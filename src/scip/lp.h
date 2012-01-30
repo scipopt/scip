@@ -1045,7 +1045,18 @@ void SCIPlpInvalidateRootObjval(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets current pseudo objective value */
+/** gets the global pseudo objective value; that is all variables set to their best (w.r.t. the objective function)
+ *  global bound
+ */
+extern
+SCIP_Real SCIPlpGetGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 extern
 SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1086,6 +1097,16 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_Real             newobj              /**< new objective value of variable */
    );
 
+/** updates current root pseudo objective value for a global change in a variable's lower bound */
+extern
+SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldlb,              /**< old lower bound of variable */
+   SCIP_Real             newlb               /**< new lower bound of variable */
+   );
+
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
 extern
 SCIP_RETCODE SCIPlpUpdateVarLb(
@@ -1094,6 +1115,16 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
    SCIP_Real             newlb               /**< new lower bound of variable */
+   );
+
+/** updates current root pseudo objective value for a global change in a variable's upper bound */
+extern
+SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldub,              /**< old upper bound of variable */
+   SCIP_Real             newub               /**< new upper bound of variable */
    );
 
 /** updates current pseudo objective value for a change in a variable's upper bound */

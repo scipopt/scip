@@ -8213,6 +8213,12 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
 /** variable deletion method of constraint handler */
 #define consDelvarsPseudoboolean NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsPseudoboolean NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsPseudoboolean NULL
+
 /*
  * constraint specific interface methods
  */
@@ -8242,7 +8248,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          consActivePseudoboolean, consDeactivePseudoboolean, 
          consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
          consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
-         conshdlrdata) );
+         consGetVarsPseudoboolean, consGetNVarsPseudoboolean, conshdlrdata) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

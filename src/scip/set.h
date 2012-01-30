@@ -827,7 +827,23 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
-
+/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were cancelled out when increasing the value and are random after decreasing it.
+ *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  The idea to get more reliable values is to always store the last reliable value, where increasing the absolute of
+ *  the value is viewed as preserving reliability. Then, after each update, the new absolute value can be compared
+ *  against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+extern
+SCIP_Bool SCIPsetIsUpdateUnreliable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
 
 #ifndef NDEBUG
 
@@ -886,6 +902,13 @@ SCIP_Real SCIPsetPseudocostdelta(
 /** return the delta to use for computing the cutoff bound for integral objectives */
 extern
 SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns minimal decrease factor that causes the recomputation of a value
+ *  (e.g., pseudo objective) instead of an update */
+extern
+SCIP_Real SCIPsetRecompfac(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1320,6 +1343,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
 #define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
+#define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )

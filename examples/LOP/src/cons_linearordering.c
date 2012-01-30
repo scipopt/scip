@@ -1068,6 +1068,12 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 /** constraint parsing method of constraint handler */
 #define consParseLinearOrdering NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsLinearOrdering NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsLinearOrdering NULL
+
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1087,7 +1093,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
          consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
          consEnableLinearOrdering, consDisableLinearOrdering, consDelVarsLinearOrdering,
          consPrintLinearOrdering, consCopyLinearOrdering, consParseLinearOrdering,
-         NULL) );
+         consGetVarsLinearOrdering, consGetNVarsLinearOrdering, NULL) );
 
    return SCIP_OKAY;
 }

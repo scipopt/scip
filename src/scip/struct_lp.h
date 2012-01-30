@@ -249,6 +249,8 @@ struct SCIP_Lp
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Real             looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Real             glbpseudoobjval;    /**< global psuedo objective value with all variables set to their best global bounds,
+                                              *   ignoring variables, with infinite best bound */
    SCIP_Real             pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
@@ -294,6 +296,7 @@ struct SCIP_Lp
    int                   firstnewrow;        /**< first row added at the current node */
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int                   nloosevars;         /**< number of loose variables in LP */
+   int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */

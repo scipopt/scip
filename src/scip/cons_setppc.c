@@ -4347,6 +4347,42 @@ SCIP_DECL_CONSPARSE(consParseSetppc)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsSetppc)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize > consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsSetppc)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -4505,9 +4541,9 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          consSepalpSetppc, consSepasolSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc,
          consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc,
-         consEnableSetppc, consDisableSetppc,
-         consDelvarsSetppc, consPrintSetppc, consCopySetppc, consParseSetppc,
-         conshdlrdata) );
+         consEnableSetppc, consDisableSetppc, consDelvarsSetppc,
+         consPrintSetppc, consCopySetppc, consParseSetppc,
+         consGetVarsSetppc, consGetNVarsSetppc, conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

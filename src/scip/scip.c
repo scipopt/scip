@@ -2741,6 +2741,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -2763,7 +2765,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
-         conscopy, consparse, conshdlrdata) );
+         conscopy, consparse, consgetvars, consgetnvars, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
    return SCIP_OKAY;
@@ -9071,6 +9073,32 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    return SCIP_OKAY;
 }
 
+/** return for given variables all their active counterparts; all active variables will be pairwise different
+ *  @note It does not hold that the first output variable is the active variable for the first input variable.
+ */
+SCIP_RETCODE SCIPgetActiveVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
+					      *   variables, if enough slots exist
+					      */
+   int*                  nvars,              /**< number of given variables, and as output number of active variables,
+					      *   if enough slots exist
+					      */
+   int                   varssize,           /**< available slots in vars array */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   )
+{
+   assert(scip != NULL);
+   assert(nvars != NULL);
+   assert(vars != NULL || *nvars == 0);
+   assert(varssize >= *nvars);
+   assert(requiredsize != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetActiveVars", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( SCIPvarsGetActiveVars(scip->set, vars, nvars, varssize, requiredsize) );
+
+   return SCIP_OKAY;
+}
 
 /** returns the reduced costs of the variable in the current node's LP relaxation;
  *  the current node has to have a feasible LP.
@@ -9103,12 +9131,12 @@ SCIP_Real SCIPgetVarRedcost(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_MULTAGGR:
    case SCIP_VARSTATUS_NEGATED:
-      return 0;
+      return 0.0;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
+      return SCIP_INVALID;
    }
 }
 
@@ -9143,12 +9171,12 @@ SCIP_Real SCIPgetVarFarkasCoef(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_MULTAGGR:
    case SCIP_VARSTATUS_NEGATED:
-      return 0;
+      return 0.0;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
+      return SCIP_INVALID;
    }
 }
 
@@ -13850,6 +13878,63 @@ SCIP_RETCODE SCIPprintCons(
    return SCIP_OKAY;
 }
 
+/** method to collect the variables of a constraint
+ *
+ *  If the number of variables is greater than the available slots in the variable array, nothing happens except that
+ *  the success point is set to FALSE. With the method SCIPgetConsNVars() it is possible to get the number of variables
+ *  a constraint has in its scope.
+ *
+ *  @note The success pointer indicates if all variables were copied into the vars arrray.
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE.
+ */
+SCIP_RETCODE SCIPgetConsVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the variables are wanted */
+   SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
+   int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetConsVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(vars != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, varssize, success) );
+
+   return SCIP_OKAY;
+}
+
+/** methed to collect the number of variables of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the number of variables
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+SCIP_RETCODE SCIPgetConsNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
+   int*                  nvars,              /**< pointer to store the number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetConsNVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nvars != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPconsGetNVars(cons, scip->set, nvars, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * LP methods
  */
@@ -13953,7 +14038,22 @@ SCIP_Real SCIPgetLPLooseObjval(
    return SCIPlpGetLooseObjval(scip->lp, scip->set);
 }
 
-/** gets pseudo objective value of the current LP */
+/** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
+ *  function) global bound
+ */
+extern
+SCIP_Real SCIPgetGlobalPseudoObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGloablPseudoObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetGlobalPseudoObjval(scip->lp, scip->set);
+}
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -22620,6 +22720,7 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisSumRelLE
 #undef SCIPisSumRelGT
 #undef SCIPisSumRelGE
+#undef SCIPisUpdateUnreliable
 #undef SCIPcreateRealarray
 #undef SCIPfreeRealarray
 #undef SCIPextendRealarray
@@ -23431,6 +23532,31 @@ SCIP_Bool SCIPisSumRelGE(
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }
+
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were canceled out when increasing the value and are random after decreasing it.
+ *  We do not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
+ *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be
+ *  compared against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+SCIP_Bool SCIPisUpdateUnreliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPcreateRealarray", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetIsUpdateUnreliable(scip->set, newvalue, oldvalue);
+}
+
 
 /** creates a dynamic array of real values */
 SCIP_RETCODE SCIPcreateRealarray(

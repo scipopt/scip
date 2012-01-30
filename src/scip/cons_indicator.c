@@ -5616,6 +5616,11 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitIndicator NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsIndicator NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsIndicator NULL
 
 
 
@@ -5703,7 +5708,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
          consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
+         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator,
+         consGetVarsIndicator, consGetNVarsIndicator, conshdlrdata) );
 
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
@@ -6637,21 +6643,30 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
          obj = varGetObjDelta(binvar);
 
-         /* if objective coefficient is 0, we prefer setting the binary variable to 1 */
+         /* check objective for possibly setting binary variable */
          if ( obj <= 0 )
          {
-            /* setting variable to 1 decreases objective -> check whether variable only occurs in the current constraint */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
+            /* setting variable to 1 does not increase objective  */
+            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
             {
-               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
-               *changed = TRUE;
-               /* make sure that the other case does not occur */
+               /* check whether variable only occurs in the current constraint */
+               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               {
+                  SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+                  *changed = TRUE;
+                  /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
+                  obj = -1.0;
+               }
+            }
+            else
+            {
+               /* make sure that the other case does not occur if obj = 0: prefer variables set to 1 */
                obj = -1.0;
             }
          }
          if ( obj >= 0 )
          {
-            /* setting variable to 0 may decrease objective -> check whether variable only occurs in the current constraint
+            /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
              * note: binary variables are only locked up */
             if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
             {

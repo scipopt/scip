@@ -50,6 +50,14 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
 
+/** pass solution to trysol heuristic which just gets added (without checking feasibility */
+extern
+SCIP_RETCODE SCIPheurPassSolAddSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< trysol heuristic */
+   SCIP_SOL*             sol                 /**< solution to be passed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

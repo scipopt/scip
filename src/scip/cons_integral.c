@@ -261,6 +261,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint parsing method of constraint handler */
 #define consParseIntegral NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsIntegral NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsIntegral NULL
 
 
 /*
@@ -280,19 +285,19 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyIntegral,
-         consFreeIntegral, consInitIntegral, consExitIntegral, 
+         consFreeIntegral, consInitIntegral, consExitIntegral,
          consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
          consDeleteIntegral, consTransIntegral, consInitlpIntegral,
-         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
+         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral,
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
-         consActiveIntegral, consDeactiveIntegral, 
-         consEnableIntegral, consDisableIntegral,
-         consDelvarsIntegral, consPrintIntegral, consCopyIntegral, consParseIntegral,
-         conshdlrdata) );
+         consActiveIntegral, consDeactiveIntegral,
+         consEnableIntegral, consDisableIntegral, consDelvarsIntegral,
+         consPrintIntegral, consCopyIntegral, consParseIntegral,
+         consGetVarsIntegral, consGetNVarsIntegral, conshdlrdata) );
 
    return SCIP_OKAY;
 }

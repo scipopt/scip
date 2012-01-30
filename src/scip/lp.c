@@ -7315,6 +7315,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->lpobjval = 0.0;
+   (*lp)->glbpseudoobjval = 0.0;
+   (*lp)->glbpseudoobjvalinf = 0;
    (*lp)->pseudoobjval = 0.0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->looseobjval = 0.0;
@@ -13238,7 +13240,27 @@ void SCIPlpInvalidateRootObjval(
    lp->rootlooseobjval = SCIP_INVALID;
 }
 
-/** gets current pseudo objective value */
+/** gets the global pseudo objective value; that is all variables set to their best (w.r.t. the objective function)
+ *  global bound
+ */
+SCIP_Real SCIPlpGetGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->glbpseudoobjvalinf >= 0);
+   assert(set != NULL);
+
+   if( lp->glbpseudoobjvalinf > 0 ||  set->nactivepricers > 0 )
+      return -SCIPsetInfinity(set);
+   else
+      return lp->glbpseudoobjval;
+}
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -13370,76 +13392,113 @@ SCIP_Bool isNewValueUnreliable(
    return SCIPsetIsZero(set, quotient);
 }
 
-/** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
+/** compute the objective delta due the new objective coefficient, lower bound, or upper bound */
 static
-SCIP_RETCODE lpUpdateVar(
-   SCIP_LP*              lp,                 /**< current LP data */
+void getObjvalDelta(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
    SCIP_Real             oldlb,              /**< old objective value of variable */
    SCIP_Real             oldub,              /**< old objective value of variable */
    SCIP_Real             newobj,             /**< new objective value of variable */
    SCIP_Real             newlb,              /**< new objective value of variable */
-   SCIP_Real             newub               /**< new objective value of variable */
+   SCIP_Real             newub,              /**< new objective value of variable */
+   SCIP_Real*            deltaval,           /**< pointer to store the delta value */
+   int*                  deltainf            /**< pointer to store the for the number of variables with infinite best bound */
    )
 {
-   SCIP_Real deltaval;
-   int deltainf;
-
-   assert(lp != NULL);
-   assert(lp->pseudoobjvalinf >= 0);
-   assert(lp->looseobjvalinf >= 0);
    assert(!SCIPsetIsInfinity(set, REALABS(oldobj)));
    assert(!SCIPsetIsInfinity(set, oldlb));
    assert(!SCIPsetIsInfinity(set, -oldub));
    assert(!SCIPsetIsInfinity(set, REALABS(newobj)));
    assert(!SCIPsetIsInfinity(set, newlb));
    assert(!SCIPsetIsInfinity(set, -newub));
-   assert(var != NULL);
 
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      SCIPerrorMessage("LP was informed of an objective change of a non-mutable variable\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   assert(SCIPvarGetProbindex(var) >= 0);
-
-   deltaval = 0.0;
-   deltainf = 0;
+   (*deltaval) = 0.0;
+   (*deltainf) = 0;
 
    /* subtract old pseudo objective value */
    if( SCIPsetIsPositive(set, oldobj) )
    {
       if( SCIPsetIsInfinity(set, -oldlb) )
-         deltainf--;
+         (*deltainf)--;
       else
-         deltaval -= oldlb * oldobj;
+         (*deltaval) -= oldlb * oldobj;
    }
    else if( SCIPsetIsNegative(set, oldobj) )
    {
       if( SCIPsetIsInfinity(set, oldub) )
-         deltainf--;
+         (*deltainf)--;
       else
-         deltaval -= oldub * oldobj;
+         (*deltaval) -= oldub * oldobj;
    }
 
    /* add new pseudo objective value */
    if( SCIPsetIsPositive(set, newobj) )
    {
       if( SCIPsetIsInfinity(set, -newlb) )
-         deltainf++;
+         (*deltainf)++;
       else
-         deltaval += newlb * newobj;
+         (*deltaval) += newlb * newobj;
    }
    else if( SCIPsetIsNegative(set, newobj) )
    {
       if( SCIPsetIsInfinity(set, newub) )
-         deltainf++;
+         (*deltainf)++;
       else
-         deltaval += newub * newobj;
+         (*deltaval) += newub * newobj;
    }
+}
+
+/** update norms of objective function vector */
+static
+void lpUpdateObjNorms(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value of variable */
+   SCIP_Real             newobj              /**< new objective value of variable */
+   )
+{
+   if( REALABS(newobj) != REALABS(oldobj) )   /*lint !e777*/
+   {
+      if( !lp->objsqrnormunreliable )
+      {
+         SCIP_Real oldvalue;
+
+         oldvalue = lp->objsqrnorm;
+         lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
+
+         /* due to numerical cancellations, we recalculate lp->objsqrnorm using all variables */
+         if( SCIPsetIsLT(set, lp->objsqrnorm, 0.0) || isNewValueUnreliable(set, lp->objsqrnorm, oldvalue) )
+            lp->objsqrnormunreliable = TRUE;
+         else
+         {
+            assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
+
+            /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
+            lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+
+            assert(lp->objsqrnorm >= 0.0);
+         }
+      }
+
+      lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
+      lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+   }
+}
+
+/** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
+static
+void lpUpdateObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             deltaval,           /**< delta value in the objective function */
+   int                   deltainf            /**< delta value for the number of variables with infinite best bound */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
 
    /* update the pseudo and loose objective values */
    lp->pseudoobjval += deltaval;
@@ -13452,35 +13511,6 @@ SCIP_RETCODE lpUpdateVar(
 
    assert(lp->pseudoobjvalinf >= 0);
    assert(lp->looseobjvalinf >= 0);
-
-   if( REALABS(newobj) != REALABS(oldobj) )   /*lint !e777*/
-   {
-      if( !lp->objsqrnormunreliable )
-      {
-         SCIP_Real oldvalue;
-         
-         oldvalue = lp->objsqrnorm;
-         lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
-         
-         /* due to numerical cancellations, we recalculate lp->objsqrnorm using all variables */
-         if( SCIPsetIsLT(set, lp->objsqrnorm, 0.0) || isNewValueUnreliable(set, lp->objsqrnorm, oldvalue) )
-            lp->objsqrnormunreliable = TRUE;
-         else
-         {
-            assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
-            
-            /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
-            lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
-            
-            assert(lp->objsqrnorm >= 0.0);
-         }
-      }
-
-      lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
-      lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
-   }
-
-   return SCIP_OKAY;
 }
 
 /** updates current pseudo and loose objective values for a change in a variable's objective value or bounds;
@@ -13623,11 +13653,65 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    {
       if( !SCIPsetIsEQ(set, oldobj, newobj) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+         SCIP_Real deltaval;
+         int deltainf;
+
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         /* the objective coefficient can only be changed during presolving, that implies that the global and local
+          * domain of the variable are the same
+          */
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
+
+         /* compute the pseudo objective delta due the new objective coefficient, lower bound, or upper bound */
+         getObjvalDelta(set, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), &deltaval, &deltainf);
+
+         /* update the pseudo and loose objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf);
+
+         /* update the root pseudo objective values */
+         lp->glbpseudoobjval += deltaval;
+         lp->glbpseudoobjvalinf += deltainf;
+         assert(lp->glbpseudoobjvalinf >= 0);
+
+         /* update the objective function vector norms */
+         lpUpdateObjNorms(lp, set, oldobj, newobj);
       }
    }
-   
+
+   return SCIP_OKAY;
+}
+
+/** updates current root pseudo objective value for a global change in a variable's lower bound */
+SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldlb,              /**< old lower bound of variable */
+   SCIP_Real             newlb               /**< new lower bound of variable */
+   )
+{
+   assert(set != NULL);
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real deltaval;
+      int deltainf;
+
+      /* compute the pseudo objective delta due the new objective coefficient, lower bound, or upper bound */
+      getObjvalDelta(set, SCIPvarGetObj(var), oldlb, SCIPvarGetUbGlobal(var),
+         SCIPvarGetObj(var), newlb, SCIPvarGetUbGlobal(var), &deltaval, &deltainf);
+
+      /* update the root pseudo objective values */
+      lp->glbpseudoobjval += deltaval;
+      lp->glbpseudoobjvalinf += deltainf;
+      assert(lp->glbpseudoobjvalinf >= 0);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -13655,11 +13739,51 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    {
       if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+         SCIP_Real deltaval;
+         int deltainf;
+
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         /* compute the pseudo objective delta due the new objective coefficient, lower bound, or upper bound */
+         getObjvalDelta(set, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var),
+            SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var), &deltaval, &deltainf);
+
+         /* update the pseudo and loose objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf);
       }
    }
-   
+
+   return SCIP_OKAY;
+}
+
+/** updates current root pseudo objective value for a global change in a variable's upper bound */
+SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldub,              /**< old upper bound of variable */
+   SCIP_Real             newub               /**< new upper bound of variable */
+   )
+{
+   assert(set != NULL);
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real deltaval;
+      int deltainf;
+
+      /* compute the pseudo objective delta due the new objective coefficient, lower bound, or upper bound */
+      getObjvalDelta(set, SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), oldub,
+         SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), newub, &deltaval, &deltainf);
+
+      /* update the pseudo and loose objective values */
+      lp->glbpseudoobjval += deltaval;
+      lp->glbpseudoobjvalinf += deltainf;
+      assert(lp->glbpseudoobjvalinf >= 0);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -13687,8 +13811,18 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    {
       if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
       {
-         SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+         SCIP_Real deltaval;
+         int deltainf;
+
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         /* compute the pseudo objective delta due the new objective coefficient, lower bound, or upper bound */
+         getObjvalDelta(set, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub,
+            SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub, &deltaval, &deltainf);
+
+         /* update the pseudo and loose objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf);
       }
    }
 

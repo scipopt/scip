@@ -17,6 +17,7 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for constraints and constraint handlers
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  *
  *  This file defines the interface for constraint handlers implemented in C.
  *
@@ -738,6 +739,44 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
       const char* name, const char* str, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
       SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
+
+/** constraint method of constraint handler which returns the variables (if possible)
+ *
+ *  The constraint handler can (this callback is optional) provide this callback to return the variables which are
+ *  involved in that particular constraint. If this not possible, the variables should be copyied into the variables
+ *  array and the success pointers has to be set to TRUE. Otherwise the success has to be set FALSE or the callback
+ *  should not be implemented.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that should return its variable data
+ *
+ *  output:
+ *  - vars            : array to store/copy the involved variables of the constraint
+ *  - varssize        : available slots in vars array which is needed to check if the array is large enough
+ *  - success         : pointer to store whether the variables are successfully copied
+ */
+#define SCIP_DECL_CONSGETVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
+      SCIP_VAR** vars, int varssize, SCIP_Bool* success)
+
+/** constraint method of constraint handler which returns the number of variables (if possible)
+ *
+ *  The constraint handler can (this callback is optional) provide this callback to return the number variable which are
+ *  involved in that particular constraint. If this not possible, the success pointers has to be set to FALSE or the
+ *  callback should not be implemented.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : constraint for which the number of variables is wanted
+ *
+ *  output:
+ *  - nvars           : pointer to store the number of variables
+ *  - success         : pointer to store whether the constraint successfully returned the number of variables
+ */
+#define SCIP_DECL_CONSGETNVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
+      int* nvars, SCIP_Bool* success)
 
 #ifdef __cplusplus
 }

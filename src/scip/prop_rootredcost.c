@@ -29,7 +29,7 @@
 #define PROP_NAME              "rootredcost"
 #define PROP_DESC              "reduced cost strengthening at the root node"
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
-#define PROP_PRIORITY          +1000000 /**< propagator priority */ 
+#define PROP_PRIORITY         +10000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */

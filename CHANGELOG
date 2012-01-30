@@ -4,7 +4,7 @@ SCIP version NEXT
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
-- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where 
+- the methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
   the new element was inserted, if this is not of interest a NULL pointer can be given
 - SCIPcolGetStrongbranchLPAge(), SCIPgetVarStrongbranchLPAge(), SCIPgetNLPs(), SCIPgetNPrimalLPs(), SCIPgetNDualLPs(),
   SCIPgetNBarrierLPs(), SCIPgetNResolveLPs(), SCIPgetNPrimalResolveLPs(), SCIPgetNDualResolveLPs(), SCIPgetNNodeLPs(),
@@ -23,6 +23,20 @@ interface
 - rename SCIPvarGetWorstBound() to SCIPvarGetWorstBoundLocal()
 - new methods SCIPvarGetBestBoundGlobal() to SCIPvarGetWorstBoundGlobal()
 - new method SCIPcalcBinomCoef() in pub_misc.h and misc.c which calculates a binomial coefficient up to 33 over 16
+- new method SCIPheurPassSolAddSol() in heur_trysol.c; solution which are passed via this method are just added without any
+  feasibility check
+- new method SCIPvarsGetProbvar() in pub_var.h and var.c, which returns for a given array of variables the active, fixed
+  or multiaggregated representation
+- new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
+  set to their best (w.r.t. the objective function) global bound
+- new method SCIPhashtableClear() which removes all elements of a hash table
+- new callback methods in constraint handler SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS which are optional and
+  returns for a constraint the involved variables and the number of variables
+- new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and
+  the number of variables if the corresponding constraint supports this (optional) callbacks
+- new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
+  (e.g., for activities; uses new parameter misc/num_recompfac)
+- new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -47,6 +61,7 @@ performance improvements:
   from scratch again
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
+- improved pseudo objective propagator
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -56,6 +71,7 @@ plugins:
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
+- fixed bug in cons_linear w.r.t recalculation of unreliable activities
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -73,6 +89,8 @@ parameters:
 - new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binry to implicit binary
   variables, default is TRUE
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
+- new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
+  to be decreased in order to recompute the value from scratch
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -90,11 +108,14 @@ fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly()
 - fixed bug in varAddTransitiveImplic() in var.c, when adding implications on special aggregated, namely negated,
   variables
+- fixed bug in cons_quadratic where bounds on activity of quadratic term were not always invalidated when quadratic
+  variables were removed
 - fixed bug in heur_undercover.c, where a variable with fixed bounds but not of status SCIP_VARSTATUS_FIXED was wrongly
   handled
 - fixed bug in cons.c, where after a restart the arrays for all initial constraints were corrected in the initsol
   process instead of the initpre process, this was to late because you might change the status in presolving which lead
   to an assert()
+- fixed issue if a primal solution leads to a cutoff of the current focus node
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

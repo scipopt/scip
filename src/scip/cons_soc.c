@@ -4031,7 +4031,6 @@ SCIP_DECL_CONSCOPY(consCopySOC)
 
 
 /** constraint parsing method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPARSE(consParseSOC)
 {  /*lint --e{715}*/
@@ -4251,9 +4250,44 @@ SCIP_DECL_CONSPARSE(consParseSOC)
 
    return SCIP_OKAY;
 }
-#else
-#define consParseSOC NULL
-#endif
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsSoc)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nvars + 1 )
+      (*success) = FALSE;
+   else
+   {
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      vars[consdata->nvars] = consdata->rhsvar;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variable (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsSoc)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars + 1;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /*
  * constraint specific interface methods
@@ -4292,9 +4326,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          consSepalpSOC, consSepasolSOC, consEnfolpSOC, consEnfopsSOC, consCheckSOC,
          consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
          consActiveSOC, consDeactiveSOC,
-         consEnableSOC, consDisableSOC,
-         consDelvarsSOC, consPrintSOC, consCopySOC, consParseSOC,
-         conshdlrdata) );
+         consEnableSOC, consDisableSOC, consDelvarsSOC,
+         consPrintSOC, consCopySOC, consParseSOC,
+         consGetVarsSoc, consGetNVarsSoc, conshdlrdata) );
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )
    {

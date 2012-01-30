@@ -846,6 +846,49 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
+
+   /** constraint method of constraint handler which returns the variables (if possible)
+    *
+    *  The constraint handler can (this callback is optional) provide this callback to return the variables which are
+    *  involved in that particular constraint. If this not possible, the variables should be copyied into the variables
+    *  array and the success pointers has to be set to TRUE. Otherwise the success has to be set FALSE or the callback
+    *  should not be implemented.
+    */
+   virtual SCIP_RETCODE scip_getvars(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< constraint for which the variables are wanted */
+      SCIP_VAR**         vars,               /**< array to store/copy the involved variable of the constraint */
+      int                varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+      SCIP_Bool*         success             /**< pointer to store whether the variables are successfully copied */
+      )
+   {  /*lint --e{715}*/
+
+      (*success) = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   /** constraint method of constraint handler which returns the number of variables (if possible)
+    *
+    *  The constraint handler can (this callback is optional) provide this callback to return the number variable which
+    *  are involved in that particular constraint. If this not possible, the success pointers has to be set to FALSE or
+    *  the callback should not be implemented.
+    */
+   virtual SCIP_RETCODE scip_getnvars(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< constraint for which the number of variables is wanted */
+      int*               nvars,              /**< pointer to store the number of variables */
+      SCIP_Bool*         success             /**< pointer to store whether the constraint successfully returned the number of variables */
+      )
+   {  /*lint --e{715}*/
+
+      (*nvars) = 0;
+      (*success) = FALSE;
+
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

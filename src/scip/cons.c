@@ -1776,6 +1776,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -1789,6 +1791,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert(consprop != NULL || propfreq == -1);
    assert(eagerfreq >= -1);
    assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
+
+   /* both callbacks have to exist or not exist */
+   assert((consgetvars != NULL) == (consgetnvars != NULL));
 
    SCIP_ALLOC( BMSallocMemory(conshdlr) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
@@ -1828,6 +1833,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consdelvars = consdelvars;
    (*conshdlr)->conscopy = conscopy;
    (*conshdlr)->consparse = consparse;
+   (*conshdlr)->consgetvars = consgetvars;
+   (*conshdlr)->consgetnvars = consgetnvars;
    (*conshdlr)->conshdlrdata = conshdlrdata;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
@@ -4984,6 +4991,80 @@ SCIP_RETCODE SCIPconsPrint(
    else 
       SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
    
+   return SCIP_OKAY;
+}
+
+/** method to collect the variables of a constraint
+ *
+ *  If the number of variables is greater than the available slots in the variable array, nothing happens except that
+ *  the success point is set to FALSE. With the method SCIPconsGetNVars() it is possible to get the number of variables
+ *  a constraint has in its scope.
+ *
+ *  @note The success pointer indicates if all variables were copied into the vars arrray.
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE.
+ */
+SCIP_RETCODE SCIPconsGetVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
+   int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consgetvars != NULL )
+   {
+      SCIP_CALL( conshdlr->consgetvars(set->scip, conshdlr, cons, vars, varssize, success) );
+   }
+   else
+   {
+      (*success) = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** methed to collect the number of variables of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the number of variables
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+SCIP_RETCODE SCIPconsGetNVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int*                  nvars,              /**< pointer to store the number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consgetnvars != NULL )
+   {
+      SCIP_CALL( conshdlr->consgetnvars(set->scip, conshdlr, cons, nvars, success) );
+   }
+   else
+   {
+      (*nvars) = 0;
+      (*success) = FALSE;
+   }
+
    return SCIP_OKAY;
 }
 

@@ -111,6 +111,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -541,6 +543,41 @@ SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** method to collect the variables of a constraint
+ *
+ *  If the number of variables is greater than the available slots in the variable array, nothing happens except that
+ *  the success point is set to FALSE. With the method SCIPgetConsNVars() it is possible to get the number of variables
+ *  a constraint has in its scope.
+ *
+ *  @note The success pointer indicates if all variables were copied into the vars arrray.
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE.
+ */
+extern
+SCIP_RETCODE SCIPconsGetVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
+   int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
+   );
+
+/** methed to collect the number of variables of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the number of variables
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+extern
+SCIP_RETCODE SCIPconsGetNVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int*                  nvars,              /**< pointer to store the number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the

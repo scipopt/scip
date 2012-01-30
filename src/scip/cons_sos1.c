@@ -1996,10 +1996,42 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsSOS1)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
+   if( varssize > consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      assert(vars != NULL);
 
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
 
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 /** constraint activation notification method of constraint handler */
 #define consActiveSOS1 NULL
@@ -2131,8 +2163,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          consSepalpSOS1, consSepasolSOS1, consEnfolpSOS1, consEnfopsSOS1, consCheckSOS1,
          consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
          consActiveSOS1, consDeactiveSOS1,
-         consEnableSOS1, consDisableSOS1,
-         consDelvarsSOS1, consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
+         consEnableSOS1, consDisableSOS1, consDelvarsSOS1,
+         consPrintSOS1, consCopySOS1, consParseSOS1,
+         consGetVarsSOS1, consGetNVarsSOS1, conshdlrdata) );
 
    /* add SOS1 constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchsos",

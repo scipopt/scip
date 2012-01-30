@@ -134,6 +134,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    SCIP_RESULT result;
    SCIP_Longint oldnbestsolsfound;
+   SCIP_Real lowerbound;
    int ndelayedheurs;
    int depth;
    int lpstateforkdepth;
@@ -228,17 +229,34 @@ SCIP_RETCODE SCIPprimalHeuristics(
    assert(!indiving);
 #endif
 
+   /* collect lower bound of current node */
+   if( tree !=  NULL )
+   {
+      assert(SCIPtreeGetFocusNode(tree) != NULL);
+      lowerbound = SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree));
+   }
+   else if( lp != NULL )
+      lowerbound = SCIPlpGetPseudoObjval(lp, set);
+   else
+      lowerbound = -SCIPsetInfinity(set);
+
    for( h = 0; h < set->nheurs; ++h )
    {
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
        * such that additional calls to LP heuristics will fail; better abort the loop in this case
-       */      
+       */
       if( lp != NULL && lp->resolvelperror) 
          break;
 
       SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+
+      /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
+       * calling the remaining heuristics
+       */
+      if( result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound )
+         break;
 
       /* make sure that heuristic did not change probing or diving status */
       assert(tree == NULL || inprobing == SCIPtreeProbing(tree));
@@ -2217,7 +2235,7 @@ SCIP_RETCODE priceAndCutLoop(
 
    if ( nsepastallrounds >= maxnsepastallrounds )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "Truncate separation round because of stalling (%d stall rounds).\n", maxnsepastallrounds);
    }
 
@@ -3628,8 +3646,12 @@ SCIP_RETCODE solveNode(
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
-      SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
+   {
+      /* the root pseudo objective value and pseudo objective value should be equal in the root node */
+      assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set), SCIPlpGetPseudoObjval(lp, set)));
 
+      SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
+   }
    /* check for cutoff */
    if( *cutoff )
    {

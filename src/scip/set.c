@@ -17,6 +17,9 @@
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
+ *
+ * @todo Functions like SCIPsetFeastol() are misleading (it seems that the feasibility tolerance can be set).
+ *       Rename all functions starting with SCIPsetXXX, e.g., SCIPsetGetFeastol() and SCIPsetSetFeastol().
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1283,6 +1286,11 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/pseudocostdelta",
          "minimal objective distance value to use for branching pseudo cost updates",
          &(*set)->num_pseudocostdelta, TRUE, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "numerics/recomputefac",
+         "minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update",
+         &(*set)->num_recompfac, TRUE, SCIP_DEFAULT_RECOMPFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* presolving parameters */
@@ -3681,6 +3689,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
 #undef SCIPsetCutoffbounddelta
+#undef SCIPsetRecompfac
 #undef SCIPsetIsEQ
 #undef SCIPsetIsLT
 #undef SCIPsetIsLE
@@ -3815,6 +3824,17 @@ SCIP_Real SCIPsetCutoffbounddelta(
    assert(set != NULL);
 
    return MIN(100.0 * SCIPsetFeastol(set), 0.0001);
+}
+
+/** returns minimal decrease factor that causes the recomputation of a value
+ *  (e.g., pseudo objective) instead of an update */
+SCIP_Real SCIPsetRecompfac(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_recompfac;
 }
 
 /** checks, if value is (positive) infinite */
@@ -4544,4 +4564,30 @@ SCIP_Bool SCIPsetIsSumRelGE(
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
+}
+
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were canceled out when increasing the value and are random after decreasing it.
+ *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  The idea to get more reliable values is to always store the last reliable value, where increasing the absolute of
+ *  the value is viewed as preserving reliability. Then, after each update, the new absolute value can be compared
+ *  against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+SCIP_Bool SCIPsetIsUpdateUnreliable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_Real quotient;
+
+   quotient = ABS(oldvalue) / MAX(ABS(newvalue), 1.0);
+
+   return quotient >= set->num_recompfac;
 }

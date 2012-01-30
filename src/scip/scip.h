@@ -1068,6 +1068,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -2762,6 +2764,22 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
                                               *   active variables */
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   );
+
+/** return for given variables all their active counterparts; all active variables will be pairwise different
+ *  @note It does not hold that the first output variable is the active variable for the first input variable.
+ */
+extern
+SCIP_RETCODE SCIPgetActiveVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
+					      *   variables, if enough slots exist
+					      */
+   int*                  nvars,              /**< number of given variables, and as output number of active variables,
+					      *   if enough slots exist
+					      */
+   int                   varssize,           /**< available slots in vars array */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
 
 /** returns the reduced costs of the variable in the current node's LP relaxation;
@@ -4499,6 +4517,41 @@ SCIP_RETCODE SCIPprintCons(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** method to collect the variables of a constraint
+ *
+ *  If the number of variables is greater than the available slots in the variable array, nothing happens except that
+ *  the success point is set to FALSE. With the method SCIPgetConsNVars() it is possible to get the number of variables
+ *  a constraint has in its scope.
+ *
+ *  @note The success pointer indicates if all variables were copied into the vars arrray.
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE.
+ */
+extern
+SCIP_RETCODE SCIPgetConsVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the variables are wanted */
+   SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
+   int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
+   );
+
+/** methed to collect the number of variables of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the number of variables
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+extern
+SCIP_RETCODE SCIPgetConsNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
+   int*                  nvars,              /**< pointer to store the number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
+   );
+
 /**@} */
 
 
@@ -4566,7 +4619,17 @@ SCIP_Real SCIPgetLPLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets pseudo objective value of the current LP */
+/** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
+ *  function) global bound
+ */
+extern
+SCIP_Real SCIPgetGlobalPseudoObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 extern
 SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -8302,6 +8365,24 @@ SCIP_Bool SCIPisSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were canceled out when increasing the value and are random after decreasing it.
+ *  We do not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
+ *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be
+ *  compared against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+extern
+SCIP_Bool SCIPisUpdateUnreliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -8364,7 +8445,8 @@ SCIP_Bool SCIPisSumRelGE(
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
 #define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
-                                                                                
+
+#define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

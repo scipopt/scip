@@ -7381,6 +7381,43 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
 /** constraint parsing method of constraint handler */
 #define consParseCumulative NULL
 
+/** constraint method of constraint handler which returns the variable data (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsCumulative)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsCumulative)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -7410,7 +7447,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          consActiveCumulative, consDeactiveCumulative,
          consEnableCumulative, consDisableCumulative, consDelvarsCumulative,
          consPrintCumulative, consCopyCumulative, consParseCumulative,
-         conshdlrdata) );
+         consGetVarsCumulative, consGetNVarsCumulative, conshdlrdata) );
 
    /* set default values for constraint handler data */
    conshdlrdata->lastsepanode = -1;

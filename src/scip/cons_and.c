@@ -3653,6 +3653,45 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    return SCIP_OKAY;
 }
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nvars + 1 )
+      (*success) = FALSE;
+   else
+   {
+      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      vars[consdata->nvars] = consdata->resvar;
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint method of constraint handler which returns the number of variable (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nvars + 1;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of event handler
  */
@@ -3704,19 +3743,19 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
          conshdlrCopyAnd,
-         consFreeAnd, consInitAnd, consExitAnd, 
+         consFreeAnd, consInitAnd, consExitAnd,
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
          consDeleteAnd, consTransAnd, consInitlpAnd,
-         consSepalpAnd, consSepasolAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
+         consSepalpAnd, consSepasolAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd,
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
-         consActiveAnd, consDeactiveAnd, 
+         consActiveAnd, consDeactiveAnd,
          consEnableAnd, consDisableAnd,
          consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
-         conshdlrdata) );
+         consGetVarsAnd, consGetNVarsAnd, conshdlrdata) );
 
    /* add and constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3725,7 +3764,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/and/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance", 
+         "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/linearize",

@@ -703,6 +703,8 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
 #define consPrintStoreGraph NULL
 #define consCopyStoreGraph NULL
 #define consParseStoreGraph NULL
+#define consGetVarsStoreGraph NULL
+#define consGetNVarsStoreGraph NULL
 
 
 /*
@@ -738,7 +740,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          consActiveStoreGraph, consDeactiveStoreGraph,
          consEnableStoreGraph, consDisableStoreGraph, consDelVarsStoreGraph,
          consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
-         conshdlrData) );
+         consGetVarsStoreGraph, consGetNVarsStoreGraph, conshdlrData) );
 
    return SCIP_OKAY;
 }
