@@ -224,7 +224,7 @@ SCIP_RETCODE readXMLSol(
    
    /* find variable sections */
    tag = "variables";
-   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 2);
+   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
