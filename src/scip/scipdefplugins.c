@@ -76,7 +76,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
-   SCIP_CALL( SCIPincludePresolConcomp(scip) );
+   SCIP_CALL( SCIPincludePresolConcomp(scip) );  /* <= TODO: remove */
+   SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );

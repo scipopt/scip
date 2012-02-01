@@ -578,6 +578,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
 			scip/presol_concomp.o \
+			scip/presol_components.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
