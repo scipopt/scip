@@ -2817,7 +2817,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsLinking)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nbinvars + 1 )
+   if( varssize < consdata->nbinvars + 1)
       (*success) = FALSE;
    else
    {

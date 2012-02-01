@@ -109,6 +109,7 @@
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_trivial.h"
+#include "scip/presol_components.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_redcost.h"

@@ -4106,6 +4106,7 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
    int ndfsnodes;
    int v;
    int i;
+   int offset;
 
    assert(adjlist != NULL);
    assert(components != NULL);
@@ -4118,6 +4119,7 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
    ndfsnodes = 0;
 
    *ncomponents = 0;
+   offset = 0;
 #ifndef NDEBUG
    BMSclearMemoryArray(components, adjlist->nnodes);
 #endif
@@ -4131,10 +4133,11 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
 
       (*ncomponents)++;
 
-      for( i = 0; i < ndfsnodes; ++i )
+      for( i = offset; i < ndfsnodes; ++i )
       {
          components[dfsnodes[i]] = *ncomponents;
       }
+      offset = ndfsnodes;
    }
 
 #ifndef NDEBUG
