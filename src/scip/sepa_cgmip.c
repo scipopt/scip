@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// #define SCIP_DEBUG
-// #define SCIP_WRITEPROB
-// #define SCIP_OUTPUT
+/* #define SCIP_DEBUG */
+/* #define SCIP_WRITEPROB */
+/* #define SCIP_OUTPUT */
 /**@file   sepa_cgmip.c
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
@@ -1664,7 +1664,7 @@ SCIP_RETCODE subscipSetParams(
    assert( subscip != NULL );
 
    /* set objective limit, if no corresponding constraint has been added */
-   if ( ! sepadata->addviolationcons )
+   if ( ! sepadata->addviolationcons && ! sepadata->addviolconshdlr )
    {
       SCIP_CALL( SCIPsetObjlimit(subscip, MINEFFICACY) );
    }
