@@ -1010,14 +1010,14 @@
  * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
  * formats.
  *
+ * - \ref reader_cip.h "CIP format"
+ * - \ref reader_cnf.h "CNF format"
+ * - \ref reader_fzn.h "FZN format"
  * - \ref reader_lp.h "LP format"
  * - \ref reader_mps.h "MPS format"
- * - \ref reader_cnf.h "CNF format"
- * - \ref reader_wbo.h "WBO format"
  * - \ref reader_opb.h "OPB format
  * - \ref reader_pip.h "PIP format"
- * - \ref reader_cip.h "CIP format"
- * - \ref reader_fzn.h "FZN format"
+ * - \ref reader_wbo.h "WBO format"
  * - \ref reader_zpl.h "ZPL format"
  */
 
