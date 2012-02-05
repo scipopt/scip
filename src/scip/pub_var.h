@@ -828,7 +828,7 @@ extern
 int SCIPvarGetNBdchgInfosLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
- 
+
 /** return upper bound change info at requested position */
 extern
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfoUb(
@@ -964,20 +964,47 @@ SCIP_Real SCIPvarGetSol(
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
-/** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, zero is returned
+/** returns the solution of the variable in the last root node's relaxation, if the root relaxation is not yet
+ *  completely solved, zero is returned
  */
 extern
 SCIP_Real SCIPvarGetRootSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
+/** returns the best solution (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation, if
+ *  the root relaxation is not yet completely solved, zero is returned
  */
 extern
-SCIP_Real SCIPvarGetRootRedcost(
+SCIP_Real SCIPvarGetBestRootSol(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the best reduced costs (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation,
+ *  if the root relaxation is not yet completely solved, or the variable was no column of the root LP, SCIP_INVALID is
+ *  returned
+ */
+extern
+SCIP_Real SCIPvarGetBestRootRedcost(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the best objective value (w.r.t. root reduced cost propagation) of the root LP which belongs the root
+ *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
+ *  SCIP_INVALID is returned
+ */
+extern
+SCIP_Real SCIPvarGetBestRootLPobjval(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** set the given solution as the best root solution w.r.t. root reduced cost propagation in the variables */
+extern
+void SCIPvarSetBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
    );
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */

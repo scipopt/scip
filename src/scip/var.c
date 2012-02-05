@@ -1815,7 +1815,9 @@ SCIP_RETCODE varCreate(
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;
-   (*var)->rootredcost = SCIP_INVALID;
+   (*var)->bestrootsol = 0.0;
+   (*var)->bestrootredcost = 0.0;
+   (*var)->bestrootlpobjval = SCIP_INVALID;
    (*var)->relaxsol = 0.0;
    (*var)->nlpsol = 0.0;
    (*var)->primsolavg = 0.5 * (lb + ub);
@@ -11522,20 +11524,82 @@ SCIP_Real SCIPvarGetSol(
 /** remembers the current solution as root solution in the problem variables */
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
 {
    assert(var != NULL);
 
    var->rootsol = SCIPvarGetSol(var, roothaslp);
-   if( roothaslp && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      var->rootredcost = SCIPcolGetRedcost(SCIPvarGetCol(var), stat, lp);
 }
 
-/** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, zero is returned
+/** updates the current solution as best root solution in the problem variables if is better */
+void SCIPvarUpdateBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
+   )
+{
+   assert(var != NULL);
+
+   /* if reduced cost are zero nothing to update */
+   if( SCIPsetIsFeasZero(set, rootredcost) )
+      return;
+
+   /* check if we have already a best combination stored */
+   if( !SCIPsetIsFeasZero(set, var->bestrootredcost) )
+   {
+      SCIP_Real currcutoffbound;
+      SCIP_Real cutoffbound;
+      SCIP_Real bound;
+
+      /* compute the cutoff bound which would improve the corresponding bound with the current stored root solution,
+       * root reduced cost, and root LP objective value combination
+       */
+      if( var->bestrootredcost > 0.0 )
+         bound = SCIPvarGetUbGlobal(var);
+      else
+         bound = SCIPvarGetLbGlobal(var);
+
+      currcutoffbound = (bound - var->bestrootsol) * var->bestrootredcost + var->bestrootlpobjval;
+
+      /* compute the cutoff bound which would improve the corresponding bound with new root solution, root reduced
+       * cost, and root LP objective value combination
+       */
+      if( rootredcost > 0.0 )
+         bound = SCIPvarGetUbGlobal(var);
+      else
+         bound = SCIPvarGetLbGlobal(var);
+
+      cutoffbound = (bound - rootsol) * rootredcost + rootlpobjval;
+
+      /* check if an improving root solution, root reduced cost, and root LP objective value is at hand */
+      if( cutoffbound > currcutoffbound )
+      {
+         SCIPdebugMessage("-> <%s> update potetial cutoff bound <%g> -> <%g>\n",
+            SCIPvarGetName(var), currcutoffbound, cutoffbound);
+
+         var->bestrootsol = rootsol;
+         var->bestrootredcost = rootredcost;
+         var->bestrootlpobjval = rootlpobjval;
+      }
+   }
+   else
+   {
+      SCIPdebugMessage("-> <%s> initialize best root reduced cost information\n", SCIPvarGetName(var));
+      SCIPdebugMessage("   -> rootsol <%g>\n", rootsol);
+      SCIPdebugMessage("   -> rootredcost <%g>\n", rootredcost);
+      SCIPdebugMessage("   -> rootlpobjval <%g>\n", rootlpobjval);
+
+      var->bestrootsol = rootsol;
+      var->bestrootredcost = rootredcost;
+      var->bestrootlpobjval = rootlpobjval;
+   }
+}
+
+/** returns the solution of the variable in the last root node's relaxation, if the root relaxation is not yet
+ *  completely solved, zero is returned
  */
 SCIP_Real SCIPvarGetRootSol(
    SCIP_VAR*             var                 /**< problem variable */
@@ -11688,10 +11752,76 @@ SCIP_Real SCIPvarGetImplRedcost(
    return implredcost;
 }
 
-/** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
+/** returns the best solution (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation, if
+ *  the root relaxation is not yet completely solved, zero is returned
  */
-SCIP_Real SCIPvarGetRootRedcost(
+SCIP_Real SCIPvarGetBestRootSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real rootsol;
+   int i;
+
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return 0.0;
+      return SCIPvarGetBestRootSol(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return var->bestrootsol;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
+      return var->locdom.lb;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(var->data.aggregate.var != NULL);
+      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
+       * corresponding infinity value instead of performing an arithmetical transformation (compare method
+       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
+       * (or is called by) a public interface method; instead, we only assert that values are finite
+       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
+       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+       */
+      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
+      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * SCIPvarGetBestRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2);
+       */
+      rootsol = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         rootsol += var->data.multaggr.scalars[i] * SCIPvarGetBestRootSol(var->data.multaggr.vars[i]);
+      return rootsol;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return var->data.negate.constant - SCIPvarGetBestRootSol(var->negatedvar);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** returns the best reduced costs (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation,
+ *  if the root relaxation is not yet completely solved, or the variable was no column of the root LP, SCIP_INVALID is
+ *  returned
+ */
+SCIP_Real SCIPvarGetBestRootRedcost(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -11702,11 +11832,11 @@ SCIP_Real SCIPvarGetRootRedcost(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetRootRedcost(var->data.original.transvar);
+      return SCIPvarGetBestRootRedcost(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return var->rootredcost;
+      return var->bestrootredcost;
 
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
@@ -11719,6 +11849,55 @@ SCIP_Real SCIPvarGetRootRedcost(
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
    }
+}
+
+/** returns the best objective value (w.r.t. root reduced cost propagation) of the root LP which belongs the root
+ *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
+ *  SCIP_INVALID is returned
+ */
+SCIP_Real SCIPvarGetBestRootLPobjval(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPvarGetBestRootLPobjval(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return var->bestrootlpobjval;
+
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIP_INVALID;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
+/** set the given solution as the best root solution w.r.t. root reduced cost propagation in the variables */
+void SCIPvarSetBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
+   )
+{
+   assert(var != NULL);
+
+   var->bestrootsol = rootsol;
+   var->bestrootredcost = rootredcost;
+   var->bestrootlpobjval = rootlpobjval;
 }
 
 /** stores the solution value as relaxation solution in the problem variable */

@@ -169,23 +169,25 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
+      SCIP_Real rootsol;
       SCIP_Real redcost;
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
       var = vars[v];
-      redcost = SCIPvarGetRootRedcost(var);
+      redcost = SCIPvarGetBestRootRedcost(var);
       if( redcost == SCIP_INVALID ) /*lint !e777*/
          continue;
 
+      rootsol = SCIPvarGetBestRootSol(var);
+      lpobjval = SCIPvarGetBestRootLPobjval(var);
+
       if( SCIPisFeasPositive(scip, redcost) )
       {
-         SCIP_Real rootsol;
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newub;
 
-         rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
          oldub = SCIPvarGetUbGlobal(var);
          assert(SCIPisFeasLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
@@ -214,12 +216,10 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       }
       else if( SCIPisFeasNegative(scip, redcost) )
       {
-         SCIP_Real rootsol;
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newlb;
 
-         rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
          oldub = SCIPvarGetUbGlobal(var);
          assert(SCIPisGE(scip, rootsol, SCIPvarGetUbGlobal(var))); /* ub might have been decreased in the meantime */

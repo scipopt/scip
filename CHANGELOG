@@ -131,6 +131,9 @@ interface
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
 - new LPI method SCIPlpiGetObjsen() to query objective sense
 - new method SCIPgetVarImplRedcost() which returns the implied reduced costs
+- new methods SCIPvarGetBestRootSol(), SCIPvarGetBestRootRedcost(), SCIPvarGetBestRootLPobjval() which return the best
+  combination for a variable w.r.t. root solution value, root LP objective value, and root reduced cost
+- removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

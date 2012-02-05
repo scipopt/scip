@@ -344,9 +344,17 @@ extern
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** remembers the best solution w.r.t. root reduced cost propagation as root solution in the problem variables */
+extern
+void SCIPprobUpdateBestRootSol(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */

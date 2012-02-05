@@ -1096,9 +1096,17 @@ void SCIPvarGetClosestVub(
 extern
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** updates the current solution as best root solution in the problem variables if it is better */
+extern
+void SCIPvarUpdateBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
    );
 
 /** returns the solution value of the problem variables in the relaxation solution */
