@@ -4045,6 +4045,19 @@ SCIP_Real SCIPgetVarRedcost(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
+/** returns the implied reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
+ */
+extern
+SCIP_Real SCIPgetVarImplRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get reduced costs, should be a column in current node LP */
+   SCIP_Bool             varfixing           /**< FALSE if for x == 0, TRUE for x == 1 */
+   );
+
 /** returns the Farkas coefficient of the variable in the current node's LP relaxation;
  *  the current node has to have an infeasible LP.
  *

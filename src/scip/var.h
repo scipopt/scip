@@ -1114,6 +1114,27 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns for given variable the reduced cost */
+extern
+SCIP_Real SCIPvarGetRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
+ *  the binary variable is fixed to the given value
+ */
+extern
+SCIP_Real SCIPvarGetImplRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+
 /** stores the solution value as relaxation solution in the problem variable */
 extern
 SCIP_RETCODE SCIPvarSetRelaxSol(

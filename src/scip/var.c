@@ -11599,6 +11599,95 @@ SCIP_Real SCIPvarGetRootSol(
    }
 }
 
+/** returns for given variable the reduced cost */
+SCIP_Real SCIPvarGetRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+   {
+      SCIP_COL* col;
+
+      col = SCIPvarGetCol(var);
+      assert(col != NULL);
+
+      switch( SCIPcolGetBasisStatus(col) )
+      {
+      case SCIP_BASESTAT_LOWER:
+         if( varfixing == TRUE )
+            return SCIPcolGetRedcost(col, stat, lp);
+         break;
+
+      case SCIP_BASESTAT_UPPER:
+         if( varfixing == FALSE )
+            return SCIPcolGetRedcost(col, stat, lp);
+         break;
+
+      case SCIP_BASESTAT_BASIC:
+      case SCIP_BASESTAT_ZERO:
+         break;
+
+      default:
+         SCIPerrorMessage("invalid basis state\n");
+         SCIPABORT();
+      }
+   }
+
+   return 0.0;
+}
+
+/** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
+ *  the binary variable is fixed to the given value
+ */
+SCIP_Real SCIPvarGetImplRedcost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* implvar;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real implredcost;
+   int nbinvars;
+   int v;
+
+   assert(SCIPvarIsBinary(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   /* get reduced cost of given variable */
+   implredcost = SCIPvarGetRedcost(var, varfixing, stat, lp);
+
+   /* collect binary implication information */
+   nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
+   vars =  SCIPimplicsGetVars(var->implics, varfixing);
+   boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
+
+   for( v = 0; v < nbinvars; ++v )
+   {
+      implvar = vars[v];
+      assert(implvar != NULL);
+
+      /* ignore binary variable which are fixed */
+      if( SCIPvarGetLbLocal(implvar) > 0.5 || SCIPvarGetUbLocal(implvar) < 0.5 )
+         continue;
+
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+
+      if( (SCIP_Bool)boundtypes[v] != varfixing )
+         implredcost += SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+      else
+         implredcost -= SCIPvarGetRedcost(implvar, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+   }
+
+   return implredcost;
+}
+
 /** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
  *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
  */

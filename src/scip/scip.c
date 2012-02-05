@@ -11927,6 +11927,45 @@ SCIP_Real SCIPgetVarRedcost(
    }
 }
 
+/** returns the implied reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
+ */
+SCIP_Real SCIPgetVarImplRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get reduced costs, should be a column in current node LP */
+   SCIP_Bool             varfixing           /**< FALSE if for x == 0, TRUE for x == 1 */
+   )
+{
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPgetVarImplRedcost(scip, var->data.original.transvar, varfixing);
+
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPvarGetImplRedcost(var, varfixing, scip->stat, scip->lp);
+
+   case SCIP_VARSTATUS_LOOSE:
+      return SCIP_INVALID;
+
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return 0.0;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID;
+   }
+}
+
+
 /** returns the Farkas coefficient of the variable in the current node's LP relaxation;
  *  the current node has to have an infeasible LP.
  *
@@ -17308,7 +17347,6 @@ SCIP_Real SCIPgetLPLooseObjval(
 /** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
  *  function) global bound
  */
-extern
 SCIP_Real SCIPgetGlobalPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    )
