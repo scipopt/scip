@@ -14,10 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.c
- * @brief  redcost propagator
+ * @brief  propagator using the LP reduced cost and the cutoff bound
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  * @author Matthias Miltenberger
  * @author Michael Winkler
+ *
+ * This propagator uses the reduced cost of an optimal solved LP relaxation to propagate the variables against the
+ * cutoff bound.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,19 +32,31 @@
 #include "scip/prop_redcost.h"
 
 
+/**@name Propagator properties
+ *
+ * @{
+ */
+
 #define PROP_NAME              "redcost"
 #define PROP_DESC              "reduced cost strengthening propagator"
 #define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP
 #define PROP_PRIORITY          +1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
-#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-                                         *   limit) */
+
+/**@} */
+
+
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
+#define DEFAULT_USEIMPLICS         TRUE /**< should implications be used to strength the reduced cost for binary variables? */
 
-
+/**@} */
 
 
 /*
@@ -52,8 +68,361 @@
 struct SCIP_PropData
 {
    SCIP_Bool             continuous;         /**< should reduced cost fixing be also applied to continuous variables? */
+   SCIP_Real             maxredcost;         /**< maximum reduced cost of a single binary variable */
+   SCIP_Bool             usefullimplics;     /**< are the implied reduced cost usefull */
+   SCIP_Bool             useimplics;         /**< should implications be used to strength the reduced cost for binary variables? */
 };
 
+
+/**@name Local methods
+ *
+ * @{
+ */
+
+/** propagate the given binary variable/column using the root reduced cost stored in the SCIP internal data structers
+ *  and check if the implictions can be useful. Deppending on that implictions are used or not used during the search to
+ *  strength the reduced costs.
+ */
+static
+SCIP_RETCODE propagateRootRedcostBinvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data structure */
+   SCIP_VAR*             var,                /**< variable to use for propagation */
+   SCIP_COL*             col,                /**< LP column of the variable */
+   SCIP_Real             cutoffbound,        /**< the current cutoff bound */
+   int*                  nchgbds             /**< pointer to count the number of bound changes */
+   )
+{
+   SCIP_Real rootredcost;
+   SCIP_Real rootsol;
+   SCIP_Real rootlpobjval;
+
+   assert(SCIPgetDepth(scip) == 0);
+
+   /* skip binary variable if it is locally fixed */
+   if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+      return SCIP_OKAY;
+
+   rootredcost = SCIPvarGetBestRootRedcost(var);
+   rootsol = SCIPvarGetBestRootSol(var);
+   rootlpobjval = SCIPvarGetBestRootLPobjval(var);
+
+   if( SCIPisFeasZero(scip, rootredcost) )
+      return SCIP_OKAY;
+
+   assert(rootlpobjval != SCIP_INVALID); /*lint !e777*/
+
+   if( rootsol > 0.5 )
+   {
+      assert(!SCIPisFeasPositive(scip, rootredcost));
+
+      /* update maximum reduced cost of a single binary variable */
+      propdata->maxredcost = MAX(propdata->maxredcost, -rootredcost);
+
+      if( rootlpobjval - rootredcost > cutoffbound )
+      {
+         SCIPdebugMessage("globally fix binary variable <%s> to 1.0\n", SCIPvarGetName(var));
+
+         SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
+         (*nchgbds)++;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      assert(!SCIPisFeasNegative(scip, rootredcost));
+
+      /* update maximum reduced cost of a single binary variable */
+      propdata->maxredcost = MAX(propdata->maxredcost, rootredcost);
+
+      if( rootlpobjval + rootredcost > cutoffbound )
+      {
+         SCIPdebugMessage("globally fix binary variable <%s> to 0.0\n", SCIPvarGetName(var));
+
+         SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
+         (*nchgbds)++;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* evaluate if the implications are useful; the implications are seen to be useful if they provide an increase for
+    * the root reduced costs
+    */
+   if( !propdata->usefullimplics )
+   {
+      SCIP_Real lbredcost;
+      SCIP_Real ubredcost;
+
+      lbredcost = SCIPgetVarImplRedcost(scip, var, FALSE);
+      assert(!SCIPisFeasPositive(scip, lbredcost));
+
+      ubredcost = SCIPgetVarImplRedcost(scip, var, TRUE);
+      assert(!SCIPisFeasNegative(scip, ubredcost));
+
+      switch( SCIPcolGetBasisStatus(col) )
+      {
+      case SCIP_BASESTAT_LOWER:
+         ubredcost -= SCIPgetVarRedcost(scip, var);
+         assert(!SCIPisFeasNegative(scip, ubredcost));
+         break;
+
+      case SCIP_BASESTAT_UPPER:
+         lbredcost -= SCIPgetVarRedcost(scip, var);
+         assert(!SCIPisFeasPositive(scip, lbredcost));
+         break;
+
+      case SCIP_BASESTAT_BASIC:
+      case SCIP_BASESTAT_ZERO:
+      default:
+         break;
+      }
+
+      propdata->usefullimplics = (lbredcost < 0.0) || (ubredcost > 0.0);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** propagate the given binary variable/column using the reduced cost */
+static
+SCIP_RETCODE propagateRedcostBinvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< propagator data structure */
+   SCIP_VAR*             var,                /**< variable to use for propagation */
+   SCIP_COL*             col,                /**< LP column of the variable */
+   SCIP_Real             requiredredcost,    /**< required reduset cost to be able to fix a binary variable */
+   int*                  nchgbds,            /**< pointer to count the number of bound changes */
+   SCIP_Bool*            cutoff              /**< pointer to store if an cutoff was detected */
+   )
+{
+   SCIP_Real lbredcost;
+   SCIP_Real ubredcost;
+   SCIP_Real redcost;
+
+   /* skip binary variable if it is locally fixed */
+   if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+      return SCIP_OKAY;
+
+   /* first use the redcost cost to fix the binary variable */
+   switch( SCIPcolGetBasisStatus(col) )
+   {
+   case SCIP_BASESTAT_LOWER:
+      redcost = SCIPgetVarRedcost(scip, var);
+      assert(!SCIPisFeasNegative(scip, redcost));
+
+      if( redcost > requiredredcost )
+      {
+         SCIPdebugMessage("variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>)\n",
+            SCIPvarGetName(var), requiredredcost, redcost);
+
+         SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
+         (*nchgbds)++;
+         return SCIP_OKAY;
+      }
+      break;
+
+   case SCIP_BASESTAT_UPPER:
+      redcost = SCIPgetVarRedcost(scip, var);
+      assert(!SCIPisFeasPositive(scip, redcost));
+
+      if( -redcost > requiredredcost )
+      {
+         SCIPdebugMessage("variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>)\n",
+            SCIPvarGetName(var), requiredredcost, redcost);
+
+         SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
+         (*nchgbds)++;
+         return SCIP_OKAY;
+      }
+      break;
+
+   case SCIP_BASESTAT_BASIC:
+      return SCIP_OKAY;
+
+   case SCIP_BASESTAT_ZERO:
+      assert(SCIPisFeasZero(scip, SCIPgetColRedcost(scip, col)));
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid basis state\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* second, if the implications should be used and if the implications are seen to be promising used the implied
+    * reduced costs to fix the binary variable
+    */
+   if( propdata->useimplics && propdata->usefullimplics )
+   {
+      /* collect implied reduced costs if the variable would be fixed to its lower bound */
+      lbredcost = SCIPgetVarImplRedcost(scip, var, FALSE);
+      assert(!SCIPisFeasPositive(scip, lbredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+
+      /* collect implied reduced costs if the variable would be fixed to its upper bound */
+      ubredcost = SCIPgetVarImplRedcost(scip, var, TRUE);
+      assert(!SCIPisFeasNegative(scip, ubredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+
+      if( -lbredcost > requiredredcost && ubredcost > requiredredcost )
+      {
+         SCIPdebugMessage("variable <%s>: cutoff (requiredredcost <%g>, lbredcost <%g>, ubredcost <%g>)\n",
+            SCIPvarGetName(var), requiredredcost, lbredcost, ubredcost);
+
+         (*cutoff) = TRUE;
+      }
+      else if( -lbredcost > requiredredcost )
+      {
+         SCIPdebugMessage("variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>, lbredcost <%g>)\n",
+            SCIPvarGetName(var), requiredredcost, redcost, lbredcost);
+
+         SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
+         (*nchgbds)++;
+      }
+      else if( ubredcost > requiredredcost )
+      {
+         SCIPdebugMessage("variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>, ubredcost <%g>)\n",
+            SCIPvarGetName(var), requiredredcost, redcost, ubredcost);
+
+         SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
+         (*nchgbds)++;
+      }
+
+      /* update maximum reduced cost of a single binary variable */
+      propdata->maxredcost = MAX3(propdata->maxredcost, -lbredcost, ubredcost);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** propagate the given none binary variable/column using the reduced cost */
+static
+SCIP_RETCODE propagateRedcostVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to use for propagation */
+   SCIP_COL*             col,                /**< LP column of the variable */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             cutoffbound,        /**< the current cutoff bound */
+   int*                  nchgbds             /**< pointer to count the number of bound changes */
+   )
+{
+   SCIP_Real redcost;
+
+   switch( SCIPcolGetBasisStatus(col) )
+   {
+   case SCIP_BASESTAT_LOWER:
+      redcost = SCIPgetColRedcost(scip, col);
+
+      assert(!SCIPisFeasNegative(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      if( SCIPisFeasPositive(scip, redcost) )
+      {
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+
+         oldlb = SCIPvarGetLbLocal(var);
+         oldub = SCIPvarGetUbLocal(var);
+         assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(col)));
+         assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(col)));
+
+        if( SCIPisFeasLT(scip, oldlb, oldub) )
+         {
+            SCIP_Real newub;
+            SCIP_Bool strengthen;
+
+            /* calculate reduced cost based bound */
+            newub = (cutoffbound - lpobjval) / redcost + oldlb;
+
+            /* check, if new bound is good enough:
+             *  - integer variables: take all possible strengthenings
+             *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
+             *                          at least 20% of the current domain
+             */
+            if( SCIPvarIsIntegral(var) )
+            {
+               newub = SCIPadjustedVarUb(scip, var, newub);
+               strengthen = (newub < oldub - 0.5);
+            }
+            else
+               strengthen = (newub < SCIPcolGetMaxPrimsol(col) && newub <= 0.2 * oldlb + 0.8 * oldub);
+
+            if( strengthen )
+            {
+               /* strengthen upper bound */
+               SCIPdebugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+                  SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
+               SCIP_CALL( SCIPchgVarUb(scip, var, newub) );
+               (*nchgbds)++;
+            }
+         }
+      }
+      break;
+
+   case SCIP_BASESTAT_BASIC:
+      break;
+
+   case SCIP_BASESTAT_UPPER:
+      redcost = SCIPgetColRedcost(scip, col);
+
+      assert(!SCIPisFeasPositive(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      if( SCIPisFeasNegative(scip, redcost) )
+      {
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+
+         oldlb = SCIPvarGetLbLocal(var);
+         oldub = SCIPvarGetUbLocal(var);
+         assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(col)));
+         assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(col)));
+
+         if( SCIPisFeasLT(scip, oldlb, oldub) )
+         {
+            SCIP_Real newlb;
+            SCIP_Bool strengthen;
+
+            /* calculate reduced cost based bound */
+            newlb = (cutoffbound - lpobjval) / redcost + oldub;
+
+            /* check, if new bound is good enough:
+             *  - integer variables: take all possible strengthenings
+             *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
+             *                          at least 20% of the current domain
+             */
+            if( SCIPvarIsIntegral(var) )
+            {
+               newlb = SCIPadjustedVarLb(scip, var, newlb);
+               strengthen = (newlb > oldlb + 0.5);
+            }
+            else
+               strengthen = (newlb > SCIPcolGetMinPrimsol(col) && newlb >= 0.8 * oldlb + 0.2 * oldub);
+
+            /* check, if new bound is good enough: at least 20% strengthening for continuous variables */
+            if( strengthen )
+            {
+               /* strengthen lower bound */
+               SCIPdebugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+                  SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
+               SCIP_CALL( SCIPchgVarLb(scip, var, newlb) );
+               (*nchgbds)++;
+            }
+         }
+      }
+      break;
+
+   case SCIP_BASESTAT_ZERO:
+      assert(SCIPisFeasZero(scip, SCIPgetColRedcost(scip, col)));
+      break;
+
+   default:
+      SCIPerrorMessage("invalid basis state\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+/**@name Callback methods of propagator
+ *
+ * @{
+ */
 
 /** copy method for propagator plugins (called when SCIP copies plugins) */
 static
@@ -86,20 +455,20 @@ SCIP_DECL_PROPFREE(propFreeRedcost)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_PROPINITSOL(propInitsolRedcost)
+{
+   SCIP_PROPDATA* propdata;
 
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
 
+   propdata->usefullimplics = FALSE;
+   propdata->maxredcost = 0.0;
 
-
-
-
-
-
-
-
-
-
-
-
+   return SCIP_OKAY;
+}
 
 /** reduced cost propagation method for an LP solution */
 static
@@ -107,13 +476,22 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_COL** cols;
+   SCIP_Real requiredredcost;
    SCIP_Real cutoffbound;
    SCIP_Real lpobjval;
+   SCIP_Bool propbinvars;
+   SCIP_Bool cutoff;
+   int nchgbds;
    int ncols;
    int c;
 
    *result = SCIP_DIDNOTRUN;
 
+   /* in case we have a zero objective function, we skip the reduced cost propagator */
+   if( SCIPgetNObjVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* propagator can only be applied during solving stage */
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
@@ -122,12 +500,16 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    if( SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
-   /* only call separator, if the current node has an LP */
+   /* only call propagator, if the current node has an LP */
    if( !SCIPhasCurrentNodeLP(scip) )
       return SCIP_OKAY;
 
    /* only call propagator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call propagator, if the current LP is a valid relaxation */
+   if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
    /* we cannot apply reduced cost strengthening, if no simplex basis is available */
@@ -137,21 +519,17 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    /* get current cutoff bound */
    cutoffbound = SCIPgetCutoffbound(scip);
 
-   /* reduced cost strengthening can only be applied, if we have a finite upper bound on the LP value */
+   /* reduced cost strengthening can only be applied, if we have a finite cutoff */
    if( SCIPisInfinity(scip, cutoffbound) )
-      return SCIP_OKAY;
-
-   /* only call propagator, if the current LP is a valid relaxation */
-   if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get LP columns */
    cols = SCIPgetLPCols(scip);
    ncols = SCIPgetNLPCols(scip);
+
+   /* do nothing if the LP has no columns (is empty) */
    if( ncols == 0 )
       return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -160,141 +538,77 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
 
+   /* check if binary variables should be propagated */
+   propbinvars = (SCIPgetDepth(scip) == 0) || (cutoffbound - lpobjval < 5 * propdata->maxredcost);
+
+   /* skip the propagator if the problem has only binary variables and those should not be propagated */
+   if( !propbinvars && SCIPgetNVars(scip) == SCIPgetNBinVars(scip) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+   cutoff = FALSE;
+   nchgbds = 0;
+
+   /* compute the required reduced cost which are needed for a binary variable to be fixed */
+   requiredredcost = cutoffbound - lpobjval;
+
+   SCIPdebugMessage("lpobjval <%g>, cutoffbound <%g>, max reduced <%g>, propgate binary %u, use implics %u\n",
+      lpobjval, cutoffbound, propdata->maxredcost, propbinvars, propdata->usefullimplics);
+
    /* check reduced costs for non-basic columns */
-   for( c = 0; c < ncols; ++c )
+   for( c = 0; c < ncols && !cutoff; ++c )
    {
       SCIP_VAR* var;
-      SCIP_Real redcost;
 
       var = SCIPcolGetVar(cols[c]);
+
+      /* skip continuous variables in case the corresponding parameter is set */
       if( !propdata->continuous && !SCIPvarIsIntegral(var) )
          continue;
 
-      switch( SCIPcolGetBasisStatus(cols[c]) )
+      if( SCIPvarIsBinary(var) )
       {
-      case SCIP_BASESTAT_LOWER:
-         redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert( !SCIPisFeasNegative(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
-         if( SCIPisFeasPositive(scip, redcost) )
+         if( propbinvars )
          {
-            SCIP_Real oldlb;
-            SCIP_Real oldub;
-
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPisFeasLT(scip, oldlb, oldub) )
+            if( SCIPgetDepth(scip) == 0 )
             {
-               SCIP_Real newub;
-               SCIP_Bool strengthen;
-
-               /* calculate reduced cost based bound */
-               newub = (cutoffbound - lpobjval) / redcost + oldlb;
-
-               /* check, if new bound is good enough:
-                *  - integer variables: take all possible strengthenings
-                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
-                *                          at least 20% of the current domain
-                */
-               if( SCIPvarIsIntegral(var) )
-               {
-                  newub = SCIPadjustedVarUb(scip, var, newub);
-                  strengthen = (newub < oldub - 0.5);
-               }
-               else
-                  strengthen = (newub < SCIPcolGetMaxPrimsol(cols[c]) && newub <= 0.2 * oldlb + 0.8 * oldub);
-
-               if( strengthen )
-               {
-                  /* strengthen upper bound */
-                  SCIPdebugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
-                  SCIP_CALL( SCIPchgVarUb(scip, var, newub) );
-                  *result = SCIP_REDUCEDDOM;
-               }
+               SCIP_CALL( propagateRootRedcostBinvar(scip, propdata, var, cols[c], cutoffbound, &nchgbds) );
+            }
+            else
+            {
+               SCIP_CALL( propagateRedcostBinvar(scip, propdata, var, cols[c], requiredredcost, &nchgbds, &cutoff) );
             }
          }
-         break;
-
-      case SCIP_BASESTAT_BASIC:
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert( !SCIPisFeasPositive(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
-         if( SCIPisFeasNegative(scip, redcost) )
-         {
-            SCIP_Real oldlb;
-            SCIP_Real oldub;
-
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPisFeasLT(scip, oldlb, oldub) )
-            {
-               SCIP_Real newlb;
-               SCIP_Bool strengthen;
-
-               /* calculate reduced cost based bound */
-               newlb = (cutoffbound - lpobjval) / redcost + oldub;
-
-               /* check, if new bound is good enough:
-                *  - integer variables: take all possible strengthenings
-                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
-                *                          at least 20% of the current domain
-                */
-               if( SCIPvarIsIntegral(var) )
-               {
-                  newlb = SCIPadjustedVarLb(scip, var, newlb);
-                  strengthen = (newlb > oldlb + 0.5);
-               }
-               else
-                  strengthen = (newlb > SCIPcolGetMinPrimsol(cols[c]) && newlb >= 0.8 * oldlb + 0.2 * oldub);
-
-               /* check, if new bound is good enough: at least 20% strengthening for continuous variables */
-               if( strengthen )
-               {
-                  /* strengthen lower bound */
-                  SCIPdebugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
-                  SCIP_CALL( SCIPchgVarLb(scip, var, newlb) );
-                  *result = SCIP_REDUCEDDOM;
-               }
-            }
-         }
-         break;
-
-      case SCIP_BASESTAT_ZERO:
-         assert(SCIPisFeasZero(scip, SCIPgetColRedcost(scip, cols[c])));
-         break;
-
-      default:
-         SCIPerrorMessage("invalid basis state\n");
-         return SCIP_INVALIDDATA;
       }
+      else
+      {
+         SCIP_CALL( propagateRedcostVar(scip, var, cols[c], lpobjval, cutoffbound, &nchgbds) );
+      }
+   }
+
+   if( cutoff )
+   {
+      *result = SCIP_CUTOFF;
+
+      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": detected cutoff\n",
+         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   }
+   else if( nchgbds > 0 )
+   {
+      *result = SCIP_REDUCEDDOM;
+
+      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": %d bound changes (max redcost <%g>)\n",
+         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) , nchgbds, propdata->maxredcost);
    }
 
    return SCIP_OKAY;
 }
 
+/**@} */
 
-
-/** propagation conflict resolving method of propagator */
-static
-SCIP_DECL_PROPRESPROP(propRespropRedcost)
-{  /*lint --e{715}*/
-   *result = SCIP_DIDNOTRUN;
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/*
- * propagator specific interface methods
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the redcost propagator and includes it in SCIP */
@@ -308,22 +622,29 @@ SCIP_RETCODE SCIPincludePropRedcost(
    /* create redcost propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
-
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecRedcost, propRespropRedcost,
+         propExecRedcost, NULL,
          propdata) );
 
    assert(prop != NULL);
 
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyRedcost) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolRedcost) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeRedcost) );
 
    /* add redcost propagator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/redcost/continuous",
+         "propagating/"PROP_NAME"/continuous",
          "should reduced cost fixing be also applied to continuous variables?",
          &propdata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/"PROP_NAME"/useimplics",
+         "should implications be used to strength the reduced cost for binary variables?",
+         &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
+
    return SCIP_OKAY;
 }
+
+/**@} */

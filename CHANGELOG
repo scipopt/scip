@@ -163,6 +163,7 @@ performance improvements:
   thrown for fixation, aggregation or multi-aggregations
 - changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
   aggressive separation
+- revised reduced cost propagator
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
