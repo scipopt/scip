@@ -1010,15 +1010,15 @@
  * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
  * formats.
  *
- * - \ref reader_cip.h "CIP format"
+ * - \ref reader_cip.h "CIP format" for SCIP's constraint integer programming format
  * - \ref reader_cnf.h "CNF format"
  * - \ref reader_fzn.h "FZN format"
- * - \ref reader_lp.h "LP format"
- * - \ref reader_mps.h "MPS format"
- * - \ref reader_opb.h "OPB format
- * - \ref reader_pip.h "PIP format"
+ * - \ref reader_lp.h "LP format" for mixed-integer quadratically constrained quadratic programming programs
+ * - \ref reader_mps.h "MPS format" for mixed-integer quadratically constrained quadratic programming programs
+ * - \ref reader_opb.h "OPB format"
+ * - \ref reader_pip.h "PIP format" for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a>
  * - \ref reader_wbo.h "WBO format"
- * - \ref reader_zpl.h "ZPL format"
+ * - \ref reader_zpl.h "ZPL format" for <a href="http://zimpl.zib.de">ZIMPL</a> models (polynomially constrained mixed-integer programming problems)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

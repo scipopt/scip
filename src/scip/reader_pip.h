@@ -21,6 +21,8 @@
  * This reader allows to parse and write PIP files with linear and polynomial constraints and objective.
  * For writing, linear (general and specialized), quadratic, and "and" constraints are supported.
  * Also abspower, bivariate, and nonlinear constraints may be written, if they are representable as polynomials.
+ *
+ * The PIP format is similar to the LP format and defined at http://polip.zib.de/pipformat.php .
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

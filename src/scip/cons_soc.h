@@ -31,10 +31,10 @@
  *
  * @par
  * Timo Berthold and Stefan Heinz and Stefan Vigerske@n
- * Extending a CIP framework to solve MIQCPs@n
+ * <a href="http://dx.doi.org/10.1007/978-1-4614-1927-3">Extending a CIP framework to solve MIQCPs</a>@n
  * In: Jon Lee and Sven Leyffer (eds.),
  *     Mixed-integer nonlinear optimization: Algorithmic advances and applications,
- *     IMA volumes in Mathematics and its Applications
+ *     IMA volumes in Mathematics and its Applications, volume 154, 427-444, 2012.
  *
  * @par
  * Aharon Ben-Tal and Arkadi Nemirovski@n
