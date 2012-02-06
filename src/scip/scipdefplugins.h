@@ -77,6 +77,7 @@
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
+#include "scip/heur_nlpfracdiving.h"
 #include "scip/heur_mutation.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
