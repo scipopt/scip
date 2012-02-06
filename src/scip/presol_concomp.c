@@ -37,7 +37,7 @@
 #define PRESOL_MAXROUNDS              -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                TRUE /**< should presolver be delayed, if other presolvers found reductions? */
 
-#define DEFAULT_SEARCH              TRUE /**< should be searched for connected components? */
+#define DEFAULT_SEARCH             FALSE /**< should be searched for connected components? */
 #define DEFAULT_SHOW_SIZES         FALSE /**< should the sizes of the single components be shown? */
 #define DEFAULT_WRITEPROBLEMS      FALSE /**< should the single components be written as an .lp-file? */
 #define DEFAULT_MAXINTVARS            20 /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */

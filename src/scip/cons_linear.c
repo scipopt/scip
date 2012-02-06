@@ -10415,7 +10415,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nvars )
+   if( varssize < consdata->nvars )
       (*success) = FALSE;
    else
    {

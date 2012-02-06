@@ -2447,7 +2447,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsXor)
 
    if( consdata->intvar == NULL )
    {
-      if( varssize < consdata->nvars  )
+      if( varssize < consdata->nvars )
          (*success) = FALSE;
       else
       {
