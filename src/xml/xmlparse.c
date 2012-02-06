@@ -1072,8 +1072,13 @@ XML_NODE* xmlProcess(
    XML_ATTR* attr;
    int       result = FALSE;
    char*     myfilename;
+   size_t    filenamelen;
 
-   ALLOC_FALSE( BMSduplicateMemoryArray(&myfilename, filename, strlen(filename) + 5) );
+   /* allocate space and copy filename (possibly modified below) in two steps in order to satisfy valgrind */
+   assert( filename != NULL );
+   filenamelen = strlen(filename);
+   ALLOC_FALSE( BMSallocMemoryArray(&myfilename, filenamelen + 5) );
+   BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
 #ifdef WITH_ZLIB
    if ( access(filename, R_OK) != 0 )
@@ -1268,11 +1273,12 @@ void xmlFreeNode(
    if ( node == NULL )
       return;
 
-   n = node->firstchild;
+   /* free data from back to front (because free is faster this way) */
+   n = node->lastchild;
    while ( n != NULL )
    {
       XML_NODE* m;
-      m = n->nextsibl;
+      m = n->prevsibl;
       xmlFreeNode(n);
       n = m;
    }
@@ -1354,7 +1360,7 @@ const char* xmlGetAttrval(
 
 #if 0
    if (a == NULL)
-      infoMessage("Error: Attribut %s in TAG <%s> not found\n",
+      infoMessage("Error: Attribute %s in TAG <%s> not found\n",
          name, node->name);
 #endif
 
