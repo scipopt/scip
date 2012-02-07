@@ -494,15 +494,15 @@ SCIP_RETCODE buildComponentSubscip(
 }
 
 
-/** loop over constraints, get active variables and fill adjacency list */
+/** loop over constraints, get active variables and fill directed graph */
 static
-SCIP_RETCODE fillAdjList(
+SCIP_RETCODE fillDigraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    LIST*                 conslist,           /**< list for filling which variable is in which constraints */
-   SCIP_Bool*            success             /**< flag indicating successful adjacency list filling */
+   SCIP_Bool*            success             /**< flag indicating successful directed graph filling */
    )
 {
    SCIP_VAR** consvars;
@@ -515,7 +515,7 @@ SCIP_RETCODE fillAdjList(
    int v;
 
    assert(scip != NULL);
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(conss != NULL);
    assert(conslist != NULL);
    assert(success != NULL);
@@ -557,7 +557,7 @@ SCIP_RETCODE fillAdjList(
 
       if( nconsvars > 1 )
       {
-         /* create sparse adjacency list
+         /* create sparse directed graph
             sparse means, to add only those edges necessary for component calculation */
          for( v = 1; v < nconsvars; ++v )
          {
@@ -566,8 +566,8 @@ SCIP_RETCODE fillAdjList(
             SCIP_CALL( fillConsIndex(scip, conslist, idx2, c) );
 
             /* we add a directed edge in both directions */
-            SCIP_CALL( SCIPadjlistAddEdge(adjlist, idx1, idx2) );
-            SCIP_CALL( SCIPadjlistAddEdge(adjlist, idx2, idx1) );
+            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx1, idx2) );
+            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx2, idx1) );
          }
       }
    }
@@ -720,7 +720,7 @@ SCIP_RETCODE presolComponents(
    int nconss;
    int nvars;
    SCIP_PRESOLDATA* presoldata;
-   SCIP_ADJLIST* adjlist;
+   SCIP_DIGRAPH* digraph;
    int* components;
    int ncomponents;
    int ndeletedcons;
@@ -791,15 +791,15 @@ SCIP_RETCODE presolComponents(
       SCIP_CALL( SCIPallocBuffer(scip, &conslist) );
       initList(scip, conslist);
 
-      SCIP_CALL( SCIPadjlistCreate(&adjlist, nvars) );
+      SCIP_CALL( SCIPdigraphCreate(&digraph, nvars) );
 
-      SCIP_CALL( fillAdjList(scip, adjlist, conss, nconss, conslist, &success) );
+      SCIP_CALL( fillDigraph(scip, digraph, conss, nconss, conslist, &success) );
 
       if( success )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
-         SCIP_CALL( SCIPadjlistComputeComponents(adjlist, components, &ncomponents) );
+         SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
          SCIP_CALL( createSubScipsAndSolve(scip, presoldata, conss, nconss,
                components, &ncomponents, conslist, &ndeletedcons, &ndeletedvars, &nsolvedprobs ) );
@@ -807,7 +807,7 @@ SCIP_RETCODE presolComponents(
          SCIPfreeBufferArray(scip, &components);
       }
 
-      SCIPadjlistFree(&adjlist);
+      SCIPdigraphFree(&digraph);
       freeList(scip, &conslist);
    }
 

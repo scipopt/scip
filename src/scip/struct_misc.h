@@ -138,13 +138,13 @@ struct SCIP_Stairmap
    int                   arraysize;          /**< current array size */
 };
 
-/** adjacency list to store and handle graphs */
-struct SCIP_Adjlist
+/** digraph structure to store and handle graphs */
+struct SCIP_Digraph
 {
    int**                 adjnodes;           /**< adjacency list: for each node (first dimension) list of adjacent nodes */
    int*                  adjnodessize;       /**< sizes of the adjacency lists for the nodes */
    int*                  nadjnodes;          /**< number of edges stored in the adjacency lists of the nodes */
-   int                   nnodes;             /**< number of nodes */
+   int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
 };
 
 

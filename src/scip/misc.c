@@ -3897,193 +3897,223 @@ int SCIPstairmapGetLatestFeasibleStart(
 }
 
 /*
- * Adjacency list
+ * Directed graph
  */
 
-/** creates adjacency list */
-SCIP_RETCODE SCIPadjlistCreate(
-   SCIP_ADJLIST**        adjlist,            /**< pointer to store the created adjacency list */
+/** creates directed graph structure */
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
    int                   nnodes              /**< number of nodes */
    )
 {
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(nnodes > 0);
 
-   SCIP_ALLOC( BMSallocMemory(adjlist) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodes, nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodessize, nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->nadjnodes, nnodes) );
-   BMSclearMemoryArray((*adjlist)->adjnodes, nnodes);
-   BMSclearMemoryArray((*adjlist)->adjnodessize, nnodes);
-   BMSclearMemoryArray((*adjlist)->nadjnodes, nnodes);
+   SCIP_ALLOC( BMSallocMemory(digraph) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodes, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodessize, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nadjnodes, nnodes) );
 
    /* store number of nodes */
-   (*adjlist)->nnodes = nnodes;
+   (*digraph)->nnodes = nnodes;
 
    return SCIP_OKAY;
 }
 
-/** sets the sizes of the adjacency lists for the nodes and allocates memory for the lists */
-SCIP_RETCODE SCIPadjlistSetSizes(
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+SCIP_RETCODE SCIPdigraphSetSizes(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int*                  sizes               /**< sizes of the adjacency lists */
    )
 {
    int i;
 
-   assert(adjlist != NULL);
-   assert(adjlist->nnodes > 0);
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
 
-   for( i = 0; i < adjlist->nnodes; ++i )
+   for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&adjlist->adjnodes[i], sizes[i]) );
-      adjlist->adjnodessize[i] = sizes[i];
-      adjlist->nadjnodes[i] = 0;
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[i], sizes[i]) );
+      digraph->adjnodessize[i] = sizes[i];
+      digraph->nadjnodes[i] = 0;
    }
 
    return SCIP_OKAY;
 }
 
-/** frees given adjacency list */
-void SCIPadjlistFree(
-   SCIP_ADJLIST**        adjlist             /**< pointer to the adjacency list */
+/** frees given directed graph structure */
+void SCIPdigraphFree(
+   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
    )
 {
    int i;
 
-   assert(adjlist != NULL);
-   assert(*adjlist != NULL);
+   assert(digraph != NULL);
+   assert(*digraph != NULL);
 
-   for( i = 0; i < (*adjlist)->nnodes; ++i )
+   for( i = 0; i < (*digraph)->nnodes; ++i )
    {
-      assert(((*adjlist)->adjnodessize == 0) == ((*adjlist)->adjnodes == NULL));
-      if( (*adjlist)->adjnodessize[i] > 0 )
+      assert(((*digraph)->adjnodessize == 0) == ((*digraph)->adjnodes == NULL));
+      if( (*digraph)->adjnodessize[i] > 0 )
       {
-         BMSfreeMemoryArray(&(*adjlist)->adjnodes[i]);
+         BMSfreeMemoryArray(&(*digraph)->adjnodes[i]);
       }
    }
 
-   /* free adjacency list data structure */
-   BMSfreeMemoryArray(&(*adjlist)->adjnodessize);
-   BMSfreeMemoryArray(&(*adjlist)->nadjnodes);
-   BMSfreeMemoryArray(&(*adjlist)->adjnodes);
-   BMSfreeMemory(adjlist);
+   /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->adjnodessize);
+   BMSfreeMemoryArray(&(*digraph)->nadjnodes);
+   BMSfreeMemoryArray(&(*digraph)->adjnodes);
+   BMSfreeMemory(digraph);
 }
 
 #define STARTADJNODESSIZE 5
 
-/* ensures that adjnodes array is big enough */
+/* ensures that adjnodes array of one node in a directed graph is big enough */
 static
 SCIP_RETCODE ensureAdjnodesSize(
-   SCIP_ADJLIST*         adjlist,            /**< pointer to the adjacency list */
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   idx,                /**< index for which the size is ensured */
    int                   newsize             /**< needed size */
    )
 {
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(idx >= 0);
-   assert(idx < adjlist->nnodes);
+   assert(idx < digraph->nnodes);
    assert(newsize > 0);
 
    /* check whether array is big enough, and realloc, if needed */
-   if( newsize > adjlist->adjnodessize[idx] )
+   if( newsize > digraph->adjnodessize[idx] )
    {
-      if( adjlist->adjnodessize[idx] == 0 )
+      if( digraph->adjnodessize[idx] == 0 )
       {
-         adjlist->adjnodessize[idx] = STARTADJNODESSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&adjlist->adjnodes[idx], adjlist->adjnodessize[idx]) );
+         digraph->adjnodessize[idx] = STARTADJNODESSIZE;
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
       }
       else
       {
-         adjlist->adjnodessize[idx] = 2 * adjlist->adjnodessize[idx];
-         SCIP_ALLOC( BMSreallocMemoryArray(&adjlist->adjnodes[idx], adjlist->adjnodessize[idx]) );
+         digraph->adjnodessize[idx] = 2 * digraph->adjnodessize[idx];
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
       }
    }
 
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the adjacency list */
-SCIP_RETCODE SCIPadjlistAddEdge(
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+/** add (directed) edge to the directed graph structure
+ *  @note: if the edge is already contained, it is added a second time
+ */
+SCIP_RETCODE SCIPdigraphAddEdge(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the edge */
    int                   endnode             /**< start node of the edge */
    )
 {
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(startnode >= 0);
    assert(endnode >= 0);
-   assert(startnode < adjlist->nnodes);
-   assert(endnode < adjlist->nnodes);
+   assert(startnode < digraph->nnodes);
+   assert(endnode < digraph->nnodes);
 
-   SCIP_CALL( ensureAdjnodesSize(adjlist, startnode, adjlist->nadjnodes[startnode] + 1) );
+   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
 
    /* add edge */
-   adjlist->adjnodes[startnode][adjlist->nadjnodes[startnode]] = endnode;
-   adjlist->nadjnodes[startnode]++;
+   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
+   digraph->nadjnodes[startnode]++;
 
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the adjacency list, if it not contained, yet */
-SCIP_RETCODE SCIPadjlistAddEdgeSave(
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+/** add (directed) edge to the directed graph structure, if it is not contained, yet */
+SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the edge */
    int                   endnode             /**< start node of the edge */
    )
 {
    int i;
 
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(startnode >= 0);
    assert(endnode >= 0);
-   assert(startnode < adjlist->nnodes);
-   assert(endnode < adjlist->nnodes);
+   assert(startnode < digraph->nnodes);
+   assert(endnode < digraph->nnodes);
 
-   for( i = 0; i < adjlist->nadjnodes[startnode]; ++i )
-      if( adjlist->adjnodes[startnode][i] == endnode )
+   for( i = 0; i < digraph->nadjnodes[startnode]; ++i )
+      if( digraph->adjnodes[startnode][i] == endnode )
          return SCIP_OKAY;
 
-   SCIP_CALL( ensureAdjnodesSize(adjlist, startnode, adjlist->nadjnodes[startnode] + 1) );
+   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
 
    /* add edge */
-   adjlist->adjnodes[startnode][adjlist->nadjnodes[startnode]] = endnode;
-   adjlist->nadjnodes[startnode]++;
+   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
+   digraph->nadjnodes[startnode]++;
 
    return SCIP_OKAY;
 }
 
-/** performs depth-first-search from the given start node */
+/** returns the number of edges originating at the given node */
+int SCIPdigraphGetNOutgoingEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the number of outgoing edges is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nadjnodes[node] >= 0);
+   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
+
+   return digraph->nadjnodes[node];
+}
+
+/** returns the array of edges originating at the given node; this array must not be changed from outside */
+int* SCIPdigraphGetOutgoingEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing edges is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nadjnodes[node] >= 0);
+   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
+   assert((digraph->nadjnodes[node] == 0) || (digraph->adjnodes[node] != NULL));
+
+   return digraph->adjnodes[node];
+}
+
+/** performs depth-first-search in the given directed graph from the given start node */
 static
 void depthFirstSearch(
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< node to start the depth-first-search */
    SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
-   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in dfs order */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse dfs order */
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
    int v;
    int adjnode;
 
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(startnode >= 0);
-   assert(startnode < adjlist->nnodes);
+   assert(startnode < digraph->nnodes);
    assert(visited[startnode] == FALSE);
 
    /* mark startnode as visited */
    visited[startnode] = TRUE;
 
    /* iterate over all nodes adjacent to current node */
-   for( v = 0; v < adjlist->nadjnodes[startnode]; ++v )
+   for( v = 0; v < digraph->nadjnodes[startnode]; ++v )
    {
-      adjnode = adjlist->adjnodes[startnode][v];
+      adjnode = digraph->adjnodes[startnode][v];
 
       /* check if the adjacent node was already visited */
       if( !visited[adjnode] )
       {
          /* recursively call depth-first-search */
-         depthFirstSearch(adjlist, adjnode, visited, dfsnodes, ndfsnodes);
+         depthFirstSearch(digraph, adjnode, visited, dfsnodes, ndfsnodes);
       }
    }
 
@@ -4092,10 +4122,14 @@ void depthFirstSearch(
    (*ndfsnodes)++;
 }
 
-/** compute components on the adjacency list */
-SCIP_RETCODE SCIPadjlistComputeComponents(
-   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
-   int*                  components,         /**< array with as many slots as there are nodes in the adjlist
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note The graph should be the directed representation of an undirected
+ *        graph, i.e., for each edge, its reverse should exist.
+ */
+SCIP_RETCODE SCIPdigraphComputeComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
                                               *   to store for each node the component to which it belongs
                                               *   (components are numbered 1 to ncomponents) */
    int*                  ncomponents         /**< pointer to store the number of components */
@@ -4106,44 +4140,167 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
    int ndfsnodes;
    int v;
    int i;
-   int offset;
 
-   assert(adjlist != NULL);
+   assert(digraph != NULL);
    assert(components != NULL);
    assert(ncomponents != NULL);
-   assert(adjlist->nnodes > 0);
+   assert(digraph->nnodes > 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&visited, adjlist->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, adjlist->nnodes) );
-   BMSclearMemoryArray(visited, adjlist->nnodes);
-   ndfsnodes = 0;
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
 
    *ncomponents = 0;
-   offset = 0;
 #ifndef NDEBUG
-   BMSclearMemoryArray(components, adjlist->nnodes);
+   BMSclearMemoryArray(components, digraph->nnodes);
 #endif
 
-   for( v = 0; v < adjlist->nnodes; ++v )
+   for( v = 0; v < digraph->nnodes; ++v )
    {
       if( visited[v] )
          continue;
 
-      depthFirstSearch(adjlist, v, visited, dfsnodes, &ndfsnodes);
+      ndfsnodes = 0;
+      depthFirstSearch(digraph, v, visited, dfsnodes, &ndfsnodes);
 
       (*ncomponents)++;
 
-      for( i = offset; i < ndfsnodes; ++i )
+      for( i = 0; i < ndfsnodes; ++i )
       {
          components[dfsnodes[i]] = *ncomponents;
       }
-      offset = ndfsnodes;
    }
 
 #ifndef NDEBUG
-   for( v = 0; v < adjlist->nnodes; ++v )
+   for( v = 0; v < digraph->nnodes; ++v )
       assert(components[v] != 0);
 #endif
+
+   BMSfreeMemoryArray(&dfsnodes);
+   BMSfreeMemoryArray(&visited);
+
+   return SCIP_OKAY;
+}
+
+/** Computes (undirected) components on the directed graph and sorts
+ *  the components (almost) topologically w.r.t. the directed graph.
+ *
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
+ */
+SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< minimum size a component should have */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store the nodes of the components one component after the other,
+                                              *   with the nodes of one component being (almost) topologically sorted */
+   int*                  componentstart,     /**< array to store for each component, where it starts in array components;
+                                              *   at position ncomponents+1, the total number of nodes is stored */
+   int                   componentstartsize, /**< size of componentstart array; if this is smaller than the number of components+1,
+                                              *   only the start indices of the first components are stored and the method should
+                                              *   be called again after enlarging the componentstart array */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   )
+{
+   int* ndirectedadjnodes;
+   int* comps;
+   int* compstart;
+   int ncomps;
+   SCIP_Bool* visited;
+   int* dfsnodes;
+   int ndfsnodes;
+   int i;
+   int j;
+   int k;
+   int idx;
+
+   assert(digraph != NULL);
+   assert(components != NULL);
+   assert(componentstart != NULL);
+   assert(ncomponents != NULL);
+   assert(digraph->nnodes > 0);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&comps, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&compstart, digraph->nnodes + 1) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+
+   /* store the number of directed arcs per node */
+   BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
+
+   /* add reverse edges to the graph */
+   for( i = digraph->nnodes - 1; i>= 0; --i )
+   {
+      for( j = 0; j < ndirectedadjnodes[i]; ++j )
+      {
+         SCIP_CALL( SCIPdigraphAddEdgeSafe(digraph, digraph->adjnodes[i][j], i) );
+      }
+   }
+
+   /* compute components in the undirected graph;
+    * this time, we store the node indices of the components, sorted by the components
+    */
+   ncomps = 0;
+   compstart[ncomps] = 0;
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      if( visited[i] )
+         continue;
+
+      ndfsnodes = 0;
+      depthFirstSearch(digraph, i, visited, &(comps[compstart[ncomps]]), &ndfsnodes);
+
+      /* forget about this component if it is too small */
+      if( ndfsnodes >= minsize )
+      {
+         ncomps++;
+         compstart[ncomps] = compstart[ncomps-1] + ndfsnodes;
+      }
+   }
+   assert(compstart[ncomps] <= digraph->nnodes);
+
+   /* restore the number of directed arcs per node */
+   BMScopyMemoryArray(digraph->nadjnodes, ndirectedadjnodes, digraph->nnodes);
+   BMSclearMemoryArray(visited, digraph->nnodes);
+
+   /* now, sort the components (almost) topologically */
+   for( i = 0; i < ncomps; ++i )
+   {
+      idx = compstart[i+1] - 1;
+      for( j = compstart[i]; j < compstart[i+1]; ++j )
+      {
+         if( visited[comps[j]] )
+            continue;
+
+         ndfsnodes = 0;
+         depthFirstSearch(digraph, comps[j], visited, dfsnodes, &ndfsnodes);
+
+         /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
+          * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
+          * they will be added before these variables, which gives a valid topological sorting
+          */
+         for( k = 0; k < ndfsnodes; ++k )
+         {
+            components[idx - k] = dfsnodes[k];
+         }
+         idx -= ndfsnodes;
+      }
+      assert(idx == compstart[i] - 1);
+   }
+
+   /* copy start indices of components and number of components */
+   for( i = 0; i <= ncomps && i < componentstartsize; ++i )
+   {
+      componentstart[i] = compstart[i];
+   }
+   *ncomponents = ncomps;
+
+   BMSfreeMemoryArray(&dfsnodes);
+   BMSfreeMemoryArray(&visited);
+   BMSfreeMemoryArray(&compstart);
+   BMSfreeMemoryArray(&comps);
+   BMSfreeMemoryArray(&ndirectedadjnodes);
 
    return SCIP_OKAY;
 }
