@@ -7578,6 +7578,13 @@ SCIP_Real SCIPgetCutoffbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** updates the cutoff bound if it is better */
+extern
+SCIP_RETCODE SCIPupdateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   );
+
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
  *  was set from the user as objective limit
  */

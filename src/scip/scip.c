@@ -20595,6 +20595,21 @@ SCIP_Real SCIPgetCutoffbound(
    return scip->primal->cutoffbound;
 }
 
+/** updates the cutoff bound if it is better */
+SCIP_RETCODE SCIPupdateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPupdateCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->tree, scip->lp, cutoffbound) );
+
+   return SCIP_OKAY;
+}
+
+
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
  *  was set from the user as objective limit
  */
