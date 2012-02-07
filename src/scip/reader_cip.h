@@ -17,6 +17,12 @@
  * @ingroup FILEREADERS
  * @brief  CIP file reader
  * @author Stefan Heinz
+ *
+ * The CIP format consists of information written by the individual constraints. Thus, the format is
+ * defined within the constraint handlers. Please check the code or documentation there.
+ *
+ * The CIP format is the only format within SCIP that allows to write and read all constraints; all
+ * other file formats are restricted to some particular sub-class of constraint integer programs.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

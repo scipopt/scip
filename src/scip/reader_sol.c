@@ -17,6 +17,8 @@
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

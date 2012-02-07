@@ -1010,15 +1010,21 @@
  * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
  * formats.
  *
- * - \ref reader_cip.h "CIP format" for SCIP's constraint integer programming format
- * - \ref reader_cnf.h "CNF format"
- * - \ref reader_fzn.h "FZN format"
- * - \ref reader_lp.h "LP format" for mixed-integer quadratically constrained quadratic programming programs
- * - \ref reader_mps.h "MPS format" for mixed-integer quadratically constrained quadratic programming programs
- * - \ref reader_opb.h "OPB format"
- * - \ref reader_pip.h "PIP format" for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a>
- * - \ref reader_wbo.h "WBO format"
- * - \ref reader_zpl.h "ZPL format" for <a href="http://zimpl.zib.de">ZIMPL</a> models (polynomially constrained mixed-integer programming problems)
+ * <table>
+ * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
+ * <tr><td>\ref reader_cnf.h "CNF format"</td> <td></td></tr>
+ * <tr><td>\ref reader_fzn.h "FZN format"</td> <td></td></tr>
+ * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs (GAMS) [write only]</td></tr>
+ * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programming programs (CPLEX)</td></tr>
+ * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs</td></tr>
+ * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for optimization pseudo-Boolean instances</td></tr>
+ * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>
+ * <tr><td>\ref reader_sol.h "SOL format"</td> <td>for solutions; XML-format (read-only) or raw SCIP format</td></tr>
+ * <tr><td>\ref reader_wbo.h "WBO format"</td> <td>for weighted pseudo-Boolean optimization instances</td></tr>
+ * <tr><td>\ref reader_zpl.h "ZPL format"</td> <td>for <a href="http://zimpl.zib.de">ZIMPL</a> models, i.e., (polynomially constrained) mixed-integer
+ *                                                 programming problems [read only]</td></tr>
+ * </table>
+ * @n
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

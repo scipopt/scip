@@ -17,6 +17,9 @@
  * @ingroup FILEREADERS
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
+ *
+ * This reader allows to read input in <a href="http://zimpl.zib.de">ZIMPL</a> format. See the web
+ * page for a definition and documentation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
