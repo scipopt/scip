@@ -378,7 +378,7 @@ static
 SCIP_RETCODE objimplicsDelPos(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJIMPLICS*      objimplics,         /**< objective implication data structure */
-   int                   pos
+   int                   pos                 /**< position */
    )
 {
    assert(0 <= pos);
@@ -693,9 +693,12 @@ SCIP_Real collectMinactImplicVar(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - bestbound(x)) * objval(x) - sum_{x\in I(1)} bestbound(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{bestbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{bestbound}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - bestbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{bestbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  */
 static
 SCIP_RETCODE collectMinactImplicVars(
@@ -788,9 +791,12 @@ SCIP_RETCODE collectMinactImplicVars(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - bestbound(x)) * objval(x) - sum_{x\in I(1)} bestbound(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{bestbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{bestbound}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - bestbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{bestbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  *
  *  This can be done w.r.t. global variable bounds (local == FALSE), w.r.t. local variable bounds (local == TRUE &&
  *  bdchgidx == NULL), and w.r.t. given time stamp (local == TRUE && bdchgidx != NULL)
@@ -938,9 +944,12 @@ SCIP_RETCODE getMinactObjchg(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - worstbound(x)) * objval(x) - sum_{x\in I(1)} worst(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{worstbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{worst}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - worstbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{worstbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  */
 static
 SCIP_Real getMaxactImplicObjchg(
