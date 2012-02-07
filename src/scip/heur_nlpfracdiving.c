@@ -56,6 +56,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MINSUCCQUOT         0.1 /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
+#define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
@@ -77,6 +78,7 @@ struct SCIP_HeurData
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             minsuccquot;        /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
+   SCIP_Real             fixquot;            /**< percentage of fractional variables that should be fixed before the next NLP solve */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
@@ -623,7 +625,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
          }
 
-         if( !cutoff && (lastnlpsolvedepth < divedepth - MIN(0.2 * nnlpcands, nlpbranchcands) || bestcand == -1) )
+         if( !cutoff && (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands) || bestcand == -1) )
          {
             /* resolve the diving NLP */
             SCIP_NLPTERMSTAT termstat;
@@ -871,6 +873,11 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/minsuccquot",
          "heuristic will not run if less then this percentage of calls succeeded (0.0: no limit)",
          &heurdata->minsuccquot, FALSE, DEFAULT_MINSUCCQUOT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/"HEUR_NAME"/fixquot",
+         "percentage of fractional variables that should be fixed before the next NLP solve",
+         &heurdata->fixquot, FALSE, DEFAULT_FIXQUOT, 0.0, 1.0, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
