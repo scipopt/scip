@@ -5330,16 +5330,21 @@ SCIP_RETCODE SCIPconsSetPropagated(
 
    if( cons->propagate != propagate )
    {
-      cons->propagate = propagate;
-      if( cons->enabled && cons->propenabled )
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
       {
-         if( cons->propagate )
+         cons->propagate = propagate;
+      }
+      else if( cons->enabled && cons->propenabled )
+      {
+         if( propagate )
          {
+            cons->propagate = propagate;
             SCIP_CALL( conshdlrAddPropcons(cons->conshdlr, set, cons) );
          }
          else
          {
             conshdlrDelPropcons(cons->conshdlr, cons);
+            cons->propagate = propagate;
          }
       }
    }
