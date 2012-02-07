@@ -51,6 +51,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
                                               *   (should be ready to hold SCIPgetNVars(scip) entries) */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Real             objlimit,           /**< objective limit: upper bound on coversize */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
    SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */

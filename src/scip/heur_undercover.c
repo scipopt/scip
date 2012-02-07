@@ -90,7 +90,7 @@
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                {x} 
+#define STATISTIC(x)                {x}
 #else
 #define STATISTIC(x)             /**/
 #endif
@@ -880,7 +880,7 @@ SCIP_RETCODE createCoveringProblem(
             negated = FALSE;
 
             /* if variable is fixed, nothing to do */
-            if( varIsFixed(scip, bdvars[v], globalbounds ? SCIPvarGetLbGlobal(bdvars[v]) : SCIPvarGetLbLocal(bdvars[v]), 
+            if( varIsFixed(scip, bdvars[v], globalbounds ? SCIPvarGetLbGlobal(bdvars[v]) : SCIPvarGetLbLocal(bdvars[v]),
                   globalbounds) )
             {
                continue;
@@ -1233,7 +1233,7 @@ SCIP_RETCODE createCoveringProblem(
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          nnonzs += termcounter[i];
-      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars); 
+      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          if( conscounter[i] > 0 )
@@ -1644,7 +1644,7 @@ SCIP_RETCODE computeFixingOrder(
       else if( heurdata->fixingorder == 'V' || heurdata->fixingorder == 'v' )
          scores[i] = cover[i];
       else
-         return SCIP_PARAMETERWRONGVAL; 
+         return SCIP_PARAMETERWRONGVAL;
 
       assert(scores[i] >= 0.0);
 
@@ -1652,7 +1652,7 @@ SCIP_RETCODE computeFixingOrder(
       if( sortdown )
          bestscore = MAX(bestscore, scores[i]);
       else
-         bestscore = MIN(bestscore, scores[i]);     
+         bestscore = MIN(bestscore, scores[i]);
 
    }
 
@@ -2412,7 +2412,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPcreate(&coveringscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
-   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify, 
+   SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, heurdata->globalbounds, heurdata->onlyconvexify,
          heurdata->coverbd, heurdata->coveringobj, &success) );
 
    if( !success )
@@ -2448,14 +2448,14 @@ SCIP_RETCODE SCIPapplyUndercover(
    if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
    {
       int nnlconss;
-      
+
       nnlconss = 0;
-      
+
       /* get number of nonlinear ocnstraints */
       for( i = 0; i < heurdata->nnlconshdlrs; ++i )
          nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
       assert(nnlconss <= SCIPgetNConss(scip));
-      
+
       maxcoversize = MIN(maxcoversize,heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) );
    }
 
@@ -2487,7 +2487,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    STATISTIC(
       if( ncovers == 0 && success )
-         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars); 
+         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
       );
 
       assert(coversize >= 0);
@@ -2515,7 +2515,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          int nnlconss;
 
          nnlconss = 0;
-         
+
          /*get number of nonlinear ocnstraints */
          for( i = 0; i < heurdata->nnlconshdlrs; ++i )
             nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
@@ -2542,7 +2542,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          SCIP_Bool infeas;
          SCIP_Bool lpsolved;
          SCIP_Bool reordered;
-         
+
          /* compute fixing order */
          SCIP_CALL( computeFixingOrder(scip, heurdata, nvars, vars, coversize, cover, lastfailed, &reordered) );
          reordered = reordered || ndives == 0;
@@ -3331,7 +3331,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    {
       /* solve covering problem */
       SCIPdebugMessage("solving covering problem\n\n");
-      
+
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
             timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, objlimit, success) );
 
