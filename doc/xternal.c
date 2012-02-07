@@ -52,7 +52,7 @@
  * <b>Getting started</b>
  *
  * - \ref SHELL   "Tutorial: the interactive shell"
- * - \ref FORMATS "Readable file formats"
+ * - \ref FILEREADERS "Readable file formats"
  *
  * - \ref MAKE    "Installation information / Makefiles"
  *
@@ -734,7 +734,7 @@
  *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats (see \ref FORMATS).
+ * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.1 as
@@ -1002,29 +1002,6 @@
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page FORMATS Readable file formats
- *
- * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
- * formats.
- *
- * <table>
- * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
- * <tr><td>\ref reader_cnf.h "CNF format"</td> <td></td></tr>
- * <tr><td>\ref reader_fzn.h "FZN format"</td> <td></td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs (GAMS) [write only]</td></tr>
- * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programming programs (CPLEX)</td></tr>
- * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs</td></tr>
- * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for optimization pseudo-Boolean instances</td></tr>
- * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>
- * <tr><td>\ref reader_sol.h "SOL format"</td> <td>for solutions; XML-format (read-only) or raw SCIP format</td></tr>
- * <tr><td>\ref reader_wbo.h "WBO format"</td> <td>for weighted pseudo-Boolean optimization instances</td></tr>
- * <tr><td>\ref reader_zpl.h "ZPL format"</td> <td>for <a href="http://zimpl.zib.de">ZIMPL</a> models, i.e., (polynomially constrained) mixed-integer
- *                                                 programming problems [read only]</td></tr>
- * </table>
- * @n
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6238,8 +6215,31 @@
 /**@defgroup FILEREADERS File Readers
  * @brief This page contains a list of all file readers which are currently available.
  *
+ * @section AVAILABLEFORMATS List of readable file formats
+ *
+ * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
+ * formats.
+ *
+ * <table>
+ * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
+ * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
+ * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc.</td></tr>
+ * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs (GAMS) [write only]</td></tr>
+ * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programming programs (CPLEX)</td></tr>
+ * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programming programs</td></tr>
+ * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for optimization pseudo-Boolean instances</td></tr>
+ * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>
+ * <tr><td>\ref reader_sol.h "SOL format"</td> <td>for solutions; XML-format (read-only) or raw SCIP format</td></tr>
+ * <tr><td>\ref reader_wbo.h "WBO format"</td> <td>for weighted pseudo-Boolean optimization instances</td></tr>
+ * <tr><td>\ref reader_zpl.h "ZPL format"</td> <td>for <a href="http://zimpl.zib.de">ZIMPL</a> models, i.e., (polynomially constrained) mixed-integer
+ *                                                 programming problems [read only]</td></tr>
+ * </table>
+ *
+ * @section ADDREADER How to add a file reader
+ *
  * A detailed description what a file reader does and how to add a file reader to SCIP can be found
  * \ref READER "here".
+ *
  */
 
 /**@defgroup LPIS LP Solver Interfaces
