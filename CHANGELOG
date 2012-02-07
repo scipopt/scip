@@ -55,6 +55,8 @@ performance improvements:
 - use faster Dijkstra variants in sepa_oddcycle
 - improved pseudo objective propagator
 - streamlined initlp functions in cons_indicator, cons_sos1, cons_sos2 (add rows only if needed)
+- added clique presolving for and-constraints, which checks if two operands or one operand and the resultant are in a
+  clique and then fixes the resultant to 0 and in the former case we can delete the and-constraint too
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

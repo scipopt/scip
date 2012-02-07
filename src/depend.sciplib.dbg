@@ -255,7 +255,7 @@ $(LIBOBJDIR)/scip/cons_and.o: src/scip/cons_and.c src/scip/cons_and.h src/scip/s
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
  src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
  src/scip/intervalarith.h src/scip/cons_linear.h src/scip/cons_logicor.h \
- src/scip/cons_nonlinear.h src/scip/debug.h
+ src/scip/cons_nonlinear.h src/scip/cons_setppc.h src/scip/debug.h
 $(LIBOBJDIR)/scip/cons_bivariate.o: src/scip/cons_bivariate.c src/scip/cons_bivariate.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
