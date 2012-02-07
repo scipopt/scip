@@ -345,7 +345,13 @@ SCIP_RETCODE SCIPpropInitpre(
    /* call presolving initialization method of propagator */
    if( prop->propinitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->presoltime, set);
+
       SCIP_CALL( prop->propinitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(prop->presoltime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -379,7 +385,13 @@ SCIP_RETCODE SCIPpropExitpre(
    /* call presolving deinitialization method of propagator */
    if( prop->propexitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->presoltime, set);
+
       SCIP_CALL( prop->propexitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(prop->presoltime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF

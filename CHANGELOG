@@ -83,7 +83,7 @@ features:
   set relaxrows = FALSE
 - the check script now recognizes MIQCP and MINLP instances
 - new column showing the pseudo objective value
-
+- time for initpre and exitpre methods is now also measured in presolving time
 
 SCIP version 2.1.2
 ==================

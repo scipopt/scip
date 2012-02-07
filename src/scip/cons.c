@@ -2195,8 +2195,14 @@ SCIP_RETCODE SCIPconshdlrInitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2271,8 +2277,14 @@ SCIP_RETCODE SCIPconshdlrExitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
