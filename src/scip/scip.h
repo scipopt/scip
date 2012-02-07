@@ -6640,6 +6640,13 @@ SCIP_RETCODE SCIPlinkLPSol(
    SCIP_SOL*             sol                 /**< primal solution */
    );
 
+/** links a primal solution to the current NLP solution */
+extern
+SCIP_RETCODE SCIPlinkNLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
 /** links a primal solution to the current relaxation solution */
 extern
 SCIP_RETCODE SCIPlinkRelaxSol(

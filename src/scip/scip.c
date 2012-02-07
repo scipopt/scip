@@ -18473,6 +18473,31 @@ SCIP_RETCODE SCIPlinkLPSol(
    return SCIP_OKAY;
 }
 
+/** links a primal solution to the current NLP solution */
+SCIP_RETCODE SCIPlinkNLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPlinkNLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp == NULL )
+   {
+      SCIPerrorMessage("NLP does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( SCIPnlpGetSolstat(scip->nlp) > SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+      SCIPerrorMessage("NLP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolLinkNLPSol(sol, scip->stat, scip->tree, scip->nlp) );
+
+   return SCIP_OKAY;
+}
+
 /** links a primal solution to the current relaxation solution */
 SCIP_RETCODE SCIPlinkRelaxSol(
    SCIP*                 scip,               /**< SCIP data structure */

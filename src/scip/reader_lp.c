@@ -127,7 +127,7 @@ void syntaxError(
 
    assert(lpinput != NULL);
 
-   SCIPerrorMessage("Syntax error in line %d: %s ('%s')\n", lpinput->linenumber, msg, lpinput->token);
+   SCIPerrorMessage("Syntax error in line %d ('%s'): %s \n", lpinput->linenumber, lpinput->token, msg);
    if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);
@@ -264,7 +264,7 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!",
+         SCIPwarningMessage("we read %d characters from the file; this might indicate a corrupted input file!",
             LP_MAX_LINELEN - 2);
          lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
@@ -941,17 +941,17 @@ SCIP_RETCODE readCoefficients(
       {
          if( inquadpart )
          {
-            syntaxError(scip, lpinput, "cannot start quadratic part while already in quadratic part");
+            syntaxError(scip, lpinput, "cannot start quadratic part while already in quadratic part.");
             return SCIP_OKAY;
          }
          if( havesign && coefsign != +1 )
          {
-            syntaxError(scip, lpinput, "cannot have '-' in front of quadratic part");
+            syntaxError(scip, lpinput, "cannot have '-' in front of quadratic part.");
             return SCIP_OKAY;
          }
          if( havevalue )
          {
-            syntaxError(scip, lpinput, "cannot have value in front of quadratic part");
+            syntaxError(scip, lpinput, "cannot have value in front of quadratic part.");
             return SCIP_OKAY;
          }
 
@@ -965,18 +965,18 @@ SCIP_RETCODE readCoefficients(
       {
          if( !inquadpart )
          {
-            syntaxError(scip, lpinput, "cannot end quadratic part before starting one");
+            syntaxError(scip, lpinput, "cannot end quadratic part before starting one.");
             return SCIP_OKAY;
          }
          if( havesign || havevalue || firstquadvar != NULL )
          {
             if( firstquadvar == NULL )
             {
-               syntaxError(scip, lpinput, "expected value or first quadratic variable");
+               syntaxError(scip, lpinput, "expected value or first quadratic variable.");
             }
             else
             {
-               syntaxError(scip, lpinput, "expected second quadratic variable");
+               syntaxError(scip, lpinput, "expected second quadratic variable.");
             }
             return SCIP_OKAY;
          }
@@ -989,7 +989,7 @@ SCIP_RETCODE readCoefficients(
             /* quadratic part in objective has to end with '/2' */
             if( !getNextToken(lpinput) )
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective");
+               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
             if( strcmp(lpinput->token, "/2") == 0 )
@@ -1001,14 +1001,14 @@ SCIP_RETCODE readCoefficients(
                /* maybe it says '/ 2' */
                if( !getNextToken(lpinput) || strcmp(lpinput->token, "2") != 0 )
                {
-                  syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective");
+                  syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
                }
                SCIPdebugMessage("(line %d) saw '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective");
+               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
          }
@@ -1021,12 +1021,12 @@ SCIP_RETCODE readCoefficients(
       {
          if( !inquadpart )
          {
-            syntaxError(scip, lpinput, "cannot have '*' outside of quadratic part");
+            syntaxError(scip, lpinput, "cannot have '*' outside of quadratic part.");
             return SCIP_OKAY;
          }
          if( firstquadvar == NULL )
          {
-            syntaxError(scip, lpinput, "cannot have '*' before first variable in quadratic term");
+            syntaxError(scip, lpinput, "cannot have '*' before first variable in quadratic term.");
             return SCIP_OKAY;
          }
          
@@ -1036,12 +1036,12 @@ SCIP_RETCODE readCoefficients(
       /* all but the first coefficient need a sign */
       if( !inquadpart && *ncoefs > 0 && !havesign )
       {
-         syntaxError(scip, lpinput, "expected sign ('+' or '-') or sense ('<' or '>')");
+         syntaxError(scip, lpinput, "expected sign ('+' or '-') or sense ('<' or '>').");
          return SCIP_OKAY;
       }
       if(  inquadpart && *nquadcoefs > 0 && !havesign )
       {
-         syntaxError(scip, lpinput, "expected sign ('+' or '-')");
+         syntaxError(scip, lpinput, "expected sign ('+' or '-').");
          return SCIP_OKAY;
       }
 
@@ -1050,12 +1050,12 @@ SCIP_RETCODE readCoefficients(
       {
          if( !inquadpart )
          {
-            syntaxError(scip, lpinput, "cannot have squares ('^2') outside of quadratic part");
+            syntaxError(scip, lpinput, "cannot have squares ('^2') outside of quadratic part.");
             return SCIP_OKAY;
          }
          if( firstquadvar == NULL )
          {
-            syntaxError(scip, lpinput, "cannot have square '^2' before variable");
+            syntaxError(scip, lpinput, "cannot have square '^2' before variable.");
             return SCIP_OKAY;
          }
          
@@ -1069,7 +1069,7 @@ SCIP_RETCODE readCoefficients(
             SCIPdebugMessage("(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, coef, coefsign);
             if( havevalue )
             {
-               syntaxError(scip, lpinput, "two consecutive values");
+               syntaxError(scip, lpinput, "two consecutive values.");
                return SCIP_OKAY;
             }
             havevalue = TRUE;
@@ -1079,7 +1079,7 @@ SCIP_RETCODE readCoefficients(
          /* the token is a variable name: get the corresponding variable (or create a new one) */
          SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
       }
-   
+
       if( !inquadpart )
       {
          /* insert the linear coefficient */
@@ -1269,7 +1269,7 @@ SCIP_RETCODE createIndicatorConstraint(
    /* check that binvalue is 0 or 1 */
    if( !SCIPisFeasEQ(scip, binvalue, 0.0) && !SCIPisFeasEQ(scip, binvalue, 1.0) )
    {
-      syntaxError(scip, lpinput, "value for binary variable must be '0' or '1'");
+      syntaxError(scip, lpinput, "value for binary variable must be '0' or '1'.");
       return SCIP_OKAY;
    }
 
@@ -1300,50 +1300,50 @@ SCIP_RETCODE createIndicatorConstraint(
       goto TERMINATE;
    if( newsection )
    {
-      syntaxError(scip, lpinput, "expected constraint");
+      syntaxError(scip, lpinput, "expected constraint.");
       goto TERMINATE;
    }
    if( nquadcoefs > 0 )
    {
       /* @todo could introduce auxiliary variable and move quadratic part into quadratic constraint? */
-      syntaxError(scip, lpinput, "quadratic indicator constraints not supported");
+      syntaxError(scip, lpinput, "quadratic indicator constraints not supported.");
       goto TERMINATE;
    }
    if( name2[0] != '\0' )
    {
-      syntaxError(scip, lpinput, "did not expect name for linear constraint");
+      syntaxError(scip, lpinput, "did not expect name for linear constraint.");
       goto TERMINATE;
    }
-   
+
    /* read the constraint sense */
    if( !getNextToken(lpinput) || !isSense(lpinput, &linsense) )
    {
-      syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
+      syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
-   
+
    /* read the right hand side */
    linsidesign = +1;
    if( !getNextToken(lpinput) )
    {
-      syntaxError(scip, lpinput, "missing right hand side");
+      syntaxError(scip, lpinput, "missing right hand side.");
       goto TERMINATE;
    }
    if( isSign(lpinput, &linsidesign) )
    {
       if( !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "missing value of right hand side");
+         syntaxError(scip, lpinput, "missing value of right hand side.");
          goto TERMINATE;
       }
    }
    if( !isValue(scip, lpinput, &linsidevalue) )
    {
-      syntaxError(scip, lpinput, "expected value as right hand side");
+      syntaxError(scip, lpinput, "expected value for right hand side.");
       goto TERMINATE;
    }
    linsidevalue *= linsidesign;
-   
+
    /* assign the left and right hand side, depending on the constraint sense */
    linConsEQ = FALSE;
    switch( linsense )
@@ -1365,7 +1365,7 @@ SCIP_RETCODE createIndicatorConstraint(
       SCIPerrorMessage("invalid constraint sense <%d>\n", linsense);
       return SCIP_INVALIDDATA;
    }
-   
+
    /* create and add the indicator constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
@@ -1377,7 +1377,7 @@ SCIP_RETCODE createIndicatorConstraint(
    local = FALSE;
    dynamic = dynamicconss;
    removable = dynamicrows || lpinput->inusercuts;
-   
+
    SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
          initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1385,7 +1385,7 @@ SCIP_RETCODE createIndicatorConstraint(
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   
+
    /* create second constraint if it was an equation */
    if( linConsEQ )
    {
@@ -1419,6 +1419,8 @@ SCIP_RETCODE createIndicatorConstraint(
  *  The CPLEX manual says that indicator constraints are of the following form:
  *
  *  [constraintname:]  binaryvariable = value  ->  linear constraint
+ *
+ *  We also accept "<->".
  */
 static
 SCIP_RETCODE readConstraints(
@@ -1463,14 +1465,14 @@ SCIP_RETCODE readConstraints(
    if( newsection )
    {
       if( ncoefs > 0 || nquadcoefs > 0 )
-         syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
+         syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
 
    /* read the constraint sense */
    if( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
    {
-      syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
+      syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
 
@@ -1478,20 +1480,20 @@ SCIP_RETCODE readConstraints(
    sidesign = +1;
    if( !getNextToken(lpinput) )
    {
-      syntaxError(scip, lpinput, "missing right hand side");
+      syntaxError(scip, lpinput, "missing right hand side.");
       goto TERMINATE;
    }
    if( isSign(lpinput, &sidesign) )
    {
       if( !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "missing value of right hand side");
+         syntaxError(scip, lpinput, "missing value of right hand side.");
          goto TERMINATE;
       }
    }
    if( !isValue(scip, lpinput, &sidevalue) )
    {
-      syntaxError(scip, lpinput, "expected value as right hand side");
+      syntaxError(scip, lpinput, "expected value as right hand side.");
       goto TERMINATE;
    }
    sidevalue *= sidesign;
@@ -1513,15 +1515,52 @@ SCIP_RETCODE readConstraints(
       break;
    case LP_SENSE_NOTHING:
    default:
-      SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
+      SCIPerrorMessage("invalid constraint sense <%d>.\n", sense);
       return SCIP_INVALIDDATA;
    }
 
    /* check whether we read the first part of an indicator constraint */
    isIndicatorCons = FALSE;
-   if( getNextToken(lpinput) && !isNewSection(lpinput) )
+   if ( getNextToken(lpinput) && !isNewSection(lpinput) )
    {
-      if( strcmp(lpinput->token, "-") == 0 )
+      /* check whether we have '<' from a "<->" string */
+      if ( *lpinput->token == '<' )
+      {
+         SCIP_Bool haveequiv = FALSE;
+         int linepos = lpinput->linepos-1;
+
+         /* check next token - cannot be a new section */
+         if ( getNextToken(lpinput) )
+         {
+            /* check for "<-" */
+            if ( *lpinput->token == '-' )
+            {
+               /* check next token - cannot be a new section */
+               if ( getNextToken(lpinput) )
+               {
+                  /* check for "<->" */
+                  if ( *lpinput->token == '>' )
+                  {
+                     lpinput->linepos = linepos;
+                     strcpy(lpinput->token, "<");
+                     syntaxError(scip, lpinput,
+                        "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
+                     haveequiv = TRUE;
+                  }
+               }
+            }
+         }
+         if ( ! haveequiv )
+         {
+            lpinput->linepos = linepos;
+            strcpy(lpinput->token, "<");
+            syntaxError(scip, lpinput, "unexpected \"<\".");
+         }
+         goto TERMINATE;
+      }
+
+      /* check for "->" */
+      if ( *lpinput->token == '-' )
       {
          /* remember '-' in token buffer */
          swapTokenBuffer(lpinput);
@@ -1530,7 +1569,7 @@ SCIP_RETCODE readConstraints(
          if( getNextToken(lpinput) )
          {
             /* check for "->" */
-            if( strcmp(lpinput->token, ">") == 0 )
+            if ( *lpinput->token == '>' )
                isIndicatorCons = TRUE;
             else
             {
@@ -1540,7 +1579,7 @@ SCIP_RETCODE readConstraints(
             }
          }
          else
-            pushToken(lpinput);
+            pushBufferToken(lpinput);
       }
       else
          pushToken(lpinput);
@@ -1582,17 +1621,17 @@ SCIP_RETCODE readConstraints(
       /* now we should have an indicator constraint */
       if( ncoefs != 1 || nquadcoefs > 0 )
       {
-         syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable");
+         syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable.");
          goto TERMINATE;
       }
       if( !SCIPisEQ(scip, coefs[0], 1.0) )
       {
-         syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable");
+         syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
          goto TERMINATE;
       }
       if( sense != LP_SENSE_EQ )
       {
-         syntaxError(scip, lpinput, "Indicator part can only handle equations");
+         syntaxError(scip, lpinput, "Indicator part cannot handle equations.");
          goto TERMINATE;
       }
 
@@ -1643,7 +1682,7 @@ SCIP_RETCODE readBounds(
       hassign = isSign(lpinput, &sign);
       if( hassign && !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "expected value");
+         syntaxError(scip, lpinput, "expected value.");
          return SCIP_OKAY;
       }
 
@@ -1653,7 +1692,7 @@ SCIP_RETCODE readBounds(
          /* first token is a value: the second token must be a sense */
          if( !getNextToken(lpinput) || !isSense(lpinput, &leftsense) )
          {
-            syntaxError(scip, lpinput, "expected bound sense '<=', '=', or '>='");
+            syntaxError(scip, lpinput, "expected bound sense '<=', '=', or '>='.");
             return SCIP_OKAY;
          }
 
@@ -1678,7 +1717,7 @@ SCIP_RETCODE readBounds(
       }
       else if( hassign )
       {
-         syntaxError(scip, lpinput, "expected value");
+         syntaxError(scip, lpinput, "expected value.");
          return SCIP_OKAY;
       }
       else
@@ -1687,7 +1726,7 @@ SCIP_RETCODE readBounds(
       /* the next token must be a variable name */
       if( !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "expected variable name");
+         syntaxError(scip, lpinput, "expected variable name.");
          return SCIP_OKAY;
       }
       SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
@@ -1706,7 +1745,7 @@ SCIP_RETCODE readBounds(
             {
                if( !getNextToken(lpinput) )
                {
-                  syntaxError(scip, lpinput, "expected value or sign");
+                  syntaxError(scip, lpinput, "expected value or sign.");
                   return SCIP_OKAY;
                }
 
@@ -1715,14 +1754,14 @@ SCIP_RETCODE readBounds(
                hassign = isSign(lpinput, &sign);
                if( hassign && !getNextToken(lpinput) )
                {
-                  syntaxError(scip, lpinput, "expected value");
+                  syntaxError(scip, lpinput, "expected value.");
                   return SCIP_OKAY;
                }
 
                /* the next token must be a value */
                if( !isValue(scip, lpinput, &value) )
                {
-                  syntaxError(scip, lpinput, "expected value");
+                  syntaxError(scip, lpinput, "expected value.");
                   return SCIP_OKAY;
                }
 
@@ -1747,7 +1786,7 @@ SCIP_RETCODE readBounds(
             }
             else
             {
-               syntaxError(scip, lpinput, "the two bound senses do not fit");
+               syntaxError(scip, lpinput, "the two bound senses do not fit.");
                return SCIP_OKAY;
             }
          }
@@ -1755,7 +1794,7 @@ SCIP_RETCODE readBounds(
          {
             if( leftsense != LP_SENSE_NOTHING )
             {
-               syntaxError(scip, lpinput, "variable with bound is marked as 'free'");
+               syntaxError(scip, lpinput, "variable with bound is marked as 'free'.");
                return SCIP_OKAY;
             }
             lb = -SCIPinfinity(scip);
@@ -1804,7 +1843,7 @@ SCIP_RETCODE readGenerals(
       SCIP_CALL( getVariable(scip, lpinput->token, &var, &created) );
       if( created )
       {
-         syntaxError(scip, lpinput, "unknown variable in generals section");
+         syntaxError(scip, lpinput, "unknown variable in generals section.");
          return SCIP_OKAY;
       }
 
@@ -1839,7 +1878,7 @@ SCIP_RETCODE readBinaries(
       SCIP_CALL( getVariable(scip, lpinput->token, &var, &created) );
       if( created )
       {
-         syntaxError(scip, lpinput, "unknown variable in binaries section");
+         syntaxError(scip, lpinput, "unknown variable in binaries section.");
          return SCIP_OKAY;
       }
 
@@ -1888,7 +1927,7 @@ SCIP_RETCODE readSemicontinuous(
    {
       if( !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "unexpected end");
+         syntaxError(scip, lpinput, "unexpected end.");
          return SCIP_OKAY;
       }
       
@@ -1896,7 +1935,7 @@ SCIP_RETCODE readSemicontinuous(
       {
          if( !getNextToken(lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
          {
-            syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'");
+            syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'.");
             return SCIP_OKAY;
          }
       }
@@ -1916,7 +1955,7 @@ SCIP_RETCODE readSemicontinuous(
       SCIP_CALL( getVariable(scip, lpinput->token, &var, &created) );
       if( created )
       {
-         syntaxError(scip, lpinput, "unknown variable in semi-continuous section");
+         syntaxError(scip, lpinput, "unknown variable in semi-continuous section.");
          return SCIP_OKAY;
       }
       
@@ -2027,7 +2066,7 @@ SCIP_RETCODE readSos(
       /* get type */
       if( !getNextToken(lpinput) )
       {
-         syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'");
+         syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'.");
          return SCIP_OKAY;
       }
       /* check whether constraint name was left out */
@@ -2059,7 +2098,7 @@ SCIP_RETCODE readSos(
       }
       else
       {
-         syntaxError(scip, lpinput, "SOS constraint type other than 1 or 2 appeared");
+         syntaxError(scip, lpinput, "SOS constraint type other than 1 or 2 appeared.");
          return SCIP_OKAY;
       }
       assert( type == 1 || type == 2 );
@@ -2069,14 +2108,14 @@ SCIP_RETCODE readSos(
       /* make sure that a colons follows */
       if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
-         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons.");
          return SCIP_OKAY;
       }
 
       /* make sure that another colons follows */
       if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
-         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+         syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons.");
          return SCIP_OKAY;
       }
 

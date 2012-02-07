@@ -52,6 +52,7 @@
  * <b>Getting started</b>
  *
  * - \ref SHELL   "Tutorial: the interactive shell"
+ * - \ref FORMATS "Readable file formats"
  *
  * - \ref MAKE    "Installation information / Makefiles"
  *
@@ -116,7 +117,7 @@
  * - <a class="el" href="AUTHORS.html#further">Further developers</a>
  * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
  *
- * @version  2.1.1.2
+ * @version  2.1.1.3
  *
  *     </td>
  *     <td valign="bottom" width="200">
@@ -733,7 +734,7 @@
  *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats.
+ * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats (see \ref FORMATS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.1 as
@@ -1001,6 +1002,23 @@
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="FAQ.html#Section2">Using SCIP as a standalone MIP/MINLP-Solver</a>.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page FORMATS Readable file formats
+ *
+ * The \ref SHELL "interactive shell" and the callable library are capable of reading/parsing several different file
+ * formats.
+ *
+ * - \ref reader_cip.h "CIP format" for SCIP's constraint integer programming format
+ * - \ref reader_cnf.h "CNF format"
+ * - \ref reader_fzn.h "FZN format"
+ * - \ref reader_lp.h "LP format" for mixed-integer quadratically constrained quadratic programming programs
+ * - \ref reader_mps.h "MPS format" for mixed-integer quadratically constrained quadratic programming programs
+ * - \ref reader_opb.h "OPB format"
+ * - \ref reader_pip.h "PIP format" for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a>
+ * - \ref reader_wbo.h "WBO format"
+ * - \ref reader_zpl.h "ZPL format" for <a href="http://zimpl.zib.de">ZIMPL</a> models (polynomially constrained mixed-integer programming problems)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -36,6 +36,12 @@
  * and constraint sides and offers a simple convexity check.
  * During presolve, the expression graph is reformulated, whereby new variables and constraints are created
  * such that for the remaining nonlinear constraints the functions \f$f_j(x)\f$ are known to be convex or concave.
+ * See also
+ *
+ * @par
+ * Stefan Vigerske@n
+ * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
+ * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

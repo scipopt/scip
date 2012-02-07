@@ -75,6 +75,8 @@ parameters:
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+  separating/cgmip/nodelimit.
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
