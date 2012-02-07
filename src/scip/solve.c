@@ -705,7 +705,7 @@ SCIP_RETCODE updatePseudocost(
             {
                SCIPdebugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
                   SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
-                  tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set),
+                  tree->focuslpstatefork->data.fork->lpobjval, SCIPlpGetObjval(lp, set),
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
                SCIP_CALL( SCIPvarUpdatePseudocost(var, set, stat,
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
