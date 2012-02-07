@@ -3874,12 +3874,9 @@ SCIP_RETCODE SCIPadjlistCreate(
    assert(nnodes > 0);
 
    SCIP_ALLOC( BMSallocMemory(adjlist) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodes, nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->adjnodessize, nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*adjlist)->nadjnodes, nnodes) );
-   BMSclearMemoryArray((*adjlist)->adjnodes, nnodes);
-   BMSclearMemoryArray((*adjlist)->adjnodessize, nnodes);
-   BMSclearMemoryArray((*adjlist)->nadjnodes, nnodes);
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*adjlist)->adjnodes, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*adjlist)->adjnodessize, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*adjlist)->nadjnodes, nnodes) );
 
    /* store number of nodes */
    (*adjlist)->nnodes = nnodes;
@@ -4023,7 +4020,7 @@ void depthFirstSearch(
    SCIP_ADJLIST*         adjlist,            /**< adjacency list */
    int                   startnode,          /**< node to start the depth-first-search */
    SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
-   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in dfs order */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse dfs order */
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
@@ -4070,20 +4067,16 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
    int ndfsnodes;
    int v;
    int i;
-   int offset;
 
    assert(adjlist != NULL);
    assert(components != NULL);
    assert(ncomponents != NULL);
    assert(adjlist->nnodes > 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&visited, adjlist->nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, adjlist->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, adjlist->nnodes) );
-   BMSclearMemoryArray(visited, adjlist->nnodes);
-   ndfsnodes = 0;
 
    *ncomponents = 0;
-   offset = 0;
 #ifndef NDEBUG
    BMSclearMemoryArray(components, adjlist->nnodes);
 #endif
@@ -4093,21 +4086,146 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
       if( visited[v] )
          continue;
 
+      ndfsnodes = 0;
       depthFirstSearch(adjlist, v, visited, dfsnodes, &ndfsnodes);
 
       (*ncomponents)++;
 
-      for( i = offset; i < ndfsnodes; ++i )
+      for( i = 0; i < ndfsnodes; ++i )
       {
          components[dfsnodes[i]] = *ncomponents;
       }
-      offset = ndfsnodes;
    }
 
 #ifndef NDEBUG
    for( v = 0; v < adjlist->nnodes; ++v )
       assert(components[v] != 0);
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** Computes (undirected) components on the adjacency list of a directed graph and sorts the components
+ *  (almost) topologically w.r.t. the directed graph.
+ *
+ * Topologically sorted means, a variable which influences the lower (upper) bound of another
+ * variable y is located before y in the corresponding variable array. Note, that in general
+ * a topological sort is not unique. Note, that there might be directed cycles, that are
+ * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ */
+SCIP_RETCODE SCIPadjlistComputeTopoSortedComponents(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   minsize,            /**< minimum size a component should have */
+   int*                  components,         /**< array with as many slots as there are nodes in the adjlist
+                                              *   to store the nodes of the components one component after the other,
+                                              *   with the nodes of one component being (almost) topologically sorted */
+   int*                  componentstart,     /**< array to store for each component, where it starts in array components,
+                                              *   at position ncomponents + 1, the total number of nodes is stored */
+   int                   componentstartsize, /**< size of componentstart array, if this is smaller than the number of components + 1,
+                                              *   only the start indices of the first components are stored and the method should
+                                              *   be called again after reallocating the componentstart array */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   )
+{
+   int* ndirectedadjnodes;
+   int* comps;
+   int* compstart;
+   int ncomps;
+   SCIP_Bool* visited;
+   int* dfsnodes;
+   int ndfsnodes;
+   int i;
+   int j;
+   int k;
+   int idx;
+
+   assert(adjlist != NULL);
+   assert(components != NULL);
+   assert(componentstart != NULL);
+   assert(ncomponents != NULL);
+   assert(adjlist->nnodes > 0);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, adjlist->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&comps, adjlist->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&compstart, adjlist->nnodes + 1) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, adjlist->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, adjlist->nnodes) );
+
+   /* store the number of directed arcs per node */
+   BMScopyMemoryArray(ndirectedadjnodes, adjlist->nadjnodes, adjlist->nnodes);
+
+   /* add reverse edges to the graph */
+   for( i = adjlist->nnodes - 1; i>= 0; --i )
+   {
+      for( j = 0; j < ndirectedadjnodes[i]; ++j )
+      {
+         SCIP_CALL( SCIPadjlistAddEdgeSave(adjlist, adjlist->adjnodes[i][j], i) );
+      }
+   }
+
+   /* compute components in the undirected graph;
+    * this time, we store the node indices of the components, sorted by the components
+    */
+   ncomps = 0;
+   compstart[ncomps] = 0;
+   for( i = 0; i < adjlist->nnodes; ++i )
+   {
+      if( visited[i] )
+         continue;
+
+      ndfsnodes = 0;
+      depthFirstSearch(adjlist, i, visited, &(comps[compstart[ncomps]]), &ndfsnodes);
+
+      /* forget about this component if it is too small */
+      if( ndfsnodes >= minsize )
+      {
+         ncomps++;
+         compstart[ncomps] = compstart[ncomps-1] + ndfsnodes;
+      }
+   }
+   assert(compstart[ncomps] <= adjlist->nnodes);
+
+   /* restore the number of directed arcs per node */
+   BMScopyMemoryArray(adjlist->nadjnodes, ndirectedadjnodes, adjlist->nnodes);
+   BMSclearMemoryArray(visited, adjlist->nnodes);
+
+   /* now, sort the components (almost) topologically */
+   for( i = 0; i < ncomps; ++i )
+   {
+      idx = compstart[i+1] - 1;
+      for( j = compstart[i]; j < compstart[i+1]; ++j )
+      {
+         if( visited[comps[j]] )
+            continue;
+
+         ndfsnodes = 0;
+         depthFirstSearch(adjlist, comps[j], visited, dfsnodes, &ndfsnodes);
+
+         /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
+          * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
+          * they will be added before these variables, which gives a valid topological sorting
+          */
+         for( k = 0; k < ndfsnodes; ++k )
+         {
+            components[idx - k] = dfsnodes[k];
+         }
+         idx -= ndfsnodes;
+      }
+      assert(idx == compstart[i] - 1);
+   }
+
+   /* copy start indices of components and number of components */
+   for( i = 0; i <= ncomps && i < componentstartsize; ++i )
+   {
+      componentstart[i] = compstart[i];
+   }
+   *ncomponents = ncomps;
+
+   BMSfreeMemoryArray(&dfsnodes);
+   BMSfreeMemoryArray(&visited);
+   BMSfreeMemoryArray(&compstart);
+   BMSfreeMemoryArray(&comps);
+   BMSfreeMemoryArray(&ndirectedadjnodes);
 
    return SCIP_OKAY;
 }

@@ -3297,6 +3297,29 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
    int*                  ncomponents         /**< pointer to store the number of components */
    );
 
+/** Computes (undirected) components on the adjacency list of a directed graph and sorts the components
+ *  (almost) topologically w.r.t. the directed graph.
+ *
+ * Topologically sorted means, a variable which influences the lower (upper) bound of another
+ * variable y is located before y in the corresponding variable array. Note, that in general
+ * a topological sort is not unique. Note, that there might be directed cycles, that are
+ * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ */
+extern
+SCIP_RETCODE SCIPadjlistComputeTopoSortedComponents(
+   SCIP_ADJLIST*         adjlist,            /**< adjacency list */
+   int                   minsize,            /**< minimum size a component should have */
+   int*                  components,         /**< array with as many slots as there are nodes in the adjlist
+                                              *   to store the nodes of the components one component after the other,
+                                              *   with the nodes of one component being (almost) topologically sorted */
+   int*                  componentstart,     /**< array to store for each component, where it starts in array components,
+                                              *   at position ncomponents + 1, the total number of nodes is stored */
+   int                   componentstartsize, /**< size of componentstart array, if this is smaller than the number of components + 1,
+                                              *   only the start indices of the first components are stored and the method should
+                                              *   be called again after reallocating the componentstart array */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   );
+
 /*
  * Numerical methods
  */
