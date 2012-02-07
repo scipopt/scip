@@ -235,6 +235,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
+   SCIP_Bool solvenlp;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nnlpiterations;
@@ -459,13 +460,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
             continue;
 
-         if( frac == 0.0 )
-            continue;
-
-         // /* do not consider variables which are integral in the LP solution */
-         // if( heurdata->preferlpfracs && nlpcandsfrac > 0 && SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
-         //    continue;
-         
          if( mayrounddown || mayroundup )
          {
             /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
@@ -496,10 +490,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                /* prefer decisions on binary variables */
                if( !SCIPvarIsBinary(var) )
                   objgain *= 1000.0;
-
-//               /* prefer decisions on variables which are also fractional in LP solution */
-//               if( heurdata->preferlpfracs && SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
-//                  frac *= 100.0;
 
                /* check, if candidate is new best candidate */
                if( SCIPisLT(scip, objgain, bestobjgain) || (SCIPisEQ(scip, objgain, bestobjgain) && frac < bestfrac) )
@@ -532,10 +522,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             if( !SCIPvarIsBinary(var) )
                frac *= 1000.0;
 
-//            /* prefer decisions on variables which are also fractional in LP solution */
-//            if( heurdata->preferlpfracs && SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
-//               frac *= 100.0;
-
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
             {
@@ -548,10 +534,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             assert(bestfrac < SCIP_INVALID);
          }
       }
-      assert(bestcand != -1 || lastnlpsolvedepth < divedepth-1);
+      assert(bestcand != -1);
 
       /* if all candidates are roundable, try to round the solution */
-      if( bestcand != -1 && (bestcandmayrounddown || bestcandmayroundup) )
+      if( bestcandmayrounddown || bestcandmayroundup )
       {
          SCIP_Bool success;
 
@@ -575,57 +561,67 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          }
       }
 
-      if( bestcand != -1 )
-         var = nlpcands[bestcand];
-      else
-         var = NULL;
+      var = nlpcands[bestcand];
 
       backtracked = FALSE;
       do
       {
-         if( bestcand != -1 )
+         /* if the variable is already fixed, numerical troubles may have occurred or
+          * variable was fixed by propagation while backtracking => Abort diving!
+          */
+         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          {
-            /* if the variable is already fixed, numerical troubles may have occurred or
-             * variable was fixed by propagation while backtracking => Abort diving!
-             */
-            if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
-            {
-               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nlpcandssol[bestcand]);
-               cutoff = TRUE;
-               break;
-            }
-
-            /* apply rounding of best candidate */
-            if( bestcandroundup == !backtracked )
-            {
-               /* round variable up */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
-                  SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-                  nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                  SCIPfeasCeil(scip, nlpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-               SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, nlpcandssol[bestcand])) );
-            }
-            else
-            {
-               /* round variable down */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
-                  SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-                  nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                  SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, nlpcandssol[bestcand]));
-               SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, nlpcandssol[bestcand])) );
-            }
-
-            /* ensure that variable will not be chosen as additional diving variable before the next NLP solve */
-            nlpcandsfrac[bestcand] = 0.0;
-
-            /* apply domain propagation */
-            SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nlpcandssol[bestcand]);
+            cutoff = TRUE;
+            break;
          }
 
-         if( !cutoff && (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands) || bestcand == -1) )
+         /* apply rounding of best candidate */
+         if( bestcandroundup == !backtracked )
+         {
+            /* round variable up */
+            SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+               SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+               nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+               SCIPfeasCeil(scip, nlpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, nlpcandssol[bestcand])) );
+         }
+         else
+         {
+            /* round variable down */
+            SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+               SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+               nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+               SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, nlpcandssol[bestcand]));
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, nlpcandssol[bestcand])) );
+         }
+
+         /* apply domain propagation */
+         SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+
+         solvenlp = FALSE;
+         if( !cutoff )
+         {
+            solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands));
+            if( !solvenlp )
+            {
+               /* check if fractional NLP variables are left (some may have been fixed by propagation) */
+               for( c = 0; c < nnlpcands; ++c )
+               {
+                  if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
+                     continue;
+                  else
+                     break;
+               }
+               if( c == nnlpcands )
+                  solvenlp = TRUE;
+            }
+         }
+
+         if( !cutoff && solvenlp )
          {
             /* resolve the diving NLP */
             SCIP_NLPTERMSTAT termstat;
@@ -681,9 +677,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          }
 
          /* perform backtracking if a cutoff was detected */
-         if( cutoff && !backtracked && heurdata->backtrack && bestcand != -1 )
+         if( cutoff && !backtracked && heurdata->backtrack )
          {
             SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
+            /* @todo could backtrack by more than one level, if we haven't solved the NLP for a while */
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
             SCIP_CALL( SCIPnewProbingNode(scip) );
             backtracked = TRUE;
