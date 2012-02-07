@@ -57,7 +57,7 @@
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MINSUCCQUOT         0.1 /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-
+#define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
 
@@ -78,6 +78,7 @@ struct SCIP_HeurData
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             minsuccquot;        /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
@@ -228,6 +229,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_Bool mayroundup;
    SCIP_Bool roundup;
    SCIP_Bool nlperror;
+   SCIP_Bool lperror;
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
    SCIP_Longint ncalls;
@@ -261,7 +263,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* do not call heuristic, if it barely succeded */
-   if( (SCIPheurGetNSolsFound(heur)+1) / (SCIP_Real)SCIPheurGetNCalls(heur) < heurdata->minsuccquot )
+   if( (SCIPheurGetNSolsFound(heur)+1) / (SCIP_Real)(SCIPheurGetNCalls(heur)+1) < heurdata->minsuccquot )
       return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
@@ -397,6 +399,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    nlperror = FALSE;
+   lperror = FALSE;
    cutoff = FALSE;
    divedepth = 0;
    bestcandmayrounddown = FALSE;
@@ -408,6 +411,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
       && !SCIPisStopped(scip) )
    {
+      int nlpbranchcands;
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
 
@@ -423,6 +427,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;
       bestcandroundup = FALSE;
+      nlpbranchcands = SCIPgetNLPBranchCands(scip);
+
+      /* find best candidate variable */
       for( c = 0; c < nnlpcands; ++c )
       {
          var = nlpcands[c];
@@ -430,6 +437,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          mayroundup = SCIPvarMayRoundUp(var);
          frac = nlpcandsfrac[c];
          obj = SCIPvarGetObj(var);
+
+         // /* do not consider variables which are integral in the LP solution */
+         // if( heurdata->preferlpfracs && nlpcandsfrac > 0 && SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
+         //    continue;
+         
          if( mayrounddown || mayroundup )
          {
             /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
@@ -491,6 +503,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             /* prefer decisions on binary variables */
             if( !SCIPvarIsBinary(var) )
                frac *= 1000.0;
+
+            /* prefer decisions on variables which are also fractional in LP solution */
+            if( heurdata->preferlpfracs && SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, var)) )
+               frac *= 100.0;
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
@@ -599,7 +615,23 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);
             cutoff = (termstat == SCIP_NLPTERMSTAT_UOBJLIM || nlpsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
-            SCIPdebugMessage("  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
+
+            if( cutoff )
+            {
+               SCIPdebugMessage("  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
+            }
+
+            /* resolve LP */  
+            if( !cutoff && !lperror && heurdata->preferlpfracs )
+            {
+               SCIP_LPSOLSTAT lpsolstat;
+
+               SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
+
+               /* get LP solution status, objective value, and fractional variables, that should be integral */
+               lpsolstat = SCIPgetLPSolstat(scip);
+               cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+            }
          }
          else
          {
@@ -781,6 +813,10 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/backtrack",
          "use one level of backtracking if infeasibility is encountered?",
          &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/"HEUR_NAME"/preferlpfracs",
+         "prefer variables that are also fractional in LP solution?",
+         &heurdata->preferlpfracs, TRUE, DEFAULT_PREFERLPFRACS, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/minsuccquot",
          "heuristic will not run if less then this percentage of calls succeeded (0.0: no limit)",
