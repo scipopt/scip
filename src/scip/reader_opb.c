@@ -17,10 +17,12 @@
  * @brief  pseudo-Boolean file reader (opb format)
  * @author Stefan Heinz
  * @author Michael Winkler
- */
-
-/* http://www.cril.univ-artois.fr/PB07/solver_req.html
- * http://www.cril.univ-artois.fr/PB10/format.pdf
+ *
+ * This file reader parses the \f$opb\f$ format and is also used by the \f$wbo\f$ reader for the \f$wbo\f$ format. For a
+ * detailed description of this format see
+ *
+ * - http://www.cril.univ-artois.fr/PB07/solver_req.html
+ * - http://www.cril.univ-artois.fr/PB10/format.pdf
  *
  * The syntax of the input file format can be described by a simple Backus-Naur
  *  form. <formula> is the start symbol of this grammar.

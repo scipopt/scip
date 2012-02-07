@@ -17,6 +17,9 @@
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
+ *
+ * DIMACS CNF (conjunctive normal form) file format used for example for SAT problems. For a detailed description of
+ * this format see http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html .
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

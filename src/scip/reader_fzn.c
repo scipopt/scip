@@ -18,6 +18,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
+ * FlatZinc is a low-level solver input language that is the target language for MiniZinc. It is designed to be easy to
+ * translate into the form required by a solver. For more details see http://www.g12.cs.mu.oz.au/minizinc/ .
+ *
  * @todo Support more general constraint types
  */
 
