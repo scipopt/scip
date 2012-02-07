@@ -3319,7 +3319,7 @@ SCIP_RETCODE SCIPvarFix(
 
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to fixed, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -4079,7 +4079,7 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
-   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
@@ -4856,7 +4856,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -5347,6 +5347,7 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5367,7 +5368,7 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
-            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
+            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -5380,6 +5381,10 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
@@ -5442,6 +5447,10 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 

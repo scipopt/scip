@@ -5175,6 +5175,40 @@ int SCIPgetNContVars(
    }  /*lint !e788*/
 }
 
+
+/** gets number of active problem variables with a non-zero objective coefficient
+ *
+ *  @note In case of the original problem the number of variables is counted. In case of the transformed problem the
+ *        number of variables is just return since it is stored internally
+ */
+int SCIPgetNObjVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNObjVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return SCIPprobGetNObjVars(scip->origprob, scip->set);
+
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      /* check that the internal count is correct */
+      assert(scip->transprob->nobjvars == SCIPprobGetNObjVars(scip->transprob, scip->set));
+      return scip->transprob->nobjvars;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+
 /** gets array with fixed and aggregated problem variables; data may become invalid after
  *  calls to SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
@@ -10081,12 +10115,12 @@ SCIP_RETCODE SCIPchgVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->primal, scip->lp, scip->eventqueue, newobj) );
+      SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->primal, scip->lp, scip->eventqueue, newobj) );
+      SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    default:

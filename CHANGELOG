@@ -35,6 +35,7 @@ interface
 - new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
   (e.g., for activities; uses new parameter misc/num_recompfac)
 - new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
+- added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective coefficient
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

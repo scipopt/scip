@@ -341,6 +341,22 @@ SCIP_PROBDATA* SCIPprobGetData(
    SCIP_PROB*            prob                /**< problem */
    );
 
+/** returns the number of variables with non-zero objective coefficient */
+extern
+int SCIPprobGetNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** update the number of variables with non-zero objective coefficient */
+extern
+void SCIPprobUpdateNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value for variable */
+   SCIP_Real             newobj              /**< new objective value for variable */
+   );
+
 /** returns the external value of the given internal objective value */
 extern
 SCIP_Real SCIPprobExternObjval(

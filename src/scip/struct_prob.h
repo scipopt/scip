@@ -66,6 +66,7 @@ struct SCIP_Prob
    int                   nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int                   deletedvarssize;    /**< available slots in deletedvars array */
    int                   ndeletedvars;       /**< number of deleted variables in the problem */
+   int                   nobjvars;           /**< number of variables with a non-zero objective coefficient */
    int                   consssize;          /**< available slots in conss array */
    int                   nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int                   maxnconss;          /**< maximum number of constraints existing at the same time */

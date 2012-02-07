@@ -2011,6 +2011,16 @@ int SCIPgetNContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of active problem variables with a non-zero objective coefficient
+ *
+ *  @note In case of the original problem the number of variables is counted. In case of the transformed problem the
+ *        number of variables is just return since it is stored
+ */
+extern
+int SCIPgetNObjVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets array with fixed and aggregated problem variables; data may become invalid after
  *  calls to SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
