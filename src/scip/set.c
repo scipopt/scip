@@ -4583,9 +4583,9 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
    )
 {
-   assert(set != NULL);
-
    SCIP_Real quotient;
+
+   assert(set != NULL);
 
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), 1.0);
 
