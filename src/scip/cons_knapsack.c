@@ -9290,6 +9290,38 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    return consdata->capacity;
 }
 
+/** changes capacity of the knapsack constraint
+ *
+ *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
+ */
+SCIP_RETCODE SCIPchgCapacityKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Longint          capacity            /**< new capacity of knapsack */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("method can only be called during problem creation stage\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->capacity = capacity;
+
+   return SCIP_OKAY;
+}
+
 /** gets the number of items in the knapsack constraint */
 int SCIPgetNVarsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */

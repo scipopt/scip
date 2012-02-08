@@ -99,6 +99,17 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** changes capacity of the knapsack constraint
+ *
+ *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
+ */
+extern
+SCIP_RETCODE SCIPchgCapacityKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Longint          capacity            /**< new capacity of knapsack */
+   );
+
 /** gets the number of items in the knapsack constraint */
 extern
 int SCIPgetNVarsKnapsack(

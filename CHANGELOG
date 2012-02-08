@@ -37,6 +37,7 @@ interface
 - new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
 - added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective coefficient
 - new method SCIPupdateCutoffbound() which can be used to pass a cutoff bound
+- new method SCIPchgCapacityKnapsack() which can be used to change the capacity of a knapsack constraint
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
