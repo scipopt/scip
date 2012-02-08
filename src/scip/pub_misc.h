@@ -3254,12 +3254,14 @@ int SCIPstairmapGetLatestFeasibleStart(
  */
 
 /** creates adjacency list */
+extern
 SCIP_RETCODE SCIPadjlistCreate(
    SCIP_ADJLIST**        adjlist,            /**< pointer to store the created adjacency list */
    int                   nnodes              /**< number of nodes */
    );
 
 /** sets the sizes of the adjacency lists for the nodes and allocates memory for the lists */
+extern
 SCIP_RETCODE SCIPadjlistSetSizes(
    SCIP_ADJLIST*         adjlist,            /**< adjacency list */
    int*                  sizes               /**< sizes of the adjacency lists */
@@ -3325,6 +3327,7 @@ SCIP_RETCODE SCIPadjlistComputeTopoSortedComponents(
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
+extern
 SCIP_Real SCIPcalcMachineEpsilon(
    void
    );
