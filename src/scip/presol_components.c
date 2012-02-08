@@ -505,14 +505,14 @@ SCIP_RETCODE fillAdjList(
    SCIP_Bool*            success             /**< flag indicating successful adjacency list filling */
    )
 {
+   SCIP_VAR** consvars;
+   int requiredsize;
+   int nconsvars;
+   int nvars;
+   int idx1;
+   int idx2;
    int c;
    int v;
-   SCIP_VAR** consvars;
-   int nconsvars;
-   int varssize;
-   int requiredsize;
-   int probindex1;
-   int probindex2;
 
    assert(scip != NULL);
    assert(adjlist != NULL);
@@ -524,56 +524,50 @@ SCIP_RETCODE fillAdjList(
 
    nconsvars = 0;
    requiredsize = 0;
-   varssize = SCIPgetNVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    /* use big buffer for storing variables
       TODO: maybe we can do better with less memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
 
-   for( c = 0; c < nconss; c++ )
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, success) );
 
       if( !(*success) )
-      {
          break;
+
+      if( nconsvars > nvars )
+      {
+         nvars = nconsvars;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nvars) );
       }
 
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, varssize, success) );
+      SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, success) );
 
       if( !(*success) )
-      {
          break;
-      }
 
-      SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, varssize, &requiredsize) );
+      SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
+      assert(requiredsize <= nvars);
 
-      if( requiredsize > varssize )
-      {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
-         varssize = requiredsize;
-
-         /* call get active variables a second time */
-         SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, varssize, &requiredsize) );
-      }
-
-      probindex1 = SCIPvarGetProbindex(consvars[0]);
-      assert(probindex1 >= 0);
-      SCIP_CALL( fillConsIndex(scip, conslist, probindex1, c) );
+      idx1 = SCIPvarGetProbindex(consvars[0]);
+      assert(idx1 >= 0);
+      SCIP_CALL( fillConsIndex(scip, conslist, idx1, c) );
 
       if( nconsvars > 1 )
       {
          /* create sparse adjacency list
             sparse means, to add only those edges necessary for component calculation */
-         for( v = 1; v < nconsvars; v++ )
+         for( v = 1; v < nconsvars; ++v )
          {
-            probindex2 = SCIPvarGetProbindex(consvars[v]);
-            assert(probindex2 >= 0);
-            SCIP_CALL( fillConsIndex(scip, conslist, probindex2, c) );
+            idx2 = SCIPvarGetProbindex(consvars[v]);
+            assert(idx2 >= 0);
+            SCIP_CALL( fillConsIndex(scip, conslist, idx2, c) );
 
             /* we add a directed edge in both directions */
-            SCIP_CALL( SCIPadjlistAddEdgeSave(adjlist, probindex1, probindex2) );
-            SCIP_CALL( SCIPadjlistAddEdgeSave(adjlist, probindex2, probindex1) );
+            SCIP_CALL( SCIPadjlistAddEdge(adjlist, idx1, idx2) );
+            SCIP_CALL( SCIPadjlistAddEdge(adjlist, idx2, idx1) );
          }
       }
    }
