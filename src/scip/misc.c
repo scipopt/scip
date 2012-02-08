@@ -4102,6 +4102,9 @@ SCIP_RETCODE SCIPadjlistComputeComponents(
       assert(components[v] != 0);
 #endif
 
+   BMSfreeMemoryArray(&dfsnodes);
+   BMSfreeMemoryArray(&visited);
+
    return SCIP_OKAY;
 }
 
