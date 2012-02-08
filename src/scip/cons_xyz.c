@@ -582,7 +582,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
-         consPrintXyz, consCopyXyz, consParseXyz, consGetVarsDataXyz,
+         consPrintXyz, consCopyXyz, consParseXyz,
          consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
