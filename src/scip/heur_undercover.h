@@ -15,7 +15,7 @@
 
 /**@file   heur_undercover.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Undercover primal heuristic for MIQCPs
+ * @brief  Undercover primal heuristic for MINLPs
  * @author Timo Berthold
  * @author Ambros Gleixner
  *
