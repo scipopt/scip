@@ -129,6 +129,7 @@ struct SCIP_HeurData
    int                   maxbacktracks;      /**< maximum number of backtracks */
    int                   maxrecovers;        /**< maximum number of recoverings */
    int                   maxreorders;        /**< maximum number of reorderings of the fixing order */
+   int                   nfixingalts;        /**< number of fixing alternatives */
    int                   nnlpfails;          /**< number of fails when solving the nlp relaxation after last success */
    int                   npostnlpfails;      /**< number of fails of the nlp local search after last success */
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
@@ -2337,6 +2338,203 @@ SCIP_RETCODE performFixing(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE fixAndPropagate(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   int*                  cover,              /**< array with indices of the variables in the computed cover */
+   int                   coversize,          /**< size of the cover */
+   SCIP_Real*            fixingvals,         /**< fixing values for the variables in the cover */
+   int*                  bdlen,              /**< current length of bound disjunction along the probing path */
+   SCIP_VAR**            bdvars,             /**< array of variables in bound disjunction */
+   SCIP_BOUNDTYPE*       bdtypes,            /**< array of bound types in bound disjunction */
+   SCIP_Real*            bdbounds,           /**< array of bounds in bound disjunction */
+   SCIP_Real*            oldbounds,          /**< array of bounds before fixing */
+   int*                  nfixedints,         /**< pointer to store number of fixed integer variables */
+   int*                  nfixedconts,        /**< pointer to store number of fixed continuous variables */
+   int*                  lastfailed,         /**< position in cover array of the variable the fixing of which yielded
+                                              *   infeasibility */
+   SCIP_Bool*            infeas              /**< pointer to store whether fix-and-propagate led to an infeasibility */
+   )
+{
+   SCIP_VAR** vars;                          /* original problem's variables */
+
+   int i;
+   SCIP_Bool lpsolved;
+
+   /* start probing in original problem */
+   lpsolved = SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL;
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* initialize data */
+   *nfixedints = 0;
+   *nfixedconts = 0;
+   *bdlen = 0;
+   vars = SCIPgetVars(scip);
+
+   /* round-fix-propagate-analyze-backtrack for each variable in the cover */
+   for( i = 0; i < coversize && !(*infeas); i++ )
+   {
+      SCIP_Real* boundalts;
+      SCIP_Real* usedvals;
+      SCIP_Real val;
+      int nbacktracks;
+      int nboundalts;
+      int nfailedvals;
+      int nusedvals;
+      int probingdepth;
+      int idx;
+
+      /* get probindex of next variable in the cover */
+      idx = cover[i];
+
+      /* nothing to do if the variable was already fixed, e.g., by propagation */
+      if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx])) )
+      {
+         fixingvals[i] = SCIPvarGetLbLocal(vars[idx]);
+         continue;
+      }
+
+      /* we will store the fixing values already used to avoid try the same value twice */
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedvals, heurdata->maxbacktracks+1) );
+      nusedvals = 0;
+
+      /* backtracking loop */
+      *infeas = TRUE;
+      nfailedvals = 0;
+      nboundalts = 0;
+      boundalts = NULL;
+      val = 0.0;
+      for( nbacktracks = 0; nbacktracks <= heurdata->maxbacktracks+nfailedvals && *infeas; nbacktracks++ )
+      {
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         SCIP_Bool usedbefore;
+         int j;
+
+         probingdepth = SCIPgetProbingDepth(scip);
+
+         /* get fixing value */
+         if( nbacktracks < heurdata->nfixingalts )
+         {
+            SCIP_Bool success;
+            
+            /* if the lp relaxation is not solved, we do not even try to retrieve the lp solution value;
+             * if the nlp relaxation is not constructed, we do not even try to retrieve the nlp solution value;
+             * if there is no feasible solution yet, we do not even try to obtain the value in the incumbent */
+            success = FALSE;
+            if( (heurdata->fixingalts[nbacktracks] != 'l' || lpsolved)
+               && (heurdata->fixingalts[nbacktracks] != 'n' || !heurdata->nlpfailed)
+               && (heurdata->fixingalts[nbacktracks] != 'i' || SCIPgetBestSol(scip) != NULL) )
+            {
+               SCIP_CALL( getFixingValue(scip, heurdata, vars[idx], &val, heurdata->fixingalts[nbacktracks], &success, *bdlen, bdvars, bdtypes, oldbounds) );
+            }
+
+            if( !success )
+            {
+               SCIPdebugMessage("retrieving fixing value '%c' for variable <%s> failed, trying next in the list\n",
+                  heurdata->fixingalts[nbacktracks], SCIPvarGetName(vars[idx]));
+               nfailedvals++;
+               continue;
+            }
+
+            /* for the first (successfully retrieved) fixing value, compute (at most 4) bound dependent
+             * alternative fixing values */
+            if( boundalts == NULL )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &boundalts, 4) );
+               nboundalts = 0;
+               calculateAlternatives(scip, vars[idx], val, &nboundalts, boundalts);
+               assert(nboundalts >= 0);
+               assert(nboundalts <= 4);
+            }
+         }
+         /* get alternative fixing value */
+         else if( boundalts != NULL && nbacktracks <  heurdata->nfixingalts+nboundalts )
+         {
+            assert(nbacktracks-heurdata->nfixingalts >= 0);
+            val = boundalts[nbacktracks-heurdata->nfixingalts];
+         }
+         else
+            break;
+
+         /* round fixing value */
+         if( SCIPvarIsIntegral(vars[idx]) && !SCIPisIntegral(scip, val) )
+         {
+            SCIP_CALL( roundFixingValue(scip, &val, vars[idx], heurdata->locksrounding) );
+            assert(SCIPisIntegral(scip, val));
+         }
+
+         /* move value into the domain, since it may be outside due to numerical issues or previous propagation */
+         oldlb = SCIPvarGetLbLocal(vars[idx]);
+         oldub = SCIPvarGetUbLocal(vars[idx]);
+         val = MIN(val, oldub);
+         val = MAX(val, oldlb);
+
+         assert(!SCIPvarIsIntegral(vars[idx]) || SCIPisFeasIntegral(scip, val));
+
+         /* check if this fixing value was already used */
+         usedbefore = FALSE;
+         for( j = nusedvals-1; j >= 0 && !usedbefore; j-- )
+            usedbefore = SCIPisFeasEQ(scip, val, usedvals[j]);
+
+         if( usedbefore )
+         {
+            nfailedvals++;
+            continue;
+         }
+
+         /* store fixing value */
+         assert(nusedvals < heurdata->maxbacktracks);
+         usedvals[nusedvals] = val;
+         nusedvals++;
+
+         /* fix-propagate-analyze */
+         SCIP_CALL( performFixing(scip, vars[idx], val, infeas, bdlen, bdvars, bdtypes, bdbounds, oldbounds) );
+
+         /* if infeasible, backtrack and try alternative fixing value */
+         if( *infeas )
+         {
+            SCIPdebugMessage("  --> cutoff detected - backtracking\n");
+            SCIP_CALL( SCIPbacktrackProbing(scip, probingdepth) );
+         }
+      }
+
+      /* free array of alternative backtracking values */
+      if( boundalts != NULL)
+         SCIPfreeBufferArray(scip, &boundalts);
+      SCIPfreeBufferArray(scip, &usedvals);
+
+      /* backtracking loop unsuccessful */
+      if( *infeas )
+      {
+         SCIPdebugMessage("no feasible fixing value found for variable <%s> in fixing order\n",
+            SCIPvarGetName(vars[idx]));
+         break;
+      }
+      /* fixing successful */
+      else
+      {
+         /* store successful fixing value */
+         fixingvals[i] = val;
+
+         /* statistics */
+         if( SCIPvarGetType(vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
+            (*nfixedconts)++;
+         else
+            (*nfixedints)++;
+      }
+   }
+   assert(*infeas || i == coversize);
+   assert(!(*infeas) || i < coversize);
+
+   /* end of dive */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   *lastfailed = i;
+   
+   return SCIP_OKAY;
+}
 
 /** main procedure of the undercover heuristic */
 static
@@ -2365,7 +2563,6 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    SCIP_Real maxcoversize;
 
-   int bdlen;                                /* current length of bound disjunction along the probing path */
    int coversize;
    int nvars;
    int ncovers;
@@ -2390,7 +2587,6 @@ SCIP_RETCODE SCIPapplyUndercover(
    bdtypes = NULL;
    bdbounds = NULL;
    oldbounds = NULL;
-   bdlen = 0;
    coversize = 0;
 
    /* get heuristic data */
@@ -2465,23 +2661,28 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPallocBufferArray(scip, &bdbounds, 2*nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldbounds, 2*nvars) );
 
-   /* recovering loop */
+   /* initialize data for recovering loop */
    SCIP_CALL( SCIPallocBufferArray(scip, &cover, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixingvals, nvars) );
    ncovers = 0;
    success = FALSE;
 
+   heurdata->nfixingalts = (int) strlen(heurdata->fixingalts);
+   assert(heurdata->nfixingalts >= 1);
+
+   /* recovering loop */
    while( ncovers <= heurdata->maxrecovers && !success )
    {
       int lastfailed;
       int ndives;
-      int nfixingalts;
       int nfixedints;
       int nfixedconts;
+      int bdlen;                                /* current length of bound disjunction along the probing path */
 
       /* solve covering problem; free transformed covering problem immediately */
       SCIPdebugMessage("solving covering problem\n\n");
       success = FALSE;
+      bdlen = 0;
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
             timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, maxcoversize, &success) );
 
@@ -2527,8 +2728,6 @@ SCIP_RETCODE SCIPapplyUndercover(
       }
 
       /* round-fix-propagate-analyze-backtrack-reorder */
-      nfixingalts = (int) strlen(heurdata->fixingalts);
-      assert(nfixingalts >= 1);
 
       /* reordering loop */
       ndives = 0;
@@ -2539,9 +2738,8 @@ SCIP_RETCODE SCIPapplyUndercover(
       lastfailed = coversize;
       while( ndives <= heurdata->maxreorders && !success )
       {
-         SCIP_Bool infeas;
-         SCIP_Bool lpsolved;
          SCIP_Bool reordered;
+         SCIP_Bool infeas;
 
          /* compute fixing order */
          SCIP_CALL( computeFixingOrder(scip, heurdata, nvars, vars, coversize, cover, lastfailed, &reordered) );
@@ -2552,174 +2750,11 @@ SCIP_RETCODE SCIPapplyUndercover(
          if( !reordered )
             break;
 
-         /* start probing in original problem */
-         lpsolved = SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL;
-         SCIP_CALL( SCIPstartProbing(scip) );
-         ndives++;
-
-         /* round-fix-propagate-analyze-backtrack for each variable in the cover */
-         nfixedints = 0;
-         nfixedconts = 0;
-         bdlen = 0;
          infeas = FALSE;
-
-         for( i = 0; i < coversize && !infeas; i++ )
-         {
-            SCIP_Real* boundalts;
-            SCIP_Real* usedvals;
-            SCIP_Real val;
-            int nbacktracks;
-            int nboundalts;
-            int nfailedvals;
-            int nusedvals;
-            int probingdepth;
-            int idx;
-
-            /* get probindex of next variable in the cover */
-            idx = cover[i];
-
-            /* nothing to do if the variable was already fixed, e.g., by propagation */
-            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx])) )
-            {
-               fixingvals[i] = SCIPvarGetLbLocal(vars[idx]);
-               continue;
-            }
-
-            /* we will store the fixing values already used to avoid try the same value twice */
-            SCIP_CALL( SCIPallocBufferArray(scip, &usedvals, heurdata->maxbacktracks+1) );
-            nusedvals = 0;
-
-            /* backtracking loop */
-            infeas = TRUE;
-            nfailedvals = 0;
-            nboundalts = 0;
-            boundalts = NULL;
-            val = 0.0;
-            for( nbacktracks = 0; nbacktracks <= heurdata->maxbacktracks+nfailedvals && infeas; nbacktracks++ )
-            {
-               SCIP_Real oldlb;
-               SCIP_Real oldub;
-               SCIP_Bool usedbefore;
-               int j;
-
-               probingdepth = SCIPgetProbingDepth(scip);
-
-               /* get fixing value */
-               if( nbacktracks < nfixingalts )
-               {
-                  /* if the lp relaxation is not solved, we do not even try to retrieve the lp solution value;
-                   * if the nlp relaxation is not constructed, we do not even try to retrieve the nlp solution value;
-                   * if there is no feasible solution yet, we do not even try to obtain the value in the incumbent */
-                  success = FALSE;
-                  if( (heurdata->fixingalts[nbacktracks] != 'l' || lpsolved)
-                     && (heurdata->fixingalts[nbacktracks] != 'n' || !heurdata->nlpfailed)
-                     && (heurdata->fixingalts[nbacktracks] != 'i' || SCIPgetBestSol(scip) != NULL) )
-                  {
-                     SCIP_CALL( getFixingValue(scip, heurdata, vars[idx], &val, heurdata->fixingalts[nbacktracks], &success, bdlen, bdvars, bdtypes, oldbounds) );
-                  }
-
-                  if( !success )
-                  {
-                     SCIPdebugMessage("retrieving fixing value '%c' for variable <%s> failed, trying next in the list\n",
-                        heurdata->fixingalts[nbacktracks], SCIPvarGetName(vars[idx]));
-                     nfailedvals++;
-                     continue;
-                  }
-
-                  /* for the first (successfully retrieved) fixing value, compute (at most 4) bound dependent
-                   * alternative fixing values */
-                  if( boundalts == NULL )
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &boundalts, 4) );
-                     nboundalts = 0;
-                     calculateAlternatives(scip, vars[idx], val, &nboundalts, boundalts);
-                     assert(nboundalts >= 0);
-                     assert(nboundalts <= 4);
-                  }
-               }
-               /* get alternative fixing value */
-               else if( boundalts != NULL && nbacktracks < nfixingalts+nboundalts )
-               {
-                  assert(nbacktracks-nfixingalts >= 0);
-                  val = boundalts[nbacktracks-nfixingalts];
-               }
-               else
-                  break;
-
-               /* round fixing value */
-               if( SCIPvarIsIntegral(vars[idx]) && !SCIPisIntegral(scip, val) )
-               {
-                  SCIP_CALL( roundFixingValue(scip, &val, vars[idx], heurdata->locksrounding) );
-                  assert(SCIPisIntegral(scip, val));
-               }
-
-               /* move value into the domain, since it may be outside due to numerical issues or previous propagation */
-               oldlb = SCIPvarGetLbLocal(vars[idx]);
-               oldub = SCIPvarGetUbLocal(vars[idx]);
-               val = MIN(val, oldub);
-               val = MAX(val, oldlb);
-
-               assert(!SCIPvarIsIntegral(vars[idx]) || SCIPisFeasIntegral(scip, val));
-
-               /* check if this fixing value was already used */
-               usedbefore = FALSE;
-               for( j = nusedvals-1; j >= 0 && !usedbefore; j-- )
-                  usedbefore = SCIPisFeasEQ(scip, val, usedvals[j]);
-
-               if( usedbefore )
-               {
-                  nfailedvals++;
-                  continue;
-               }
-
-               /* store fixing value */
-               assert(nusedvals < heurdata->maxbacktracks);
-               usedvals[nusedvals] = val;
-               nusedvals++;
-
-               /* fix-propagate-analyze */
-               SCIP_CALL( performFixing(scip, vars[idx], val, &infeas, &bdlen, bdvars, bdtypes, bdbounds, oldbounds) );
-
-               /* if infeasible, backtrack and try alternative fixing value */
-               if( infeas )
-               {
-                  SCIPdebugMessage("  --> cutoff detected - backtracking\n");
-                  SCIP_CALL( SCIPbacktrackProbing(scip, probingdepth) );
-               }
-            }
-
-            /* free array of alternative backtracking values */
-            if( boundalts != NULL)
-               SCIPfreeBufferArray(scip, &boundalts);
-            SCIPfreeBufferArray(scip, &usedvals);
-
-            /* backtracking loop unsuccessful */
-            if( infeas )
-            {
-               SCIPdebugMessage("no feasible fixing value found for variable <%s> in fixing order %d\n",
-                  SCIPvarGetName(vars[idx]), ndives);
-               break;
-            }
-            /* fixing successful */
-            else
-            {
-               /* store successful fixing value */
-               fixingvals[i] = val;
-
-               /* statistics */
-               if( SCIPvarGetType(vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
-                  nfixedconts++;
-               else
-                  nfixedints++;
-            }
-         }
-
-         /* end of dive */
-         SCIP_CALL( SCIPendProbing(scip) );
+         SCIP_CALL( fixAndPropagate(scip, heurdata, cover, coversize, fixingvals, &bdlen, bdvars, bdtypes, bdbounds, oldbounds, 
+               &nfixedints, &nfixedconts, &lastfailed, &infeas) );
+         ndives++;
          success = !infeas;
-         lastfailed = i;
-         assert(infeas || i == coversize);
-         assert(!infeas || i < coversize);
       }
 
       /* update time limit */
@@ -2783,7 +2818,7 @@ SCIP_RETCODE SCIPapplyUndercover(
          }
 
          /* heuristic succeeded */
-         success = sol != NULL;
+         success = (sol != NULL);
          if( success )
          {
             *result = SCIP_FOUNDSOL;
