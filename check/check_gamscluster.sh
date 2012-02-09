@@ -87,9 +87,9 @@ fi
 EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.eval
 SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.set
 SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sch
-GMSDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.gms
-OPTDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.opt
-SOLDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sol
+GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.gms
+OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.opt
+SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sol
 
 echo > $EVALFILE
 
@@ -254,7 +254,7 @@ do
     COUNT=`expr $COUNT + 1`
 
     GMSFILE=`basename $i`
-    INPUTDIR=`dirname $i`
+    INPUTDIR=`pwd`/`dirname $i`
     case $GMSFILE in
       *.gms )
         ;;

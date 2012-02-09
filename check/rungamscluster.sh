@@ -25,11 +25,12 @@ OUTFILE=$CLIENTTMPDIR/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
-SCRDIR=$CLIENTTMPDIR/$BASENAME.scr
+WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
 
-# setup scratch directory
-mkdir -p $SCRDIR
-GAMSOPTS="$GAMSOPTS SCRDIR=$SCRDIR"
+# setup scratch directory, and delete on exit or if interrupted
+mkdir -p $WORKDIR
+trap "rm -r $WORKDIR" EXIT SIGHUP SIGINT SIGTERM
+GAMSOPTS="$GAMSOPTS curdir=$WORKDIR"
 
 # initialize trace file
 echo "* Trace Record Definition" > $TRCFILE
@@ -68,5 +69,3 @@ mv $OUTFILE results/$BASENAME.out
 mv $LSTFILE results/$BASENAME.lst
 mv $ERRFILE results/$BASENAME.err
 mv $TRCFILE results/$BASENAME.trc
-
-rm -r $SCRDIR
