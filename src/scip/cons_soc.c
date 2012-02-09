@@ -1252,7 +1252,9 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
+ * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
+ * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
+ * if separatedlpsol is NULL, then cut is added to cutpool only
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -1261,11 +1263,12 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
-   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found, or NULL if not of interest */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool addedtolp;
    SCIP_ROW* row;
    int c;
 
@@ -1298,6 +1301,8 @@ SCIP_RETCODE addLinearizationCuts(
       if( row == NULL )
          continue;
 
+      addedtolp = FALSE;
+
       assert(!SCIProwIsLocal(row));
 
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
@@ -1312,11 +1317,15 @@ SCIP_RETCODE addLinearizationCuts(
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
             *separatedlpsol = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            addedtolp = TRUE;
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
          }
       }
 
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      if( !addedtolp )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }

@@ -107,6 +107,8 @@ fixed bugs:
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
   to exponential growth in running time
+- force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
+  optimality for convex NLPs
 
 SCIP version 2.1.1
 ==================
