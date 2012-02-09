@@ -26,8 +26,6 @@
  * the minimum number of variable fixings necessary. As fixing values, we use values from the LP relaxation, the NLP
  * relaxation, or the incumbent solution.
  *
- * @todo after adding conflict to master SCIP rerun the probing with the same cover;
- *
  * @todo use the conflict analysis to analyze the infeasibility which arise after the probing of the cover worked and
  *       solve returned infeasible, instead of adding the Nogood/Conflict by hand; that has the advantage that the SCIP
  *       takes care of creating the conflict and might shrink the initial reason
@@ -53,10 +51,13 @@
 #define HEUR_TIMING             SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP        TRUE         /**< does the heuristic use a secondary SCIP instance? */
 
+/* default values for user parameters, grouped by parameter type */
 #define DEFAULT_FIXINGALTS      "li"         /**< sequence of fixing values used: 'l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution */
+
 #define DEFAULT_MAXNODES        (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem */
 #define DEFAULT_MINNODES        (SCIP_Longint)500/**< minimum number of nodes to regard in the subproblem */
 #define DEFAULT_NODESOFS        (SCIP_Longint)500/**< number of nodes added to the contingent of the total nodes */
+
 #define DEFAULT_CONFLICTWEIGHT  1000.0       /**< weight for conflict score in fixing order */
 #define DEFAULT_CUTOFFWEIGHT    1.0          /**< weight for cutoff score in fixing order */
 #define DEFAULT_INFERENCEWEIGHT 1.0          /**< weight for inference score in fixing order */
@@ -65,21 +66,26 @@
 #define DEFAULT_MINIMPROVE      0.0          /**< factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_NODESQUOT       0.1          /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_RECOVERDIV      0.9          /**< fraction of covering variables in the last cover which need to change their value when recovering */
+
+#define DEFAULT_MAXBACKTRACKS   6            /**< maximum number of backtracks */
+#define DEFAULT_MAXRECOVERS     0            /**< maximum number of recoverings */
+#define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
+
+#define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
+#define DEFAULT_FIXINGORDER     'v'          /**< order in which variables should be fixed */
+
 #define DEFAULT_BEFORECUTS      TRUE         /**< should undercover called at root node before cut separation? */
 #define DEFAULT_FIXINTFIRST     FALSE        /**< should integer variables in the cover be fixed first? */
 #define DEFAULT_LOCKSROUNDING   TRUE         /**< shall LP values for integer vars be rounded according to locks? */
 #define DEFAULT_ONLYCONVEXIFY   FALSE        /**< should we only fix/dom.red. variables creating nonconvexity? */
 #define DEFAULT_POSTNLP         TRUE         /**< should the nlp heuristic be called to polish a feasible solution? */
 #define DEFAULT_COVERBD         FALSE        /**< should bounddisjunction constraints be covered (or just copied)? */
-#define DEFAULT_MAXBACKTRACKS   6            /**< maximum number of backtracks */
-#define DEFAULT_MAXRECOVERS     0            /**< maximum number of recoverings */
-#define DEFAULT_MAXREORDERS     1            /**< maximum number of reorderings of the fixing order */
-#define DEFAULT_COVERINGOBJ     'u'          /**< objective function of the covering problem */
-#define DEFAULT_FIXINGORDER     'v'          /**< order in which variables should be fixed */
+#define DEFAULT_REUSECOVER      FALSE        /**< shall the cover be re-used if a conflict was added after an infeasible subproblem? */
 #define DEFAULT_COPYCUTS        TRUE         /**< should all active cuts from the cutpool of the original scip be copied
                                               *   to constraints of the subscip
                                               */
 
+/* local defines */
 #define COVERINGOBJS            "cdlmtu"     /**< list of objective functions of the covering problem */
 #define FIXINGORDERS            "CcVv"       /**< list of orders in which variables can be fixed */
 #define MAXNLPFAILS             1            /**< maximum number of fails after which we give up solving the nlp relaxation */
@@ -117,15 +123,6 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             recoverdiv;         /**< fraction of covering variables in the last cover which need to change their value when recovering */
-   SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
-   SCIP_Bool             fixintfirst;        /**< should integer variables in the cover be fixed first? */
-   SCIP_Bool             globalbounds;       /**< should global bounds on variables be used instead of local bounds at focus node? */
-   SCIP_Bool             locksrounding;      /**< shall LP values for integer vars be rounded according to locks? */
-   SCIP_Bool             nlpsolved;          /**< has current nlp relaxation already been solved successfully? */
-   SCIP_Bool             nlpfailed;          /**< has solving the nlp relaxation failed? */
-   SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity? */
-   SCIP_Bool             postnlp;            /**< should the nlp heuristic be called to polish a feasible solution? */
-   SCIP_Bool             coverbd;            /**< should bounddisjunction constraints be covered (or just copied)? */
    int                   maxbacktracks;      /**< maximum number of backtracks */
    int                   maxrecovers;        /**< maximum number of recoverings */
    int                   maxreorders;        /**< maximum number of reorderings of the fixing order */
@@ -135,6 +132,16 @@ struct SCIP_HeurData
    int                   nnlconshdlrs;       /**< number of nonlinear constraint handlers */
    char                  coveringobj;        /**< objective function of the covering problem */
    char                  fixingorder;        /**< order in which variables should be fixed */
+   SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation? */
+   SCIP_Bool             fixintfirst;        /**< should integer variables in the cover be fixed first? */
+   SCIP_Bool             globalbounds;       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             locksrounding;      /**< shall LP values for integer vars be rounded according to locks? */
+   SCIP_Bool             nlpsolved;          /**< has current nlp relaxation already been solved successfully? */
+   SCIP_Bool             nlpfailed;          /**< has solving the nlp relaxation failed? */
+   SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             postnlp;            /**< should the nlp heuristic be called to polish a feasible solution? */
+   SCIP_Bool             coverbd;            /**< should bounddisjunction constraints be covered (or just copied)? */
+   SCIP_Bool             reusecover;         /**< shall the cover be re-used if a conflict was added after an infeasible subproblem? */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
 };
@@ -2418,7 +2425,7 @@ SCIP_RETCODE fixAndPropagate(
          if( nbacktracks < heurdata->nfixingalts )
          {
             SCIP_Bool success;
-            
+
             /* if the lp relaxation is not solved, we do not even try to retrieve the lp solution value;
              * if the nlp relaxation is not constructed, we do not even try to retrieve the nlp solution value;
              * if there is no feasible solution yet, we do not even try to obtain the value in the incumbent */
@@ -2532,7 +2539,7 @@ SCIP_RETCODE fixAndPropagate(
    SCIP_CALL( SCIPendProbing(scip) );
 
    *lastfailed = i;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2570,6 +2577,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    int i;
 
    SCIP_Bool success;
+   SCIP_Bool reusecover;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -2666,12 +2674,13 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_CALL( SCIPallocBufferArray(scip, &fixingvals, nvars) );
    ncovers = 0;
    success = FALSE;
+   reusecover = FALSE;
 
    heurdata->nfixingalts = (int) strlen(heurdata->fixingalts);
    assert(heurdata->nfixingalts >= 1);
 
    /* recovering loop */
-   while( ncovers <= heurdata->maxrecovers && !success )
+   while( (ncovers <= heurdata->maxrecovers || reusecover) && !success )
    {
       int lastfailed;
       int ndives;
@@ -2679,63 +2688,70 @@ SCIP_RETCODE SCIPapplyUndercover(
       int nfixedconts;
       int bdlen;                                /* current length of bound disjunction along the probing path */
 
+      SCIP_Bool conflictcreated;
+
       /* solve covering problem; free transformed covering problem immediately */
       SCIPdebugMessage("solving covering problem\n\n");
       success = FALSE;
       bdlen = 0;
-      SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
-            timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, maxcoversize, &success) );
+      conflictcreated = FALSE;
 
-   STATISTIC(
-      if( ncovers == 0 && success )
-         SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
-      );
-
-      assert(coversize >= 0);
-      assert(coversize <= nvars);
-
-      SCIP_CALL( SCIPfreeTransform(coveringscip) );
-      ncovers++;
-
-      /* terminate if no feasible cover was found */
-      if( !success )
+      if( !reusecover )
       {
-         SCIPdebugMessage("no feasible cover found in covering problem %d, terminating\n", ncovers);
-         goto TERMINATE;
-      }
+         SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
+               timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, maxcoversize, &success) );
 
-      /* terminate, if cover is empty or too large */
-      if( coversize == 0 || coversize > maxcoversize )
-      {
-         SCIPdebugMessage("terminating due to coversize=%d\n", coversize);
-         goto TERMINATE;
-      }
+         STATISTIC(
+            if( ncovers == 0 && success )
+               SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+            );
 
-      if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
-      {
-         int nnlconss;
+         assert(coversize >= 0);
+         assert(coversize <= nvars);
+         ncovers++;
 
-         nnlconss = 0;
+         SCIP_CALL( SCIPfreeTransform(coveringscip) );
 
-         /*get number of nonlinear ocnstraints */
-         for( i = 0; i < heurdata->nnlconshdlrs; ++i )
-            nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
-         assert(nnlconss <= SCIPgetNConss(scip));
-
-         /* terminate, if cover too large for the ratio of nonlinear constraints */
-         if( coversize > heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) )
+         /* terminate if no feasible cover was found */
+         if( !success )
+         {
+            SCIPdebugMessage("no feasible cover found in covering problem %d, terminating\n", ncovers);
             goto TERMINATE;
+         }
+
+         /* terminate, if cover is empty or too large */
+         if( coversize == 0 || coversize > maxcoversize )
+         {
+            SCIPdebugMessage("terminating due to coversize=%d\n", coversize);
+            goto TERMINATE;
+         }
+
+         if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
+         {
+            int nnlconss;
+
+            nnlconss = 0;
+
+            /*get number of nonlinear ocnstraints */
+            for( i = 0; i < heurdata->nnlconshdlrs; ++i )
+               nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
+            assert(nnlconss <= SCIPgetNConss(scip));
+
+            /* terminate, if cover too large for the ratio of nonlinear constraints */
+            if( coversize > heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) )
+               goto TERMINATE;
+         }
       }
 
-      /* round-fix-propagate-analyze-backtrack-reorder */
 
-      /* reordering loop */
+      /* data setup */
       ndives = 0;
       nfixedints = 0;
       nfixedconts = 0;
       success = FALSE;
+      lastfailed = reusecover ? MAX(1, coversize-1) : coversize;
 
-      lastfailed = coversize;
+      /* round-fix-propagate-analyze-backtrack-reorder loop */
       while( ndives <= heurdata->maxreorders && !success )
       {
          SCIP_Bool reordered;
@@ -2751,7 +2767,7 @@ SCIP_RETCODE SCIPapplyUndercover(
             break;
 
          infeas = FALSE;
-         SCIP_CALL( fixAndPropagate(scip, heurdata, cover, coversize, fixingvals, &bdlen, bdvars, bdtypes, bdbounds, oldbounds, 
+         SCIP_CALL( fixAndPropagate(scip, heurdata, cover, coversize, fixingvals, &bdlen, bdvars, bdtypes, bdbounds, oldbounds,
                &nfixedints, &nfixedconts, &lastfailed, &infeas) );
          ndives++;
          success = !infeas;
@@ -2810,6 +2826,7 @@ SCIP_RETCODE SCIPapplyUndercover(
             {
                /* even if we had reset the global bounds at start of probing, the constraint might be only locally valid due to local constraints/cuts */
                SCIP_CALL( createConflict(scip, bdlen, bdvars, bdtypes, bdbounds, SCIPgetDepth(scip) > 0, TRUE, TRUE, &success) );
+               conflictcreated = success;
             }
 
             SCIPdebugMessage("subproblem solved (%s), forbidding assignment in original problem %s, %sconflict length=%d\n",
@@ -2890,6 +2907,12 @@ SCIP_RETCODE SCIPapplyUndercover(
             success = FALSE;
          }
       }
+
+      /* try to re-use the same cover at most once */
+      if( heurdata->reusecover && !reusecover && conflictcreated )
+         reusecover = TRUE;
+      else
+         reusecover = FALSE;
    }
 
  TERMINATE:
@@ -3266,6 +3289,28 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "fraction of covering variables in the last cover which need to change their value when recovering",
          &heurdata->recoverdiv, TRUE, DEFAULT_RECOVERDIV, 0.0, 1.0, NULL, NULL) );
 
+   /* add int parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
+         "maximum number of backtracks in fix-and-propagate",
+         &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxrecovers",
+         "maximum number of recoverings",
+         &heurdata->maxrecovers, TRUE, DEFAULT_MAXRECOVERS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxreorders",
+         "maximum number of reorderings of the fixing order",
+         &heurdata->maxreorders, TRUE, DEFAULT_MAXREORDERS, 0, INT_MAX, NULL, NULL) );
+
+   /* add char parameters */
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
+         "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
+         &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
+         "order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index",
+         &heurdata->fixingorder, TRUE, DEFAULT_FIXINGORDER, FIXINGORDERS, NULL, NULL) );
+
    /* add bool parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/beforecuts",
          "should the heuristic be called at root node before cut separation?",
@@ -3291,31 +3336,13 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "should bounddisjunction constraints be covered (or just copied)?",
          &heurdata->coverbd, TRUE, DEFAULT_COVERBD, NULL, NULL) );
 
-   /* add int parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
-         "maximum number of backtracks in fix-and-propagate",
-         &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxrecovers",
-         "maximum number of recoverings",
-         &heurdata->maxrecovers, TRUE, DEFAULT_MAXRECOVERS, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxreorders",
-         "maximum number of reorderings of the fixing order",
-         &heurdata->maxreorders, TRUE, DEFAULT_MAXREORDERS, 0, INT_MAX, NULL, NULL) );
-
-   /* add char parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
-         "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
-         &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
-         "order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index",
-         &heurdata->fixingorder, TRUE, DEFAULT_FIXINGORDER, FIXINGORDERS, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/reusecover",
+         "shall the cover be reused if a conflict was added after an infeasible subproblem?",
+         &heurdata->reusecover, TRUE, DEFAULT_REUSECOVER, NULL, NULL) );
 
    return SCIP_OKAY;
 }
