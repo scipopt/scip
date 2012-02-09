@@ -3,7 +3,6 @@ SCIP version 2.1.2
 
 fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly()
-<<<<<<< HEAD
 - fixed bug in varAddTransitiveImplic() in var.c, when adding implications on special aggregated, namely negated,
   variables
 - fixed bug in cons_quadratic where bounds on activity of quadratic term were not always invalidated when quadratic
@@ -18,6 +17,8 @@ fixed bugs:
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
   to exponential growth in running time
+- force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
+  optimality for convex NLPs
 
 SCIP version 2.1.1
 ==================
