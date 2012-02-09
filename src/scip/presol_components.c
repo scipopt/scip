@@ -105,8 +105,8 @@ void initPresoldata(
 /** initialize list */
 static
 SCIP_RETCODE initList(
-   SCIP*                 scip,
-   LIST*                 list
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIST*                 list                /**< constraint list */
    )
 {
    int v;
@@ -131,10 +131,10 @@ SCIP_RETCODE initList(
 /** begin constraint filling for one variable */
 static
 SCIP_RETCODE startList(
-   SCIP*                 scip,
-   LIST*                 list,
-   int                   varidx,
-   int                   considx
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIST*                 list,               /**< constraint list */
+   int                   varidx,             /**< variable index for adding a constraint index */
+   int                   considx             /**< constraint index which should be filled */
    )
 {
    SCIP_CALL( SCIPallocMemoryArray(scip, &list->conss[varidx], START_LIST_SIZE) );
@@ -150,10 +150,10 @@ SCIP_RETCODE startList(
 /** continue constraint filling for one variable */
 static
 SCIP_RETCODE appendList(
-   SCIP*                 scip,
-   LIST*                 list,
-   int                   varidx,
-   int                   considx
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIST*                 list,               /**< constraint list */
+   int                   varidx,             /**< variable index for adding a constraint index */
+   int                   considx             /**< constraint index which should be filled */
    )
 {
    if( list->meminfo[varidx].nused >= (list->meminfo[varidx].navail - 1) )
@@ -171,10 +171,10 @@ SCIP_RETCODE appendList(
 /** fill constraint into list for this variable */
 static
 SCIP_RETCODE fillConsIndex(
-   SCIP*                 scip,
-   LIST*                 list,
-   int                   varidx,
-   int                   considx
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIST*                 list,               /**< constraint list */
+   int                   varidx,             /**< variable index for adding a constraint index */
+   int                   considx             /**< constraint index which should be filled */
    )
 {
    assert(scip != NULL);
@@ -196,8 +196,8 @@ SCIP_RETCODE fillConsIndex(
 /** delete list */
 static
 void freeList(
-   SCIP*                 scip,
-   LIST**                list
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIST**                list                /**< constraint list */
    )
 {
    int v;
@@ -301,9 +301,12 @@ SCIP_RETCODE buildComponentSubscip(
    SCIP_VAR**            vars,               /**< variables contained in this component */
    int                   nvars,              /**< number of variables contained in this component */
    int*                  nsolvedprobs,       /**< pointer to increase, if the subproblem was solved */
-   int*                  ndeletedvars,       /**< pointer to store the number of deleted variables */
-   int*                  ndeletedcons,       /**< pointer to store the number of deleted constraints */
-   SCIP_Real*            subsolvetime        /**< pointer to store time needed to solve the subproblem */
+   SCIP_Real*            subsolvetime,       /**< pointer to store time needed to solve the subproblem */
+   int*                  nconstodelete,      /**< number of constraints for deletion */
+   SCIP_CONS**           constodelete,       /**< constraints for deletion */
+   int*                  nvarstofix,         /**< number of variables for fixing */
+   SCIP_VAR**            varstofix,          /**< variables for fixing */
+   SCIP_Real*            varsfixvalues       /**< fixing values of the variables */
    )
 {
    char probname[SCIP_MAXSTRLEN];
@@ -320,11 +323,19 @@ SCIP_RETCODE buildComponentSubscip(
    assert(presoldata != NULL);
    assert(conss != NULL);
    assert(nconss > 0);
+   assert(vars != NULL);
    assert(nvars > 0);
+   assert(nsolvedprobs != NULL);
+   assert(subsolvetime != NULL);
+   assert(nconstodelete != NULL);
+   assert(constodelete != NULL);
+   assert(nvarstofix != NULL);
+   assert(varstofix != NULL);
+   assert(varsfixvalues != NULL);
 
    c = presoldata->ncomponents;
 
-   //printf("build sub-SCIP for component %d (%d vars, %d conss)\n", c, nvars, nconss);
+   //SCIPdebugMessage("build sub-SCIP for component %d (%d vars, %d conss)\n", c, nvars, nconss);
 
    /* create sub-SCIP */
    SCIP_CALL( SCIPcreate(&(presoldata->components[c])) );
@@ -447,29 +458,26 @@ SCIP_RETCODE buildComponentSubscip(
          if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
          {
             SCIP_SOL* sol;
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
 
             ++(*nsolvedprobs);
 
             sol = SCIPgetBestSol(subscip);
 
-            /* fix variables contained in the sub-scip */
+            /* memorize variables for later fixing */
             for( i = 0; i < nvars; ++i )
             {
                assert( SCIPhashmapExists(presoldata->varmaps[c], vars[i]) );
-               SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(presoldata->varmaps[c], vars[i])), &infeasible, &fixed) );
-               assert(!infeasible);
-               assert(fixed);
+               varstofix[*nvarstofix] = vars[i];
+               varsfixvalues[*nvarstofix] = SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(presoldata->varmaps[c], vars[i]));
+               (*nvarstofix)++;
             }
-            (*ndeletedvars) += nvars;
 
-            /* delete constraints contained in the sub-scip */
+            /* memorize constraints for later deletion */
             for( i = 0; i < nconss; ++i )
             {
-               SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+               constodelete[*nconstodelete] = conss[i];
+               (*nconstodelete)++;
             }
-            (*ndeletedcons) += nconss;
          }
          else
          {
@@ -492,7 +500,6 @@ SCIP_RETCODE buildComponentSubscip(
 
    return SCIP_OKAY;
 }
-
 
 /** loop over constraints, get active variables and fill directed graph */
 static
@@ -577,6 +584,7 @@ SCIP_RETCODE fillDigraph(
    return SCIP_OKAY;
 }
 
+
 /** use components to detect which vars and cons belong to one subscip
  *  and try to solve all subscips having not too much integer vars
  */
@@ -589,10 +597,13 @@ SCIP_RETCODE createSubScipsAndSolve(
    int*                  components,         /**< array with component number for every variable */
    int*                  ncomponents,        /**< size of array with component numbers */
    LIST*                 conslist,           /**< list containing information which variable occur in which constraint */
-   int*                  ndeletedcons,       /**< number of deleted constraints by component presolver */
-   int*                  ndeletedvars,       /**< number of fixed variables by component presolver */
-   int*                  nsolvedprobs        /**< number of solved subproblems */
-   )
+   int*                  nsolvedprobs,       /**< number of solved subproblems */
+   int*                  nconstodelete,      /**< number of constraints for deletion */
+   SCIP_CONS**           constodelete,       /**< constraints for deletion */
+   int*                  nvarstofix,         /**< number of variables for fixing */
+   SCIP_VAR**            varstofix,          /**< variables for fixing */
+   SCIP_Real*            varsfixvalues       /**< variables fixing values */
+  )
 {
    int comp;
    int v;
@@ -614,12 +625,13 @@ SCIP_RETCODE createSubScipsAndSolve(
    assert(components != NULL);
    assert(ncomponents != NULL);
    assert(conslist != NULL);
-   assert(ndeletedcons != NULL);
-   assert(ndeletedvars != NULL);
    assert(nsolvedprobs != NULL);
+   assert(nconstodelete != NULL);
+   assert(constodelete != NULL);
+   assert(nvarstofix != NULL);
+   assert(varstofix != NULL);
+   assert(varsfixvalues != NULL);
 
-   *ndeletedcons = 0;
-   *ndeletedvars = 0;
    *nsolvedprobs = 0;
    subsolvetime = 0.0;
 
@@ -684,9 +696,20 @@ SCIP_RETCODE createSubScipsAndSolve(
 
       if( (nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars) || presoldata->writeproblems )
       {
-         /* build subscip for one component */
-         SCIP_CALL( buildComponentSubscip(scip, presoldata, tmpconss, ntmpconss,
-               tmpvars, ntmpvars, nsolvedprobs, ndeletedvars, ndeletedcons, &subsolvetime) );
+         if( ntmpconss > 0 && ntmpvars > 0 )
+         {
+            /* build subscip for one component and try to solve it */
+            SCIP_CALL( buildComponentSubscip(scip, presoldata, tmpconss, ntmpconss,
+                  tmpvars, ntmpvars, nsolvedprobs, &subsolvetime, nconstodelete, constodelete,
+                  nvarstofix, varstofix, varsfixvalues ) );
+         }
+         else
+         {
+            /* this can occur if we have a variable present within
+               the obj function but not present within any constraint */
+            printf("++++++++++++++ sub-SCIP for empty (!) component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
+            presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
+         }
       }
       else
       {
@@ -700,6 +723,55 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIPfreeBufferArray(scip, &tmpconss);
 
    freeComponentData(scip, presoldata);
+
+   return SCIP_OKAY;
+}
+
+/** do variable fixing and constraint deletion at the end,
+ *  since a variable fixing can change the current and the
+ *  subsequent slots in the vars array
+ */
+static
+SCIP_RETCODE fixVarsDeleteConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nconsstodelete,     /**< number of constraints for deletion */
+   SCIP_CONS**           consstodelete,      /**< constraints for deletion */
+   int                   nvarstofix,         /**< number of variables for fixing */
+   SCIP_VAR**            varstofix,          /**< variables for fixing */
+   SCIP_Real*            varsfixvalues,      /**< fixing values of the variables */
+   int*                  ndeletedcons,       /**< number of deleted constraints by component presolver */
+   int*                  ndeletedvars        /**< number of fixed variables by component presolver */
+   )
+{
+   int i;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
+
+   assert(scip != NULL);
+   assert(consstodelete != NULL);
+   assert(varstofix != NULL);
+   assert(varsfixvalues != NULL);
+   assert(ndeletedcons != NULL);
+   assert(ndeletedvars != NULL);
+
+   *ndeletedcons = 0;
+   *ndeletedvars = 0;
+
+   /* fix variables */
+   for( i = 0; i < nvarstofix; i++ )
+   {
+      SCIP_CALL( SCIPfixVar(scip, varstofix[i], varsfixvalues[i], &infeasible, &fixed) );
+      assert(!infeasible);
+      assert(fixed);
+      (*ndeletedvars)++;
+   }
+
+   /* delete constraints */
+   for( i = 0; i < nconsstodelete; ++i )
+   {
+      SCIP_CALL( SCIPdelCons(scip, consstodelete[i]) );
+      (*ndeletedcons)++;
+   }
 
    return SCIP_OKAY;
 }
@@ -730,6 +802,11 @@ SCIP_RETCODE presolComponents(
    int c;
    LIST* conslist;
    SCIP_Bool success;
+   int nconstodelete;
+   SCIP_CONS** constodelete;
+   int nvarstofix;
+   SCIP_VAR** varstofix;
+   SCIP_Real* varsfixvalues;
 
    assert(scip != NULL);
    assert(presol != NULL);
@@ -788,6 +865,13 @@ SCIP_RETCODE presolComponents(
 
    if( nvars > 1 && nconss > 1 )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &constodelete, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsfixvalues, nvars) );
+
+      nconstodelete = 0;
+      nvarstofix = 0;
+
       SCIP_CALL( SCIPallocBuffer(scip, &conslist) );
       initList(scip, conslist);
 
@@ -802,13 +886,20 @@ SCIP_RETCODE presolComponents(
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
          SCIP_CALL( createSubScipsAndSolve(scip, presoldata, conss, nconss,
-               components, &ncomponents, conslist, &ndeletedcons, &ndeletedvars, &nsolvedprobs ) );
+               components, &ncomponents, conslist, &nsolvedprobs, &nconstodelete, constodelete,
+               &nvarstofix, varstofix, varsfixvalues) );
+
+         SCIP_CALL( fixVarsDeleteConss(scip, nconstodelete, constodelete,
+                nvarstofix, varstofix, varsfixvalues, &ndeletedcons, &ndeletedvars) );
 
          SCIPfreeBufferArray(scip, &components);
       }
 
       SCIPdigraphFree(&digraph);
       freeList(scip, &conslist);
+      SCIPfreeBufferArray(scip, &varsfixvalues);
+      SCIPfreeBufferArray(scip, &varstofix);
+      SCIPfreeBufferArray(scip, &constodelete);
    }
 
    SCIPfreeBufferArray(scip, &conss);
