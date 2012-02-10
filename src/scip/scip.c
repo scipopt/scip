@@ -18609,6 +18609,69 @@ SCIP_RETCODE SCIPtightenVarUb(
    return SCIP_OKAY;
 }
 
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbCons and second the upperbound by calling
+ *        SCIPinferVarUbCons
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarFixCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPinferVarFixCons", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* in presolving case we take the shortcut to directly fix the variables */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+   {
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, fixedval, infeasible, &fixed) );
+
+      if( tightened != NULL )
+	 *tightened = fixed;
+   }
+   /* otherwise we use the lb and ub methods */
+   else
+   {
+      SCIP_Bool lbtightened;
+
+      SCIP_CALL( SCIPinferVarLbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, &lbtightened) );
+
+      if( !infeasible )
+      {
+	 SCIP_CALL( SCIPinferVarUbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, tightened) );
+
+	 if( tightened != NULL )
+	    *tightened |= lbtightened;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
@@ -18912,6 +18975,69 @@ SCIP_RETCODE SCIPinferBinvarCons(
 
    if( tightened != NULL )
       *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbProp and second the upperbound by calling
+ *        SCIPinferVarUbProp
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarFixProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPinferVarFixProp", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* in presolving case we take the shortcut to directly fix the variables */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+   {
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, fixedval, infeasible, &fixed) );
+
+      if( tightened != NULL )
+	 *tightened = fixed;
+   }
+   /* otherwise we use the lb and ub methods */
+   else
+   {
+      SCIP_Bool lbtightened;
+
+      SCIP_CALL( SCIPinferVarLbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, &lbtightened) );
+
+      if( !infeasible )
+      {
+	 SCIP_CALL( SCIPinferVarUbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, tightened) );
+
+	 if( tightened != NULL )
+	    *tightened |= lbtightened;
+      }
+   }
 
    return SCIP_OKAY;
 }

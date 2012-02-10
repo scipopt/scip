@@ -7747,6 +7747,31 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbCons and second the upperbound by calling
+ *        SCIPinferVarUbCons
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+EXTERN
+SCIP_RETCODE SCIPinferVarFixCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
@@ -7828,6 +7853,31 @@ SCIP_RETCODE SCIPinferBinvarCons(
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbProp and second the upperbound by calling
+ *        SCIPinferVarUbProp
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+EXTERN
+SCIP_RETCODE SCIPinferVarFixProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
