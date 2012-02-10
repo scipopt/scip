@@ -18,6 +18,12 @@
  * @brief  components presolver
  * @author Dieter Weninger
  * @author Gerald Gamrath
+ *
+ * This presolver looks for independent components at the end of the presolving.
+ * If independent components are found in which a maximum number of variables
+ * is not exceeded, the component-presolver tries to solve them in advance
+ * within subproblems. Afterwards the corresponding variables/constraints can be
+ * fixed in the main problem.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
