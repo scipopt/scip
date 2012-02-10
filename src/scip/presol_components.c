@@ -15,7 +15,7 @@
 #define SCIP_DEBUG
 
 /**@file   presol_components.c
- * @brief  components presolver
+ * @brief  solve independent components in advance
  * @author Dieter Weninger
  * @author Gerald Gamrath
  */
@@ -442,7 +442,7 @@ SCIP_RETCODE buildComponentSubscip(
       if( presoldata->writeproblems )
       {
          (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_comp_%d.lp", SCIPgetProbName(scip), c);
-         printf("write problem to file %s\n", probname);
+         SCIPdebugMessage("write problem to file %s\n", probname);
          SCIP_CALL( SCIPwriteOrigProblem(subscip, probname, NULL, FALSE) );
       }
 
@@ -481,13 +481,13 @@ SCIP_RETCODE buildComponentSubscip(
          }
          else
          {
-            printf("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+            SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
                c, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip), SCIPgetNContVars(subscip), nconss);
          }
       }
       else
       {
-         printf("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
             c, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip), SCIPgetNContVars(subscip), nconss);
       }
    }
@@ -602,7 +602,8 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIP_CONS**           constodelete,       /**< constraints for deletion */
    int*                  nvarstofix,         /**< number of variables for fixing */
    SCIP_VAR**            varstofix,          /**< variables for fixing */
-   SCIP_Real*            varsfixvalues       /**< variables fixing values */
+   SCIP_Real*            varsfixvalues,      /**< variables fixing values */
+   int*                  statistics          /**< array holding some statistical information */
   )
 {
    int comp;
@@ -616,8 +617,11 @@ SCIP_RETCODE createSubScipsAndSolve(
    int ntmpvars;
    int nbinvars;
    int nintvars;
+   int nsumbinintvars;
    SCIP_Real subsolvetime;
    SCIP_Bool* consincomponent;
+   int* debugvars;
+   int* debugcons;
 
    assert(scip != NULL);
    assert(presoldata != NULL);
@@ -643,6 +647,12 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpconss, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consincomponent, nconss) );
+
+   /* use two debug array to verify everything doing well */
+   SCIP_CALL( SCIPallocBufferArray(scip, &debugvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &debugcons, nconss) );
+   BMSclearMemoryArray(debugvars, nvars);
+   BMSclearMemoryArray(debugcons, nconss);
 
    /* loop over all components
       start loop from 1 because components are numbered form 1..n */
@@ -680,6 +690,9 @@ SCIP_RETCODE createSubScipsAndSolve(
                   c++;
                }
             }
+
+            assert(debugvars[v] == 0);
+            debugvars[v] = comp;
          }
       }
 
@@ -691,7 +704,29 @@ SCIP_RETCODE createSubScipsAndSolve(
          {
             tmpconss[ntmpconss] = conss[c];
             ntmpconss++;
+
+            assert((debugcons[c] == 0) || (debugcons[c] == comp));
+            debugcons[c] = comp;
          }
+      }
+
+      /* extract some statistical information */
+      nsumbinintvars = nbinvars + nintvars;
+      if( 0 <= nsumbinintvars && nsumbinintvars < 21 )
+      {
+         statistics[0]++;
+      }
+      else if( 20 < nsumbinintvars && nsumbinintvars < 51 )
+      {
+         statistics[1]++;
+      }
+      else if( 50 < nsumbinintvars && nsumbinintvars < 101 )
+      {
+         statistics[2]++;
+      }
+      else if( 100 < nsumbinintvars )
+      {
+         statistics[3]++;
       }
 
       if( (nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars) || presoldata->writeproblems )
@@ -707,16 +742,27 @@ SCIP_RETCODE createSubScipsAndSolve(
          {
             /* this can occur if we have a variable present within
                the obj function but not present within any constraint */
-            printf("++++++++++++++ sub-SCIP for empty (!) component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
+            SCIPdebugMessage("++++++++++++++ sub-SCIP for empty (!) component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
             presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
          }
       }
       else
       {
-         printf("++++++++++++++ sub-SCIP for component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
+         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
             presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
       }
    }
+
+   /* every variable has to be in one component */
+   for( v = 0; v < nvars; v++ )
+      assert(debugvars[v] != 0);
+
+   /* every constraint has to be in one component */
+   for( c = 0; c < nconss; c++ )
+      assert(debugcons[c] != 0);
+
+   SCIPfreeBufferArray(scip, &debugvars);
+   SCIPfreeBufferArray(scip, &debugcons);
 
    SCIPfreeBufferArray(scip, &consincomponent);
    SCIPfreeBufferArray(scip, &tmpvars);
@@ -781,8 +827,6 @@ static
 SCIP_RETCODE presolComponents(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_PRESOL*          presol,             /**< the presolver itself */
-   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
-   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
    )
 {
@@ -807,11 +851,10 @@ SCIP_RETCODE presolComponents(
    int nvarstofix;
    SCIP_VAR** varstofix;
    SCIP_Real* varsfixvalues;
+   int statistics[4] = {0,0,0,0};
 
    assert(scip != NULL);
    assert(presol != NULL);
-   //assert(nfixedvars != NULL);
-   //assert(ndelconss != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -887,7 +930,7 @@ SCIP_RETCODE presolComponents(
 
          SCIP_CALL( createSubScipsAndSolve(scip, presoldata, conss, nconss,
                components, &ncomponents, conslist, &nsolvedprobs, &nconstodelete, constodelete,
-               &nvarstofix, varstofix, varsfixvalues) );
+               &nvarstofix, varstofix, varsfixvalues, statistics) );
 
          SCIP_CALL( fixVarsDeleteConss(scip, nconstodelete, constodelete,
                 nvarstofix, varstofix, varsfixvalues, &ndeletedcons, &ndeletedvars) );
@@ -904,11 +947,8 @@ SCIP_RETCODE presolComponents(
 
    SCIPfreeBufferArray(scip, &conss);
 
-   //(*nfixedvars) = (*nfixedvars) + ndeletedvars;
-   //(*ndelconss) = (*ndelconss) + ndeletedcons;
-
-   SCIPdebugMessage("### %d components, %d solved, %d delcons, %d delvars\n",
-      ncomponents, nsolvedprobs, ndeletedcons, ndeletedvars);
+   SCIPdebugMessage("### %d comp (distribution: [1-20]=%d, [21-50]=%d, [51-100]=%d, >100=%d), %d solved, %d delcons, %d delvars\n",
+      ncomponents, statistics[0], statistics[1], statistics[2], statistics[3], nsolvedprobs, ndeletedcons, ndeletedvars);
 
    return SCIP_OKAY;
 }
@@ -1000,7 +1040,7 @@ static
 SCIP_DECL_PRESOLEXITPRE(presolExitpreComponents)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( presolComponents(scip, presol, NULL, NULL, result) );
+   SCIP_CALL( presolComponents(scip, presol, result) );
 
    *result = SCIP_FEASIBLE;
 
