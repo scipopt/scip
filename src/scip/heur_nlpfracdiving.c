@@ -13,6 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
+#define STATISTIC_INFORMATION
+
+/* uncomment to get statistical output at the end of SCIP run */
+/* #define STATISTIC_INFORMATION */
+
 /**@file   heur_nlpfracdiving.c
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
@@ -61,6 +66,12 @@
 #define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
+/* enable statistic output by defining macro STATISTIC_INFORMATION */
+#ifdef STATISTIC_INFORMATION
+#define STATISTIC(x)                {x}
+#else
+#define STATISTIC(x)             /**/
+#endif
 
 
 /* locally defined heuristic data */
@@ -83,6 +94,9 @@ struct SCIP_HeurData
    SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
+#ifdef STATISTIC_INFORMATION
+   SCIP_Longint          nnlpsolves;         /**< number of NLP solves */
+#endif
 };
 
 
@@ -154,6 +168,9 @@ SCIP_DECL_HEURINIT(heurInitNlpFracdiving) /*lint --e{715}*/
    /* initialize data */
    heurdata->nnlpiterations = 0;
    heurdata->nsuccess = 0;
+   STATISTIC(
+      heurdata->nnlpsolves = 0;
+      );
 
    return SCIP_OKAY;
 }
@@ -174,6 +191,15 @@ SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   STATISTIC(
+      if( strstr(SCIPgetProbName(scip), "_covering") == NULL )
+      {
+         SCIPinfoMessage(scip, NULL, "%-20s %5d sols in %5d runs, %10d NLP iters in %5d NLP solves\n",
+            SCIPgetProbName(scip), SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur),
+            heurdata->nnlpiterations, heurdata->nnlpsolves);
+      }
+      );
 
    return SCIP_OKAY;
 }
@@ -330,6 +356,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
    /* solve NLP relaxation */
    SCIP_CALL( SCIPsolveNLP(scip) );
+   STATISTIC( ++heurdata->nnlpsolves; )
 
    /* give up, if no feasible solution found */
    nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -632,6 +659,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
             SCIP_CALL( SCIPsolveNLP(scip) );
             lastnlpsolvedepth = divedepth;
+            STATISTIC( ++heurdata->nnlpsolves; )
 
             termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
