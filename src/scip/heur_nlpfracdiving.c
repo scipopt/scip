@@ -45,6 +45,9 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
+/* event handler properties */
+#define EVENTHDLR_NAME         "Nlpfracdiving"
+#define EVENTHDLR_DESC         "bound change event handler for "HEUR_NAME" heuristic"
 
 
 /*
@@ -97,12 +100,14 @@ struct SCIP_HeurData
    SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
+   int                   nfixedcovervars;    /**< number of variables in the cover that are already fixed */
 #ifdef STATISTIC_INFORMATION
    int                   nnlpsolves;         /**< number of NLP solves */
    int                   nfailcutoff;        /**< number of fails due to cutoff */
    int                   nfaildepth;         /**< number of fails due to too deep */
    int                   nfailnlperror;      /**< number of fails due to NLP error */
 #endif
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
 
@@ -114,6 +119,70 @@ struct SCIP_HeurData
 
 
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * We update the number of variables fixed in the cover
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecNlpFracdiving)
+{
+   SCIP_EVENTTYPE eventtype;
+   SCIP_HEURDATA* heurdata;
+   SCIP_VAR* var;
+
+   SCIP_Real oldbound;
+   SCIP_Real newbound;
+   SCIP_Real otherbound;
+   
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+   assert(0 <= heurdata->nfixedcovervars && heurdata->nfixedcovervars <= SCIPgetNVars(scip));
+
+   oldbound = SCIPeventGetOldbound(event);
+   newbound = SCIPeventGetNewbound(event);
+   var = SCIPeventGetVar(event);
+
+   eventtype = SCIPeventGetType(event);
+   otherbound = (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var);
+
+   switch( eventtype )
+   {
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+      /* if cover variable is now fixed */
+         if( SCIPisFeasEQ(scip, newbound, otherbound) )
+         {
+            assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
+            ++(heurdata->nfixedcovervars);
+         }
+         break;
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      /* if cover variable is now unfixed */
+      if( SCIPisFeasEQ(scip, oldbound,otherbound) )
+      {
+         assert(!SCIPisFeasEQ(scip, newbound, otherbound));
+         --(heurdata->nfixedcovervars);
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid event type.\n");
+      return SCIP_INVALIDDATA;
+   }
+   assert(0 <= heurdata->nfixedcovervars && heurdata->nfixedcovervars <= SCIPgetNVars(scip));
+
+   SCIPdebugMessage("changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
+                    oldbound, newbound, heurdata->nfixedcovervars);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -174,6 +243,7 @@ SCIP_DECL_HEURINIT(heurInitNlpFracdiving) /*lint --e{715}*/
    /* initialize data */
    heurdata->nnlpiterations = 0;
    heurdata->nsuccess = 0;
+   heurdata->nfixedcovervars = 0;
    STATISTIC(
       heurdata->nnlpsolves = 0;
       heurdata->nfailcutoff = 0;
@@ -250,6 +320,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_VAR* var;
    SCIP_VAR** nlpcands;
+   SCIP_VAR** covervars;
    SCIP_Real* nlpcandssol;
    SCIP_Real* nlpcandsfrac;
    SCIP_HASHMAP* varincover;
@@ -281,6 +352,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_Longint maxnnlpiterations;
    int npseudocands;
    int nlpbranchcands;
+   int ncovervars;
    int nnlpcands;
    int startnnlpcands;
    int depth;
@@ -290,8 +362,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int lastnlpsolvedepth;
    int bestcand;
    int c;
-   int ncovervars;
-   int ncovervarsfixed;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -456,16 +526,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
+
    covercomputed = FALSE;
    varincover = NULL;
-
+   
    /* compute cover, if required */
    if( heurdata->prefercover )
    {
-      SCIP_VAR** covervars;
       SCIP_Real timelimit;
       SCIP_Real memorylimit;
-      int ncovervars;
       SCIP_Bool success;
 
       /* get limits */
@@ -485,17 +554,25 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          /* create hash map */
          SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
 
-         for( c = 0; c < ncovervars && SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT; c++ )
+         /* process variables in the cover */
+         for( c = 0; c < ncovervars; c++ )
          {
-            /* insert variable  */
-            assert(!SCIPhashmapExists(varincover, covervars[c]));
-            SCIP_CALL( SCIPhashmapInsert(varincover, covervars[c], (void*) (size_t) (c+1)) );
+            /* insert variable into hash map */
+            if( SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT )
+            {
+               assert(!SCIPhashmapExists(varincover, covervars[c]));
+               SCIP_CALL( SCIPhashmapInsert(varincover, covervars[c], (void*) (size_t) (c+1)) );
+            }
+
+            /* catch bound change events of cover variables */
+            assert(heurdata->eventhdlr != NULL);
+            SCIP_CALL( SCIPcatchVarEvent(scip, covervars[c], SCIP_EVENTTYPE_BOUNDCHANGED, heurdata->eventhdlr,
+                  (SCIP_EVENTDATA*) heurdata, NULL) );
+            assert(!SCIPisFeasEQ(scip, SCIPvarGetLbLocal(covervars[c]), SCIPvarGetUbLocal(covervars[c])));
          }
+
          covercomputed = TRUE;        
       }
-
-      /* free temporary array */
-      SCIPfreeBufferArray(scip, &covervars);
    }
 
    /* start diving */
@@ -621,7 +698,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
             /* prefer decisions on cover variables */
             if( covercomputed && SCIPhashmapExists(varincover, var) )
-            {printf("XXX\n");               frac *= 1000.0; }
+               frac *= 1000.0;
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
@@ -888,13 +965,26 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       }
    }
 
-   /* free cover array */
-   assert( covercomputed == (varincover != NULL));
-   if( covercomputed )
-      SCIPhashmapFree(&varincover);
-
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
+
+   /* free cover array */
+   assert(covercomputed == (varincover != NULL));
+   if( covercomputed )
+   {
+      assert(heurdata->eventhdlr != NULL);
+      assert(heurdata->nfixedcovervars == 0);
+      SCIPhashmapFree(&varincover);
+
+      /* drop bound change events of cover variables */
+      for( c = 0; c < ncovervars; c++ )
+      {
+         SCIP_CALL( SCIPdropVarEvent(scip, covervars[c], SCIP_EVENTTYPE_BOUNDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
+      }
+
+      /* free temporary array */
+      SCIPfreeBufferArray(scip, &covervars);
+   }
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
@@ -928,6 +1018,18 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          heurFreeNlpFracdiving, heurInitNlpFracdiving, heurExitNlpFracdiving,
          heurInitsolNlpFracdiving, heurExitsolNlpFracdiving, heurExecNlpFracdiving,
          heurdata) );
+
+   /* create event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlpFracdiving, NULL) );
+
+   /* get event handler for bound change events */
+   heurdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if ( heurdata->eventhdlr == NULL )
+   {
+      SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    /* fracdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
