@@ -527,7 +527,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnnlpcands = nnlpcands;
-   while( !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE && nnlpcands > 0
+   while( !nlperror && !cutoff && (nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nnlpcands > 0
       && (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
@@ -773,6 +773,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             }
          }
 
+         nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( !cutoff && solvenlp )
          {
             /* resolve the diving NLP */
@@ -783,7 +784,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
 
             SCIP_CALL( SCIPsolveNLP(scip) );
-            lastnlpsolvedepth = divedepth;
             STATISTIC( ++heurdata->nnlpsolves; )
 
             termstat = SCIPgetNLPTermstat(scip);
@@ -810,6 +810,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             }
             else
             {
+               /* remember that we have solve NLP on this depth successfully */
+               lastnlpsolvedepth = divedepth;
                /* forget previous backtrack variable, we will never go back to a depth before the current one */
                backtrackdepth = -1;
             }
@@ -899,7 +901,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
 #if 1
    SCIPdebugMessage("NLP fracdiving ABORT due to ");
-   if( nlperror || nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
       SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
       STATISTIC( heurdata->nfailnlperror++; )
