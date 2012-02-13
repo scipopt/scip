@@ -4086,7 +4086,11 @@ void depthFirstSearch(
    (*ndfsnodes)++;
 }
 
-/** compute components on the given directed graph */
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note The graph should be the directed representation of an undirected
+ *        graph, i.e., for each edge, its reverse should exist.
+ */
 SCIP_RETCODE SCIPdigraphComputeComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int*                  components,         /**< array with as many slots as there are nodes in the directed graph
@@ -4141,13 +4145,12 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
    return SCIP_OKAY;
 }
 
-/** Computes (undirected) components on the directed graph and sorts the components
- *  (almost) topologically w.r.t. the directed graph.
+/** Computes (undirected) components on the directed graph and sorts
+ *  the components (almost) topologically w.r.t. the directed graph.
  *
- * Topologically sorted means, a variable which influences the lower (upper) bound of another
- * variable y is located before y in the corresponding variable array. Note, that in general
- * a topological sort is not unique. Note, that there might be directed cycles, that are
- * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
  */
 SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -4157,9 +4160,9 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
                                               *   with the nodes of one component being (almost) topologically sorted */
    int*                  componentstart,     /**< array to store for each component, where it starts in array components;
                                               *   at position ncomponents+1, the total number of nodes is stored */
-   int                   componentstartsize, /**< size of componentstart array, if this is smaller than the number of components+1,
+   int                   componentstartsize, /**< size of componentstart array; if this is smaller than the number of components+1,
                                               *   only the start indices of the first components are stored and the method should
-                                              *   be called again after reallocating the componentstart array */
+                                              *   be called again after enlarging the componentstart array */
    int*                  ncomponents         /**< pointer to store the number of components */
    )
 {
