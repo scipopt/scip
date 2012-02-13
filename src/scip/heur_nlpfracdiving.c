@@ -290,8 +290,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int lastnlpsolvedepth;
    int bestcand;
    int c;
-   int ncovervars;
-   int ncovervarsfixed;
 
    int       backtrackdepth;   /* depth where to go when backtracking */
    SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
