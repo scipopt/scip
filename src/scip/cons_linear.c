@@ -1374,7 +1374,7 @@ void consdataUpdateActivities(
             SCIPdebugMessage("%s%s activity of linear constraint unreliable after update: %16.9g\n", (global ? "global " : ""),
                (pseudo ? "pseudo" : ((boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) ? "min" : "max")), (*activity));
 
-            /* recompute the activity that was just changed and is not reliable anymore */
+            /* mark the activity that was just changed and is not reliable anymore to be invalid */
             if( global )
             {
                if( (boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) )
@@ -3275,15 +3275,17 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if we are in transformed problem, update minimum and maximum activities */
-   if( SCIPconsIsTransformed(cons) )
-      consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
-
    /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
    if( consdata->nvars <= 1 )
       consdataInvalidateActivities(consdata);
+   else
+   {
+      /* if we are in transformed problem, update minimum and maximum activities */
+      if( SCIPconsIsTransformed(cons) )
+         consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
+   }
 
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
