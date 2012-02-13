@@ -98,7 +98,10 @@ struct SCIP_HeurData
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 #ifdef STATISTIC_INFORMATION
-   SCIP_Longint          nnlpsolves;         /**< number of NLP solves */
+   int                   nnlpsolves;         /**< number of NLP solves */
+   int                   nfailcutoff;        /**< number of fails due to cutoff */
+   int                   nfaildepth;         /**< number of fails due to too deep */
+   int                   nfailnlperror;      /**< number of fails due to NLP error */
 #endif
 };
 
@@ -173,6 +176,9 @@ SCIP_DECL_HEURINIT(heurInitNlpFracdiving) /*lint --e{715}*/
    heurdata->nsuccess = 0;
    STATISTIC(
       heurdata->nnlpsolves = 0;
+      heurdata->nfailcutoff = 0;
+      heurdata->nfaildepth = 0;
+      heurdata->nfailnlperror = 0;
       );
 
    return SCIP_OKAY;
@@ -196,11 +202,13 @@ SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    STATISTIC(
-      if( strstr(SCIPgetProbName(scip), "_covering") == NULL )
+      if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPinfoMessage(scip, NULL, "%-20s %5d sols in %5d runs, %10d NLP iters in %5d NLP solves\n",
-            SCIPgetProbName(scip), SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur),
-            heurdata->nnlpiterations, heurdata->nnlpsolves);
+         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.2f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
+            SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
+            heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
+            (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
+         );
       }
       );
 
@@ -369,14 +377,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
-      SCIP_NLPSTATISTICS* nlpstatistics;
-      SCIPdebugMessage("initial NLP infeasible --> stop\n");
+      SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
 
       /* update iteration count */
-      SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
-      SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-      heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-      SCIPnlpStatisticsFree(&nlpstatistics);
+      if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+      {
+         SCIP_NLPSTATISTICS* nlpstatistics;
+
+         SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+         SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
+         heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
+         SCIPnlpStatisticsFree(&nlpstatistics);
+
+         STATISTIC( heurdata->nfailcutoff++; )
+      }
+      else
+      {
+         STATISTIC( heurdata->nfailnlperror++; )
+      }
 
       return SCIP_OKAY;
    }
@@ -816,10 +834,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    if( nlperror || nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
+      STATISTIC( heurdata->nfailnlperror++; )
    }
    else if( SCIPisStopped(scip) || cutoff )
    {
       SCIPdebugPrintf("LIMIT hit - stop: %d cutoff: %d \n", SCIPisStopped(scip), cutoff);
+      STATISTIC( heurdata->nfailcutoff++; )
    }
    else if(! (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
@@ -828,6 +848,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       SCIPdebugPrintf("TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth, 
          (nnlpcands > startnnlpcands - divedepth/2), (divedepth >= maxdivedepth), (heurdata->nnlpiterations >= maxnnlpiterations),
          (objval >= searchbound));   
+      STATISTIC( heurdata->nfaildepth++; )
    }
    else if ( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
