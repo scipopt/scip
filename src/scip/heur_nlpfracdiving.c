@@ -808,6 +808,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             {
                SCIPdebugMessage("  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
             }
+            else
+            {
+               /* forget previous backtrack variable, we will never go back to a depth before the current one */
+               backtrackdepth = -1;
+            }
 
             /* resolve LP */  
             if( !cutoff && !lperror && heurdata->preferlpfracs )
