@@ -274,7 +274,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
    STATISTIC(
       if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.2f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
+         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
             (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
@@ -362,6 +362,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int lastnlpsolvedepth;
    int bestcand;
    int c;
+   int       backtrackdepth;   /* depth where to go when backtracking */
+   SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
+   SCIP_Real backtrackvarval;  /* (fractional) value of backtrack variable */
+   SCIP_Bool backtrackroundup; /* whether variable should be rounded up in backtracking */
+
+   backtrackdepth = -1;
+   backtrackvar = NULL;
+   backtrackvarval = 0.0;
+   backtrackroundup = FALSE;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -596,7 +605,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnnlpcands = nnlpcands;
-   while( !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE && nnlpcands > 0
+   while( !nlperror && !cutoff && (nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nnlpcands > 0
       && (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
@@ -755,26 +764,69 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             break;
          }
 
-         /* apply rounding of best candidate */
-         if( bestcandroundup == !backtracked )
+         if( backtracked && backtrackdepth > 0 )
          {
-            /* round variable up */
-            SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-               divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
-               SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-               nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPfeasCeil(scip, nlpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, nlpcandssol[bestcand])) );
+            /* round backtrack variable up or down */
+            if( backtrackroundup )
+            {
+               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+                  SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
+                  SCIPfeasCeil(scip, backtrackvarval), SCIPvarGetUbLocal(backtrackvar));
+               SCIP_CALL( SCIPchgVarLbProbing(scip, backtrackvar, SCIPfeasCeil(scip, backtrackvarval)) );
+            }
+            else
+            {
+               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+                  SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
+                  SCIPvarGetLbLocal(backtrackvar), SCIPfeasFloor(scip, backtrackvarval));
+               SCIP_CALL( SCIPchgVarUbProbing(scip, backtrackvar, SCIPfeasFloor(scip, backtrackvarval)) );
+            }
+            /* forget about backtrack variable */
+            backtrackdepth = -1;
          }
          else
          {
-            /* round variable down */
-            SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-               divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
-               SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-               nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, nlpcandssol[bestcand]));
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, nlpcandssol[bestcand])) );
+            /* apply rounding of best candidate */
+            if( bestcandroundup == !backtracked )
+            {
+               /* round variable up */
+               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+                  SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+                  nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  SCIPfeasCeil(scip, nlpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, nlpcandssol[bestcand])) );
+
+               /* remember variable for backtracking, if we have none yet (e.g., we are just after NLP solve) or we are half way to the next NLP solve */
+               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)/2.0)) )
+               {
+                  backtrackdepth   = divedepth;
+                  backtrackvar     = var;
+                  backtrackvarval  = nlpcandssol[bestcand];
+                  backtrackroundup = FALSE;
+               }
+            }
+            else
+            {
+               /* round variable down */
+               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                  divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
+                  SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
+                  nlpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, nlpcandssol[bestcand]));
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, nlpcandssol[bestcand])) );
+
+               /* remember variable for backtracking, if we have none yet (e.g., we are just after NLP solve) or we are half way to the next NLP solve */
+               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)/2.0)) )
+               {
+                  backtrackdepth   = divedepth;
+                  backtrackvar     = var;
+                  backtrackvarval  = nlpcandssol[bestcand];
+                  backtrackroundup = TRUE;
+               }
+            }
          }
 
          /* apply domain propagation */
@@ -799,6 +851,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             }
          }
 
+         nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( !cutoff && solvenlp )
          {
             /* resolve the diving NLP */
@@ -809,7 +862,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
 
             SCIP_CALL( SCIPsolveNLP(scip) );
-            lastnlpsolvedepth = divedepth;
             STATISTIC( ++heurdata->nnlpsolves; )
 
             termstat = SCIPgetNLPTermstat(scip);
@@ -833,6 +885,13 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             if( cutoff )
             {
                SCIPdebugMessage("  *** cutoff detected in NLP solving at level %d, nlpsolstat: %d\n", SCIPgetProbingDepth(scip), nlpsolstat);
+            }
+            else
+            {
+               /* remember that we have solve NLP on this depth successfully */
+               lastnlpsolvedepth = divedepth;
+               /* forget previous backtrack variable, we will never go back to a depth before the current one */
+               backtrackdepth = -1;
             }
 
             /* resolve LP */  
@@ -858,10 +917,22 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          /* perform backtracking if a cutoff was detected */
          if( cutoff && !backtracked && heurdata->backtrack )
          {
-            SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
-            /* @todo could backtrack by more than one level, if we haven't solved the NLP for a while */
-            SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
-            SCIP_CALL( SCIPnewProbingNode(scip) );
+            if( backtrackdepth == -1 )
+            {
+               /* backtrack one step */
+               SCIPdebugMessage("  *** cutoff detected at level %d - backtracking one step\n", SCIPgetProbingDepth(scip));
+               SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+            }
+            else
+            {
+               /* if we have a stored a depth for backtracking, go there */
+               SCIPdebugMessage("  *** cutoff detected at level %d - backtracking to depth %d\n", SCIPgetProbingDepth(scip), backtrackdepth);
+               SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+               divedepth = backtrackdepth;
+               /* @todo if backtrackdepth is lastnlpsolvedepth-1, reduce fixquot, so we don't wait with NLP solves for too long */
+            }
             backtracked = TRUE;
          }
          else
@@ -908,7 +979,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
 #if 1
    SCIPdebugMessage("NLP fracdiving ABORT due to ");
-   if( nlperror || nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
       SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
       STATISTIC( heurdata->nfailnlperror++; )
