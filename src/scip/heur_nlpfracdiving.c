@@ -367,14 +367,18 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
-      SCIP_NLPSTATISTICS* nlpstatistics;
-      SCIPdebugMessage("initial NLP infeasible --> stop\n");
+      SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
 
       /* update iteration count */
-      SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
-      SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-      heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-      SCIPnlpStatisticsFree(&nlpstatistics);
+      if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+      {
+         SCIP_NLPSTATISTICS* nlpstatistics;
+
+         SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+         SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
+         heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
+         SCIPnlpStatisticsFree(&nlpstatistics);
+      }
 
       return SCIP_OKAY;
    }
