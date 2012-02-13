@@ -250,9 +250,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_VAR* var;
    SCIP_VAR** nlpcands;
-   SCIP_VAR** covervars;
    SCIP_Real* nlpcandssol;
    SCIP_Real* nlpcandsfrac;
+   SCIP_HASHMAP* varincover;
    SCIP_Real searchubbound;
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
@@ -274,6 +274,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
    SCIP_Bool solvenlp;
+   SCIP_Bool covercomputed;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nnlpiterations;
@@ -288,8 +289,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int divedepth;
    int lastnlpsolvedepth;
    int bestcand;
-   int ncovervars;
    int c;
+   int ncovervars;
+   int ncovervarsfixed;
 
    int       backtrackdepth;   /* depth where to go when backtracking */
    SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
@@ -310,7 +312,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
    /* only call heuristic, if an NLP relaxation has been constructed */
-   if( !SCIPisNLPConstructed(scip) )
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
    /* get heuristic's data */
@@ -415,6 +417,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       nlpbranchcands = SCIPgetNLPBranchCands(scip);
    else
       nlpbranchcands = 0;
+
    /* prefer decisions on variables which are also fractional in LP solution */
    if( heurdata->preferlpfracs && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       for( c = 0; c < nnlpcands; ++c )
@@ -463,12 +466,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
+   covercomputed = FALSE;
+   varincover = NULL;
 
    /* compute cover, if required */
    if( heurdata->prefercover )
    {
+      SCIP_VAR** covervars;
       SCIP_Real timelimit;
       SCIP_Real memorylimit;
+      int ncovervars;
       SCIP_Bool success;
 
       /* get limits */
@@ -483,8 +490,22 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
       SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, FALSE, FALSE, FALSE, 'u', &success) );
 
-      if( !success )
-         ncovervars = 0;
+      if( success )
+      {
+         /* create hash map */
+         SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
+
+         for( c = 0; c < ncovervars && SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT; c++ )
+         {
+            /* insert variable  */
+            assert(!SCIPhashmapExists(varincover, covervars[c]));
+            SCIP_CALL( SCIPhashmapInsert(varincover, covervars[c], (void*) (size_t) (c+1)) );
+         }
+         covercomputed = TRUE;        
+      }
+
+      /* free temporary array */
+      SCIPfreeBufferArray(scip, &covervars);
    }
 
    /* start diving */
@@ -573,6 +594,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                if( !SCIPvarIsBinary(var) )
                   objgain *= 1000.0;
 
+               /* prefer decisions on cover variables */
+               if( covercomputed && SCIPhashmapExists(varincover, var) )
+                  objgain *= 1000.0;
+
                /* check, if candidate is new best candidate */
                if( SCIPisLT(scip, objgain, bestobjgain) || (SCIPisEQ(scip, objgain, bestobjgain) && frac < bestfrac) )
                {
@@ -603,6 +628,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             /* prefer decisions on binary variables */
             if( !SCIPvarIsBinary(var) )
                frac *= 1000.0;
+
+            /* prefer decisions on cover variables */
+            if( covercomputed && SCIPhashmapExists(varincover, var) )
+            {printf("XXX\n");               frac *= 1000.0; }
 
             /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
             if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
@@ -865,12 +894,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac=%d\n", nlpsolstat, objval, searchbound, nnlpcands);
    }
 
- // !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE && nnlpcands > 0
- //      && (divedepth < 10
- //         || nnlpcands <= startnnlpcands - divedepth/2
- //         || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
- //      && !SCIPisStopped(scip)
-
 #if 1
    SCIPdebugMessage("NLP fracdiving ABORT due to ");
    if( nlperror || nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
@@ -931,8 +954,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    }
 
    /* free cover array */
-   if( heurdata->prefercover )
-      SCIPfreeBufferArray(scip, &covervars);
+   assert( covercomputed == (varincover != NULL));
+   if( covercomputed )
+      SCIPhashmapFree(&varincover);
 
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
@@ -1020,7 +1044,7 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "percentage of fractional variables that should be fixed before the next NLP solve",
          &heurdata->fixquot, FALSE, DEFAULT_FIXQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/fracdiving/prefercover",
+         "heuristics/"HEUR_NAME"/prefercover",
          "should variables in a minimal cover be preferred?",
          &heurdata->prefercover, FALSE, DEFAULT_PREFERCOVER, NULL, NULL) );
 
