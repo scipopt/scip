@@ -31,6 +31,7 @@
 
 #include "scip/heur_nlpfracdiving.h"
 #include "scip/heur_subnlp.h" /* for NLP initialization */
+#include "scip/heur_undercover.h" /* for cover computation */
 #include "nlpi/nlpi.h" /* for NLP statistics, currently */
 
 
@@ -64,6 +65,7 @@
 #define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
+#define DEFAULT_PREFERCOVER        TRUE /**< should variables in a minimal cover be preferred? */
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
@@ -92,6 +94,7 @@ struct SCIP_HeurData
    SCIP_Real             fixquot;            /**< percentage of fractional variables that should be fixed before the next NLP solve */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
+   SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 #ifdef STATISTIC_INFORMATION
@@ -239,6 +242,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_VAR* var;
    SCIP_VAR** nlpcands;
+   SCIP_VAR** covervars;
    SCIP_Real* nlpcandssol;
    SCIP_Real* nlpcandsfrac;
    SCIP_Real searchubbound;
@@ -276,6 +280,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int divedepth;
    int lastnlpsolvedepth;
    int bestcand;
+   int ncovervars;
    int c;
 
    assert(heur != NULL);
@@ -431,8 +436,30 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
+   /* compute cover, if required */
+   if( heurdata->prefercover )
+   {
+      SCIP_Real timelimit;
+      SCIP_Real memorylimit;
+      SCIP_Bool success;
 
-   /* start diving - aehm - probing */
+      /* get limits */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+      if( !SCIPisInfinity(scip, timelimit) )
+         timelimit -= SCIPgetSolvingTime(scip);
+      if( !SCIPisInfinity(scip, memorylimit) )
+         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+
+      /* compute cover */
+      SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
+      SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, FALSE, FALSE, FALSE, 'u', &success) );
+
+      if( !success )
+         ncovervars = 0;
+   }
+
+   /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* get NLP objective value*/
@@ -817,6 +844,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       }
    }
 
+   /* free cover array */
+   if( heurdata->prefercover )
+      SCIPfreeBufferArray(scip, &covervars);
+
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
 
@@ -902,6 +933,10 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/fixquot",
          "percentage of fractional variables that should be fixed before the next NLP solve",
          &heurdata->fixquot, FALSE, DEFAULT_FIXQUOT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/fracdiving/prefercover",
+         "should variables in a minimal cover be preferred?",
+         &heurdata->prefercover, FALSE, DEFAULT_PREFERCOVER, NULL, NULL) );
 
    return SCIP_OKAY;
 }
