@@ -6809,6 +6809,17 @@ SCIP_RETCODE SCIPbranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+extern
+SCIP_RETCODE SCIPbranchVarHole(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child (x <= left), or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
+   );
+
 /** branches on a variable x using a given value x'; 
  *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
  *  two child nodes (x <= x', x >= x') are created;

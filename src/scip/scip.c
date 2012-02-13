@@ -18885,6 +18885,24 @@ SCIP_RETCODE SCIPbranchVar(
    return SCIP_OKAY;
 }
 
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+SCIP_RETCODE SCIPbranchVarHole(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child (x <= left), or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPbranchVarHole", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeBranchVarHole(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->lp,
+         scip->branchcand, scip->eventqueue, var, left, right, downchild, upchild) );
+
+   return SCIP_OKAY;
+}
+
 /** branches on a variable x using a given value x'; 
  *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
  *  two child nodes (x <= x', x >= x') are created;

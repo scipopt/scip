@@ -487,6 +487,24 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
+/** branches a variable x using the given domain hole; two child nodes will be created (x <= left, x >= right) */
+extern
+SCIP_RETCODE SCIPtreeBranchVarHole(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
 /** n-ary branching on a variable x
  * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
  * The branching value is selected as in SCIPtreeBranchVar().
