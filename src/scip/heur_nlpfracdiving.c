@@ -202,12 +202,12 @@ SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    STATISTIC(
-      if( strstr(SCIPgetProbName(scip), "_covering") == NULL )
+      if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %5.2fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.2f avg., fails %3d cutoff %3d depth %3d nlperror\n",
+         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.2f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
-            heurdata->nfailcutoff, heurdata->nfaildepth, heurdata->nfailnlperror
+            (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
          );
       }
       );
@@ -387,11 +387,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
          SCIPnlpStatisticsFree(&nlpstatistics);
 
-         STATISTIC( heurdata->nfailnlperror++; )
+         STATISTIC( heurdata->nfailcutoff++; )
       }
       else
       {
-         STATISTIC( heurdata->nfailcutoff++; )
+         STATISTIC( heurdata->nfailnlperror++; )
       }
 
       return SCIP_OKAY;
