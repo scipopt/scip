@@ -249,10 +249,14 @@ struct SCIP_Lp
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Real             looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
-   SCIP_Real             glbpseudoobjval;    /**< global psuedo objective value with all variables set to their best global bounds,
+   SCIP_Real             rellooseobjval;     /**< last reliable solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Real             glbpseudoobjval;    /**< global pseudo solution value with all variables set to their best global bounds,
+                                              *   ignoring variables, with infinite best bound */
+   SCIP_Real             relglbpseudoobjval; /**< last reliable global pseudo solution value */
    SCIP_Real             pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Real             relpseudoobjval;    /**< last reliable pseudo solution value */
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
@@ -306,6 +310,9 @@ struct SCIP_Lp
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    SCIP_Bool             objsqrnormunreliable;/**< is squared Euclidean norm of objective function vector of problem
                                                *   variables unreliable and need recalculation? */
+   SCIP_Bool             looseobjvalid;      /**< is the loose objective value valid or should it be recomputed from scratch? */
+   SCIP_Bool             glbpseudoobjvalid;  /**< is the global pseudo solution value valid or should it be recomputed from scratch? */
+   SCIP_Bool             pseudoobjvalid;     /**< is the pseudo solution value valid or should it be recomputed from scratch? */
    SCIP_Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    SCIP_Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */

@@ -1449,7 +1449,7 @@ void SCIPprobStoreRootSol(
          SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
-      SCIPlpStoreRootObjval(lp, set);
+      SCIPlpStoreRootObjval(lp, set, prob);
    }
 }
 

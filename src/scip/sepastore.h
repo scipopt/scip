@@ -31,6 +31,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_prob.h"
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_branch.h"
@@ -100,6 +101,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

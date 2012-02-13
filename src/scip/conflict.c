@@ -5431,7 +5431,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
-   assert(!SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set)));
+   assert(!SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, prob)));
    assert(!SCIPsetIsInfinity(set, lp->cutoffbound));
 
    if( success != NULL )
@@ -5446,7 +5446,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
-      SCIPlpGetPseudoObjval(lp, set), lp->cutoffbound);
+      SCIPlpGetPseudoObjval(lp, set, prob), lp->cutoffbound);
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
@@ -5495,7 +5495,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       lbchginfoposs[v] = var->nlbchginfos-1;
       ubchginfoposs[v] = var->nubchginfos-1;
    }
-   assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set)));
+   assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, prob)));
    SCIPdebugMessage("  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);
 
    /* check, if the pseudo row is still violated (after recalculation of pseudo activity) */

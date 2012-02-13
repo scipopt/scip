@@ -214,6 +214,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
@@ -230,6 +231,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchInt(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
@@ -248,6 +250,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
    int                   ncols,              /**< number of columns */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
@@ -266,6 +269,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesInt(
    int                   ncols,              /**< number of columns */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
@@ -956,6 +960,7 @@ extern
 SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             cutoffbound         /**< new upper objective limit */
    );
 
@@ -1016,7 +1021,8 @@ SCIP_Bool SCIPlpIsRootLPRelax(
 extern
 SCIP_Real SCIPlpGetObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets part of objective value of current LP that results from COLUMN variables only */
@@ -1029,14 +1035,16 @@ SCIP_Real SCIPlpGetColumnObjval(
 extern
 SCIP_Real SCIPlpGetLooseObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** remembers the current LP objective value as root solution value */
 extern
 void SCIPlpStoreRootObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                 /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** invalidates the root LP solution value */
@@ -1051,7 +1059,8 @@ void SCIPlpInvalidateRootObjval(
 extern
 SCIP_Real SCIPlpGetGlobalPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
@@ -1060,7 +1069,8 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
 extern
 SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
@@ -1068,6 +1078,7 @@ extern
 SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */
@@ -1370,6 +1381,7 @@ extern
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */

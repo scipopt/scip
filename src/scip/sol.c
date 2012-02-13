@@ -363,6 +363,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -374,7 +375,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, prob, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -428,6 +429,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -437,7 +439,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    assert(sol != NULL);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, prob, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -448,6 +450,7 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -458,11 +461,11 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      SCIP_CALL( SCIPsolCreateLPSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreateLPSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -524,6 +527,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -546,7 +550,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       /* the objective value has to be calculated manually, because the LP's value is invalid;
        * use objective values of variables, because columns objective values are changed to dive values
        */
-      sol->obj = SCIPlpGetLooseObjval(lp, set);
+      sol->obj = SCIPlpGetLooseObjval(lp, set, prob);
       if( !SCIPsetIsInfinity(set, -sol->obj) )
       {
          SCIP_VAR* var;
@@ -566,7 +570,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    else
    {
       /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-      sol->obj = SCIPlpGetObjval(lp, set);
+      sol->obj = SCIPlpGetObjval(lp, set, prob);
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    solStamp(sol, stat, tree, TRUE);
@@ -662,6 +666,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -676,7 +681,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_CALL( solClearArrays(sol) );
 
    /* link solution to pseudo solution */
-   sol->obj = SCIPlpGetPseudoObjval(lp, set);
+   sol->obj = SCIPlpGetPseudoObjval(lp, set, prob);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    solStamp(sol, stat, tree,TRUE);
 
@@ -690,6 +695,7 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -700,11 +706,11 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, prob, tree, lp) );
    }
    else
    {
-      SCIP_CALL( SCIPsolLinkPseudoSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkPseudoSol(sol, set, stat, prob, tree, lp) );
    }
 
    return SCIP_OKAY;
