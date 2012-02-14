@@ -38,6 +38,14 @@ echo "* GamsSolve" >> $TRCFILE
 echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
 echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
 
+# setup gams file that sets cutoff
+# this only works for models that include %gams.u1% and where the model name is m (e.g., MINLPLib instances)
+if test -n "$CUTOFF"
+then
+  echo "m.cutoff = $CUTOFF;" > $CLIENTTMPDIR/$BASENAME.cutoff
+  GAMSOPTS="$GAMSOPTS u1=$CLIENTTMPDIR/$BASENAME.cutoff"
+fi
+
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 echo @01 $FILENAME ===========      >> $OUTFILE 

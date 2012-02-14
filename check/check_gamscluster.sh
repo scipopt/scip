@@ -30,6 +30,9 @@ CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
 
+# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
+SETCUTOFF=0
+
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
 then
@@ -204,6 +207,18 @@ if test $QUEUETYPE = local ; then
   trap "kill $schulzpid" EXIT SIGHUP SIGINT SIGTERM
 fi
 
+# if cutoff should be passed, check for solu file
+if test $SETCUTOFF = 1 ; then
+  if test -e testset/$TSTNAME.solu ; then
+    SOLUFILE=testset/$TSTNAME.solu
+  elif test -e testset/all.solu ; then
+    SOLUFILE=testset/all.solu
+  else
+    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+    SETCUTOFF=0
+  fi
+fi
+
 # counter to define file names for a test set uniquely 
 COUNT=1
 # dependencies of finish-job, if run through slurm
@@ -301,6 +316,11 @@ do
     if test $KEEPSOLS = "true"
     then
       GDXFILE="gdx=$SOLDIR/${GMSFILE/%gms/gdx}"
+    fi
+
+    if test $SETCUTOFF = 1
+    then
+      export CUTOFF=`grep ${GMSFILE/%.gms/} $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
     fi
 
     # additional environment variables needed by rungamscluster.sh
