@@ -1891,7 +1891,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpXor)
 {  /*lint --e{715}*/

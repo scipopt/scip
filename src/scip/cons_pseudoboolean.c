@@ -2898,7 +2898,7 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #if 0
 static
 SCIP_DECL_CONSINITLP(consInitlpPseudoboolean)

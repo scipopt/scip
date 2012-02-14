@@ -2819,7 +2819,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/

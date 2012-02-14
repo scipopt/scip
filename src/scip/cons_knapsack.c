@@ -731,10 +731,10 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of knapsack constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
@@ -8234,7 +8234,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
