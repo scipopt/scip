@@ -13,6 +13,7 @@ fixed bugs:
   process instead of the initpre process, this was to late because you might change the status in presolving which lead
   to an assert()
 - fixed issue if a primal solution leads to a cutoff of the current focus node
+- fixed bug with strong branching and LP status in conflict analysis
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
