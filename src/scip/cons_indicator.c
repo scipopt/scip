@@ -4766,7 +4766,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
 }
 
 
-/** LP initialization method of constraint handler
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  *  For an indicator constraint with binary variable \f$y\f$ and slack variable \f$s\f$ the coupling
  *  inequality \f$s \le M (1-y)\f$ (equivalently: \f$s + M y \le M\f$) is inserted, where \f$M\f$ is
@@ -4785,74 +4785,84 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* SCIPdebugMessage("Checking for initial rows for indicator constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) ); */
+   /* only add constraints at root node (use separation for other nodes) */
+   if ( SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* check whether coupling constraints should be added */
+   if ( ! conshdlrdata->addcoupling )
+      return SCIP_OKAY;
+
+   /* check whether coupling constraints have been added already */
+   if ( conshdlrdata->addcouplingcons && conshdlrdata->addedcouplingcons )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Adding initial rows for indicator constraints.\n");
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Real ub;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      /* add coupling if required */
-      if ( conshdlrdata->addcoupling && consdata->linconsactive )
+      /* do not add inequalities if there are no linear constraints (no slack variable available) */
+      if ( ! consdata->linconsactive )
+         continue;
+
+      /* get upper bound for slack variable in linear constraint */
+      ub = SCIPvarGetUbGlobal(consdata->slackvar);
+      assert( ! SCIPisNegative(scip, ub) );
+
+      /* insert corresponding row if helpful and coefficient is not too large */
+      if ( ub <= conshdlrdata->maxcouplingvalue )
       {
-         SCIP_Real ub;
-
-         /* get upper bound for slack variable in linear constraint */
-         ub = SCIPvarGetUbGlobal(consdata->slackvar);
-         assert( ! SCIPisNegative(scip, ub) );
-
-         /* insert corresponding row if helpful and coefficient is not too large */
-         if ( ub <= conshdlrdata->maxcouplingvalue )
-         {
-            char name[50];
+         char name[50];
 
 #ifndef NDEBUG
-            (void) SCIPsnprintf(name, 50, "couple%d", c);
+         (void) SCIPsnprintf(name, 50, "couple%d", c);
 #else
-            name[0] = '\0';
+         name[0] = '\0';
 #endif
 
-            /* add variable upper bound if required */
-            if ( conshdlrdata->addcouplingcons )
-            {
-               if ( ! conshdlrdata->addedcouplingcons )
-               {
-                  SCIP_CONS* cons;
+         /* add variable upper bound if required */
+         if ( conshdlrdata->addcouplingcons )
+         {
+            SCIP_CONS* cons;
 
-                  SCIPdebugMessage("Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+            assert( ! conshdlrdata->addedcouplingcons );
 
-                  SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, consdata->slackvar, consdata->binvar, ub, -SCIPinfinity(scip), ub,
-                        TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+            SCIPdebugMessage("Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 
-                  SCIP_CALL( SCIPaddCons(scip, cons) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-               }
-            }
-            else
-            {
-               SCIP_ROW* row;
+            SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, consdata->slackvar, consdata->binvar, ub, -SCIPinfinity(scip), ub,
+                  TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-               SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         }
+         else
+         {
+            SCIP_ROW* row;
 
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-               SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+            SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 #ifdef SCIP_OUTPUT
-               SCIProwPrint(row, NULL);
+            SCIProwPrint(row, NULL);
 #endif
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row));
-            }
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            
+            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
    }
