@@ -4284,7 +4284,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
-/** actually performs analyzation of infeasible LP */
+/** actually performs analysis of infeasible LP */
 static
 SCIP_RETCODE conflictAnalyzeLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -4299,7 +4299,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
    int*                  nreconvconss,       /**< pointer to store the number of generated reconvergence constraints */
-   int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
+   int*                  nreconvliterals,    /**< pointer to store the number of literals generated reconvergence constraints */
+   SCIP_Bool             marklpunsolved      /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
    )
 {
    SCIP_LPI* lpi;
@@ -4711,11 +4712,17 @@ SCIP_RETCODE conflictAnalyzeLP(
       /* mark the LP unsolved */
       if( nbdchgs > 0 || nsidechgs > 0 )
       {
-         lp->solved = FALSE;
-         lp->primalfeasible = FALSE;
-         lp->dualfeasible = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         /* The LPI data are out of sync with LP data. Thus, the LP should be marked
+          * unsolved. However, for strong branching calls, the LP has to have status 'solved'; in
+          * this case, marklpunsolved is FALSE and synchronization is performed later. */
+         if ( marklpunsolved )
+         {
+            lp->solved = FALSE;
+            lp->primalfeasible = FALSE;
+            lp->dualfeasible = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
       }
 
       /* reinstall old objective and iteration limits in LP solver */
@@ -4802,7 +4809,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, SCIPlpDiving(lp),
-         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals) );
+         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->ninflpsuccess += (nconss > 0 ? 1 : 0);
    conflict->ninflpiterations += iterations;
    conflict->ninflpconfconss += nconss;
@@ -4868,7 +4875,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, SCIPlpDiving(lp),
-         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals) );
+         &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->nboundlpsuccess += (nconss > 0 ? 1 : 0);
    conflict->nboundlpiterations += iterations;
    conflict->nboundlpconfconss += nconss;
@@ -5103,6 +5110,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 {
    int* cstat;
    int* rstat;
+   SCIP_RETCODE retcode;
+   SCIP_Bool resolve;
    SCIP_Real oldlb;
    SCIP_Real oldub;
    SCIP_Real newlb;
@@ -5151,14 +5160,14 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    oldlb = col->lb;
    oldub = col->ub;
 
+   resolve = FALSE;
+
    /* is down branch infeasible? */
    if( col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound) )
    {
       newub = SCIPsetFeasCeil(set, col->primsol-1.0);
       if( newub >= col->lb - 0.5 )
       {
-         SCIP_RETCODE retcode;
-
          SCIPdebugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
@@ -5190,9 +5199,9 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             conflict->nsbiterations += iter;
             SCIPdebugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
 
-            /* perform conflict analysis on infeasible LP */
+            /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
             SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE,
-                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals) );
+                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -5210,12 +5219,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          /* reset LP basis */
          SCIP_CALL( SCIPlpiSetBase(lp->lpi, cstat, rstat) );
 
-         /* mark the LP unsolved */
-         lp->solved = FALSE;
-         lp->primalfeasible = FALSE;
-         lp->dualfeasible = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         /* mark the LP to be resolved at the end */
+         resolve = TRUE;
       }
    }
 
@@ -5225,8 +5230,6 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       newlb = SCIPsetFeasFloor(set, col->primsol+1.0);
       if( newlb <= col->ub + 0.5 )
       {
-         SCIP_RETCODE retcode;
-
          SCIPdebugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
@@ -5258,9 +5261,9 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             conflict->nsbiterations += iter;
             SCIPdebugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
-            /* perform conflict analysis on infeasible LP */
+            /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
             SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE,
-                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals) );
+                  &iter, &nconss, &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += (nconss > 0 ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -5278,18 +5281,27 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          /* reset LP basis */
          SCIP_CALL( SCIPlpiSetBase(lp->lpi, cstat, rstat) );
 
-         /* mark the LP unsolved */
-         lp->solved = FALSE;
-         lp->primalfeasible = FALSE;
-         lp->dualfeasible = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         /* mark the LP to be resolved at the end */
+         resolve = TRUE;
       }
    }
 
    /* free temporary memory for storing current LP basis */
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
+
+   /* resolve LP if something has changed in order to synchronize LPI and LP */
+   if ( resolve )
+   {
+      /* start LP timer */
+      SCIPclockStart(stat->conflictlptime, set);
+
+      /* resolve the LP */
+      retcode = SCIPlpiSolveDual(lp->lpi);
+
+      /* stop LP timer */
+      SCIPclockStop(stat->conflictlptime, set);
+   }
 
    /* stop timing */
    SCIPclockStop(conflict->sbanalyzetime, set);

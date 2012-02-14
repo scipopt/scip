@@ -62,6 +62,7 @@ fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
+- fixed bug with strong branching with the LP status for conflict analysis
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
