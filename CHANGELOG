@@ -19,6 +19,7 @@ performance improvements:
   to exponential growth in running time
 - force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
   optimality for convex NLPs
+- streamlined initlp functions in cons_indicator, cons_sos1, cons_sos2 (add rows only if needed)
 
 SCIP version 2.1.1
 ==================
