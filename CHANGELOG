@@ -51,6 +51,7 @@ performance improvements:
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
 - improved pseudo objective propagator
+- streamlined initlp functions in cons_indicator, cons_sos1, cons_sos2 (add rows only if needed)
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
