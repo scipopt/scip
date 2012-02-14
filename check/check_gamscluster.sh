@@ -17,7 +17,6 @@ TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
 SETNAME=$4
-BINNAME=gams.$5
 TIMELIMIT=$6
 NODELIMIT=$7
 GAPLIMIT=${8:-0}
@@ -66,6 +65,7 @@ then
   echo "No GAMS system available: $GAMSBIN does not work. Abort."
   exit 1
 fi
+BINNAME=`echo $GAMSBIN | sed -e 's/[^A-Za-z0-9_.]/_/g'`
 
 if test -z "$SOLVER"
 then
@@ -84,12 +84,12 @@ then
     mkdir locks
 fi
 
-EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.eval
-SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.set
-SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sch
-GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.gms
-OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.opt
-SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sol
+EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.eval
+SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.set
+SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sch
+GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
+OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
+SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
 
 echo > $EVALFILE
 
