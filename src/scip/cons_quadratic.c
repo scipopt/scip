@@ -9461,10 +9461,10 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpQuadratic)
-{  
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_VAR*          var;

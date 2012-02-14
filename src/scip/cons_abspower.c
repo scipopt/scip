@@ -5002,7 +5002,7 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
 #endif
 
 
-/** LP initialization method of constraint handler
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  * we add secant underestimators
  */

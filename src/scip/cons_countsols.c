@@ -1555,7 +1555,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 /** transforms constraint data into data belonging to the transformed problem */
 #define consTransCountsols NULL
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpCountsols NULL
 
 /** separation method of constraint handler for LP solutions */

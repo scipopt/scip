@@ -6615,7 +6615,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {
