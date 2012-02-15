@@ -102,7 +102,7 @@ void initPresoldata(
    presoldata->ncomponents = 0;
 }
 
-/** initialize list */
+/** initialize constraint list */
 static
 SCIP_RETCODE initList(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -193,7 +193,7 @@ SCIP_RETCODE fillConsIndex(
    return SCIP_OKAY;
 }
 
-/** delete list */
+/** delete constraint list */
 static
 void freeList(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -586,7 +586,7 @@ SCIP_RETCODE fillDigraph(
 
 
 /** use components to detect which vars and cons belong to one subscip
- *  and try to solve all subscips having not too much integer vars
+ *  and try to solve all subscips having not too much integer variables
  */
 static
 SCIP_RETCODE createSubScipsAndSolve(
@@ -648,7 +648,7 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consincomponent, nconss) );
 
-   /* use two debug array to verify everything doing well */
+   /* use two debug arrays to verify if everything doing well */
    SCIP_CALL( SCIPallocBufferArray(scip, &debugvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &debugcons, nconss) );
    BMSclearMemoryArray(debugvars, nvars);
@@ -686,6 +686,7 @@ SCIP_RETCODE createSubScipsAndSolve(
                c = 0;
                while( conslist->conss[v][c] != -1 )
                {
+                  /* mark constraint as belonging to this component */
                   consincomponent[conslist->conss[v][c]] = TRUE;
                   c++;
                }
@@ -830,10 +831,10 @@ SCIP_RETCODE presolComponents(
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
    )
 {
-   SCIP_CONSHDLR** conshdlrs;
-   int nconshdlrs;
    SCIP_CONS** conss;
    int nconss;
+   SCIP_CONS** tmpconss;
+   int ntmpconss;
    int nvars;
    SCIP_PRESOLDATA* presoldata;
    SCIP_DIGRAPH* digraph;
@@ -842,7 +843,6 @@ SCIP_RETCODE presolComponents(
    int ndeletedcons;
    int ndeletedvars;
    int nsolvedprobs;
-   int i;
    int c;
    LIST* conslist;
    SCIP_Bool success;
@@ -877,29 +877,16 @@ SCIP_RETCODE presolComponents(
    ndeletedcons = 0;
    nsolvedprobs = 0;
 
-   /* collect number of enforced constraints */
-   nconshdlrs = SCIPgetNConshdlrs(scip);
-   conshdlrs = SCIPgetConshdlrs(scip);
+   /* collect checked constraints for component presolving */
+   ntmpconss = SCIPgetNConss(scip);
+   tmpconss = SCIPgetConss(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &conss, ntmpconss) );
    nconss = 0;
-   for( i = 0; i < nconshdlrs; ++i )
+   for( c = 0; c < ntmpconss; c++ )
    {
-      nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-   }
-   SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
-
-   /* copy the contraints */
-   nconss = 0;
-   for( i = 0; i < nconshdlrs; ++i )
-   {
-      SCIP_CONS** conshdlrconss;
-      int nconshdlrconss;
-
-      conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
-      nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
-
-      for( c = 0; c < nconshdlrconss; ++c )
+      if( SCIPconsIsChecked(tmpconss[c]) )
       {
-         conss[nconss] = conshdlrconss[c];
+         conss[nconss] = tmpconss[c];
          nconss++;
       }
    }
@@ -918,20 +905,23 @@ SCIP_RETCODE presolComponents(
       SCIP_CALL( SCIPallocBuffer(scip, &conslist) );
       initList(scip, conslist);
 
+      /* create and fill digraph */
       SCIP_CALL( SCIPdigraphCreate(&digraph, nvars) );
-
       SCIP_CALL( fillDigraph(scip, digraph, conss, nconss, conslist, &success) );
 
       if( success )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
+         /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
+         /* create subproblems from independent components and solve them */
          SCIP_CALL( createSubScipsAndSolve(scip, presoldata, conss, nconss,
                components, &ncomponents, conslist, &nsolvedprobs, &nconstodelete, constodelete,
                &nvarstofix, varstofix, varsfixvalues, statistics) );
 
+         /* fix variables and delete constraints of solved subproblems */
          SCIP_CALL( fixVarsDeleteConss(scip, nconstodelete, constodelete,
                 nvarstofix, varstofix, varsfixvalues, &ndeletedcons, &ndeletedvars) );
 
