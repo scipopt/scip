@@ -29,6 +29,9 @@
  * @todo use the conflict analysis to analyze the infeasibility which arise after the probing of the cover worked and
  *       solve returned infeasible, instead of adding the Nogood/Conflict by hand; that has the advantage that the SCIP
  *       takes care of creating the conflict and might shrink the initial reason
+ *
+ * @todo do not use LP and NLP fixing values in the same run, e.g., fixingalts = "lni", but start a second dive if LP
+ *       values fail
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3320,7 +3323,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 
    /* add char parameters */
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
-         "objective function of the covering problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
+         "objective function of the covering problem (influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties)",
          &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
