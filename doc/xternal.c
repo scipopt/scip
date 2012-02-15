@@ -1406,7 +1406,7 @@
  *    infeasible.
  *  - If the constraint may become violated by increasing the value of a variable, it should call
  *    SCIPaddVarLocks(scip, var, nlocksneg, nlockspos), saying that rounding up is potentially rendering the
- *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
+ *    constraint's negation infeasible and rounding down is potentially rendering the constraint itself
  *    infeasible.
  *  - If the constraint may become violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
