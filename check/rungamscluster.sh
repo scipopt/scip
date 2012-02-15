@@ -42,8 +42,24 @@ echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTim
 # this only works for models that include %gams.u1% and where the model name is m (e.g., MINLPLib instances)
 if test -n "$CUTOFF"
 then
-  echo "m.cutoff = $CUTOFF;" > $CLIENTTMPDIR/$BASENAME.cutoff
-  GAMSOPTS="$GAMSOPTS u1=$CLIENTTMPDIR/$BASENAME.cutoff"
+  echo "m.cutoff = $CUTOFF;" > $WORKDIR/include.u1
+  GAMSOPTS="$GAMSOPTS u1=$WORKDIR/include.u1"
+fi
+
+# add commands to .u1 file to read start solutions from available gdx files, if any
+if test "$PASSSTARTSOL" = 1 ; then
+  for sol in $INPUTDIR/${GMSFILE/%.gms/}*.gdx ;
+  do
+    if test -e $sol ; then
+      # create .u1 file if not existing yet and add u1 command to GAMS options
+      if test ! -e $WORKDIR/include.u1 ;
+      then
+        touch $WORKDIR/include.u1
+        GAMSOPTS="$GAMSOPTS u1=$WORKDIR/include.u1"
+      fi
+      echo "execute_loadpoint '$sol'" >> $WORKDIR/include.u1
+    fi
+  done
 fi
 
 uname -a                            > $OUTFILE
