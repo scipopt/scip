@@ -4785,10 +4785,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* only add constraints at root node (use separation for other nodes) */
-   if ( SCIPgetDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    /* check whether coupling constraints should be added */
    if ( ! conshdlrdata->addcoupling )
       return SCIP_OKAY;
@@ -4796,8 +4792,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    /* check whether coupling constraints have been added already */
    if ( conshdlrdata->addcouplingcons && conshdlrdata->addedcouplingcons )
       return SCIP_OKAY;
-
-   SCIPdebugMessage("Adding initial rows for indicator constraints.\n");
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -4813,6 +4807,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
       /* do not add inequalities if there are no linear constraints (no slack variable available) */
       if ( ! consdata->linconsactive )
          continue;
+
+      SCIPdebugMessage("Adding initial rows for indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       /* get upper bound for slack variable in linear constraint */
       ub = SCIPvarGetUbGlobal(consdata->slackvar);
