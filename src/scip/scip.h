@@ -1973,8 +1973,12 @@ SCIP_RETCODE SCIPgetVarsData(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
-/** gets array with active problem variables; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
+/** gets array with active problem variables
+ *
+ *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(), SCIPfixVar(),
+ *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
+ *           accessed via this method) gets resized and/or resorted. This can invalid the data pointer which is returned
+ *           by this method.
  */
 extern
 SCIP_VAR** SCIPgetVars(
@@ -2172,7 +2176,11 @@ int SCIPgetNConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets array of globally valid constraints currently in the problem */
+/** gets array of globally valid constraints currently in the problem
+ *
+ *  @warning If your are using the method SCIPaddCons(), it can happen that the internal constraint array (which is
+ *           accessed via this method) gets resized. This can invalid the data pointer which is returned by this method.
+ */
 extern
 SCIP_CONS** SCIPgetConss(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2224,11 +2232,14 @@ SCIP_RETCODE SCIPaddConsNode(
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
  *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
  *  only active in a small part of the tree although it is valid in a larger part.
- *  In this case, one should pass the more global node where the constraint is valid as "validnode".
- *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *
  *  If the constraint is valid at the same node as it is inserted (the usual case), one should pass NULL as "validnode".
  *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
  *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
+ *
+ *  @note The same constraint cannot be added twice to the branching tree with different "validnode" parameters. This is
+ *        the case due internal data structures and performance issues. In such a case you should try to realize your
+ *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
  */
 extern
 SCIP_RETCODE SCIPaddConsLocal(
@@ -3120,8 +3131,8 @@ SCIP_Real SCIPadjustedVarUb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3136,8 +3147,8 @@ SCIP_RETCODE SCIPchgVarLb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3175,8 +3186,8 @@ SCIP_RETCODE SCIPchgVarUbNode(
 /** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3190,8 +3201,8 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3235,8 +3246,8 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3255,8 +3266,8 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3275,8 +3286,8 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3297,8 +3308,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3334,8 +3345,8 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3356,8 +3367,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3392,8 +3403,8 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3411,8 +3422,8 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3672,15 +3683,15 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
 
-/** changes type of variable in the problem; 
+/** changes type of variable in the problem;
  *
- * @note this type changes might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *  @warning This type changes might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *
- * @note if SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed; the variable type of the
- *       corresponding transformed variable is changed; the type of the original variable does not change
- * 
- * @note if the type changes from a continuous variable to a non-continuous variable the bound of the variable get
- *       adjusts w.r.t. to integrality information
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed; the variable type of the
+ *        corresponding transformed variable is changed; the type of the original variable does not change
+ *
+ *  @note If the type changes from a continuous variable to a non-continuous variable the bound of the variable get
+ *        adjusted w.r.t. to integrality information
  */
 extern
 SCIP_RETCODE SCIPchgVarType(
