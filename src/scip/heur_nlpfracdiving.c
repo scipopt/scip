@@ -65,6 +65,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MINSUCCQUOT         0.1 /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
+#define DEFAULT_MAXDIVEDEPTH         10 /**< maximal diving depth */
 #define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_LP                 TRUE /**< should the LP relaxation be solved before the NLP relaxation? */
@@ -97,6 +98,7 @@ struct SCIP_HeurData
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   int                   maxdivedepth;       /**< maximal diving depth */
    SCIP_Real             minsuccquot;        /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
    SCIP_Real             fixquot;            /**< percentage of fractional variables that should be fixed before the next NLP solve */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
@@ -834,7 +836,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    
    while( !nlperror && !cutoff && (nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nnlpcands > 0
-      && (divedepth < 10
+      && (divedepth < heurdata->maxdivedepth
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
       && !SCIPisStopped(scip) )
@@ -981,19 +983,19 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       backtracked = FALSE;
       do
       {
-         /* if the variable is already fixed, numerical troubles may have occurred or
-          * variable was fixed by propagation while backtracking => Abort diving!
-          */
-         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
-         {
-            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nlpcandssol[bestcand]);
-            cutoff = TRUE;
-            break;
-         }
-
          if( backtracked && backtrackdepth > 0 )
          {
+            /* if the variable is already fixed, numerical troubles may have occurred or
+             * variable was fixed by propagation while backtracking => Abort diving!
+             */
+            if( SCIPvarGetLbLocal(backtrackvar) >= SCIPvarGetUbLocal(backtrackvar) - 0.5 )
+            {
+               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+                  SCIPvarGetName(backtrackvar), SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar), backtrackvarval);
+               cutoff = TRUE;
+               break;
+            }
+
             /* round backtrack variable up or down */
             if( backtrackroundup )
             {
@@ -1011,11 +1013,28 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                   SCIPvarGetLbLocal(backtrackvar), SCIPfeasFloor(scip, backtrackvarval));
                SCIP_CALL( SCIPchgVarUbProbing(scip, backtrackvar, SCIPfeasFloor(scip, backtrackvarval)) );
             }
+
             /* forget about backtrack variable */
             backtrackdepth = -1;
+
+            /* for pseudo cost computation */
+            bestcandroundup = backtrackroundup;
+            frac = SCIPfrac(scip, backtrackvarval);
+            var = backtrackvar;
          }
          else
          {
+            /* if the variable is already fixed, numerical troubles may have occurred or
+             * variable was fixed by propagation while backtracking => Abort diving!
+             */
+            if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+            {
+               SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nlpcandssol[bestcand]);
+               cutoff = TRUE;
+               break;
+            }
+
             /* apply rounding of best candidate */
             if( bestcandroundup == !backtracked )
             {
@@ -1055,6 +1074,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                   backtrackroundup = TRUE;
                }
             }
+
+            /* for pseudo-cost computation */
+            frac = nlpcandsfrac[bestcand];
          }
 
          /* apply domain propagation */
@@ -1069,7 +1091,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
           */
          if( !cutoff && solvesubmip && covercomputed && 
             (heurdata->nfixedcovervars == ncovervars || 
-               (heurdata->nfixedcovervars >= (ncovervars+1)/2 && !SCIPhashmapExists(varincover, var))) )
+            (heurdata->nfixedcovervars >= (ncovervars+1)/2 && !SCIPhashmapExists(varincover, var))) )
          {
             int probingdepth;
 
@@ -1143,9 +1165,30 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
 
             if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+            {
                nlpbranchcands = SCIPgetNLPBranchCands(scip);
+
+               /* get new objective value */
+               oldobjval = objval;
+               objval = SCIPgetLPObjval(scip);
+
+               /* update pseudo cost values */
+               if( SCIPisGT(scip, objval, oldobjval) )
+               {
+                  if( bestcandroundup )
+                  {
+                     SCIP_CALL( SCIPupdateVarPseudocost(scip, var, 1.0-frac, objval - oldobjval, 1.0) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPupdateVarPseudocost(scip, var, 0.0-frac, objval - oldobjval, 1.0) );
+                  }
+               }
+            }
             else
+            {
                nlpbranchcands = 0;
+            }
 
             if( cutoff )
             {
@@ -1270,25 +1313,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
       if( !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
-         /* get new objective value */
-         oldobjval = objval;
-         objval = SCIPgetNLPObjval(scip);
-#if 0
-         /* update pseudo cost values */
-         if( SCIPisGT(scip, objval, oldobjval) )
-         {
-            if( bestcandroundup )
-            {
-               SCIP_CALL( SCIPupdateVarPseudocost(scip, nlpcands[bestcand], 1.0-nlpcandsfrac[bestcand],
-                     objval - oldobjval, 1.0) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPupdateVarPseudocost(scip, nlpcands[bestcand], 0.0-nlpcandsfrac[bestcand],
-                     objval - oldobjval, 1.0) );
-            }
-         }
-#endif
          /* get new fractional variables */
          SCIP_CALL( SCIPgetNLPFracVars(scip, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands, NULL) );
 
@@ -1478,6 +1502,10 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/maxdiveavgquotnosol",
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/"HEUR_NAME"/maxdivedepth",
+         "maximal diving depth",
+         &heurdata->maxdivedepth, FALSE, DEFAULT_MAXDIVEDEPTH, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/"HEUR_NAME"/backtrack",
          "use one level of backtracking if infeasibility is encountered?",
