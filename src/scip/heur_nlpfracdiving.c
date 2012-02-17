@@ -845,16 +845,43 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
          /* apply domain propagation */
          SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+         if( cutoff )
+         {
+            SCIPdebugMessage("  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
+         }
 
+         /* resolve LP */
+         if( !cutoff && !lperror && heurdata->preferlpfracs )
+         {
+            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
+
+            /* get LP solution status, objective value, and fractional variables, that should be integral */
+            lpsolstat = SCIPgetLPSolstat(scip);
+            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+
+            if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+               nlpbranchcands = SCIPgetNLPBranchCands(scip);
+            else
+               nlpbranchcands = 0;
+
+            if( cutoff )
+            {
+               SCIPdebugMessage("  *** cutoff detected in LP solving at level %d, lpsolstat = %d\n", SCIPgetProbingDepth(scip), lpsolstat);
+            }
+         }
+
+         /* check whether we want to solve the NLP */
          solvenlp = FALSE;
          if( !cutoff )
          {
-            solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands));
+            /* solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)); */
+            solvenlp = (lastnlpsolvedepth < divedepth - heurdata->fixquot * nnlpcands);
             if( !solvenlp )
             {
                /* check if fractional NLP variables are left (some may have been fixed by propagation) */
                for( c = 0; c < nnlpcands; ++c )
                {
+                  var = nlpcands[c];
                   if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
                      continue;
                   else
@@ -927,25 +954,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                   SCIP_CALL( SCIPunlinkSol(scip, nlpstartsol) );
                }
             }
-
-            /* resolve LP */  
-            if( !cutoff && !lperror && heurdata->preferlpfracs )
-            {
-               SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
-
-               /* get LP solution status, objective value, and fractional variables, that should be integral */
-               lpsolstat = SCIPgetLPSolstat(scip);
-               cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
-
-               if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-                  nlpbranchcands = SCIPgetNLPBranchCands(scip);
-               else
-                  nlpbranchcands = 0;
-            }
-         }
-         else if( cutoff )
-         {
-            SCIPdebugMessage("  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
          }
 
          /* perform backtracking if a cutoff was detected */
@@ -1010,7 +1018,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             }
 
       }
-      SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac=%d\n", nlpsolstat, objval, searchbound, nnlpcands);
+      SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac nlp=%d lp=%d\n", nlpsolstat, objval, searchbound, nnlpcands, nlpbranchcands);
    }
 
 #if 1
