@@ -699,15 +699,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
-   nlpstartsol = NULL;
-   /* save solution of first NLP, if we may use it later */
-   if( heurdata->nlpstart != 'n' )
-   {
-      SCIP_CALL( SCIPcreateNLPSol(scip, &nlpstartsol, heur) );
-      SCIP_CALL( SCIPunlinkSol(scip, nlpstartsol) );
-   }
-   setnlpinitguess = FALSE;
-
    /* get fractional variables that should be integral */
    SCIP_CALL( SCIPgetNLPFracVars(scip, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands, NULL) );
 
@@ -728,7 +719,35 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
    /* don't try to dive, if there are no fractional variables */
    if( nnlpcands == 0 )
+   {
+      SCIP_Bool success;
+
+      /* but check whether NLP solution if feasible */
+      SCIP_CALL( SCIPlinkNLPSol(scip, heurdata->sol) );
+
+      /* check, if solution was feasible and good enough */
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+#else
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+#endif
+      if( success )
+      {
+         SCIPdebugMessage(" -> solution of first NLP was integral, feasible, and good enough\n");
+         *result = SCIP_FOUNDSOL;
+      }
+
       return SCIP_OKAY;
+   }
+
+   nlpstartsol = NULL;
+   /* save solution of first NLP, if we may use it later */
+   if( heurdata->nlpstart != 'n' )
+   {
+      SCIP_CALL( SCIPcreateNLPSol(scip, &nlpstartsol, heur) );
+      SCIP_CALL( SCIPunlinkSol(scip, nlpstartsol) );
+   }
+   setnlpinitguess = FALSE;
 
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -967,7 +986,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIPdebugMessage("nlpfracdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
             /* try to add solution to SCIP */
+#ifdef SCIP_DEBUG
             SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
+#else
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
+#endif
 
             /* check, if solution was feasible and good enough */
             if( success )
