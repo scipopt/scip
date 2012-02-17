@@ -2197,6 +2197,9 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
          addcombconss && !heurdata->comblinearconsadded,
          addcontconss && !heurdata->contlinearconsadded) );
 
+   heurdata->comblinearconsadded |= addcombconss;
+   heurdata->contlinearconsadded |= addcontconss;
+
    return SCIP_OKAY;
 }
 
