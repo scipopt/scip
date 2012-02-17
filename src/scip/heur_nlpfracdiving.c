@@ -1143,8 +1143,17 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
                      /* fix and propagate */
                      SCIP_CALL( SCIPnewProbingNode(scip) );
-                     SCIP_CALL( SCIPchgVarLbProbing(scip, covervars[c], nlpsolval) );
-                     SCIP_CALL( SCIPchgVarUbProbing(scip, covervars[c], nlpsolval) );
+                     assert(SCIPisLbBetter(scip, nlpsolval, lb, ub) || SCIPisUbBetter(scip, nlpsolval, lb, ub));
+
+                     if( SCIPisLbBetter(scip, nlpsolval, lb, ub) )
+                     {
+                        SCIP_CALL( SCIPchgVarLbProbing(scip, covervars[c], nlpsolval) );
+                     }
+                     if( SCIPisUbBetter(scip, nlpsolval, lb, ub) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbProbing(scip, covervars[c], nlpsolval) );
+                     }
+
                      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
                   }
                }
