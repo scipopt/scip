@@ -3751,6 +3751,7 @@ SCIP_RETCODE createNlRow(
          {
             linvars[0] = consdata->x;
             lincoefs[0] = sign * 2.0 * consdata->xoffset;
+            nlinvars = 1;
             constant = sign * consdata->xoffset * consdata->xoffset;
          }
       }
