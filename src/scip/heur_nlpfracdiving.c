@@ -67,6 +67,7 @@
 #define DEFAULT_MINSUCCQUOT         0.1 /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
 #define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LP                 TRUE /**< should the LP relaxation be solved before the NLP relaxation? */
 #define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
 #define DEFAULT_PREFERCOVER        TRUE /**< should variables in a minimal cover be preferred? */
 #define DEFAULT_SOLVESUBMIP       FALSE /**< should a sub-MIP be solved if all cover variables are fixed? */
@@ -99,6 +100,7 @@ struct SCIP_HeurData
    SCIP_Real             minsuccquot;        /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
    SCIP_Real             fixquot;            /**< percentage of fractional variables that should be fixed before the next NLP solve */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             lp;                 /**< should the LP relaxation be solved before the NLP relaxation? */
    SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
    SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Bool             solvesubmip;        /**< should a sub-MIP be solved if all cover variables are fixed? */
@@ -829,6 +831,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    bestcandmayroundup = FALSE;
    startnnlpcands = nnlpcands;
    solvesubmip = heurdata->solvesubmip;
+   lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    
    while( !nlperror && !cutoff && (nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nnlpcands > 0
       && (divedepth < 10
@@ -1061,54 +1064,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIPdebugMessage("  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
          }
 
-         /* resolve LP */
-         if( !cutoff && !lperror && heurdata->preferlpfracs )
-         {
-            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
-
-            /* get LP solution status, objective value, and fractional variables, that should be integral */
-            lpsolstat = SCIPgetLPSolstat(scip);
-            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
-
-            if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-               nlpbranchcands = SCIPgetNLPBranchCands(scip);
-            else
-               nlpbranchcands = 0;
-
-            if( cutoff )
-            {
-               SCIPdebugMessage("  *** cutoff detected in LP solving at level %d, lpsolstat = %d\n", SCIPgetProbingDepth(scip), lpsolstat);
-            }
-         }
-
-         /* check whether we want to solve the NLP */
-         solvenlp = FALSE;
-         if( !cutoff )
-         {
-            /* solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)); */
-            solvenlp = (lastnlpsolvedepth < divedepth - heurdata->fixquot * nnlpcands);
-            if( !solvenlp )
-            {
-               /* check if fractional NLP variables are left (some may have been fixed by propagation) */
-               for( c = 0; c < nnlpcands; ++c )
-               {
-                  var = nlpcands[c];
-                  if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
-                     continue;
-                  else
-                     break;
-               }
-               if( c == nnlpcands )
-                  solvenlp = TRUE;
-            }
-         }
-         else
-         {
-            SCIPdebugMessage("  *** cutoff detected in propagation at level %d\n", SCIPgetProbingDepth(scip));
-         }
-
-         nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
-
          /* if all variables in the cover are fixed or there is no fractional variable in the cover, 
           * then solve a sub-MIP 
           */
@@ -1178,9 +1133,53 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             }
          }
 
+         /* resolve the diving LP */
+         if( !cutoff && !lperror && heurdata->lp )
+         {
+            SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
+
+            /* get LP solution status, objective value, and fractional variables, that should be integral */
+            lpsolstat = SCIPgetLPSolstat(scip);
+            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+
+            if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+               nlpbranchcands = SCIPgetNLPBranchCands(scip);
+            else
+               nlpbranchcands = 0;
+
+            if( cutoff )
+            {
+               SCIPdebugMessage("  *** cutoff detected in LP solving at level %d, lpsolstat = %d\n", SCIPgetProbingDepth(scip), lpsolstat);
+            }
+         }
+
+         /* check whether we want to solve the NLP */
+         solvenlp = FALSE;
+         if( !cutoff )
+         {
+            /* solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)); */
+            solvenlp = (lastnlpsolvedepth < divedepth - heurdata->fixquot * nnlpcands);
+            if( !solvenlp )
+            {
+               /* check if fractional NLP variables are left (some may have been fixed by propagation) */
+               for( c = 0; c < nnlpcands; ++c )
+               {
+                  var = nlpcands[c];
+                  if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
+                     continue;
+                  else
+                     break;
+               }
+               if( c == nnlpcands )
+                  solvenlp = TRUE;
+            }
+         }
+
+         nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+         /* resolve the diving NLP */
          if( !cutoff && solvenlp )
          {
-            /* resolve the diving NLP */
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
@@ -1483,6 +1482,10 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/backtrack",
          "use one level of backtracking if infeasibility is encountered?",
          &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/"HEUR_NAME"/lp",
+         "should the LP relaxation be solved before the NLP relaxation?",
+         &heurdata->lp, TRUE, DEFAULT_LP, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/"HEUR_NAME"/preferlpfracs",
          "prefer variables that are also fractional in LP solution?",
