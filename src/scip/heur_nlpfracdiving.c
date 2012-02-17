@@ -841,6 +841,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          }
       }
    }
+   else
+   {
+      covervars = NULL;
+      ncovervars = 0;
+   }
 
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
