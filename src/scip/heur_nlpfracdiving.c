@@ -783,7 +783,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
       SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, FALSE, FALSE, FALSE, 'u', &covercomputed) );
 
-      if( covercomputed && heurdata->solvesubmip )
+      if( covercomputed )
       {
          /* create hash map */
          SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
@@ -1360,7 +1360,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* free hash map and drop variable bound change events */
-   if( covercomputed && heurdata->solvesubmip)
+   if( covercomputed )
    {
       assert(heurdata->eventhdlr != NULL);
       assert(heurdata->nfixedcovervars == 0);
