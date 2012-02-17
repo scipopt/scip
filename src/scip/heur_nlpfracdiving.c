@@ -553,6 +553,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    SCIP_Real bestobjgain;
    SCIP_Real frac;
    SCIP_Real bestfrac;
+   SCIP_Real origfeastol;
    SCIP_Bool bestcandmayrounddown;
    SCIP_Bool bestcandmayroundup;
    SCIP_Bool bestcandroundup;
@@ -582,6 +583,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int divedepth;
    int lastnlpsolvedepth;
    int bestcand;
+   int origiterlim;
    int c;
    int       backtrackdepth;   /* depth where to go when backtracking */
    SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
@@ -637,7 +639,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* calculate the maximal number of NLP iterations until heuristic is aborted */
-   nnlpiterations = 100; /*TODO was SCIPgetNNodeLPIterations(scip); */
+   nnlpiterations = 100; /* @todo what should we set here? was SCIPgetNNodeLPIterations(scip) */
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterquot * nnlpiterations);
@@ -660,10 +662,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 #if 0 /* def SCIP_DEBUG */
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
-   /* @todo reset feastol when heuristic finished */
+   /* tighten NLP solver feasibility tolerance to avoid fail due to small inaccuracies (for now) */
+   SCIP_CALL( SCIPgetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, &origfeastol) );
    SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, 0.01*SCIPfeastol(scip)) );
 
-   /* set iteration limit; @todo reset limit when heuristic finished */
+   /* set iteration limit */
+   SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations) );
 
    /* set starting point to lp solution */
@@ -695,6 +699,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       {
          STATISTIC( heurdata->nfailnlperror++; )
       }
+
+      /* reset changed NLP parameters */
+      SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
+      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
 
       return SCIP_OKAY;
    }
@@ -736,6 +744,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
          SCIPdebugMessage(" -> solution of first NLP was integral, feasible, and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
+
+      /* reset changed NLP parameters */
+      SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
+      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
 
       return SCIP_OKAY;
    }
@@ -1249,7 +1261,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
-            /* set iteration limit; @todo reset limit when heuristic finished */
+            /* set iteration limit */
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
@@ -1446,6 +1458,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    {
       SCIP_CALL( SCIPfreeSol(scip, &nlpstartsol) );
    }
+
+   /* reset changed NLP parameters */
+   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
