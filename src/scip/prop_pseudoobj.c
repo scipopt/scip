@@ -2321,7 +2321,7 @@ SCIP_RETCODE propagateCutoffbound(
 
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2368,7 +2368,6 @@ SCIP_RETCODE propagateCutoffbound(
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
 
          (*result) = SCIP_CUTOFF;
-
          return SCIP_OKAY;
       }
 
@@ -2401,7 +2400,7 @@ SCIP_RETCODE propagateCutoffbound(
          /* analyze the conflict */
          SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
       }
-      *result = SCIP_CUTOFF;
+      (*result) = SCIP_CUTOFF;
 
       return SCIP_OKAY;
    }
@@ -2742,7 +2741,7 @@ SCIP_RETCODE propagateLowerbound(
 
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
    cutoff = FALSE;
    nchgbds = 0;
 
@@ -3022,7 +3021,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
@@ -3038,7 +3037,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
    if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
-      *result = SCIP_CUTOFF;
+      (*result) = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 
@@ -3048,7 +3047,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       SCIP_Real objval;
       SCIP_Bool tightened;
 
-      *result = SCIP_DIDNOTFIND;
+      (*result) = SCIP_DIDNOTFIND;
       oldnchgbds = *nchgbds;
 
       /* get the problem variables */
@@ -3073,7 +3072,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
       /* evaluate if bound change was detected */
       if( *nchgbds > oldnchgbds )
-         *result = SCIP_SUCCESS;
+         (*result) = SCIP_SUCCESS;
 
       /* store the old values */
       propdata->cutoffbound = cutoffbound;
@@ -3093,7 +3092,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
@@ -3116,7 +3115,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    /* propagate c*x <= cutoff */
    SCIP_CALL( propagateCutoffbound(scip, prop, result) );
 
-   if( *result != SCIP_CUTOFF && (propdata->nmaxactvars > 0 || propdata->nobjintvars > 0) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( (*result) != SCIP_CUTOFF && (propdata->nmaxactvars > 0 || propdata->nobjintvars > 0) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       SCIP_RESULT dualresult;
 
@@ -3124,7 +3123,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       SCIP_CALL( propagateLowerbound(scip, prop, &dualresult) );
 
       if( dualresult == SCIP_REDUCEDDOM || dualresult == SCIP_CUTOFF )
-         *result = dualresult;
+         (*result) = dualresult;
    }
 
    return SCIP_OKAY;
@@ -3153,7 +3152,7 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
    /* resolve the propagation of the inference variable w.r.t. required minactivity */
    SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx) );
 
-   *result = SCIP_SUCCESS;
+   (*result) = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
