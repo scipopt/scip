@@ -5745,14 +5745,19 @@ SCIP_RETCODE treeBacktrackProbing(
        * reset them to infinity
        */
       if( tree->cutoffdepth >= tree->pathlen )
+      {
+         /* apply the pending bound changes */
+         SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, lp, branchcand, eventqueue) );
+
          tree->cutoffdepth = INT_MAX;
+      }
       if( tree->repropdepth >= tree->pathlen )
          tree->repropdepth = INT_MAX;
    }
 
-   SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 
+   SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n",
       tree->pathlen-1, SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
-   
+
    return SCIP_OKAY;
 }
 
