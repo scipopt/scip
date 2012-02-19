@@ -2657,6 +2657,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
+   assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
    /* get contribution of variable by fixing it to its lower bound w.r.t. maximum activity of the objective function */
    lbobjchg = getMaxactObjchg(var, SCIP_BOUNDTYPE_LOWER, useimplics);
@@ -2825,6 +2826,9 @@ SCIP_RETCODE propagateLowerbound(
                break;
             }
 
+            /* update maximum pseudo activity since the previous global bound change invalidated the maximum pseudo activity */
+            maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
+
             nchgbds++;
          }
 
@@ -2845,7 +2849,11 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( propagateLowerboundBinvar(scip, var, lowerbound, maxpseudoobjact, propdata->propuseimplics, &cutoff, &tightened) );
 
             if( tightened )
+            {
+               /* update maximum pseudo activity since the previous global bound change invalidated the maximum pseudo activity */
+               maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
                nchgbds++;
+            }
          }
 
 #ifndef NDEBUG
