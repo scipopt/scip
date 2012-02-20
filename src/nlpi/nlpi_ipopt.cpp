@@ -967,7 +967,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
       }
       else
-         status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
+      {
+         /* for now, do not use ReOptimizeNLP, since it may not return a solution within bounds if all variables are fixed, see Ipopt ticket #179 */
+         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
+      }
 
       // catch the very bad status codes
       switch( status ) {
