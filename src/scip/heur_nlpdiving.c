@@ -18,7 +18,7 @@
 /* uncomment to get statistical output at the end of SCIP run */
 /* #define STATISTIC_INFORMATION */
 
-/**@file   heur_nlpfracdiving.c
+/**@file   heur_nlpdiving.c
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
  * @author Stefan Vigerske
@@ -29,15 +29,15 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/heur_nlpfracdiving.h"
+#include "scip/heur_nlpdiving.h"
 #include "scip/heur_subnlp.h" /* for NLP initialization */
 #include "scip/heur_undercover.h" /* for cover computation */
 #include "nlpi/nlpi.h" /* for NLP statistics, currently */
 
 
-#define HEUR_NAME             "nlpfracdiving"
+#define HEUR_NAME             "nlpdiving"
 #define HEUR_DESC             "NLP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         '%'
+#define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
@@ -46,7 +46,7 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* event handler properties */
-#define EVENTHDLR_NAME         "Nlpfracdiving"
+#define EVENTHDLR_NAME         "Nlpdiving"
 #define EVENTHDLR_DESC         "bound change event handler for "HEUR_NAME" heuristic"
 
 
@@ -73,7 +73,7 @@
 #define DEFAULT_PREFERCOVER        TRUE /**< should variables in a minimal cover be preferred? */
 #define DEFAULT_SOLVESUBMIP       FALSE /**< should a sub-MIP be solved if all cover variables are fixed? */
 #define DEFAULT_NLPSTART            's' /**< which point should be used as starting point for the NLP solver? */
-
+#define DEFAULT_VARSELRULE          'f' /**< which variable selection should be used? ('f'ractionality, 'c'oefficient) */
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
@@ -107,6 +107,7 @@ struct SCIP_HeurData
    SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Bool             solvesubmip;        /**< should a sub-MIP be solved if all cover variables are fixed? */
    char                  nlpstart;           /**< which point should be used as starting point for the NLP solver? */
+   char                  varselrule;         /**< which variable selection should be used? ('f'ractionality, 'c'oefficient) */
 
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
@@ -225,7 +226,7 @@ SCIP_RETCODE chooseFracVar(
                objgain *= 1000.0;
 
             /* prefer decisions on cover variables */
-            if( covercomputed && heurdata->prefercover && SCIPhashmapExists(varincover, var) )
+            if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
                objgain *= 1000.0;
 
             /* check, if candidate is new best candidate */
@@ -260,7 +261,7 @@ SCIP_RETCODE chooseFracVar(
             frac *= 1000.0;
 
          /* prefer decisions on cover variables */
-         if( covercomputed && heurdata->prefercover && SCIPhashmapExists(varincover, var) )
+         if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
             frac *= 1000.0;
 
          /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
@@ -277,6 +278,159 @@ SCIP_RETCODE chooseFracVar(
    }
 
    *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
+      
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE chooseCoefVar(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR**            nlpcands,           /**< array of NLP fractional variables */                
+   SCIP_Real*            nlpcandssol,        /**< array of NLP fractional variables solution values */
+   SCIP_Real*            nlpcandsfrac,       /**< array of NLP fractional variables fractionalities */
+   int                   nnlpcands,          /**< number of NLP fractional variables */
+   SCIP_HASHMAP*         varincover,         /**< hash map for variables */
+   SCIP_Bool             covercomputed,      /**< has a minimal cover been computed? */
+   int*                  bestcand,           /**< pointer to store the index of the best candidate variable */
+   SCIP_Bool*            bestcandmayround,   /**< pointer to store whether best candidate is trivially roundable */
+   SCIP_Bool*            bestcandroundup     /**< pointer to store whether best candidate should be rounded up */
+   )
+{
+   SCIP_Bool bestcandmayrounddown;
+   SCIP_Bool bestcandmayroundup;
+   int bestnviolrows;             /* number of violated rows for best candidate */
+   SCIP_Real bestcandfrac;        /* fractionality of best candidate */
+   int c;
+
+   /* check preconditions */
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandsfrac != NULL);
+   assert(nlpcandssol != NULL);
+   assert(bestcand != NULL);
+   assert(bestcandmayround != NULL);
+   assert(bestcandroundup != NULL);
+
+   bestcandmayrounddown = TRUE;
+   bestcandmayroundup = TRUE;
+   bestnviolrows = INT_MAX;
+   bestcandfrac = SCIP_INVALID;
+   
+   /* get best candidate */
+   for( c = 0; c < nnlpcands; ++c )
+   {
+      SCIP_VAR* var;
+
+      int nlocksdown;
+      int nlocksup;
+      int nviolrows;
+
+      SCIP_Bool mayrounddown;
+      SCIP_Bool mayroundup;
+      SCIP_Bool roundup;
+      SCIP_Real frac;
+  
+      var = nlpcands[c];
+      mayrounddown = SCIPvarMayRoundDown(var);
+      mayroundup = SCIPvarMayRoundUp(var);
+      frac = nlpcandsfrac[c];
+
+      if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
+         continue;
+
+      if( mayrounddown || mayroundup )
+      {
+         /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
+         if( bestcandmayrounddown || bestcandmayroundup )
+         {
+            /* choose rounding direction:
+             * - if variable may be rounded in both directions, round corresponding to the fractionality
+             * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+             *   the current fractional solution
+             */
+            if( mayrounddown && mayroundup )
+               roundup = (frac > 0.5);
+            else
+               roundup = mayrounddown;
+
+            if( roundup )
+            {
+               frac = 1.0 - frac;
+               nviolrows = SCIPvarGetNLocksUp(var);
+            }
+            else
+               nviolrows = SCIPvarGetNLocksDown(var);
+
+            /* penalize too small fractions */
+            if( frac < 0.01 )
+               nviolrows *= 100;
+
+            /* prefer decisions on binary variables */
+            if( !SCIPvarIsBinary(var) )
+               nviolrows *= 1000;
+
+            /* prefer decisions on cover variables */
+            if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
+               nviolrows *= 1000;
+
+            /* check, if candidate is new best candidate */
+            assert( (0.0 < frac && frac < 1.0) || SCIPvarIsBinary(var) );
+            if( nviolrows + frac < bestnviolrows + bestcandfrac )
+            {
+               *bestcand = c;
+               bestnviolrows = nviolrows;
+               bestcandfrac = frac;
+               bestcandmayrounddown = mayrounddown;
+               bestcandmayroundup = mayroundup;
+               *bestcandroundup = roundup;
+            }
+         }
+      }
+      else
+      {
+         /* the candidate may not be rounded */
+         nlocksdown = SCIPvarGetNLocksDown(var);
+         nlocksup = SCIPvarGetNLocksUp(var);
+         roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && frac > 0.5));
+         if( roundup )
+         {
+            nviolrows = nlocksup;
+            frac = 1.0 - frac;
+         }
+         else
+            nviolrows = nlocksdown;
+
+         /* penalize too small fractions */
+         if( frac < 0.01 )
+            nviolrows *= 100;
+
+         /* prefer decisions on binary variables */
+         if( !SCIPvarIsBinary(var) )
+            nviolrows *= 100;
+
+         /* prefer decisions on cover variables */
+         if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
+            nviolrows *= 1000;
+
+         /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+         assert((0.0 < frac && frac < 1.0) || SCIPvarIsBinary(var));
+         if( bestcandmayrounddown || bestcandmayroundup || nviolrows + frac < bestnviolrows + bestcandfrac )
+         {
+            *bestcand = c;
+            bestnviolrows = nviolrows;
+            bestcandfrac = frac;
+            bestcandmayrounddown = FALSE;
+            bestcandmayroundup = FALSE;
+            *bestcandroundup = roundup;
+         }
+         assert(bestcandfrac < SCIP_INVALID);
+      }
+   }
+
+  *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
       
    return SCIP_OKAY;
 }
@@ -498,7 +652,7 @@ SCIP_RETCODE solveSubMIP(
  * We update the number of variables fixed in the cover
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecNlpFracdiving)
+SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
 {
    SCIP_EVENTTYPE eventtype;
    SCIP_HEURDATA* heurdata;
@@ -563,7 +717,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpFracdiving)
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyNlpFracdiving)
+SCIP_DECL_HEURCOPY(heurCopyNlpdiving)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
@@ -571,14 +725,14 @@ SCIP_DECL_HEURCOPY(heurCopyNlpFracdiving)
 
    /* call inclusion method of primal heuristic */
    /* @todo disabled copying for easier development/debugging */
-/*   SCIP_CALL( SCIPincludeHeurNlpFracdiving(scip) ); */
+/*   SCIP_CALL( SCIPincludeHeurNlpdiving(scip) ); */
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeNlpFracdiving) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeNlpdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -598,7 +752,7 @@ SCIP_DECL_HEURFREE(heurFreeNlpFracdiving) /*lint --e{715}*/
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitNlpFracdiving) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -629,7 +783,7 @@ SCIP_DECL_HEURINIT(heurInitNlpFracdiving) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -660,7 +814,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpFracdiving) /*lint --e{715}*/
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINITSOL(heurInitsolNlpFracdiving)
+SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 {  /*lint --e{715}*/
    SCIP_HEUR* nlpheur;
 
@@ -680,12 +834,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpFracdiving)
 }
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolNlpFracdiving NULL
+#define heurExitsolNlpdiving NULL
 
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_NLPSOLSTAT nlpsolstat;
@@ -999,7 +1153,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    /* get NLP objective value*/
    objval = SCIPgetNLPObjval(scip);
 
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing nlpfracdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing nlpdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nnlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
@@ -1033,8 +1187,21 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
       bestcandroundup = FALSE;
 
       /* find best candidate variable */
-      SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
-            &bestcand, &bestcandmayround, &bestcandroundup) );
+      switch( heurdata->varselrule )
+      {
+      case 'f': 
+         SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
+               &bestcand, &bestcandmayround, &bestcandroundup) );
+         break;
+      case 'c': 
+         SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
+               &bestcand, &bestcandmayround, &bestcandroundup) );
+         break;
+      default:
+         SCIPerrorMessage("invalid variable selection rule\n");
+         return SCIP_INVALIDDATA;
+      }
+
       assert(bestcand != -1);
 
       /* if all candidates are roundable, try to round the solution */
@@ -1048,7 +1215,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
          if( success )
          {
-            SCIPdebugMessage("nlpfracdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+            SCIPdebugMessage("nlpdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
             /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
@@ -1075,7 +1242,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
          if( backtracked && backtrackdepth > 0 )
          {
-
 
             /* if the variable is already fixed, numerical troubles may have occurred or
              * variable was fixed by propagation while backtracking => Abort diving!
@@ -1461,7 +1627,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
       /* create solution from diving NLP */
       SCIP_CALL( SCIPlinkNLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("nlpfracdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+      SCIPdebugMessage("nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
 #ifdef SCIP_DEBUG
@@ -1525,7 +1691,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
 
-   SCIPdebugMessage("nlpfracdiving heuristic finished\n");
+   SCIPdebugMessage("nlpdiving heuristic finished\n");
 
    return SCIP_OKAY;
 }
@@ -1538,7 +1704,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
  */
 
 /** creates the fracdiving heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
+SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1550,14 +1716,14 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyNlpFracdiving,
-         heurFreeNlpFracdiving, heurInitNlpFracdiving, heurExitNlpFracdiving,
-         heurInitsolNlpFracdiving, heurExitsolNlpFracdiving, heurExecNlpFracdiving,
+         heurCopyNlpdiving,
+         heurFreeNlpdiving, heurInitNlpdiving, heurExitNlpdiving,
+         heurInitsolNlpdiving, heurExitsolNlpdiving, heurExecNlpdiving,
          heurdata) );
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlpFracdiving, NULL) );
+         NULL,NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlpdiving, NULL) );
 
    /* get event handler for bound change events */
    heurdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -1636,6 +1802,10 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "heuristics/"HEUR_NAME"/nlpstart",
          "which point should be used as starting point for the NLP solver? ('n'one, last 'f'easible, from dive's'tart)",
          &heurdata->nlpstart, TRUE, DEFAULT_NLPSTART, "fns", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "heuristics/"HEUR_NAME"/varselrule",
+         "which variable selection should be used? ('f'ractionality, 'c'oefficient)",
+         &heurdata->varselrule, TRUE, DEFAULT_VARSELRULE, "fc", NULL, NULL) );
 
    return SCIP_OKAY;
 }

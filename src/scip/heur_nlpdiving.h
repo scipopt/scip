@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_nlpfracdiving.h
+/**@file   heur_nlpdiving.h
  * @ingroup PRIMALHEURISTICS
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
@@ -27,8 +27,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_NLPFRACDIVING_H__
-#define __SCIP_HEUR_NLPFRACDIVING_H__
+#ifndef __SCIP_HEUR_NLPDIVING_H__
+#define __SCIP_HEUR_NLPDIVING_H__
 
 
 #include "scip/scip.h"
@@ -39,7 +39,7 @@ extern "C" {
 
 /** creates the fracdiving heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
+SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
