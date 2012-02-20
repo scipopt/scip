@@ -122,8 +122,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -434,6 +432,179 @@ SCIP_RETCODE chooseCoefVar(
       
    return SCIP_OKAY;
 }
+
+static
+void calcPscostQuot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             primsol,            /**< primal solution of variable */
+   SCIP_Real             frac,               /**< fractionality of variable */
+   int                   rounddir,           /**< -1: round down, +1: round up, 0: select due to pseudo cost values */
+   SCIP_Real*            pscostquot,         /**< pointer to store pseudo cost quotient */
+   SCIP_Bool*            roundup,            /**< pointer to store whether the variable should be rounded up */
+   SCIP_Bool             prefvar             /**< should this variable be prefered because it is in a minimal cover? */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   assert(pscostquot != NULL);
+   assert(roundup != NULL);
+   assert(SCIPisEQ(scip, frac, primsol - SCIPfeasFloor(scip, primsol)));
+
+   /* bound fractions to not prefer variables that are nearly integral */
+   frac = MAX(frac, 0.1);
+   frac = MIN(frac, 0.9);
+
+   /* get pseudo cost quotient */
+   pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0-frac);
+   pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
+   assert(pscostdown >= 0.0 && pscostup >= 0.0);
+
+   /* choose rounding direction */
+   if( rounddir == -1 )
+      *roundup = FALSE;
+   else if( rounddir == +1 )
+      *roundup = TRUE;
+   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+      *roundup = FALSE;
+   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
+      *roundup = TRUE;
+   else if( frac < 0.3 )
+      *roundup = FALSE;
+   else if( frac > 0.7 )
+      *roundup = TRUE;
+   else if( pscostdown < pscostup )
+      *roundup = FALSE;
+   else
+      *roundup = TRUE;
+
+   /* calculate pseudo cost quotient */
+   if( *roundup )
+      *pscostquot = sqrt(frac) * (1.0+pscostdown) / (1.0+pscostup);
+   else
+      *pscostquot = sqrt(1.0-frac) * (1.0+pscostup) / (1.0+pscostdown);
+
+   /* prefer decisions on binary variables */
+   if( SCIPvarIsBinary(var) )
+      (*pscostquot) *= 1000.0;
+
+   /* prefer decisions on cover variables */
+   if( prefvar )
+      (*pscostquot) *= 1000.0;
+}
+
+static
+SCIP_RETCODE choosePscostVar(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR**            nlpcands,           /**< array of NLP fractional variables */
+   SCIP_Real*            nlpcandssol,        /**< array of NLP fractional variables solution values */
+   SCIP_Real*            nlpcandsfrac,       /**< array of NLP fractional variables fractionalities */
+   int                   nnlpcands,          /**< number of NLP fractional variables */
+   SCIP_HASHMAP*         varincover,         /**< hash map for variables */
+   SCIP_Bool             covercomputed,      /**< has a minimal cover been computed? */
+   int*                  bestcand,           /**< pointer to store the index of the best candidate variable */
+   SCIP_Bool*            bestcandmayround,   /**< pointer to store whether best candidate is trivially roundable */
+   SCIP_Bool*            bestcandroundup     /**< pointer to store whether best candidate should be rounded up */
+   )
+{
+   SCIP_Bool bestcandmayrounddown;
+   SCIP_Bool bestcandmayroundup;
+   SCIP_Real bestpscostquot;
+   int c;
+
+   /* check preconditions */
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandsfrac != NULL);
+   assert(nlpcandssol != NULL);
+   assert(bestcand != NULL);
+   assert(bestcandmayround != NULL);
+   assert(bestcandroundup != NULL);
+
+   bestcandmayrounddown = TRUE;
+   bestcandmayroundup = TRUE;
+
+   for( c = 0; c < nnlpcands; ++c )
+   {
+      SCIP_VAR* var;
+      SCIP_Real primsol;
+
+      SCIP_Bool mayrounddown;
+      SCIP_Bool mayroundup;
+      SCIP_Bool roundup;
+      SCIP_Bool prefvar;
+      SCIP_Real frac;
+      SCIP_Real pscostquot;
+
+      var = nlpcands[c];
+      mayrounddown = SCIPvarMayRoundDown(var);
+      mayroundup = SCIPvarMayRoundUp(var);
+      primsol = nlpcandssol[c];
+      frac = nlpcandsfrac[c];
+      prefvar = covercomputed && heurdata->prefercover && SCIPhashmapExists(varincover, var);
+      pscostquot = SCIP_INVALID;
+
+      if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
+         continue;
+
+      if( mayrounddown || mayroundup )
+      {
+         /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
+         if( bestcandmayrounddown || bestcandmayroundup )
+         {
+            /* choose rounding direction:
+             * - if variable may be rounded in both directions, round corresponding to the pseudo cost values
+             * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+             *   the current fractional solution
+             */
+            roundup = FALSE;
+            if( mayrounddown && mayroundup )
+               calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+            else if( mayrounddown )
+               calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup, prefvar);
+            else
+               calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup, prefvar);
+
+            assert(pscostquot != SCIP_INVALID);
+
+            /* check, if candidate is new best candidate */
+            if( pscostquot > bestpscostquot )
+            {
+               *bestcand = c;
+               bestpscostquot = pscostquot;
+               bestcandmayrounddown = mayrounddown;
+               bestcandmayroundup = mayroundup;
+               *bestcandroundup = roundup;
+            }
+         }
+      }
+      else
+      {
+         /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
+         calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+         assert(pscostquot != SCIP_INVALID);
+
+         /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+         if( bestcandmayrounddown || bestcandmayroundup || pscostquot > bestpscostquot )
+         {
+            *bestcand = c;
+            bestpscostquot = pscostquot;
+            bestcandmayrounddown = FALSE;
+            bestcandmayroundup = FALSE;
+            *bestcandroundup = roundup;
+         }
+      }
+   }
+
+   *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
+
+   return SCIP_OKAY;
+}
+
+
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
@@ -1197,6 +1368,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          break;
+      case 'p':
+         SCIP_CALL( choosePscostVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
+               &bestcand, &bestcandmayround, &bestcandroundup) );
+         break;
       default:
          SCIPerrorMessage("invalid variable selection rule\n");
          return SCIP_INVALIDDATA;
@@ -1630,7 +1805,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIPdebugMessage("nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
@@ -1804,8 +1979,8 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          &heurdata->nlpstart, TRUE, DEFAULT_NLPSTART, "fns", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "heuristics/"HEUR_NAME"/varselrule",
-         "which variable selection should be used? ('f'ractionality, 'c'oefficient)",
-         &heurdata->varselrule, TRUE, DEFAULT_VARSELRULE, "fc", NULL, NULL) );
+         "which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost)",
+         &heurdata->varselrule, TRUE, DEFAULT_VARSELRULE, "fcp", NULL, NULL) );
 
    return SCIP_OKAY;
 }
