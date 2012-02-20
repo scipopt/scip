@@ -4100,6 +4100,29 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 #endif
          }
       }
+
+      /* add nlrow representation to NLP, if NLP had been constructed
+       * note, that we did not tell SCIP in exitpre that we have something to add to the NLP, thus indicators are only available in the NLP for MINLPs, but not for MIPs with indicators
+       */
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
+      {
+         SCIP_NLROW* nlrow;
+         SCIP_VAR* quadvars[2];
+         SCIP_QUADELEM quadelem;
+
+         /* create nonlinear row binary variable * slack variable = 0 */
+         quadvars[0] = consdata->binvar;
+         quadvars[1] = consdata->slackvar;
+         quadelem.idx1 = 0;
+         quadelem.idx2 = 1;
+         quadelem.coef = 1.0;
+
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1, &quadelem, NULL, 0.0, 0.0) );
+
+         /* add row to NLP and forget about it */
+         SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+         SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+      }
    }
 
    SCIPdebugMessage("Initialized %d indicator constraints.\n", nconss);
