@@ -2255,7 +2255,7 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       }
    }
 
-#ifndef NDEBUG
+#if 0
    /* check if all initial constraints are included in the initconss array */
    {
       int c;
