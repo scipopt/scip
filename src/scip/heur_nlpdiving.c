@@ -1679,7 +1679,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
             {
-               SCIPwarningMessage("Error while solving NLP in Fracdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               SCIPwarningMessage("Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
                nlperror = TRUE;
                break;
             }
@@ -1765,7 +1765,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    }
 
 #if 1
-   SCIPdebugMessage("NLP fracdiving ABORT due to ");
+   SCIPdebugMessage("NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
       SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
@@ -1878,7 +1878,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
  * heuristic specific interface methods
  */
 
-/** creates the fracdiving heuristic and includes it in SCIP */
+/** creates the nlpdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1908,7 +1908,7 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* fracdiving heuristic parameters */
+   /* nlpdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/minreldepth",
          "minimal relative depth to start diving",
