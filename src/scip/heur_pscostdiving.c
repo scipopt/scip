@@ -84,6 +84,7 @@ struct SCIP_HeurData
  * local methods
  */
 
+/** calculates the pseudocost score for a given variable w.r.t. a given solution value and a given rounding direction */
 static
 void calcPscostQuot(
    SCIP*                 scip,               /**< SCIP data structure */

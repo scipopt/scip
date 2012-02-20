@@ -120,8 +120,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -281,6 +279,15 @@ SCIP_RETCODE chooseFracVar(
 }
 
 
+/** finds best candidate variable w.r.t. locking numbers:
+ * - prefer variables that may not be rounded without destroying LP feasibility:
+ *   - of these variables, round variable with least number of locks in corresponding direction
+ * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+ *   - round variable with least number of locks in opposite of its feasible rounding direction
+ * - binary variables are prefered
+ * - variables in a minimal cover or variables that are also fractional in an optimal LP solution might
+ *   also be prefered if a correpsonding parameter is set
+ */
 static
 SCIP_RETCODE chooseCoefVar(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -428,8 +435,345 @@ SCIP_RETCODE chooseCoefVar(
       }
    }
 
-  *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
+   *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
       
+   return SCIP_OKAY;
+}
+
+/** calculates the pseudocost score for a given variable w.r.t. a given solution value and a given rounding direction */
+static
+void calcPscostQuot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             primsol,            /**< primal solution of variable */
+   SCIP_Real             frac,               /**< fractionality of variable */
+   int                   rounddir,           /**< -1: round down, +1: round up, 0: select due to pseudo cost values */
+   SCIP_Real*            pscostquot,         /**< pointer to store pseudo cost quotient */
+   SCIP_Bool*            roundup,            /**< pointer to store whether the variable should be rounded up */
+   SCIP_Bool             prefvar             /**< should this variable be prefered because it is in a minimal cover? */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   assert(pscostquot != NULL);
+   assert(roundup != NULL);
+   assert(SCIPisEQ(scip, frac, primsol - SCIPfeasFloor(scip, primsol)));
+
+   /* bound fractions to not prefer variables that are nearly integral */
+   frac = MAX(frac, 0.1);
+   frac = MIN(frac, 0.9);
+
+   /* get pseudo cost quotient */
+   pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0-frac);
+   pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
+   assert(pscostdown >= 0.0 && pscostup >= 0.0);
+
+   /* choose rounding direction */
+   if( rounddir == -1 )
+      *roundup = FALSE;
+   else if( rounddir == +1 )
+      *roundup = TRUE;
+   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+      *roundup = FALSE;
+   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
+      *roundup = TRUE;
+   else if( frac < 0.3 )
+      *roundup = FALSE;
+   else if( frac > 0.7 )
+      *roundup = TRUE;
+   else if( pscostdown < pscostup )
+      *roundup = FALSE;
+   else
+      *roundup = TRUE;
+
+   /* calculate pseudo cost quotient */
+   if( *roundup )
+      *pscostquot = sqrt(frac) * (1.0+pscostdown) / (1.0+pscostup);
+   else
+      *pscostquot = sqrt(1.0-frac) * (1.0+pscostup) / (1.0+pscostdown);
+
+   /* prefer decisions on binary variables */
+   if( SCIPvarIsBinary(var) )
+      (*pscostquot) *= 1000.0;
+
+   /* prefer decisions on cover variables */
+   if( prefvar )
+      (*pscostquot) *= 1000.0;
+}
+
+/** finds best candidate variable w.r.t. pseudo costs:
+ * - prefer variables that may not be rounded without destroying LP feasibility:
+ *   - of these variables, round variable with largest rel. difference of pseudo cost values in corresponding
+ *     direction
+ * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+ *   - round variable in the objective value direction
+ * - binary variables are prefered
+ * - variables in a minimal cover or variables that are also fractional in an optimal LP solution might
+ *   also be prefered if a correpsonding parameter is set
+ */
+static
+SCIP_RETCODE choosePscostVar(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR**            nlpcands,           /**< array of NLP fractional variables */
+   SCIP_Real*            nlpcandssol,        /**< array of NLP fractional variables solution values */
+   SCIP_Real*            nlpcandsfrac,       /**< array of NLP fractional variables fractionalities */
+   int                   nnlpcands,          /**< number of NLP fractional variables */
+   SCIP_HASHMAP*         varincover,         /**< hash map for variables */
+   SCIP_Bool             covercomputed,      /**< has a minimal cover been computed? */
+   int*                  bestcand,           /**< pointer to store the index of the best candidate variable */
+   SCIP_Bool*            bestcandmayround,   /**< pointer to store whether best candidate is trivially roundable */
+   SCIP_Bool*            bestcandroundup     /**< pointer to store whether best candidate should be rounded up */
+   )
+{
+   SCIP_Bool bestcandmayrounddown;
+   SCIP_Bool bestcandmayroundup;
+   SCIP_Real bestpscostquot;
+   int c;
+
+   /* check preconditions */
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandsfrac != NULL);
+   assert(nlpcandssol != NULL);
+   assert(bestcand != NULL);
+   assert(bestcandmayround != NULL);
+   assert(bestcandroundup != NULL);
+
+   bestcandmayrounddown = TRUE;
+   bestcandmayroundup = TRUE;
+
+   for( c = 0; c < nnlpcands; ++c )
+   {
+      SCIP_VAR* var;
+      SCIP_Real primsol;
+
+      SCIP_Bool mayrounddown;
+      SCIP_Bool mayroundup;
+      SCIP_Bool roundup;
+      SCIP_Bool prefvar;
+      SCIP_Real frac;
+      SCIP_Real pscostquot;
+
+      var = nlpcands[c];
+      mayrounddown = SCIPvarMayRoundDown(var);
+      mayroundup = SCIPvarMayRoundUp(var);
+      primsol = nlpcandssol[c];
+      frac = nlpcandsfrac[c];
+      prefvar = covercomputed && heurdata->prefercover && SCIPhashmapExists(varincover, var);
+      pscostquot = SCIP_INVALID;
+
+      if( SCIPisLT(scip, nlpcandssol[c], SCIPvarGetLbLocal(var)) || SCIPisGT(scip, nlpcandssol[c], SCIPvarGetUbLocal(var)) )
+         continue;
+
+      if( mayrounddown || mayroundup )
+      {
+         /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
+         if( bestcandmayrounddown || bestcandmayroundup )
+         {
+            /* choose rounding direction:
+             * - if variable may be rounded in both directions, round corresponding to the pseudo cost values
+             * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+             *   the current fractional solution
+             */
+            roundup = FALSE;
+            if( mayrounddown && mayroundup )
+               calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+            else if( mayrounddown )
+               calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup, prefvar);
+            else
+               calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup, prefvar);
+
+            assert(pscostquot != SCIP_INVALID);
+
+            /* check, if candidate is new best candidate */
+            if( pscostquot > bestpscostquot )
+            {
+               *bestcand = c;
+               bestpscostquot = pscostquot;
+               bestcandmayrounddown = mayrounddown;
+               bestcandmayroundup = mayroundup;
+               *bestcandroundup = roundup;
+            }
+         }
+      }
+      else
+      {
+         /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
+         calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+         assert(pscostquot != SCIP_INVALID);
+
+         /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+         if( bestcandmayrounddown || bestcandmayroundup || pscostquot > bestpscostquot )
+         {
+            *bestcand = c;
+            bestpscostquot = pscostquot;
+            bestcandmayrounddown = FALSE;
+            bestcandmayroundup = FALSE;
+            *bestcandroundup = roundup;
+         }
+      }
+   }
+
+   *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
+
+   return SCIP_OKAY;
+}
+
+/** finds best candidate variable w.r.t. the incumbent solution:
+ * - prefer variables that may not be rounded without destroying LP feasibility:
+ *   - of these variables, round a variable to its value in direction of incumbent solution, and choose the
+ *     variable that is closest to its rounded value
+ * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+ *   - round variable in direction that destroys LP feasibility (other direction is checked by SCIProundSol())
+ *   - round variable with least increasing objective value
+ * - binary variables are prefered
+ * - variables in a minimal cover or variables that are also fractional in an optimal LP solution might
+ *   also be prefered if a correpsonding parameter is set
+ */
+static
+SCIP_RETCODE chooseGuidedVar(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_VAR**            nlpcands,           /**< array of NLP fractional variables */
+   SCIP_Real*            nlpcandssol,        /**< array of NLP fractional variables solution values */
+   SCIP_Real*            nlpcandsfrac,       /**< array of NLP fractional variables fractionalities */
+   int                   nnlpcands,          /**< number of NLP fractional variables */
+   SCIP_SOL*             bestsol,            /**< incumbent solution */
+   SCIP_HASHMAP*         varincover,         /**< hash map for variables */
+   SCIP_Bool             covercomputed,      /**< has a minimal cover been computed? */
+   int*                  bestcand,           /**< pointer to store the index of the best candidate variable */
+   SCIP_Bool*            bestcandmayround,   /**< pointer to store whether best candidate is trivially roundable */
+   SCIP_Bool*            bestcandroundup     /**< pointer to store whether best candidate should be rounded up */
+   )
+{
+   SCIP_Real bestobjgain;
+   SCIP_Real bestfrac;
+   SCIP_Bool bestcandmayrounddown;
+   SCIP_Bool bestcandmayroundup;
+   int c;
+
+   /* check preconditions */
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandsfrac != NULL);
+   assert(nlpcandssol != NULL);
+   assert(bestcand != NULL);
+   assert(bestcandmayround != NULL);
+   assert(bestcandroundup != NULL);
+
+   bestcandmayrounddown = TRUE;
+   bestcandmayroundup = TRUE;
+   bestobjgain = SCIPinfinity(scip);
+   bestfrac = SCIP_INVALID;
+
+   for( c = 0; c < nnlpcands; ++c )
+   {
+      SCIP_VAR* var;
+      SCIP_Real bestsolval;
+      SCIP_Real solval;
+      SCIP_Real obj;
+      SCIP_Real frac;
+      SCIP_Real objgain;
+
+      SCIP_Bool mayrounddown;
+      SCIP_Bool mayroundup;
+      SCIP_Bool roundup;
+
+      var = nlpcands[c];
+      mayrounddown = SCIPvarMayRoundDown(var);
+      mayroundup = SCIPvarMayRoundUp(var);
+      solval = nlpcandssol[c];
+      frac = nlpcandsfrac[c];
+      obj = SCIPvarGetObj(var);
+      bestsolval = SCIPgetSolVal(scip, bestsol, var);
+
+      if( SCIPisLT(scip, solval, SCIPvarGetLbLocal(var)) || SCIPisGT(scip, solval, SCIPvarGetUbLocal(var)) )
+         continue;
+
+      /* select default rounding direction */
+      roundup = (solval < bestsolval);
+
+      if( mayrounddown || mayroundup )
+      {
+         /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
+         if( bestcandmayrounddown || bestcandmayroundup )
+         {
+            /* choose rounding direction:
+             * - if variable may be rounded in both directions, round corresponding to its value in incumbent solution
+             * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+             *   the current fractional solution with SCIProundSol()
+             */
+            if( !mayrounddown || !mayroundup )
+               roundup = mayrounddown;
+
+            if( roundup )
+            {
+               frac = 1.0 - frac;
+               objgain = frac*obj;
+            }
+            else
+               objgain = -frac*obj;
+
+            /* penalize too small fractions */
+            if( frac < 0.01 )
+               objgain *= 1000.0;
+
+            /* prefer decisions on binary variables */
+            if( !SCIPvarIsBinary(var) )
+               objgain *= 1000.0;
+
+            /* prefer decisions on cover variables */
+            if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
+               objgain *= 1000.0;
+
+            /* check, if candidate is new best candidate */
+            if( SCIPisLT(scip, objgain, bestobjgain) || (SCIPisEQ(scip, objgain, bestobjgain) && frac < bestfrac) )
+            {
+               *bestcand = c;
+               bestobjgain = objgain;
+               bestfrac = frac;
+               bestcandmayrounddown = mayrounddown;
+               bestcandmayroundup = mayroundup;
+               *bestcandroundup = roundup;
+            }
+         }
+      }
+      else
+      {
+         /* the candidate may not be rounded */
+         if( roundup )
+            frac = 1.0 - frac;
+
+         /* penalize too small fractions */
+         if( frac < 0.01 )
+            frac += 10.0;
+
+         /* prefer decisions on binary variables */
+         if( !SCIPvarIsBinary(var) )
+            frac *= 1000.0;
+
+         /* prefer decisions on cover variables */
+         if( covercomputed && heurdata->prefercover && !SCIPhashmapExists(varincover, var) )
+            frac *= 1000.0;
+
+         /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+         if( bestcandmayrounddown || bestcandmayroundup || frac < bestfrac )
+         {
+            *bestcand = c;
+            bestfrac = frac;
+            bestcandmayrounddown = FALSE;
+            bestcandmayroundup = FALSE;
+            *bestcandroundup = roundup;
+         }
+      }
+   }
+
+   *bestcandmayround = bestcandmayroundup || bestcandmayrounddown;
+
    return SCIP_OKAY;
 }
 
@@ -467,7 +811,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    for( i = 0; i < nvars; i++ )
-     subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
 
    /* copy the solution */
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
@@ -681,12 +1025,12 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if cover variable is now fixed */
-         if( SCIPisFeasEQ(scip, newbound, otherbound) )
-         {
-            assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
-            ++(heurdata->nfixedcovervars);
-         }
-         break;
+      if( SCIPisFeasEQ(scip, newbound, otherbound) )
+      {
+         assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
+         ++(heurdata->nfixedcovervars);
+      }
+      break;
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if cover variable is now unfixed */
@@ -703,7 +1047,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    assert(0 <= heurdata->nfixedcovervars && heurdata->nfixedcovervars <= SCIPgetNVars(scip));
 
    SCIPdebugMessage("changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
-                    oldbound, newbound, heurdata->nfixedcovervars);
+      oldbound, newbound, heurdata->nfixedcovervars);
 
    return SCIP_OKAY;
 }
@@ -723,7 +1067,7 @@ SCIP_DECL_HEURCOPY(heurCopyNlpdiving)
 
    /* call inclusion method of primal heuristic */
    /* @todo disabled copying for easier development/debugging */
-/*   SCIP_CALL( SCIPincludeHeurNlpdiving(scip) ); */
+   /*   SCIP_CALL( SCIPincludeHeurNlpdiving(scip) ); */
 
    return SCIP_OKAY;
 }
@@ -802,7 +1146,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
             (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
-         );
+            );
       }
       );
 
@@ -843,6 +1187,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_NLPSOLSTAT nlpsolstat;
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_SOL* nlpstartsol;
+   SCIP_SOL* bestsol;
    SCIP_VAR** nlpcands;
    SCIP_VAR** covervars;
    SCIP_Real* nlpcandssol;
@@ -891,6 +1236,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    backtrackvar = NULL;
    backtrackvarval = 0.0;
    backtrackroundup = FALSE;
+   bestsol = NULL;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -954,6 +1300,22 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
+   /* store a copy of the best solution, if guided diving should be used */
+   if( heurdata->varselrule == 'g' )
+   {
+      /* don't dive, if no feasible solutions exist */
+      if( SCIPgetNSols(scip) == 0 )
+         return SCIP_OKAY;
+
+      /* get best solution that should guide the search; if this solution lives in the original variable space,
+       * we cannot use it since it might violate the global bounds of the current problem
+       */
+      if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+         return SCIP_OKAY;
+
+      SCIP_CALL( SCIPcreateSolCopy(scip, &bestsol, SCIPgetBestSol(scip)) );
+   }
+
    *result = SCIP_DIDNOTFIND;
 
 #if 0 /* def SCIP_DEBUG */
@@ -974,8 +1336,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPsolveNLP(scip) );
    STATISTIC( ++heurdata->nnlpsolves; )
 
-   /* give up, if no feasible solution found */
-   nlpsolstat = SCIPgetNLPSolstat(scip);
+      /* give up, if no feasible solution found */
+      nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
@@ -991,15 +1353,21 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          SCIPnlpStatisticsFree(&nlpstatistics);
 
          STATISTIC( heurdata->nfailcutoff++; )
-      }
+            }
       else
       {
          STATISTIC( heurdata->nfailnlperror++; )
-      }
+            }
 
       /* reset changed NLP parameters */
       SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
       SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+
+      /* free copied best solution */
+      if( heurdata->varselrule == 'g' )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
+      }
 
       return SCIP_OKAY;
    }
@@ -1046,6 +1414,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       /* reset changed NLP parameters */
       SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
       SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+
+      /* free copied best solution */
+      if( heurdata->varselrule == 'g' )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
+      }
 
       return SCIP_OKAY;
    }
@@ -1193,6 +1567,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          break;
       case 'c': 
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
+               &bestcand, &bestcandmayround, &bestcandroundup) );
+         break;
+      case 'p':
+         SCIP_CALL( choosePscostVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
+               &bestcand, &bestcandmayround, &bestcandroundup) );
+         break;
+      case 'g':
+         SCIP_CALL( chooseGuidedVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, bestsol, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
          break;
       default:
@@ -1347,7 +1729,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
           */
          if( !cutoff && solvesubmip && covercomputed && 
             (heurdata->nfixedcovervars == ncovervars || 
-            (heurdata->nfixedcovervars >= (ncovervars+1)/2 && !SCIPhashmapExists(varincover, var))) )
+               (heurdata->nfixedcovervars >= (ncovervars+1)/2 && !SCIPhashmapExists(varincover, var))) )
          {
             int probingdepth;
 
@@ -1499,10 +1881,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPsolveNLP(scip) );
             STATISTIC( ++heurdata->nnlpsolves; )
 
-            termstat = SCIPgetNLPTermstat(scip);
+               termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
             {
-               SCIPwarningMessage("Error while solving NLP in Fracdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+               SCIPwarningMessage("Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
                nlperror = TRUE;
                break;
             }
@@ -1588,17 +1970,17 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    }
 
 #if 1
-   SCIPdebugMessage("NLP fracdiving ABORT due to ");
+   SCIPdebugMessage("NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
       SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
       STATISTIC( heurdata->nfailnlperror++; )
-   }
+         }
    else if( SCIPisStopped(scip) || cutoff )
    {
       SCIPdebugPrintf("LIMIT hit - stop: %d cutoff: %d \n", SCIPisStopped(scip), cutoff);
       STATISTIC( heurdata->nfailcutoff++; )
-   }
+         }
    else if(! (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound) ) )
@@ -1607,7 +1989,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          (nnlpcands > startnnlpcands - divedepth/2), (divedepth >= maxdivedepth), (heurdata->nnlpiterations >= maxnnlpiterations),
          (objval >= searchbound));   
       STATISTIC( heurdata->nfaildepth++; )
-   }
+         }
    else if ( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
       SCIPdebugPrintf("SUCCESS\n");
@@ -1628,7 +2010,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIPdebugMessage("nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, FALSE, FALSE, TRUE, &success) );
 #else
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, &success) );
@@ -1686,6 +2068,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
 
+   /* free copied best solution */
+   if( heurdata->varselrule == 'g' )
+   {
+      assert(bestsol != NULL);
+      SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
+   }
+   else
+      assert(bestsol == NULL);
+
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
 
@@ -1695,13 +2086,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 }
 
 
-
-
 /*
  * heuristic specific interface methods
  */
 
-/** creates the fracdiving heuristic and includes it in SCIP */
+/** creates the nlpdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1731,7 +2120,7 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* fracdiving heuristic parameters */
+   /* nlpdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/minreldepth",
          "minimal relative depth to start diving",
@@ -1802,9 +2191,8 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          &heurdata->nlpstart, TRUE, DEFAULT_NLPSTART, "fns", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "heuristics/"HEUR_NAME"/varselrule",
-         "which variable selection should be used? ('f'ractionality, 'c'oefficient)",
-         &heurdata->varselrule, TRUE, DEFAULT_VARSELRULE, "fc", NULL, NULL) );
+         "which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided)",
+         &heurdata->varselrule, FALSE, DEFAULT_VARSELRULE, "fcpg", NULL, NULL) );
 
    return SCIP_OKAY;
 }
-
