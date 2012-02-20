@@ -14401,7 +14401,11 @@ SCIP_RETCODE SCIPcheckCons(
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14412,17 +14416,21 @@ SCIP_RETCODE SCIPenfopsCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfopsCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
 
    SCIP_CALL( SCIPconsEnfops(cons, scip->set, solinfeasible, objinfeasible, result) );
 
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14432,6 +14440,7 @@ SCIP_RETCODE SCIPenfolpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfolpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -14441,7 +14450,11 @@ SCIP_RETCODE SCIPenfolpCons(
    return SCIP_OKAY;
 }
 
-/** calls LP initialization method for single */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
@@ -14449,6 +14462,7 @@ SCIP_RETCODE SCIPinitlpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14457,7 +14471,10 @@ SCIP_RETCODE SCIPinitlpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14475,7 +14492,10 @@ SCIP_RETCODE SCIPsepalpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14495,7 +14515,10 @@ SCIP_RETCODE SCIPsepasolCons(
    return SCIP_OKAY;
 }
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
@@ -14514,7 +14537,11 @@ SCIP_RETCODE SCIPpropCons(
    return SCIP_OKAY;
 }
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
@@ -14528,6 +14555,7 @@ SCIP_RETCODE SCIPrespropCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(infervar != NULL);
    assert(bdchgidx != NULL);
    assert(result != NULL);
@@ -14539,7 +14567,10 @@ SCIP_RETCODE SCIPrespropCons(
    return SCIP_OKAY;
 }
 
-/** presolves of single constraint */
+/** presolves of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to presolve */
@@ -14590,7 +14621,11 @@ SCIP_RETCODE SCIPpresolCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14598,6 +14633,7 @@ SCIP_RETCODE SCIPactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14606,7 +14642,11 @@ SCIP_RETCODE SCIPactiveCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14614,6 +14654,7 @@ SCIP_RETCODE SCIPdeactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPdeactiveCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 

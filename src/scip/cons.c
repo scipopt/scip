@@ -6019,8 +6019,6 @@ SCIP_RETCODE SCIPconsEnfops(
    SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, &cons, 1, 1, solinfeasible, objinfeasible, result) );
    SCIPdebugMessage(" -> enfops returned result <%d>\n", *result);
 
-
-
    if( *result != SCIP_CUTOFF
       && *result != SCIP_CONSADDED
       && *result != SCIP_REDUCEDDOM
