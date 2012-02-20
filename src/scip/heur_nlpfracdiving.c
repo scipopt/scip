@@ -65,7 +65,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MINSUCCQUOT         0.1 /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
-#define DEFAULT_MAXDIVEDEPTH         10 /**< maximal diving depth */
+#define DEFAULT_MAXFEASNLPS          10 /**< maximal number of NLPs with feasible solution to solve during one dive */
 #define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_LP                 TRUE /**< should the LP relaxation be solved before the NLP relaxation? */
@@ -98,7 +98,7 @@ struct SCIP_HeurData
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-   int                   maxdivedepth;       /**< maximal diving depth */
+   int                   maxfeasnlps;        /**< maximal number of NLPs with feasible solution to solve during one dive */
    SCIP_Real             minsuccquot;        /**< heuristic will not run if less then this percentage of calls succeeded (0.0: no limit) */
    SCIP_Real             fixquot;            /**< percentage of fractional variables that should be fixed before the next NLP solve */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
@@ -582,6 +582,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    int maxdivedepth;
    int divedepth;
    int lastnlpsolvedepth;
+   int nfeasnlps;
    int bestcand;
    int origiterlim;
    int c;
@@ -865,6 +866,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    lastnlpsolvedepth = 0;
+   nfeasnlps = 1;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnnlpcands = nnlpcands;
@@ -872,9 +874,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
    lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    
    while( !nlperror && !cutoff && (nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nnlpcands > 0
-      && (divedepth < heurdata->maxdivedepth
+      && (nfeasnlps < heurdata->maxfeasnlps
          || nnlpcands <= startnnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
+         || (nfeasnlps < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound))
       && !SCIPisStopped(scip) )
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -1299,7 +1301,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);
-            cutoff = (termstat == SCIP_NLPTERMSTAT_UOBJLIM || nlpsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
+            cutoff = (nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             if( cutoff )
             {
@@ -1320,6 +1322,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpFracdiving) /*lint --e{715}*/
                   SCIP_CALL( SCIPlinkNLPSol(scip, nlpstartsol) );
                   SCIP_CALL( SCIPunlinkSol(scip, nlpstartsol) );
                }
+               /* increase counter on number of NLP solves with feasible solution */
+               ++nfeasnlps;
             }
          }
 
@@ -1547,9 +1551,9 @@ SCIP_RETCODE SCIPincludeHeurNlpFracdiving(
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxdivedepth",
-         "maximal diving depth",
-         &heurdata->maxdivedepth, FALSE, DEFAULT_MAXDIVEDEPTH, 1, INT_MAX, NULL, NULL) );
+         "heuristics/"HEUR_NAME"/maxfeasnlps",
+         "maximal number of NLPs with feasible solution to solve during one dive ",
+         &heurdata->maxfeasnlps, FALSE, DEFAULT_MAXFEASNLPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/"HEUR_NAME"/backtrack",
          "use one level of backtracking if infeasibility is encountered?",
