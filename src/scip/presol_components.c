@@ -18,6 +18,8 @@
  * @brief  solve independent components in advance
  * @author Dieter Weninger
  * @author Gerald Gamrath
+ *
+ * TODO: simulation of presolving without solve
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,119 +56,21 @@ struct SCIP_PresolData
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
    SCIP_Real             intfactor;          /** the weight of an integer variable compared to binary variables */
-
-   SCIP**                components;         /** sub-SCIPs storing the components */
-   SCIP_HASHMAP**        varmaps;            /** hashmaps mapping from original variables to variables in the sub-SCIPs */
-   SCIP_HASHMAP*         consmap;            /** hashmaps mapping from original constraints to constraints in the sub-SCIPs
-                                              *  (needed only for performance reasons)
-                                              */
-   int                   componentssize;     /** size of arrays components and varmaps */
-   int                   ncomponents;        /** number of components */
 };
 
 /*
  * Local methods
  */
 
-/** comparison method for two sorting key pairs */
+/** copies a connected component consisting of the given constraints and variables into a sub-SCIP
+ *  and tries to solve the sub-SCIP to optimality
+ */
 static
-SCIP_DECL_SORTPTRCOMP(elementComparator)
-{
-   int* key1 = (int*)elem1;
-   int* key2 = (int*)elem2;
-
-   if( *key1 < *key2 )
-      return -1;
-   else if( *key1 > *key2 )
-      return +1;
-   else
-      return 0;
-}
-
-/** initializes presolver data */
-static
-void initPresoldata(
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
-   )
-{
-   assert(presoldata != NULL);
-
-   presoldata->dosearch = 0;
-   presoldata->components = NULL;
-   presoldata->varmaps = NULL;
-   presoldata->consmap = NULL;
-   presoldata->componentssize = 0;
-   presoldata->ncomponents = 0;
-}
-
-/** initializes the data for storing connected components */
-static
-SCIP_RETCODE initComponentData(
+SCIP_RETCODE solveComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
-   int                   ncomponents         /**< number of independent components */
-   )
-{
-   assert(scip != NULL);
-   assert(presoldata != NULL);
-   assert(ncomponents > 0);
-   assert(presoldata->ncomponents == 0);
-   assert(presoldata->componentssize == 0);
-   assert(presoldata->components == NULL);
-   assert(presoldata->varmaps == NULL);
-   assert(presoldata->consmap == NULL);
-
-   /* allocate memory for sub-SCIPs and variable maps */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &presoldata->components, ncomponents) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &presoldata->varmaps, ncomponents) );
-   SCIP_CALL( SCIPhashmapCreate(&presoldata->consmap, SCIPblkmem(scip), 10 * SCIPgetNConss(scip)) );
-   presoldata->componentssize = ncomponents;
-
-   return SCIP_OKAY;
-}
-
-/** free the data for storing connected components */
-static
-SCIP_RETCODE freeComponentData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
-   )
-{
-   int c;
-
-   assert(scip != NULL);
-   assert(presoldata != NULL);
-
-   /* free sub-SCIPs and variable hash maps */
-   for( c = 0; c < presoldata->ncomponents; ++c )
-   {
-      if( presoldata->components[c] != NULL )
-      {
-         SCIP_CALL( SCIPfree(&presoldata->components[c]) );
-      }
-      if( presoldata->varmaps[c] != NULL )
-      {
-         SCIPhashmapFree(&presoldata->varmaps[c]);
-      }
-   }
-
-   SCIPhashmapFree(&presoldata->consmap);
-
-   SCIPfreeMemoryArray(scip, &presoldata->components);
-   SCIPfreeMemoryArray(scip, &presoldata->varmaps);
-   presoldata->ncomponents = 0;
-   presoldata->componentssize = 0;
-   presoldata->components = NULL;
-   presoldata->varmaps = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** copies a connected component given by a set of constraints into a sub-SCIP */
-static
-SCIP_RETCODE buildComponentSubscip(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
+   int                   compnr,             /**< number of the component */
    SCIP_CONS**           conss,              /**< constraints contained in this component */
    int                   nconss,             /**< number of constraints contained in this component */
    SCIP_VAR**            vars,               /**< variables contained in this component */
@@ -180,14 +84,13 @@ SCIP_RETCODE buildComponentSubscip(
    SCIP_Real*            varsfixvalues       /**< fixing values of the variables */
    )
 {
-   char probname[SCIP_MAXSTRLEN];
-   char consname[SCIP_MAXSTRLEN];
+   char name[SCIP_MAXSTRLEN];
    SCIP* subscip;
+   SCIP_HASHMAP* varmap;
    SCIP_CONS* newcons;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_Bool success;
-   int c;
    int i;
 
    assert(scip != NULL);
@@ -204,170 +107,121 @@ SCIP_RETCODE buildComponentSubscip(
    assert(varstofix != NULL);
    assert(varsfixvalues != NULL);
 
-   c = presoldata->ncomponents;
-
-   //SCIPdebugMessage("build sub-SCIP for component %d (%d vars, %d conss)\n", c, nvars, nconss);
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      goto TERMINATE;
 
    /* create sub-SCIP */
-   SCIP_CALL( SCIPcreate(&(presoldata->components[c])) );
-   subscip = presoldata->components[c];
+   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create variable hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&presoldata->varmaps[c], SCIPblkmem(scip), 10 * nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * nvars) );
 
-   /* copy plugins */
+   /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
    success = TRUE;
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip,
-         TRUE, /* readers */
-         TRUE, /* pricers */
-         TRUE, /* conshdlrs */
-         TRUE, /* conflicthdlrs */
-         TRUE, /* presolvers */
-         TRUE, /* relaxators */
-         TRUE, /* separators */
-         TRUE, /* propagators */
-         TRUE, /* heuristics */
-         TRUE, /* eventhandler */
-         TRUE, /* nodeselectors (SCIP gives an error if there is none) */
-         TRUE, /* branchrules */
-         TRUE, /* displays */
-         FALSE, /* dialogs */
-         TRUE, /* nlpis */
-         &success) );
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
 
-   if( success )
+   if( !success )
+      goto TERMINATE;
+
+   /* copy parameter settings */
+   SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+   /* set time and memory limit for the subproblem */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* set node limit */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", presoldata->nodelimit) );
+
+   /* set gap limit to 0 */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
+
+   /* reduce the effort spent for hash tables */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+
+   /* do not catch control-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+
+   /* create problem in sub-SCIP */
+   /* get name of the original problem and add "comp_nr" */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", SCIPgetProbName(scip), compnr);
+   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   for( i = 0; i < nconss; ++i )
    {
-      /* copy parameter settings */
-      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+      /* copy the constraint */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(conss[i]));
+      SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, name,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, &success) );
 
-#if 1
-      /* reduce the effort spent for hash tables */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
-#endif
-
-      /* set gap limit to 0 */
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
-
-      /* do not catch control-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-
-      /* check whether there is enough time and memory left */
-      timelimit = 0.0;
-      memorylimit = 0.0;
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-      if( !SCIPisInfinity(scip, timelimit) )
-         timelimit -= SCIPgetSolvingTime(scip);
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-      if( !SCIPisInfinity(scip, memorylimit) )
-         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      /* break if constraint was not successfully copied */
+      if( !success )
          goto TERMINATE;
 
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-      /* set node limit */
-      if( presoldata->nodelimit != -1 )
-      {
-         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", presoldata->nodelimit) );
-      }
-      //SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 20000) );
-
-      /* disable output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
-
-      /* create problem in sub-SCIP */
-      /* get name of the original problem and add "comp_nr" */
-      (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_comp_%d", SCIPgetProbName(scip), c);
-      SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-      for( i = 0; i < nconss; ++i )
-      {
-         /* copy the constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(conss[i]));
-         SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]),
-               presoldata->varmaps[c], presoldata->consmap, consname,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, &success) );
-
-         /* break if constraint was not successfully copied */
-         if( !success )
-            break;
-
-         SCIP_CALL( SCIPaddCons(subscip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
-      }
+      SCIP_CALL( SCIPaddCons(subscip, newcons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
    }
 
-   /* ignore this component, if a problem relevant plugin or a constraint could not be copied */
-   if( success )
+   /* write the problem, if requested */
+   if( presoldata->writeproblems )
    {
-      presoldata->ncomponents++;
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.lp", SCIPgetProbName(scip), compnr);
+      SCIPdebugMessage("write problem to file %s\n", name);
+      SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
+   }
 
-      //printf("++++++++++++++ sub-SCIP for component %d: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-      //   c, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip), SCIPgetNContVars(subscip), nconss);
+   /* solve the subproblem */
+   SCIP_CALL( SCIPsolve(subscip) );
 
-      if( presoldata->writeproblems )
+   *subsolvetime += SCIPgetSolvingTime(subscip);
+
+   if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+   {
+      SCIP_SOL* sol;
+
+      ++(*nsolvedprobs);
+
+      sol = SCIPgetBestSol(subscip);
+
+      /* memorize variables for later fixing */
+      for( i = 0; i < nvars; ++i )
       {
-         (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_comp_%d.lp", SCIPgetProbName(scip), c);
-         SCIPdebugMessage("write problem to file %s\n", probname);
-         SCIP_CALL( SCIPwriteOrigProblem(subscip, probname, NULL, FALSE) );
+         assert( SCIPhashmapExists(varmap, vars[i]) );
+         varstofix[*nvarstofix] = vars[i];
+         varsfixvalues[*nvarstofix] = SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(varmap, vars[i]));
+         (*nvarstofix)++;
       }
 
-      if( SCIPgetNBinVars(subscip) + SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
+      /* memorize constraints for later deletion */
+      for( i = 0; i < nconss; ++i )
       {
-         //SCIP_CALL( SCIPpresolve(subscip) ); // TODO: simulation of presolving without solve
-
-         SCIP_CALL( SCIPsolve(subscip) );
-
-         //printf("solved subproblem %d: status = %d, time = %.2f\n", c, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
-         *subsolvetime += SCIPgetSolvingTime(subscip);
-
-         if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
-         {
-            SCIP_SOL* sol;
-
-            ++(*nsolvedprobs);
-
-            sol = SCIPgetBestSol(subscip);
-
-            /* memorize variables for later fixing */
-            for( i = 0; i < nvars; ++i )
-            {
-               assert( SCIPhashmapExists(presoldata->varmaps[c], vars[i]) );
-               varstofix[*nvarstofix] = vars[i];
-               varsfixvalues[*nvarstofix] = SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(presoldata->varmaps[c], vars[i]));
-               (*nvarstofix)++;
-            }
-
-            /* memorize constraints for later deletion */
-            for( i = 0; i < nconss; ++i )
-            {
-               constodelete[*nconstodelete] = conss[i];
-               (*nconstodelete)++;
-            }
-         }
-         else
-         {
-            SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-               c, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip), SCIPgetNContVars(subscip), nconss);
-         }
+         constodelete[*nconstodelete] = conss[i];
+         (*nconstodelete)++;
       }
-      else
-      {
-         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-            c, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip), SCIPgetNContVars(subscip), nconss);
-      }
+   }
+   else
+   {
+      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+         compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
+         SCIPgetNContVars(subscip), nconss);
    }
 
  TERMINATE:
-   SCIP_CALL( SCIPfree(&presoldata->components[c]) );
-   SCIPhashmapFree(&presoldata->varmaps[c]);
-   presoldata->components[c] = NULL;
-   presoldata->varmaps[c] = NULL;
+   SCIP_CALL( SCIPfree(&subscip) );
+   SCIPhashmapFree(&varmap);
 
    return SCIP_OKAY;
 }
@@ -487,11 +341,11 @@ void updateStatistics(
    }
 }
 
-/** use components to detect which vars and cons belong to one subscip
- *  and try to solve all subscips having not too much integer variables
+/** use components to assign variables and constraints to the subscips
+ *  and try to solve all subscips having not too many integer variables
  */
 static
-SCIP_RETCODE createSubScipsAndSolve(
+SCIP_RETCODE splitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_CONS**           conss,              /**< constraints */
@@ -508,22 +362,23 @@ SCIP_RETCODE createSubScipsAndSolve(
    int*                  statistics          /**< array holding some statistical information */
   )
 {
-   int comp;
-   int v;
-   int c;
+   SCIP_HASHMAP* consmap; /** hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
    SCIP_VAR** vars;
-   int nvars;
    SCIP_CONS** tmpconss;
-   int ntmpconss;
    SCIP_VAR** tmpvars;
+   int* conscomponent;
+   int* considx;
+   int* varscomponent;
+   int* varsidx;
+   SCIP_Real subsolvetime;
+   int nvars;
+   int ntmpconss;
    int ntmpvars;
    int nbinvars;
    int nintvars;
-   SCIP_Real subsolvetime;
-   int** conscomponent;
-   int* considx;
-   int** varscomponent;
-   int* varsidx;
+   int comp;
+   int v;
+   int c;
 
    assert(scip != NULL);
    assert(presoldata != NULL);
@@ -545,7 +400,7 @@ SCIP_RETCODE createSubScipsAndSolve(
    nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
 
-   initComponentData(scip, presoldata, *ncomponents);
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * SCIPgetNConss(scip)) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpconss, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, nvars) );
@@ -555,26 +410,28 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsidx, nvars) );
 
    /* do the mapping from calculated components per variable to corresponding
-      constraints and sort the component-arrays for faster finding the
-      actual variables and constraints belonging to one component */
+    * constraints and sort the component-arrays for faster finding the
+    * actual variables and constraints belonging to one component
+    */
    for( c = 0; c < nconss; c++ )
    {
-      conscomponent[c] = &components[firstvaridxpercons[c]];
+      conscomponent[c] = components[firstvaridxpercons[c]];
       considx[c] = c;
    }
    for( v = 0; v < nvars; v++ )
    {
-      varscomponent[v] = &components[v];
+      varscomponent[v] = components[v];
       varsidx[v] = v;
    }
-   SCIPsortPtrInt((void**)varscomponent, varsidx, elementComparator, nvars);
-   SCIPsortPtrInt((void**)conscomponent, considx, elementComparator, nconss);
+   SCIPsortIntInt(varscomponent, varsidx, nvars);
+   SCIPsortIntInt(conscomponent, considx, nconss);
 
    v = 0;
    c = 0;
 
    /* loop over all components
-      start loop from 1 because components are numbered form 1..n */
+    * start loop from 1 because components are numbered form 1..n
+    */
    for( comp = 1; comp <= *ncomponents; comp++ )
    {
       ntmpconss = 0;
@@ -583,7 +440,7 @@ SCIP_RETCODE createSubScipsAndSolve(
       nintvars = 0;
 
       /* get variables present in this component */
-      while( v < nvars && *varscomponent[v] == comp )
+      while( v < nvars && varscomponent[v] == comp )
       {
          /* variable is present in this component */
          tmpvars[ntmpvars] = vars[varsidx[v]];
@@ -600,7 +457,7 @@ SCIP_RETCODE createSubScipsAndSolve(
       assert(ntmpvars != 0);
 
       /* get constraints present in this component */
-      while( c < nconss && *conscomponent[c] == comp )
+      while( c < nconss && conscomponent[c] == comp )
       {
          /* constraint is present in this component */
          tmpconss[ntmpconss] = conss[considx[c]];
@@ -613,25 +470,46 @@ SCIP_RETCODE createSubScipsAndSolve(
 
       if( (nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars) || presoldata->writeproblems )
       {
-         if( ntmpconss > 0 && ntmpvars > 0 )
+         /* single variable without constraint */
+         if( ntmpconss == 0 )
          {
-            /* build subscip for one component and try to solve it */
-            SCIP_CALL( buildComponentSubscip(scip, presoldata, tmpconss, ntmpconss,
-                  tmpvars, ntmpvars, nsolvedprobs, &subsolvetime, nconstodelete, constodelete,
-                  nvarstofix, varstofix, varsfixvalues ) );
+            /* there is no constraint to connect variables, so there should be only one */
+            assert(ntmpvars == 1);
+
+            /* fix variable to its best bound */
+            varstofix[*nvarstofix] = tmpvars[0];
+            if( SCIPisPositive(scip, SCIPvarGetObj(tmpvars[0])) )
+               varsfixvalues[*nvarstofix] = SCIPvarGetLbGlobal(tmpvars[0]);
+            else if( SCIPisNegative(scip, SCIPvarGetObj(tmpvars[0])) )
+               varsfixvalues[*nvarstofix] = SCIPvarGetUbGlobal(tmpvars[0]);
+            else
+               varsfixvalues[*nvarstofix] = 0.0;
+            (*nvarstofix)++;
+         }
+         /* single constraint without variables */
+         else if( ntmpvars == 0 )
+         {
+            /* there is no variable connecting constraints, so there should be only one */
+            assert(ntmpconss == 1);
+
+            constodelete[*nconstodelete] = tmpconss[0];
+            (*nconstodelete)++;
          }
          else
          {
-            /* this can occur if we have a variable present within
-               the obj function but not present within any constraint */
-            SCIPdebugMessage("++++++++++++++ sub-SCIP for empty (!) component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
+            assert(ntmpconss > 0);
+            assert(ntmpvars > 0 );
+
+            /* build subscip for one component and try to solve it */
+            SCIP_CALL( solveComponent(scip, presoldata, consmap, comp, tmpconss, ntmpconss,
+                  tmpvars, ntmpvars, nsolvedprobs, &subsolvetime, nconstodelete, constodelete,
+                  nvarstofix, varstofix, varsfixvalues ) );
          }
       }
       else
       {
          SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not created: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            presoldata->ncomponents, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
+            comp, ntmpvars, nbinvars, nintvars, ntmpvars - nintvars - nbinvars, ntmpconss);
       }
    }
 
@@ -641,8 +519,7 @@ SCIP_RETCODE createSubScipsAndSolve(
    SCIPfreeBufferArray(scip, &conscomponent);
    SCIPfreeBufferArray(scip, &tmpvars);
    SCIPfreeBufferArray(scip, &tmpconss);
-
-   freeComponentData(scip, presoldata);
+   SCIPhashmapFree(&consmap);
 
    return SCIP_OKAY;
 }
@@ -704,13 +581,14 @@ SCIP_RETCODE presolComponents(
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
    )
 {
-   SCIP_CONS** conss;
-   int nconss;
-   SCIP_CONS** tmpconss;
-   int ntmpconss;
-   int nvars;
    SCIP_PRESOLDATA* presoldata;
    SCIP_DIGRAPH* digraph;
+   SCIP_CONS** conss;
+   SCIP_CONS** tmpconss;
+   int* firstvaridxpercons;
+   int nconss;
+   int ntmpconss;
+   int nvars;
    int* components;
    int ncomponents;
    int ndeletedcons;
@@ -718,12 +596,13 @@ SCIP_RETCODE presolComponents(
    int nsolvedprobs;
    int c;
    SCIP_Bool success;
-   int nconstodelete;
+
    SCIP_CONS** constodelete;
-   int nvarstofix;
+   int nconstodelete;
    SCIP_VAR** varstofix;
    SCIP_Real* varsfixvalues;
-   int* firstvaridxpercons;
+   int nvarstofix;
+
    int statistics[4] = {0,0,0,0};
 
    assert(scip != NULL);
@@ -733,6 +612,9 @@ SCIP_RETCODE presolComponents(
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
@@ -788,7 +670,7 @@ SCIP_RETCODE presolComponents(
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
          /* create subproblems from independent components and solve them */
-         SCIP_CALL( createSubScipsAndSolve(scip, presoldata, conss, nconss,
+         SCIP_CALL( splitProblem(scip, presoldata, conss, nconss,
                components, &ncomponents, firstvaridxpercons, &nsolvedprobs, &nconstodelete, constodelete,
                &nvarstofix, varstofix, varsfixvalues, statistics) );
 
@@ -851,50 +733,10 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
    return SCIP_OKAY;
 }
 
-
-/** initialization method of presolver (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_PRESOLINIT(presolInitComponents)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of components presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
+/* define unused callbacks as NULL */
 #define presolInitComponents NULL
-#endif
-
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_PRESOLEXIT(presolExitComponents)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of components presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define presolExitComponents NULL
-#endif
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreComponents)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of components presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define presolInitpreComponents NULL
-#endif
 
 
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
@@ -914,7 +756,6 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreComponents)
 static
 SCIP_DECL_PRESOLEXEC(presolExecComponents)
 {  /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 
@@ -932,7 +773,6 @@ SCIP_RETCODE SCIPincludePresolComponents(
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
-   initPresoldata(presoldata);
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip,
