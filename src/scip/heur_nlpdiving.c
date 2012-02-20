@@ -12,8 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
-#define STATISTIC_INFORMATION
 
 /* uncomment to get statistical output at the end of SCIP run */
 /* #define STATISTIC_INFORMATION */
@@ -39,7 +37,7 @@
 #define HEUR_DESC             "NLP diving heuristic that chooses fixings w.r.t. the fractionalities"
 #define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -1003000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
