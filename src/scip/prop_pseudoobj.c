@@ -2516,7 +2516,8 @@ void calcMaxObjPseudoactivity(
    /* calculate current max pseudo activity and largest contribution */
    propdata->maxpseudoobjact = 0.0;
    propdata->maxpseudoobjactinf = 0;
-   for( v = 0; v < nvars; v++ )
+
+   for( v = 0; v < nvars; ++v )
    {
       objval = SCIPvarGetObj(vars[v]);
       if( SCIPisPositive(scip, objval) )
@@ -2826,9 +2827,10 @@ SCIP_RETCODE propagateLowerbound(
                break;
             }
 
-            /* update maximum pseudo activity since the previous global bound change invalidated the maximum pseudo activity */
+            /* update maximum pseudo activity since the previous global bound change might invalidated the maximum
+             * pseudo activity
+             */
             maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
-
             nchgbds++;
          }
 
@@ -2850,7 +2852,9 @@ SCIP_RETCODE propagateLowerbound(
 
             if( tightened )
             {
-               /* update maximum pseudo activity since the previous global bound change invalidated the maximum pseudo activity */
+               /* update maximum pseudo activity since the previous global bound change might invalidated the maximum
+                * pseudo activity
+                */
                maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
                nchgbds++;
             }
