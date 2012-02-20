@@ -68,11 +68,11 @@
 #define DEFAULT_MAXFEASNLPS          10 /**< maximal number of NLPs with feasible solution to solve during one dive */
 #define DEFAULT_FIXQUOT             0.2 /**< percentage of fractional variables that should be fixed before the next NLP solve */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LP                 TRUE /**< should the LP relaxation be solved before the NLP relaxation? */
-#define DEFAULT_PREFERLPFRACS      TRUE /**< prefer variables that are also fractional in LP solution? */
+#define DEFAULT_LP                FALSE /**< should the LP relaxation be solved before the NLP relaxation? */
+#define DEFAULT_PREFERLPFRACS     FALSE /**< prefer variables that are also fractional in LP solution? */
 #define DEFAULT_PREFERCOVER        TRUE /**< should variables in a minimal cover be preferred? */
 #define DEFAULT_SOLVESUBMIP       FALSE /**< should a sub-MIP be solved if all cover variables are fixed? */
-#define DEFAULT_NLPSTART            'f' /**< which point should be used as starting point for the NLP solver? */
+#define DEFAULT_NLPSTART            's' /**< which point should be used as starting point for the NLP solver? */
 
 #define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
