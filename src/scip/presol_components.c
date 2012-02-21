@@ -363,6 +363,8 @@ SCIP_RETCODE splitProblem(
    int*                  nvarstofix,         /**< number of variables for fixing */
    SCIP_VAR**            varstofix,          /**< variables for fixing */
    SCIP_Real*            varsfixvalues,      /**< variables fixing values */
+   int*                  nconswithnovars,    /**< number of constraints with no variables */
+   int*                  nvarswithnocons,    /**< number of variables with no constraints */
    int*                  statistics          /**< array holding some statistical information */
   )
 {
@@ -396,6 +398,8 @@ SCIP_RETCODE splitProblem(
    assert(nvarstofix != NULL);
    assert(varstofix != NULL);
    assert(varsfixvalues != NULL);
+   assert(nconswithnovars != NULL);
+   assert(nvarswithnocons != NULL);
    assert(statistics != NULL);
 
    *nsolvedprobs = 0;
@@ -489,6 +493,7 @@ SCIP_RETCODE splitProblem(
             else
                varsfixvalues[*nvarstofix] = 0.0;
             (*nvarstofix)++;
+            (*nvarswithnocons)++;
          }
          /* single constraint without variables */
          else if( ntmpvars == 0 )
@@ -498,6 +503,7 @@ SCIP_RETCODE splitProblem(
 
             constodelete[*nconstodelete] = tmpconss[0];
             (*nconstodelete)++;
+            (*nconswithnovars)++;
          }
          else
          {
@@ -598,6 +604,8 @@ SCIP_RETCODE presolComponents(
    int ndeletedcons;
    int ndeletedvars;
    int nsolvedprobs;
+   int nconswithnovars;
+   int nvarswithnocons;
    int c;
    SCIP_Bool success;
 
@@ -635,6 +643,8 @@ SCIP_RETCODE presolComponents(
    ndeletedvars = 0;
    ndeletedcons = 0;
    nsolvedprobs = 0;
+   nconswithnovars = 0;
+   nvarswithnocons = 0;
 
    /* collect checked constraints for component presolving */
    ntmpconss = SCIPgetNConss(scip);
@@ -676,7 +686,7 @@ SCIP_RETCODE presolComponents(
          /* create subproblems from independent components and solve them in dependence on their size */
          SCIP_CALL( splitProblem(scip, presoldata, conss, nconss,
                components, &ncomponents, firstvaridxpercons, &nsolvedprobs, &nconstodelete, constodelete,
-               &nvarstofix, varstofix, varsfixvalues, statistics) );
+               &nvarstofix, varstofix, varsfixvalues, &nconswithnovars, &nvarswithnocons, statistics) );
 
          /* fix variables and delete constraints of solved subproblems */
          SCIP_CALL( fixVarsDeleteConss(scip, nconstodelete, constodelete,
@@ -695,8 +705,8 @@ SCIP_RETCODE presolComponents(
 
    SCIPfreeBufferArray(scip, &conss);
 
-   SCIPdebugMessage("### %d comp (distribution: [1-20]=%d, [21-50]=%d, [51-100]=%d, >100=%d), %d solved, %d delcons, %d delvars\n",
-      ncomponents, statistics[0], statistics[1], statistics[2], statistics[3], nsolvedprobs, ndeletedcons, ndeletedvars);
+   SCIPdebugMessage("### %d comp ([1-20]=%d, [21-50]=%d, [51-100]=%d, >100=%d), [%d cons0vars, %d vars0cons], %d solved, %d delcons, %d delvars\n",
+      ncomponents, statistics[0], statistics[1], statistics[2], statistics[3], nconswithnovars, nvarswithnocons, nsolvedprobs, ndeletedcons, ndeletedvars);
 
    return SCIP_OKAY;
 }
