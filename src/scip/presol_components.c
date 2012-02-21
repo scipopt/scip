@@ -41,8 +41,6 @@
 #define DEFAULT_NODELIMIT         10000      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR             1      /**< the weight of an integer variable compared to binary variables */
 
-#define START_LIST_SIZE              10      /**< first size of constraint list per variable */
-#define LIST_MEMORY_GAIN             10      /**< memory extension factor */
 
 /*
  * Data structures
