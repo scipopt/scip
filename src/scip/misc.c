@@ -4089,37 +4089,69 @@ void depthFirstSearch(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< node to start the depth-first-search */
    SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stackadjvisited,    /**< array of size number of nodes to store the number of adjacent nodes already visited
+                                              *   for each node on the stack; only needed for performance reasons */
    int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse dfs order */
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int v;
-   int adjnode;
+   int stacksize;
+   int currnode;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
    assert(startnode < digraph->nnodes);
+   assert(visited != NULL);
    assert(visited[startnode] == FALSE);
+   assert(dfsstack != NULL);
+   assert(dfsnodes != NULL);
+   assert(ndfsnodes != NULL);
 
-   /* mark startnode as visited */
-   visited[startnode] = TRUE;
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stackadjvisited[0] = 0;
+   stacksize = 1;
 
-   /* iterate over all nodes adjacent to current node */
-   for( v = 0; v < digraph->nadjnodes[startnode]; ++v )
+   while( stacksize > 0 )
    {
-      adjnode = digraph->adjnodes[startnode][v];
+      /* get next node from stack */
+      currnode = dfsstack[stacksize - 1];
 
-      /* check if the adjacent node was already visited */
-      if( !visited[adjnode] )
+      /* mark current node as visited */
+      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      visited[currnode] = TRUE;
+
+      /* iterate through the adjacency list until we reach unhandled node */
+      while( stackadjvisited[stacksize - 1] < digraph->nadjnodes[currnode]
+         && visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]] )
       {
-         /* recursively call depth-first-search */
-         depthFirstSearch(digraph, adjnode, visited, dfsnodes, ndfsnodes);
+         stackadjvisited[stacksize - 1]++;
+      }
+
+      /* the current node was completely handled, remove it from stack */
+      if( stackadjvisited[stacksize - 1] == digraph->nadjnodes[currnode] )
+      {
+         stacksize--;
+
+         /* store node in the sorted nodes array */
+         dfsnodes[(*ndfsnodes)] = currnode;
+         (*ndfsnodes)++;
+      }
+      /* handle next unhandled adjacent node */
+      else
+      {
+         assert(!visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]]);
+
+         /* put the adjacent node onto the stack */
+         dfsstack[stacksize] = digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]];
+         stackadjvisited[stacksize] = 0;
+         stackadjvisited[stacksize - 1]++;
+         stacksize++;
+         assert(stacksize <= digraph->nnodes);
       }
    }
-
-   /* store node in the sorted nodes array */
-   dfsnodes[(*ndfsnodes)] = startnode;
-   (*ndfsnodes)++;
 }
 
 /** Compute undirected connected components on the given graph.
@@ -4136,6 +4168,8 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
    )
 {
    SCIP_Bool* visited;
+   int* stackadjvisited;
+   int* dfsstack;
    int* dfsnodes;
    int ndfsnodes;
    int v;
@@ -4148,6 +4182,8 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
 
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
 
    *ncomponents = 0;
 #ifndef NDEBUG
@@ -4160,7 +4196,7 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
          continue;
 
       ndfsnodes = 0;
-      depthFirstSearch(digraph, v, visited, dfsnodes, &ndfsnodes);
+      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
 
       (*ncomponents)++;
 
@@ -4175,6 +4211,8 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
       assert(components[v] != 0);
 #endif
 
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
 
@@ -4202,13 +4240,15 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    int*                  ncomponents         /**< pointer to store the number of components */
    )
 {
+   SCIP_Bool* visited;
    int* ndirectedadjnodes;
    int* comps;
    int* compstart;
-   int ncomps;
-   SCIP_Bool* visited;
+   int* stackadjvisited;
+   int* dfsstack;
    int* dfsnodes;
    int ndfsnodes;
+   int ncomps;
    int i;
    int j;
    int k;
@@ -4225,6 +4265,8 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    SCIP_ALLOC( BMSallocMemoryArray(&compstart, digraph->nnodes + 1) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
 
    /* store the number of directed arcs per node */
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
@@ -4249,7 +4291,7 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
          continue;
 
       ndfsnodes = 0;
-      depthFirstSearch(digraph, i, visited, &(comps[compstart[ncomps]]), &ndfsnodes);
+      depthFirstSearch(digraph, i, visited, dfsstack, stackadjvisited, &(comps[compstart[ncomps]]), &ndfsnodes);
 
       /* forget about this component if it is too small */
       if( ndfsnodes >= minsize )
@@ -4274,7 +4316,7 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
             continue;
 
          ndfsnodes = 0;
-         depthFirstSearch(digraph, comps[j], visited, dfsnodes, &ndfsnodes);
+         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
 
          /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
           * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
@@ -4296,6 +4338,8 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    }
    *ncomponents = ncomps;
 
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
    BMSfreeMemoryArray(&compstart);
