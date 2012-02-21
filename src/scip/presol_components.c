@@ -41,8 +41,6 @@
 #define DEFAULT_NODELIMIT         10000      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR             1      /**< the weight of an integer variable compared to binary variables */
 
-#define START_LIST_SIZE              10      /**< first size of constraint list per variable */
-#define LIST_MEMORY_GAIN             10      /**< memory extension factor */
 
 /*
  * Data structures
@@ -263,6 +261,7 @@ SCIP_RETCODE fillDigraph(
 
    for( c = 0; c < nconss; ++c )
    {
+      /* get number of variables for this cconstraint */
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, success) );
 
       if( !(*success) )
@@ -274,11 +273,13 @@ SCIP_RETCODE fillDigraph(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nvars) );
       }
 
+      /* get variables for this constraint */
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, success) );
 
       if( !(*success) )
          break;
 
+      /* transform given variables to active variables */
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
       assert(requiredsize <= nvars);
 
@@ -291,7 +292,8 @@ SCIP_RETCODE fillDigraph(
       if( nconsvars > 1 )
       {
          /* create sparse directed graph
-            sparse means, to add only those edges necessary for component calculation */
+          * sparse means, to add only those edges necessary for component calculation
+          */
          for( v = 1; v < nconsvars; ++v )
          {
             idx2 = SCIPvarGetProbindex(consvars[v]);
@@ -309,7 +311,9 @@ SCIP_RETCODE fillDigraph(
    return SCIP_OKAY;
 }
 
-/* calculate frequency distribution of component sizes */
+/** calculate frequency distribution of component sizes
+ *  in dependence of the number of discrete variables
+ */
 static
 void updateStatistics(
    int                   nbinvars,           /**< number of binary variables */
@@ -669,7 +673,7 @@ SCIP_RETCODE presolComponents(
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
-         /* create subproblems from independent components and solve them */
+         /* create subproblems from independent components and solve them in dependence on their size */
          SCIP_CALL( splitProblem(scip, presoldata, conss, nconss,
                components, &ncomponents, firstvaridxpercons, &nsolvedprobs, &nconstodelete, constodelete,
                &nvarstofix, varstofix, varsfixvalues, statistics) );
