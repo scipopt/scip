@@ -50,6 +50,7 @@
 struct SCIP_PresolData
 {
    SCIP_Bool             dosearch;           /** should be searched for components? */
+   SCIP_Bool             didsearch;          /** did the presolver already search for components? */
    SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
@@ -79,7 +80,8 @@ SCIP_RETCODE solveComponent(
    SCIP_CONS**           constodelete,       /**< constraints for deletion */
    int*                  nvarstofix,         /**< number of variables for fixing */
    SCIP_VAR**            varstofix,          /**< variables for fixing */
-   SCIP_Real*            varsfixvalues       /**< fixing values of the variables */
+   SCIP_Real*            varsfixvalues,      /**< fixing values of the variables */
+   SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -209,6 +211,15 @@ SCIP_RETCODE solveComponent(
          constodelete[*nconstodelete] = conss[i];
          (*nconstodelete)++;
       }
+   }
+   else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
+   {
+      *result = SCIP_CUTOFF;
+   }
+   else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED )
+   {
+      /* TODO: store unbounded ray in original SCIP data structure */
+      *result = SCIP_UNBOUNDED;
    }
    else
    {
@@ -365,7 +376,8 @@ SCIP_RETCODE splitProblem(
    SCIP_Real*            varsfixvalues,      /**< variables fixing values */
    int*                  nconswithnovars,    /**< number of constraints with no variables */
    int*                  nvarswithnocons,    /**< number of variables with no constraints */
-   int*                  statistics          /**< array holding some statistical information */
+   int*                  statistics,         /**< array holding some statistical information */
+   SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
   )
 {
    SCIP_HASHMAP* consmap; /** hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
@@ -401,6 +413,7 @@ SCIP_RETCODE splitProblem(
    assert(nconswithnovars != NULL);
    assert(nvarswithnocons != NULL);
    assert(statistics != NULL);
+   assert(result != NULL);
 
    *nsolvedprobs = 0;
    subsolvetime = 0.0;
@@ -513,7 +526,10 @@ SCIP_RETCODE splitProblem(
             /* build subscip for one component and try to solve it */
             SCIP_CALL( solveComponent(scip, presoldata, consmap, comp, tmpconss, ntmpconss,
                   tmpvars, ntmpvars, nsolvedprobs, &subsolvetime, nconstodelete, constodelete,
-                  nvarstofix, varstofix, varsfixvalues ) );
+                  nvarstofix, varstofix, varsfixvalues, result) );
+
+            if( *result == SCIP_CUTOFF )
+               break;
          }
       }
       else
@@ -588,6 +604,8 @@ static
 SCIP_RETCODE presolComponents(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_PRESOL*          presol,             /**< the presolver itself */
+   int*                  nfixedvars,         /**< counter to increase by the number of fixed variables */
+   int*                  ndelconss,          /**< counter to increase by the number of deleted constrains */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
    )
 {
@@ -631,13 +649,14 @@ SCIP_RETCODE presolComponents(
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
-   if( !presoldata->dosearch )
+   if( !presoldata->dosearch || presoldata->didsearch )
    {
       /* do not search for components */
       return SCIP_OKAY;
    }
 
    *result = SCIP_DIDNOTFIND;
+   presoldata->didsearch = TRUE;
 
    ncomponents = 0;
    ndeletedvars = 0;
@@ -684,13 +703,16 @@ SCIP_RETCODE presolComponents(
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
          /* create subproblems from independent components and solve them in dependence on their size */
-         SCIP_CALL( splitProblem(scip, presoldata, conss, nconss,
-               components, &ncomponents, firstvaridxpercons, &nsolvedprobs, &nconstodelete, constodelete,
-               &nvarstofix, varstofix, varsfixvalues, &nconswithnovars, &nvarswithnocons, statistics) );
+         SCIP_CALL( splitProblem(scip, presoldata, conss, nconss, components, &ncomponents, firstvaridxpercons,
+               &nsolvedprobs, &nconstodelete, constodelete, &nvarstofix, varstofix, varsfixvalues, &nconswithnovars,
+               &nvarswithnocons, statistics, result) );
 
          /* fix variables and delete constraints of solved subproblems */
          SCIP_CALL( fixVarsDeleteConss(scip, nconstodelete, constodelete,
                 nvarstofix, varstofix, varsfixvalues, &ndeletedcons, &ndeletedvars) );
+
+         (*nfixedvars) += ndeletedvars;
+         (*ndelconss) += ndeletedcons;
 
          SCIPfreeBufferArray(scip, &components);
       }
@@ -704,6 +726,9 @@ SCIP_RETCODE presolComponents(
    }
 
    SCIPfreeBufferArray(scip, &conss);
+
+   if( (ndeletedvars > 0 || ndeletedcons > 0) && ((*result) == SCIP_DIDNOTFIND) )
+      *result = SCIP_SUCCESS;
 
    SCIPdebugMessage("### %d comp ([1-20]=%d, [21-50]=%d, [51-100]=%d, >100=%d), [%d cons0vars, %d vars0cons], %d solved, %d delcons, %d delvars\n",
       ncomponents, statistics[0], statistics[1], statistics[2], statistics[3], nconswithnovars, nvarswithnocons, nsolvedprobs, ndeletedcons, ndeletedvars);
@@ -751,25 +776,23 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
 #define presolInitComponents NULL
 #define presolExitComponents NULL
 #define presolInitpreComponents NULL
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreComponents)
-{  /*lint --e{715}*/
-
-   SCIP_CALL( presolComponents(scip, presol, result) );
-
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
+#define presolExitpreComponents NULL
 
 
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecComponents)
 {  /*lint --e{715}*/
+   *result = SCIP_DIDNOTRUN;
+
+   SCIPdebugMessage("presolExecComponents(): SCIPisPresolveFinished() = %d\n", SCIPisPresolveFinished(scip));
+
+   /* only call the component presolver, if presolving would be stopped otherwise */
+   if( SCIPisPresolveFinished(scip) )
+   {
+      SCIP_CALL( presolComponents(scip, presol, nfixedvars, ndelconss, result) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -787,6 +810,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   presoldata->didsearch = FALSE;
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip,
