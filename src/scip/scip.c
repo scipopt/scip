@@ -1446,16 +1446,19 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constraint; elsewise a new constraint will be created and captured in the target
- *  SCIP; this created constraint is added to the constraint hash map and returned as target constraint; the variable
- *  map is used to map the variables of the source SCIP to the variables of the target SCIP
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
+ *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of
+ *  the source SCIP to the variables of the target SCIP
  *
  *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *           be declared feasible even if it violates this particular constraint.  This constellation should only be
  *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
  *           to the variable's local bounds.
  *
- *  @note The constraint is not added to the target SCIP
+ *  @note The constraint is not added to the target SCIP. You can check whether a constraint is added by calling
+ *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
+ *        explicitly and what is already added.)
+ *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
@@ -1492,9 +1495,9 @@ SCIP_RETCODE SCIPgetConsCopy(
 
    assert(targetcons != NULL);
    assert(sourceconshdlr != NULL);
-   
+
    SCIP_CALL( checkStage(targetscip, "SCIPgetConsCopy", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
-   
+
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
 
@@ -1513,7 +1516,7 @@ SCIP_RETCODE SCIPgetConsCopy(
       SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
    }
    else
-   { 
+   {
       localconsmap = consmap;
 
       /* try to retrieve copied constraint from hash map */
@@ -1540,6 +1543,11 @@ SCIP_RETCODE SCIPgetConsCopy(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
+   else if( *success )
+   {
+      /* insert constraint into mapping between source SCIP and the target SCIP */
+      SCIP_CALL( SCIPhashmapInsert(consmap, sourcecons, *targetcons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1551,7 +1559,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
- *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
+ *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
+ *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -1564,7 +1574,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    )
@@ -1574,7 +1584,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP* localconsmap;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
-   int nsourceconshdlrs;   
+   int nsourceconshdlrs;
    int i;
 
    assert(sourcescip != NULL);
@@ -1588,7 +1598,7 @@ SCIP_RETCODE SCIPcopyConss(
    /* check if we locally need to create a variable or constraint hash map */
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
-   
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1612,20 +1622,20 @@ SCIP_RETCODE SCIPcopyConss(
 
    *valid = TRUE;
 
-   /* copy constraints: loop through all (source) constraint handlers */  
+   /* copy constraints: loop through all (source) constraint handlers */
    for( i = 0; i < nsourceconshdlrs; ++i )
    {
       SCIP_CONS** sourceconss;
       SCIP_CONS* targetcons;
-      SCIP_Bool succeed;      
+      SCIP_Bool success;
       int nsourceconss;
-      int c;         
-   
+      int c;
+
       assert(sourceconshdlrs[i] != NULL);
 
-      /* constraint handlers have to explicitly set the succeed pointer to TRUE */
-      succeed = FALSE; 
-      
+      /* constraint handlers have to explicitly set the success pointer to TRUE */
+      success = FALSE;
+
       /* Get all active constraints for copying; this array contains all active constraints;
        * constraints are active if they are globally valid and not deleted after presolving OR they
        * were locally added during the search and we are currently in a node which belongs to the
@@ -1651,7 +1661,7 @@ SCIP_RETCODE SCIPcopyConss(
          SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
 
-      /* copy all constraints of one constraint handler */  
+      /* copy all constraints of one constraint handler */
       for( c = 0; c < nsourceconss; ++c )
       {
          /* all constraints have to be active */
@@ -1671,25 +1681,22 @@ SCIP_RETCODE SCIPcopyConss(
          SCIP_CALL( SCIPgetConsCopy(sourcescip, targetscip, sourceconss[c], &targetcons, sourceconshdlrs[i], localvarmap, localconsmap, NULL,
                SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
-               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]), 
-               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
+               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &success) );
 
          /* add the copied constraint to target SCIP if the copying process was valid */
-         if( succeed )
+         if( success )
          {
             assert(targetcons != NULL);
 
             if( !enablepricing )
                SCIPconsSetModifiable(targetcons, FALSE);
 
-            /* add constraint to target SCIP */
-            SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+	    /* add constraint to target SCIP */
+	    SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 
-            /* insert constraint into mapping between source SCIP and the target SCIP */
-            SCIP_CALL( SCIPhashmapInsert(localconsmap, sourceconss[c], targetcons) );
-
-            /* release constraint once for the creation capture */
-            SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+	    /* release constraint once for the creation capture */
+	    SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
          }
          else
          {
@@ -1710,7 +1717,7 @@ SCIP_RETCODE SCIPcopyConss(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
-   
+
    return SCIP_OKAY;
 }
 

@@ -93,6 +93,7 @@ struct SCIP_Cons
    unsigned int          updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
    unsigned int          updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
+   unsigned int          isadded:1;          /**< TRUE iff constraint was added to a SCIP instance */
 };
 
 /** tracks additions and removals of the set of active constraints */

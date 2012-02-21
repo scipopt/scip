@@ -4678,6 +4678,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateobsolete = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
+   (*cons)->isadded = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -4750,7 +4751,7 @@ SCIP_RETCODE SCIPconsCopy(
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
-   
+
    if( sourceconshdlr->conscopy != NULL )
    {
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
@@ -5996,6 +5997,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsAdded
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -6334,4 +6336,14 @@ int SCIPconsGetNLocksNeg(
    assert(cons != NULL);
 
    return cons->nlocksneg;
+}
+
+/** returns if the constraint was already added to a SCIP instance */
+SCIP_Bool SCIPconsIsAdded(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->isadded;
 }

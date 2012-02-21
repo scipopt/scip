@@ -38,6 +38,7 @@ interface
 - added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective coefficient
 - new method SCIPupdateCutoffbound() which can be used to pass a cutoff bound
 - new method SCIPchgCapacityKnapsack() which can be used to change the capacity of a knapsack constraint
+- new method SCIPconsIsAdded() which returns whether a constraint was already added to a SCIP instance
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -64,6 +65,7 @@ fixed bugs:
 - fixed bug in heur_zirounding with computation of up/downslacks
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
 - fixed bug with strong branching with the LP status for conflict analysis
+- fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
