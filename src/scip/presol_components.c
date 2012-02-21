@@ -38,8 +38,8 @@
 #define DEFAULT_SEARCH             TRUE      /**< should be searched for components? */
 #define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .lp-file? */
 #define DEFAULT_MAXINTVARS           20      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
-#define DEFAULT_NODELIMIT         10000      /**< maximum number of nodes to be solved in subproblems */
-#define DEFAULT_INTFACTOR             1      /**< the weight of an integer variable compared to binary variables */
+#define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
+#define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
 
 
 /*
@@ -128,6 +128,7 @@ SCIP_RETCODE solveComponent(
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
 
+   /* abort if the plugins could not be copied successfully */
    if( !success )
       goto TERMINATE;
 
@@ -153,7 +154,7 @@ SCIP_RETCODE solveComponent(
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* create problem in sub-SCIP */
    /* get name of the original problem and add "comp_nr" */
@@ -167,7 +168,7 @@ SCIP_RETCODE solveComponent(
       SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, name,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, &success) );
 
-      /* break if constraint was not successfully copied */
+      /* abort if constraint was not successfully copied */
       if( !success )
          goto TERMINATE;
 
@@ -183,49 +184,52 @@ SCIP_RETCODE solveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
-   /* solve the subproblem */
-   SCIP_CALL( SCIPsolve(subscip) );
-
-   *subsolvetime += SCIPgetSolvingTime(subscip);
-
-   if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+   if( nbinvars + presoldata->intfactor * nintvars <= presoldata->maxintvars )
    {
-      SCIP_SOL* sol;
+      /* solve the subproblem */
+      SCIP_CALL( SCIPsolve(subscip) );
 
-      ++(*nsolvedprobs);
+      *subsolvetime += SCIPgetSolvingTime(subscip);
 
-      sol = SCIPgetBestSol(subscip);
-
-      /* memorize variables for later fixing */
-      for( i = 0; i < nvars; ++i )
+      if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       {
-         assert( SCIPhashmapExists(varmap, vars[i]) );
-         varstofix[*nvarstofix] = vars[i];
-         varsfixvalues[*nvarstofix] = SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(varmap, vars[i]));
-         (*nvarstofix)++;
-      }
+         SCIP_SOL* sol;
 
-      /* memorize constraints for later deletion */
-      for( i = 0; i < nconss; ++i )
-      {
-         constodelete[*nconstodelete] = conss[i];
-         (*nconstodelete)++;
+         ++(*nsolvedprobs);
+
+         sol = SCIPgetBestSol(subscip);
+
+         /* memorize variables for later fixing */
+         for( i = 0; i < nvars; ++i )
+         {
+            assert( SCIPhashmapExists(varmap, vars[i]) );
+            varstofix[*nvarstofix] = vars[i];
+            varsfixvalues[*nvarstofix] = SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(varmap, vars[i]));
+            (*nvarstofix)++;
+         }
+
+         /* memorize constraints for later deletion */
+         for( i = 0; i < nconss; ++i )
+         {
+            constodelete[*nconstodelete] = conss[i];
+            (*nconstodelete)++;
+         }
       }
-   }
-   else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
-   {
-      *result = SCIP_CUTOFF;
-   }
-   else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED )
-   {
-      /* TODO: store unbounded ray in original SCIP data structure */
-      *result = SCIP_UNBOUNDED;
-   }
-   else
-   {
-      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
-         compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
-         SCIPgetNContVars(subscip), nconss);
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
+      {
+         *result = SCIP_CUTOFF;
+      }
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED )
+      {
+         /* TODO: store unbounded ray in original SCIP data structure */
+         *result = SCIP_UNBOUNDED;
+      }
+      else
+      {
+         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+            compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
+            SCIPgetNContVars(subscip), nconss);
+      }
    }
 
  TERMINATE:
@@ -475,7 +479,6 @@ SCIP_RETCODE splitProblem(
          ++ntmpvars;
          ++v;
       }
-      assert(ntmpvars != 0);
 
       /* get constraints present in this component */
       while( c < nconss && conscomponent[c] == comp )
@@ -494,7 +497,7 @@ SCIP_RETCODE splitProblem(
          /* single variable without constraint */
          if( ntmpconss == 0 )
          {
-            /* there is no constraint to connect variables, so there should be only one */
+            /* there is no constraint to connect variables, so there should be only one variable in the component */
             assert(ntmpvars == 1);
 
             /* fix variable to its best bound */
@@ -511,7 +514,7 @@ SCIP_RETCODE splitProblem(
          /* single constraint without variables */
          else if( ntmpvars == 0 )
          {
-            /* there is no variable connecting constraints, so there should be only one */
+            /* there is no variable connecting constraints, so there should be only one constraint in the component */
             assert(ntmpconss == 1);
 
             constodelete[*nconstodelete] = tmpconss[0];
@@ -785,7 +788,7 @@ SCIP_DECL_PRESOLEXEC(presolExecComponents)
 {  /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("presolExecComponents(): SCIPisPresolveFinished() = %d\n", SCIPisPresolveFinished(scip));
+   SCIPdebugMessage("presolExecComponents(): SCIPisPresolveFinished() = %ud\n", SCIPisPresolveFinished(scip));
 
    /* only call the component presolver, if presolving would be stopped otherwise */
    if( SCIPisPresolveFinished(scip) )
@@ -844,11 +847,11 @@ SCIP_RETCODE SCIPincludePresolComponents(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/components/nodelimit",
          "maximum number of nodes to be solved in subproblems",
-         &presoldata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+         &presoldata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/components/intfactor",
          "the weight of an integer variable compared to binary variables",
-         &presoldata->intfactor, FALSE, DEFAULT_INTFACTOR, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->intfactor, FALSE, DEFAULT_INTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
