@@ -162,6 +162,16 @@ struct SCIP_Stat
    int                   npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
+   int                   lastnpresolfixedvars;/**< number of presolving fixings in current run */
+   int                   lastnpresolaggrvars;/**< number of presolving aggregations in current run */
+   int                   lastnpresolchgvartypes;/**< number of presolving variable type changes in current run */
+   int                   lastnpresolchgbds;  /**< number of presolving bound changes in current run */
+   int                   lastnpresoladdholes;/**< number of presolving hole additions in current run */
+   int                   lastnpresoldelconss;/**< number of presolving constraint deletions in current run */
+   int                   lastnpresoladdconss;/**< number of presolving constraint additions in current run */
+   int                   lastnpresolupgdconss;/**< number of presolving constraint upgrades in current run */
+   int                   lastnpresolchgcoefs;/**< number of presolving coefficient changes in current run */
+   int                   lastnpresolchgsides;/**< number of presolving side changes in current run */
    int                   solindex;           /**< consecutively numbered solution index */
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
