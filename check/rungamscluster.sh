@@ -27,10 +27,18 @@ LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
 WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
 
-# setup scratch directory, and delete on exit or if interrupted
+# setup scratch directory
 mkdir -p $WORKDIR
-trap "rm -r $WORKDIR" EXIT SIGHUP SIGINT SIGTERM
 GAMSOPTS="$GAMSOPTS curdir=$WORKDIR"
+
+# ensure scratch directory is deleted and results are copied when exiting (normally or due to abort/interrupt)
+trap "
+  rm -r $WORKDIR;
+  test -e $OUTFILE && mv $OUTFILE results/$BASENAME.out
+  test -e $LSTFILE && mv $LSTFILE results/$BASENAME.lst
+  test -e $ERRFILE && mv $ERRFILE results/$BASENAME.err
+  test -e $TRCFILE && mv $TRCFILE results/$BASENAME.trc
+" EXIT
 
 # initialize trace file
 echo "* Trace Record Definition" > $TRCFILE
@@ -88,8 +96,3 @@ echo -----------------------------  >> $OUTFILE
 date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
-
-mv $OUTFILE results/$BASENAME.out
-mv $LSTFILE results/$BASENAME.lst
-mv $ERRFILE results/$BASENAME.err
-mv $TRCFILE results/$BASENAME.trc

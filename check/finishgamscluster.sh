@@ -14,10 +14,22 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-if test -d $GMSDIR
+if test -z "$GMSDIR"
+then
+  echo "Error: finishgamscluster.sh called with empty GMSDIR variable."
+  exit 0
+fi
+
+if test -d "$GMSDIR"
 then
   rm $GMSDIR/*
   rmdir $GMSDIR
+fi
+
+if test -z "$EVALFILE"
+then
+  echo "Error: finishgamscluster.sh called with empty EVALFILE variable."
+  exit 0
 fi
 
 ./evalcheck_gamscluster.sh -r $EVALFILE
