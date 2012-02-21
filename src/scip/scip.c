@@ -759,7 +759,7 @@ SCIP_Bool SCIPisTransformed(
    return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
 }
 
-/** returns whether the solution process should be provably correct */
+/** returns whether the solution process should be probably correct */
 SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -769,6 +769,74 @@ SCIP_Bool SCIPisExactSolve(
 
    return (scip->set->misc_exactsolve);
 }
+
+/** returns whether the presolving process would be finished given no more presolving reductions are found in this
+ *  presolving round
+ *
+ *  Checks whether the number of presolving rounds is not exceeded and the presolving reductions found in the current
+ *  presolving round suffice to trigger another presolving round.
+ *
+ *  @note if subsequent presolvers find more reductions, presolving might continue even if the method returns FALSE
+ *  @note does not check whether infeasibility or unboundedness was already detected in presolving (which would result
+ *        in presolving being stopped although the method returns TRUE)
+ */
+SCIP_Bool SCIPisPresolveFinished(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   int maxnrounds;
+   SCIP_Bool finished;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisPresolveFinished", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* get maximum number of presolving rounds */
+   maxnrounds = scip->set->presol_maxrounds;
+   if( maxnrounds == -1 )
+      maxnrounds = INT_MAX;
+
+   /* don't abort, if enough changes were applied to the variables */
+   finished = (scip->transprob->nvars == 0
+      || (scip->stat->npresolfixedvars - scip->stat->lastnpresolfixedvars
+         + scip->stat->npresolaggrvars - scip->stat->lastnpresolaggrvars
+         + scip->stat->npresolchgvartypes - scip->stat->lastnpresolchgvartypes
+         + (scip->stat->npresolchgbds - scip->stat->lastnpresolchgbds)/10.0
+         + (scip->stat->npresoladdholes - scip->stat->lastnpresoladdholes)/10.0
+         <= scip->set->presol_abortfac * scip->transprob->nvars)); /*lint !e653*/
+
+   /* don't abort, if enough changes were applied to the constraints */
+   finished = finished
+      && (scip->transprob->nconss == 0
+         || (scip->stat->npresoldelconss - scip->stat->lastnpresoldelconss
+            + scip->stat->npresoladdconss - scip->stat->lastnpresoladdconss
+            + scip->stat->npresolupgdconss - scip->stat->lastnpresolupgdconss
+            + scip->stat->npresolchgsides - scip->stat->lastnpresolchgsides
+            <= scip->set->presol_abortfac * scip->transprob->nconss));
+
+   /* don't abort, if enough changes were applied to the coefficients (assume a 1% density of non-zero elements) */
+   finished = finished
+      && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
+         || (scip->stat->npresolchgcoefs - scip->stat->lastnpresolchgcoefs
+            <= scip->set->presol_abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
+
+#if 0
+   /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
+   finished = finished
+      && (scip->stat->nimplications - scip->stat->lastnpresolimplications
+         <= scip->set->presol_abortfac * 100 * scip->transprob->nbinvars)
+      && (SCIPcliquetableGetNCliques(scip->cliquetable) - scip->stat->lastnpresolcliques
+         <= scip->set->presol_abortfac * scip->transprob->nbinvars);
+#endif
+
+   /* abort if maximal number of presolving rounds is reached */
+   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+
+   return finished;
+}
+
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
 SCIP_Bool SCIPpressedCtrlC(
@@ -6488,73 +6556,6 @@ SCIP_RETCODE exitPresolve(
    return SCIP_OKAY;
 }
 
-/** returns whether the presolving should be aborted */
-static
-SCIP_Bool isPresolveFinished(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             abortfac,           /**< presolving is finished, if changed portion is smaller than this factor */
-   int                   maxnrounds,         /**< maximal number of presolving rounds to perform */
-   int                   lastnfixedvars,     /**< number of fixed variables in last presolving round */
-   int                   lastnaggrvars,      /**< number of aggregated variables in last presolving round */
-   int                   lastnchgvartypes,   /**< number of changed variable types in last presolving round */
-   int                   lastnchgbds,        /**< number of changed bounds in last presolving round */
-   int                   lastnaddholes,      /**< number of added holes in last presolving round */
-   int                   lastndelconss,      /**< number of deleted constraints in last presolving round */
-   int                   lastnaddconss,      /**< number of added constraints in last presolving round */
-   int                   lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
-   int                   lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
-   int                   lastnchgsides,      /**< number of changed sides in last presolving round */
-   /*int                   lastnimplications,*/  /**< number of implications in last presolving round */
-   /*int                   lastncliques,*/       /**< number of cliques in last presolving round */
-   SCIP_Bool             unbounded,          /**< has presolving detected unboundedness? */
-   SCIP_Bool             infeasible          /**< has presolving detected infeasibility? */
-   )
-{
-   SCIP_Bool finished;
-
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-   assert(scip->transprob != NULL);
-
-   /* don't abort, if enough changes were applied to the variables */
-   finished = (scip->transprob->nvars == 0
-      || (scip->stat->npresolfixedvars - lastnfixedvars
-         + scip->stat->npresolaggrvars - lastnaggrvars
-         + scip->stat->npresolchgvartypes - lastnchgvartypes
-         + (scip->stat->npresolchgbds - lastnchgbds)/10.0
-         + (scip->stat->npresoladdholes - lastnaddholes)/10.0 <= abortfac * scip->transprob->nvars)); /*lint !e653*/
-
-   /* don't abort, if enough changes were applied to the constraints */
-   finished = finished
-      && (scip->transprob->nconss == 0
-         || (scip->stat->npresoldelconss - lastndelconss
-            + scip->stat->npresoladdconss - lastnaddconss
-            + scip->stat->npresolupgdconss - lastnupgdconss
-            + scip->stat->npresolchgsides - lastnchgsides
-            <= abortfac * scip->transprob->nconss));
-
-   /* don't abort, if enough changes were applied to the coefficients (assume a 1% density of non-zero elements) */
-   finished = finished
-      && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
-         || (scip->stat->npresolchgcoefs - lastnchgcoefs
-            <= abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
-
-#if 0
-   /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
-   finished = finished
-      && (scip->stat->nimplications - lastnimplications <= abortfac * 100 * scip->transprob->nbinvars)
-      && (SCIPcliquetableGetNCliques(scip->cliquetable) - lastncliques <= abortfac * scip->transprob->nbinvars);
-#endif
-
-   /* abort if problem is infeasible or unbounded */
-   finished = finished || unbounded || infeasible;
-
-   /* abort if maximal number of presolving rounds is reached */
-   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
-
-   return finished;
-}
-
 /** applies one round of presolving */
 static
 SCIP_RETCODE presolveRound(
@@ -6877,8 +6878,6 @@ SCIP_RETCODE presolve(
    SCIP_Bool delayed;
    SCIP_Bool finished;
    SCIP_Bool stopped;
-   SCIP_Real abortfac;
-   int maxnrounds;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -6945,46 +6944,25 @@ SCIP_RETCODE presolve(
       }
    }
 
-   maxnrounds = scip->set->presol_maxrounds;
-   if( maxnrounds == -1 )
-      maxnrounds = INT_MAX;
-
-   abortfac = scip->set->presol_abortfac;
-
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
-   finished = (*unbounded || *infeasible || scip->stat->npresolrounds >= maxnrounds);
+   finished = (*unbounded || *infeasible || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds));
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
    {
-      int lastnfixedvars;
-      int lastnaggrvars;
-      int lastnchgvartypes;
-      int lastnchgbds;
-      int lastnaddholes;
-      int lastndelconss;
-      int lastnaddconss;
-      int lastnupgdconss;
-      int lastnchgcoefs;
-      int lastnchgsides;
-      /*int lastnimplications;*/
-      /*int lastncliques;*/
-
-
-      lastnfixedvars = scip->stat->npresolfixedvars;
-      lastnaggrvars = scip->stat->npresolaggrvars;
-      lastnchgvartypes = scip->stat->npresolchgvartypes;
-      lastnchgbds = scip->stat->npresolchgbds;
-      lastnaddholes = scip->stat->npresoladdholes;
-      lastndelconss = scip->stat->npresoldelconss;
-      lastnaddconss = scip->stat->npresoladdconss;
-      lastnupgdconss = scip->stat->npresolupgdconss;
-      lastnchgcoefs = scip->stat->npresolchgcoefs;
-      lastnchgsides = scip->stat->npresolchgsides;
-      /*lastnimplications = scip->stat->nimplications;*/
-      /*lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);*/
+      /* store current number of reductions */
+      scip->stat->lastnpresolfixedvars = scip->stat->npresolfixedvars;
+      scip->stat->lastnpresolaggrvars = scip->stat->npresolaggrvars;
+      scip->stat->lastnpresolchgvartypes = scip->stat->npresolchgvartypes;
+      scip->stat->lastnpresolchgbds = scip->stat->npresolchgbds;
+      scip->stat->lastnpresoladdholes = scip->stat->npresoladdholes;
+      scip->stat->lastnpresoldelconss = scip->stat->npresoldelconss;
+      scip->stat->lastnpresoladdconss = scip->stat->npresoladdconss;
+      scip->stat->lastnpresolupgdconss = scip->stat->npresolupgdconss;
+      scip->stat->lastnpresolchgcoefs = scip->stat->npresolchgcoefs;
+      scip->stat->lastnpresolchgsides = scip->stat->npresolchgsides;
 
       /* sort propagators */
       SCIPsetSortPropsPresol(scip->set);
@@ -6998,9 +6976,10 @@ SCIP_RETCODE presolve(
       SCIP_CALL( presolveRound(scip, FALSE, &delayed, unbounded, infeasible) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
-      finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-         lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-         /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
+      finished = SCIPisPresolveFinished(scip);
+
+      /* check whether problem is infeasible or unbounded */
+      finished = finished || *unbounded || *infeasible;
 
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
@@ -7009,9 +6988,10 @@ SCIP_RETCODE presolve(
          SCIP_CALL( presolveRound(scip, TRUE, &delayed, unbounded, infeasible) );
 
          /* check again, if we should abort presolving due to not enough changes in the last round */
-         finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-            lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-            /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
+         finished = SCIPisPresolveFinished(scip);
+
+         /* check whether problem is infeasible or unbounded */
+         finished = finished || *unbounded || *infeasible;
       }
 
       /* increase round number */

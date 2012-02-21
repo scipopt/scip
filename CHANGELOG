@@ -39,6 +39,8 @@ interface
 - new method SCIPupdateCutoffbound() which can be used to pass a cutoff bound
 - new method SCIPchgCapacityKnapsack() which can be used to change the capacity of a knapsack constraint
 - new method SCIPconsIsAdded() which returns whether a constraint was already added to a SCIP instance
+- new method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the current
+  presolving round, given no further reductions will be found; can be used to ensure that a presolver is called very late
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

@@ -217,9 +217,24 @@ extern
 SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
-/** returns whether the solution process should be provably correct */
+/** returns whether the solution process should be probably correct */
 extern
 SCIP_Bool SCIPisExactSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the presolving process would be finished given no more presolving reductions are found in this
+ *  presolving round
+ *
+ *  Checks whether the number of presolving rounds is not exceeded and the presolving reductions found in the current
+ *  presolving round suffice to trigger another presolving round.
+ *
+ *  @note if subsequent presolvers find more reductions, presolving might continue even if the method returns FALSE
+ *  @note does not check whether infeasibility or unboundedness was already detected in presolving (which would result
+ *        in presolving being stopped although the method returns TRUE)
+ */
+extern
+SCIP_Bool SCIPisPresolveFinished(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
