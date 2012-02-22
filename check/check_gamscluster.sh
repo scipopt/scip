@@ -346,8 +346,9 @@ do
     export PASSSTARTSOL=$PASSSTARTSOL
 
     case $QUEUETYPE in
-      srun ) 
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+      srun )
+        # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $QUEUE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;
