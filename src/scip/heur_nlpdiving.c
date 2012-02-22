@@ -544,6 +544,7 @@ SCIP_RETCODE choosePscostVar(
 
    bestcandmayrounddown = TRUE;
    bestcandmayroundup = TRUE;
+   bestpscostquot = -1.0;
 
    for( c = 0; c < nnlpcands; ++c )
    {
