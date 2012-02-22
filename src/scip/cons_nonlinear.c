@@ -7298,7 +7298,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
-   SCIP_Bool          doreformulations;
    int                c;
 
    assert(scip     != NULL);
@@ -7311,15 +7310,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->exprgraph != NULL);
-
-   /* if other presolvers did not find any changes (except for deleted conss) since last call,
-    * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
-    * otherwise, we wait with these
-    */
-   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
-      nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
-      nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
-   SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    havegraphchange = FALSE;
 
@@ -7434,34 +7424,46 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
 
-   if( doreformulations && conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
+   if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
-      int naddconssbefore;
-
-      naddconssbefore = conshdlrdata->naddedreformconss;
-      SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
-
-      if( conshdlrdata->naddedreformconss > naddconssbefore )
+      /* if other presolvers did not find enough changes for another presolving round,
+       * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
+       * otherwise, we wait with these
+       */
+      if( SCIPisPresolveFinished(scip) )
       {
-         *result = SCIP_SUCCESS;
-         *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
+         int naddconssbefore;
 
-         /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
-         for( c = 0; c < nconss; ++c )
+         SCIPdebugMessage("reformulating expression graph\n");
+
+         naddconssbefore = conshdlrdata->naddedreformconss;
+         SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
+
+         if( conshdlrdata->naddedreformconss > naddconssbefore )
          {
-            assert(conss[c] != NULL);  /*lint !e794*/
+            *result = SCIP_SUCCESS;
+            *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
 
-            consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
-            assert(consdata != NULL);
+            /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
+            for( c = 0; c < nconss; ++c )
+            {
+               assert(conss[c] != NULL);  /*lint !e794*/
 
-            consdata->ispresolved = FALSE;
+               consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
+               assert(consdata != NULL);
+
+               consdata->ispresolved = FALSE;
+            }
          }
       }
-   }
+      else
+      {
+         SCIPdebugMessage("presolving will wait with reformulation\n");
 
-   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-   if( !doreformulations )
-      *result = SCIP_DELAYED;
+         /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
+         *result = SCIP_DELAYED;
+      }
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
