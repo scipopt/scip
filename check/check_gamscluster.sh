@@ -97,6 +97,10 @@ GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
 OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
 SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
 
+# additional environment variables needed by finishgamscluster.sh at the end (or when trap is setup)
+export GMSDIR=$GMSDIR
+export EVALFILE=$EVALFILE
+
 echo > $EVALFILE
 
 # we add 10% to the time limit and additional 10 seconds in case of small time limits
@@ -197,6 +201,7 @@ then
 fi
 
 # if run locally, run schulz to make sure solvers do not run forever
+# also setup what happens on exit
 if test $QUEUETYPE = local ; then
   # signal 2 (sigint, ^C) when 5 seconds above timelimit
   # signal 1 (sighup) when at hard timelimit
@@ -206,8 +211,9 @@ if test $QUEUETYPE = local ; then
   (( sleepsec = TIMELIMIT > 600 ? 60 : (TIMELIMIT > 30 ? TIMELIMIT / 10 - 2 : 1) ))
   ./schulz.sh "^$solverexe" "`expr $TIMELIMIT + 5`:$HARDTIMELIMIT:`expr $HARDTIMELIMIT + 60`" "2:1:9" $sleepsec > $SCHFILE 2>&1 &
   schulzpid=$!
-  # kill schulz on exit, or if we are interrupted
-  trap "kill $schulzpid" EXIT SIGHUP SIGINT SIGTERM
+
+  # kill schulz on exit and call finishgamscluster script
+  trap "echo 'Finishing up.'; kill $schulzpid; ./finishgamscluster.sh" EXIT
 fi
 
 # if cutoff should be passed, check for solu file
@@ -359,19 +365,13 @@ do
   fi
 done
 
-# additional environment variables needed by finishgamscluster.sh
-export GMSDIR=$GMSDIR
-export EVALFILE=$EVALFILE
-
+# add job that calls finishgamscluster.sh for slurm runs
+# for local runs, finishgamscluster.sh is called via the trap above, so it's also called if we interrupt with a Ctrl+C or similar
+#TODO call finishgamscluster also in qsub runs
 case $QUEUETYPE in
   srun )
     sbatch --job-name=GAMSFINISH -p $QUEUE --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
     echo
     squeue -p $QUEUE
     ;;
-  local )
-    echo "Finishing up."
-    ./finishgamscluster.sh
-    ;;
 esac
-#TODO call finishgamscluster also in qsub runs

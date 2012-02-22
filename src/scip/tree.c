@@ -1487,7 +1487,16 @@ SCIP_RETCODE SCIPnodeAddCons(
       SCIPerrorMessage("try to add a constraint of another scip instance\n");
       return SCIP_INVALIDDATA;
    }
+   /* check if we already added this constraint */
+   if( cons->isadded )
+   {
+      SCIPerrorMessage("try to add a constraint which was already added\n");
+      return SCIP_INVALIDDATA;
+   }
 #endif
+
+   /* mark the constraint added to a SCIP instance */
+   cons->isadded = TRUE;
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
    SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,

@@ -759,7 +759,7 @@ SCIP_Bool SCIPisTransformed(
    return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
 }
 
-/** returns whether the solution process should be provably correct */
+/** returns whether the solution process should be probably correct */
 SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -769,6 +769,74 @@ SCIP_Bool SCIPisExactSolve(
 
    return (scip->set->misc_exactsolve);
 }
+
+/** returns whether the presolving process would be finished given no more presolving reductions are found in this
+ *  presolving round
+ *
+ *  Checks whether the number of presolving rounds is not exceeded and the presolving reductions found in the current
+ *  presolving round suffice to trigger another presolving round.
+ *
+ *  @note if subsequent presolvers find more reductions, presolving might continue even if the method returns FALSE
+ *  @note does not check whether infeasibility or unboundedness was already detected in presolving (which would result
+ *        in presolving being stopped although the method returns TRUE)
+ */
+SCIP_Bool SCIPisPresolveFinished(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   int maxnrounds;
+   SCIP_Bool finished;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisPresolveFinished", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* get maximum number of presolving rounds */
+   maxnrounds = scip->set->presol_maxrounds;
+   if( maxnrounds == -1 )
+      maxnrounds = INT_MAX;
+
+   /* don't abort, if enough changes were applied to the variables */
+   finished = (scip->transprob->nvars == 0
+      || (scip->stat->npresolfixedvars - scip->stat->lastnpresolfixedvars
+         + scip->stat->npresolaggrvars - scip->stat->lastnpresolaggrvars
+         + scip->stat->npresolchgvartypes - scip->stat->lastnpresolchgvartypes
+         + (scip->stat->npresolchgbds - scip->stat->lastnpresolchgbds)/10.0
+         + (scip->stat->npresoladdholes - scip->stat->lastnpresoladdholes)/10.0
+         <= scip->set->presol_abortfac * scip->transprob->nvars)); /*lint !e653*/
+
+   /* don't abort, if enough changes were applied to the constraints */
+   finished = finished
+      && (scip->transprob->nconss == 0
+         || (scip->stat->npresoldelconss - scip->stat->lastnpresoldelconss
+            + scip->stat->npresoladdconss - scip->stat->lastnpresoladdconss
+            + scip->stat->npresolupgdconss - scip->stat->lastnpresolupgdconss
+            + scip->stat->npresolchgsides - scip->stat->lastnpresolchgsides
+            <= scip->set->presol_abortfac * scip->transprob->nconss));
+
+   /* don't abort, if enough changes were applied to the coefficients (assume a 1% density of non-zero elements) */
+   finished = finished
+      && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
+         || (scip->stat->npresolchgcoefs - scip->stat->lastnpresolchgcoefs
+            <= scip->set->presol_abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
+
+#if 0
+   /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
+   finished = finished
+      && (scip->stat->nimplications - scip->stat->lastnpresolimplications
+         <= scip->set->presol_abortfac * 100 * scip->transprob->nbinvars)
+      && (SCIPcliquetableGetNCliques(scip->cliquetable) - scip->stat->lastnpresolcliques
+         <= scip->set->presol_abortfac * scip->transprob->nbinvars);
+#endif
+
+   /* abort if maximal number of presolving rounds is reached */
+   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
+
+   return finished;
+}
+
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
 SCIP_Bool SCIPpressedCtrlC(
@@ -1446,16 +1514,19 @@ SCIP_RETCODE SCIPcopyVars(
 }
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
- *  map, it is just returned as target constraint; elsewise a new constraint will be created and captured in the target
- *  SCIP; this created constraint is added to the constraint hash map and returned as target constraint; the variable
- *  map is used to map the variables of the source SCIP to the variables of the target SCIP
+ *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
+ *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of
+ *  the source SCIP to the variables of the target SCIP
  *
  *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution may
  *           be declared feasible even if it violates this particular constraint.  This constellation should only be
  *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
  *           to the variable's local bounds.
  *
- *  @note The constraint is not added to the target SCIP
+ *  @note The constraint is not added to the target SCIP. You can check whether a constraint is added by calling
+ *        SCIPconsIsAdded(). (If you mix SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add
+ *        explicitly and what is already added.)
+ *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
@@ -1492,9 +1563,9 @@ SCIP_RETCODE SCIPgetConsCopy(
 
    assert(targetcons != NULL);
    assert(sourceconshdlr != NULL);
-   
+
    SCIP_CALL( checkStage(targetscip, "SCIPgetConsCopy", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
-   
+
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
 
@@ -1513,7 +1584,7 @@ SCIP_RETCODE SCIPgetConsCopy(
       SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
    }
    else
-   { 
+   {
       localconsmap = consmap;
 
       /* try to retrieve copied constraint from hash map */
@@ -1540,6 +1611,11 @@ SCIP_RETCODE SCIPgetConsCopy(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
+   else if( *success )
+   {
+      /* insert constraint into mapping between source SCIP and the target SCIP */
+      SCIP_CALL( SCIPhashmapInsert(consmap, sourcecons, *targetcons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1551,7 +1627,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
- *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP
+ *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
+ *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
+ *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -1564,7 +1642,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? 
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    )
@@ -1574,7 +1652,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_HASHMAP* localconsmap;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
-   int nsourceconshdlrs;   
+   int nsourceconshdlrs;
    int i;
 
    assert(sourcescip != NULL);
@@ -1588,7 +1666,7 @@ SCIP_RETCODE SCIPcopyConss(
    /* check if we locally need to create a variable or constraint hash map */
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
-   
+
    if( uselocalvarmap )
    {
       /* create the variable mapping hash map */
@@ -1612,20 +1690,20 @@ SCIP_RETCODE SCIPcopyConss(
 
    *valid = TRUE;
 
-   /* copy constraints: loop through all (source) constraint handlers */  
+   /* copy constraints: loop through all (source) constraint handlers */
    for( i = 0; i < nsourceconshdlrs; ++i )
    {
       SCIP_CONS** sourceconss;
       SCIP_CONS* targetcons;
-      SCIP_Bool succeed;      
+      SCIP_Bool success;
       int nsourceconss;
-      int c;         
-   
+      int c;
+
       assert(sourceconshdlrs[i] != NULL);
 
-      /* constraint handlers have to explicitly set the succeed pointer to TRUE */
-      succeed = FALSE; 
-      
+      /* constraint handlers have to explicitly set the success pointer to TRUE */
+      success = FALSE;
+
       /* Get all active constraints for copying; this array contains all active constraints;
        * constraints are active if they are globally valid and not deleted after presolving OR they
        * were locally added during the search and we are currently in a node which belongs to the
@@ -1651,7 +1729,7 @@ SCIP_RETCODE SCIPcopyConss(
          SCIPdebugMessage("Attempting to copy %d %s constraints\n", nsourceconss, SCIPconshdlrGetName(sourceconshdlrs[i]));
       }
 
-      /* copy all constraints of one constraint handler */  
+      /* copy all constraints of one constraint handler */
       for( c = 0; c < nsourceconss; ++c )
       {
          /* all constraints have to be active */
@@ -1671,25 +1749,22 @@ SCIP_RETCODE SCIPcopyConss(
          SCIP_CALL( SCIPgetConsCopy(sourcescip, targetscip, sourceconss[c], &targetcons, sourceconshdlrs[i], localvarmap, localconsmap, NULL,
                SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
-               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]), 
-               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &succeed) );
+               SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &success) );
 
          /* add the copied constraint to target SCIP if the copying process was valid */
-         if( succeed )
+         if( success )
          {
             assert(targetcons != NULL);
 
             if( !enablepricing )
                SCIPconsSetModifiable(targetcons, FALSE);
 
-            /* add constraint to target SCIP */
-            SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
+	    /* add constraint to target SCIP */
+	    SCIP_CALL( SCIPaddCons(targetscip, targetcons) );
 
-            /* insert constraint into mapping between source SCIP and the target SCIP */
-            SCIP_CALL( SCIPhashmapInsert(localconsmap, sourceconss[c], targetcons) );
-
-            /* release constraint once for the creation capture */
-            SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
+	    /* release constraint once for the creation capture */
+	    SCIP_CALL( SCIPreleaseCons(targetscip, &targetcons) );
          }
          else
          {
@@ -1710,7 +1785,7 @@ SCIP_RETCODE SCIPcopyConss(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -6481,73 +6556,6 @@ SCIP_RETCODE exitPresolve(
    return SCIP_OKAY;
 }
 
-/** returns whether the presolving should be aborted */
-static
-SCIP_Bool isPresolveFinished(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             abortfac,           /**< presolving is finished, if changed portion is smaller than this factor */
-   int                   maxnrounds,         /**< maximal number of presolving rounds to perform */
-   int                   lastnfixedvars,     /**< number of fixed variables in last presolving round */
-   int                   lastnaggrvars,      /**< number of aggregated variables in last presolving round */
-   int                   lastnchgvartypes,   /**< number of changed variable types in last presolving round */
-   int                   lastnchgbds,        /**< number of changed bounds in last presolving round */
-   int                   lastnaddholes,      /**< number of added holes in last presolving round */
-   int                   lastndelconss,      /**< number of deleted constraints in last presolving round */
-   int                   lastnaddconss,      /**< number of added constraints in last presolving round */
-   int                   lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
-   int                   lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
-   int                   lastnchgsides,      /**< number of changed sides in last presolving round */
-   /*int                   lastnimplications,*/  /**< number of implications in last presolving round */
-   /*int                   lastncliques,*/       /**< number of cliques in last presolving round */
-   SCIP_Bool             unbounded,          /**< has presolving detected unboundedness? */
-   SCIP_Bool             infeasible          /**< has presolving detected infeasibility? */
-   )
-{
-   SCIP_Bool finished;
-
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-   assert(scip->transprob != NULL);
-
-   /* don't abort, if enough changes were applied to the variables */
-   finished = (scip->transprob->nvars == 0
-      || (scip->stat->npresolfixedvars - lastnfixedvars
-         + scip->stat->npresolaggrvars - lastnaggrvars
-         + scip->stat->npresolchgvartypes - lastnchgvartypes
-         + (scip->stat->npresolchgbds - lastnchgbds)/10.0
-         + (scip->stat->npresoladdholes - lastnaddholes)/10.0 <= abortfac * scip->transprob->nvars)); /*lint !e653*/
-
-   /* don't abort, if enough changes were applied to the constraints */
-   finished = finished
-      && (scip->transprob->nconss == 0
-         || (scip->stat->npresoldelconss - lastndelconss
-            + scip->stat->npresoladdconss - lastnaddconss
-            + scip->stat->npresolupgdconss - lastnupgdconss
-            + scip->stat->npresolchgsides - lastnchgsides
-            <= abortfac * scip->transprob->nconss));
-
-   /* don't abort, if enough changes were applied to the coefficients (assume a 1% density of non-zero elements) */
-   finished = finished
-      && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
-         || (scip->stat->npresolchgcoefs - lastnchgcoefs
-            <= abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
-
-#if 0
-   /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
-   finished = finished
-      && (scip->stat->nimplications - lastnimplications <= abortfac * 100 * scip->transprob->nbinvars)
-      && (SCIPcliquetableGetNCliques(scip->cliquetable) - lastncliques <= abortfac * scip->transprob->nbinvars);
-#endif
-
-   /* abort if problem is infeasible or unbounded */
-   finished = finished || unbounded || infeasible;
-
-   /* abort if maximal number of presolving rounds is reached */
-   finished = finished || (scip->stat->npresolrounds >= maxnrounds);
-
-   return finished;
-}
-
 /** applies one round of presolving */
 static
 SCIP_RETCODE presolveRound(
@@ -6870,8 +6878,6 @@ SCIP_RETCODE presolve(
    SCIP_Bool delayed;
    SCIP_Bool finished;
    SCIP_Bool stopped;
-   SCIP_Real abortfac;
-   int maxnrounds;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -6938,46 +6944,25 @@ SCIP_RETCODE presolve(
       }
    }
 
-   maxnrounds = scip->set->presol_maxrounds;
-   if( maxnrounds == -1 )
-      maxnrounds = INT_MAX;
-
-   abortfac = scip->set->presol_abortfac;
-
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
-   finished = (*unbounded || *infeasible || scip->stat->npresolrounds >= maxnrounds);
+   finished = (*unbounded || *infeasible || (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds));
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
    {
-      int lastnfixedvars;
-      int lastnaggrvars;
-      int lastnchgvartypes;
-      int lastnchgbds;
-      int lastnaddholes;
-      int lastndelconss;
-      int lastnaddconss;
-      int lastnupgdconss;
-      int lastnchgcoefs;
-      int lastnchgsides;
-      /*int lastnimplications;*/
-      /*int lastncliques;*/
-
-
-      lastnfixedvars = scip->stat->npresolfixedvars;
-      lastnaggrvars = scip->stat->npresolaggrvars;
-      lastnchgvartypes = scip->stat->npresolchgvartypes;
-      lastnchgbds = scip->stat->npresolchgbds;
-      lastnaddholes = scip->stat->npresoladdholes;
-      lastndelconss = scip->stat->npresoldelconss;
-      lastnaddconss = scip->stat->npresoladdconss;
-      lastnupgdconss = scip->stat->npresolupgdconss;
-      lastnchgcoefs = scip->stat->npresolchgcoefs;
-      lastnchgsides = scip->stat->npresolchgsides;
-      /*lastnimplications = scip->stat->nimplications;*/
-      /*lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);*/
+      /* store current number of reductions */
+      scip->stat->lastnpresolfixedvars = scip->stat->npresolfixedvars;
+      scip->stat->lastnpresolaggrvars = scip->stat->npresolaggrvars;
+      scip->stat->lastnpresolchgvartypes = scip->stat->npresolchgvartypes;
+      scip->stat->lastnpresolchgbds = scip->stat->npresolchgbds;
+      scip->stat->lastnpresoladdholes = scip->stat->npresoladdholes;
+      scip->stat->lastnpresoldelconss = scip->stat->npresoldelconss;
+      scip->stat->lastnpresoladdconss = scip->stat->npresoladdconss;
+      scip->stat->lastnpresolupgdconss = scip->stat->npresolupgdconss;
+      scip->stat->lastnpresolchgcoefs = scip->stat->npresolchgcoefs;
+      scip->stat->lastnpresolchgsides = scip->stat->npresolchgsides;
 
       /* sort propagators */
       SCIPsetSortPropsPresol(scip->set);
@@ -6991,9 +6976,10 @@ SCIP_RETCODE presolve(
       SCIP_CALL( presolveRound(scip, FALSE, &delayed, unbounded, infeasible) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
-      finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-         lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-         /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
+      finished = SCIPisPresolveFinished(scip);
+
+      /* check whether problem is infeasible or unbounded */
+      finished = finished || *unbounded || *infeasible;
 
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
@@ -7002,9 +6988,10 @@ SCIP_RETCODE presolve(
          SCIP_CALL( presolveRound(scip, TRUE, &delayed, unbounded, infeasible) );
 
          /* check again, if we should abort presolving due to not enough changes in the last round */
-         finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
-            lastnchgbds, lastnaddholes, lastndelconss, lastnaddconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-            /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
+         finished = SCIPisPresolveFinished(scip);
+
+         /* check whether problem is infeasible or unbounded */
+         finished = finished || *unbounded || *infeasible;
       }
 
       /* increase round number */
