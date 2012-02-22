@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,9 +21,9 @@
  *
  * This presolver looks for independent components at the end of the presolving.
  * If independent components are found in which a maximum number of variables
- * is not exceeded, the component-presolver tries to solve them in advance
- * within subproblems. Afterwards the corresponding variables/constraints can be
- * fixed in the main problem.
+ * is not exceeded, the presolver tries to solve them in advance as subproblems.
+ * Afterwards, if a subproblem was solved to optimality, the corresponding
+ * variables/constraints can be fixed/deleted in the main problem.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
