@@ -28,7 +28,6 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
-#include "scip/type_prob.h"
 #include "scip/type_stat.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
@@ -100,7 +99,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */

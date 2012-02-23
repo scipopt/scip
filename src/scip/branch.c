@@ -2114,7 +2114,6 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 SCIP_RETCODE SCIPbranchExecLP(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -2150,7 +2149,7 @@ SCIP_RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, prob, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
             result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
@@ -2198,7 +2197,7 @@ SCIP_RETCODE SCIPbranchExecLP(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, prob, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }
@@ -2210,7 +2209,6 @@ SCIP_RETCODE SCIPbranchExecLP(
 SCIP_RETCODE SCIPbranchExecExtern(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -2246,7 +2244,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       /* @todo: adjust this, that also LP branching might be called, if lpmaxpriority != externmaxpriority.
        * Therefor, it has to be clear which of both has the higher priority 
        */
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, prob, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
             result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
@@ -2318,7 +2316,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIPdebugMessage("no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, prob, stat, lp, branchcand, eventqueue, var, val, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, val, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }
@@ -2330,7 +2328,6 @@ SCIP_RETCODE SCIPbranchExecExtern(
 SCIP_RETCODE SCIPbranchExecPseudo(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -2395,7 +2392,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, prob, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }

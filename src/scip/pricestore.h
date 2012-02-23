@@ -84,7 +84,6 @@ SCIP_RETCODE SCIPpricestoreAddBdviolvar(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -125,7 +124,6 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

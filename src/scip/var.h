@@ -62,7 +62,6 @@ SCIP_RETCODE SCIPboundchgApply(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -78,7 +77,6 @@ SCIP_RETCODE SCIPboundchgUndo(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to remove */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -91,7 +89,6 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    SCIP_DOMCHG*          domchg,             /**< domain change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -125,7 +122,6 @@ SCIP_RETCODE SCIPdomchgApply(
    SCIP_DOMCHG*          domchg,             /**< domain change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -140,7 +136,6 @@ SCIP_RETCODE SCIPdomchgUndo(
    SCIP_DOMCHG*          domchg,             /**< domain change to remove */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -595,7 +590,6 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -675,7 +669,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -691,7 +684,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -707,7 +699,6 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -724,7 +715,6 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -740,7 +730,6 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -756,7 +745,6 @@ SCIP_RETCODE SCIPvarChgBdLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
@@ -880,7 +868,6 @@ SCIP_RETCODE SCIPvarResetBounds(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -904,7 +891,6 @@ SCIP_RETCODE SCIPvarAddVlb(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -927,7 +913,6 @@ SCIP_RETCODE SCIPvarAddVub(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -952,7 +937,6 @@ SCIP_RETCODE SCIPvarAddImplic(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -977,7 +961,6 @@ SCIP_RETCODE SCIPvarAddClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
