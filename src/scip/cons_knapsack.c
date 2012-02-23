@@ -8993,7 +8993,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsKnapsack)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nvars )
+   if( varssize < consdata->nvars )
       (*success) = FALSE;
    else
    {

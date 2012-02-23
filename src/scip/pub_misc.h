@@ -3406,12 +3406,102 @@ int SCIPstairmapGetLatestFeasibleStart(
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    );
 
+/*
+ * Directed graph
+ */
+
+/** creates directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+extern
+SCIP_RETCODE SCIPdigraphSetSizes(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   );
+
+/** frees given directed graph structure */
+extern
+void SCIPdigraphFree(
+   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
+   );
+
+/** add (directed) edge to the directed graph structure
+ *  @note: if the edge is already contained, it is added a second time
+ */
+extern
+SCIP_RETCODE SCIPdigraphAddEdge(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** add (directed) edge to the directed graph structure, if it is not contained, yet */
+extern
+SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** returns the number of edges originating at the given node */
+extern
+int SCIPdigraphGetNOutgoingEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the number of outgoing edges is returned */
+   );
+
+/** returns the array of edges originating at the given node; this array must not be changed from outside */
+extern
+int* SCIPdigraphGetOutgoingEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing edges is returned */
+   );
+
+/** compute components on the given directed graph */
+extern
+SCIP_RETCODE SCIPdigraphComputeComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 1 to ncomponents) */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   );
+
+/** Computes (undirected) components on the directed graph and sorts the components
+ *  (almost) topologically w.r.t. the directed graph.
+ *
+ * Topologically sorted means, a variable which influences the lower (upper) bound of another
+ * variable y is located before y in the corresponding variable array. Note, that in general
+ * a topological sort is not unique. Note, that there might be directed cycles, that are
+ * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ */
+extern
+SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< minimum size a component should have */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store the nodes of the components one component after the other,
+                                              *   with the nodes of one component being (almost) topologically sorted */
+   int*                  componentstart,     /**< array to store for each component, where it starts in array components;
+                                              *   at position ncomponents+1, the total number of nodes is stored */
+   int                   componentstartsize, /**< size of componentstart array, if this is smaller than the number of components+1,
+                                              *   only the start indices of the first components are stored and the method should
+                                              *   be called again after reallocating the componentstart array */
+   int*                  ncomponents         /**< pointer to store the number of components */
+   );
+
 
 /*
  * Numerical methods
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
+extern
 SCIP_Real SCIPcalcMachineEpsilon(
    void
    );
