@@ -36,6 +36,9 @@ SETCUTOFF=0
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
 
+# set this to true to keep solutions in .gdx files
+KEEPSOLS=0
+
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
 then
@@ -58,14 +61,13 @@ then
     exit
 fi
 
+# if we run locally, use hostname as "queue"-name
 if test "$QUEUETYPE" = "local"
 then
     QUEUE=$HOSTNAME
 fi
 
-# set this to true to keep solutions in .gdx files
-KEEPSOLS=false
-
+# check if gams system is available
 if ! which $GAMSBIN > /dev/null 2>&1
 then
   echo "No GAMS system available: $GAMSBIN does not work. Abort."
@@ -73,9 +75,17 @@ then
 fi
 BINNAME=`echo $GAMSBIN | sed -e 's/[^A-Za-z0-9_.]/_/g'`
 
+# check if gams solver has been specified
 if test -z "$SOLVER"
 then
   echo "GAMSSOLVER not specified. Abort."
+  exit 1
+fi
+
+# check if testset file is available
+if test ! -r testset/$TSTNAME.test
+then
+  echo "Testset file testset/$TSTNAME.test not available. Abort."
   exit 1
 fi
 
@@ -133,7 +143,7 @@ then
 fi
 
 # create directory for solutions, if KEEPSOLS is true
-if test "$KEEPSOLS" = "true"
+if test "$KEEPSOLS" = 1
 then
   mkdir -p $SOLDIR
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
@@ -322,7 +332,7 @@ do
       continue
     fi
 
-    if test $KEEPSOLS = "true"
+    if test $KEEPSOLS = 1
     then
       GDXFILE="gdx=$SOLDIR/${GMSFILE/%gms/gdx}"
     fi
