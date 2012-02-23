@@ -1537,8 +1537,8 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          continue;
       }
 
-      SCIPdebugMessage("removing fixed quadratic variables from element %g <%s> <%s>",
-         elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
+      SCIPdebugMessage("removing fixed quadratic variables from %dth element %g <%s> <%s>\n",
+         i, elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
 
       /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
       SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, stat, nlp, i) );
@@ -1856,9 +1856,10 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       {
          if( !SCIPvarIsActive(nlrow->quadvars[i]) )
          {
-            /* it can have happened that a new quadratic variable was added that is multi-aggregated (when multiplying two multi-aggregations)
-             * in this case, the variable was only temporarily used and should not be used anymore, thus we can remove it */
-            assert(SCIPvarGetStatus(nlrow->quadvars[i]) == SCIP_VARSTATUS_MULTAGGR);
+            /* it can have happened that a new quadratic variable was added that is not active (when multiplying two multi-aggregations)
+             * in this case, the variable was only temporarily used and should not be used anymore (this is asserted in the next for-loop below),
+             * thus we can remove it
+             */
             newpos[i] = -1;
             ++offset;
          }

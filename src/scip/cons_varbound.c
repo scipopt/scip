@@ -2294,7 +2294,7 @@ SCIP_RETCODE applyFixings(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
       SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -2819,7 +2819,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/

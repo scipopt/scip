@@ -4584,9 +4584,9 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    /* check if we have easy aggregation if we flip the variables x and y that means:
     *
-    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(b/a) < infinty
+    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinty
     */
-   if( !easyaggr  && !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx))
+   if( !easyaggr  && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
       && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
    {
       SCIP_VAR* var;
@@ -8718,11 +8718,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vubvar" the variable lower and upper bounds of this variable "vubvar" are also considered; note
              *       that the "aggvar" can be a variable lower bound variable of the variable "vubvar"; Due to that
              *       situation it can happen that we reach that code place where "vlbvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -8785,11 +8786,12 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       "vlbvar" the variable lower and upper bounds of this variable "vlbvar" are also considered; note
              *       that the "aggvar" can be a variable upper bound variable of the variable "vlbvar"; Due to that
              *       situation it can happen that we reach that code place where "vubvars[i] == aggvar". In particular
-             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED but is still active since
-             *       the aggregation is not finished yet (in SCIPvarAggregate()); therefore we have to explicitly check
-             *       that the active variable has not a variable status SCIP_VARSTATUS_AGGREGATED;
+             *       the "aggvar" has already the variable status SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED
+             *       but is still active since the aggregation is not finished yet (in SCIPvarAggregate()); therefore we
+             *       have to explicitly check that the active variable has not a variable status
+             *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -11205,11 +11207,8 @@ SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Real primsol;
-   int i;
-
    assert(var != NULL);
- 
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -11229,7 +11228,12 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_Real lpsolval;
+
       assert(var->data.aggregate.var != NULL);
+      lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
+
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
        * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
@@ -11237,11 +11241,15 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetLPSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
-      return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
-
+      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
+   }
    case SCIP_VARSTATUS_MULTAGGR:
+   {
+      SCIP_Real primsol;
+      int i;
+
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
@@ -11252,7 +11260,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
       return primsol;
-
+   }
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);

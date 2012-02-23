@@ -731,10 +731,10 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of knapsack constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
@@ -1069,7 +1069,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       addval = 0.0;
       /* update solution information */
-      if( solitems != NULL)
+      if( solitems != NULL || solval != NULL )
       {
          SCIP_Longint i;
 
@@ -1079,16 +1079,25 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
          {
-            solitems[*nsolitems] = myitems[i];
-            ++(*nsolitems);
+            if( solitems != NULL)
+            {
+               assert(nonsolitems != NULL);
+               solitems[*nsolitems] = myitems[i];
+               ++(*nsolitems);
+            }
             addval += myprofits[i];
          }
 
-         /* the rest are not in the solution */
-         for( j = nmyitems - 1; j >= capacity; --j )
+         if( solitems != NULL)
          {
-            nonsolitems[*nnonsolitems] = myitems[j];
-            ++(*nnonsolitems);
+            assert(nonsolitems != NULL);
+
+            /* the rest are not in the solution */
+            for( j = nmyitems - 1; j >= capacity; --j )
+            {
+               nonsolitems[*nnonsolitems] = myitems[j];
+               ++(*nnonsolitems);
+            }
          }
       }
       /* update solution value */
@@ -8219,7 +8228,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/

@@ -945,7 +945,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    {
       if( eventdata->varidx < 0 )
       {
-         /* mark activity bounds for this quad var term variable as not up to date anymore */
+         /* mark activity bounds for quad term as not up to date anymore */
          SCIPintervalSetEmpty(&consdata->quadactivitybounds);
       }
       else
@@ -2050,6 +2050,7 @@ SCIP_RETCODE delQuadVarTermPos(
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -2411,10 +2412,10 @@ SCIP_RETCODE removeBilinearTermsPos(
    consdata->ispropagated  = FALSE;
    consdata->ispresolved   = FALSE;
    consdata->iscurvchecked = FALSE;
-   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate activity */
    consdata->activity = SCIP_INVALID;
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
 
    /* invalidate nonlinear row */
    if( consdata->nlrow != NULL )
@@ -2801,7 +2802,6 @@ SCIP_RETCODE removeFixedVariables(
                   assert(var2pos < consdata->nquadvars);
                }
                consdata->quadvarterms[var2pos].lincoef += bilinterm->coef * offset;
-               SCIPintervalSetEmpty(&consdata->quadactivitybounds);
             }
 
             offset = consdata->quadvarterms[i].lincoef * offset + consdata->quadvarterms[i].sqrcoef * offset * offset;
@@ -7050,7 +7050,9 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
+ * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
+ * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
+ * if separatedlpsol is NULL, then cut is added to cutpool only
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -7059,12 +7061,13 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
-   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found, or NULL if not of interest */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool addedtolp;
    SCIP_ROW* row;
    int c;
 
@@ -7104,6 +7107,8 @@ SCIP_RETCODE addLinearizationCuts(
       if( row == NULL )
          continue;
 
+      addedtolp = FALSE;
+
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
@@ -7116,12 +7121,13 @@ SCIP_RETCODE addLinearizationCuts(
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
             *separatedlpsol = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            addedtolp = TRUE;
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
             SCIPdebugMessage("added linearization cut <%s> to LP, efficacy = %g\n", SCIProwGetName(row), -feasibility / MAX(1.0, norm));
          }
       }
 
-      if( !SCIProwIsLocal(row) )
+      if( !SCIProwIsLocal(row) && !addedtolp )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
          SCIPdebugMessage("added linearization cut <%s> to cutpool\n", SCIProwGetName(row));
@@ -9455,10 +9461,10 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpQuadratic)
-{  
+{
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_VAR*          var;

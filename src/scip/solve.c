@@ -134,6 +134,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    SCIP_RESULT result;
    SCIP_Longint oldnbestsolsfound;
+   SCIP_Real lowerbound;
    int ndelayedheurs;
    int depth;
    int lpstateforkdepth;
@@ -228,17 +229,34 @@ SCIP_RETCODE SCIPprimalHeuristics(
    assert(!indiving);
 #endif
 
+   /* collect lower bound of current node */
+   if( tree !=  NULL )
+   {
+      assert(SCIPtreeGetFocusNode(tree) != NULL);
+      lowerbound = SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree));
+   }
+   else if( lp != NULL )
+      lowerbound = SCIPlpGetPseudoObjval(lp, set);
+   else
+      lowerbound = -SCIPsetInfinity(set);
+
    for( h = 0; h < set->nheurs; ++h )
    {
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
        * such that additional calls to LP heuristics will fail; better abort the loop in this case
-       */      
+       */
       if( lp != NULL && lp->resolvelperror) 
          break;
 
       SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+
+      /* if the new solution cuts off the current node due to a new primal solution (via the citoff bound) interrapt
+       * calling the remaing heuristics
+       */
+      if( result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound )
+         break;
 
       /* make sure that heuristic did not change probing or diving status */
       assert(tree == NULL || inprobing == SCIPtreeProbing(tree));

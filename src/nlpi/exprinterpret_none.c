@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRTREE*        tree                /**< expression tree */
    )
 {
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** evaluates an expression tree */
@@ -115,6 +115,7 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_Real*            val                 /**< buffer to store value */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
@@ -127,6 +128,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
@@ -140,6 +142,7 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
@@ -154,6 +157,7 @@ SCIP_RETCODE SCIPexprintGradInt(
    SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
@@ -168,6 +172,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
@@ -183,5 +188,6 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
    )
 {
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/

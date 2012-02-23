@@ -104,6 +104,8 @@ static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
 
+/* CppAD 20120101 brings its own implementation of a sign operator, so don't implement again */
+#ifndef CPPAD_SIGN_OP_INCLUDED
 /* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping
  * It can be used since it's derivative is almost everywhere 0.0 */
 
@@ -128,6 +130,7 @@ SCIPInterval sign(const SCIPInterval& x)
 }
 /* discrete CppAD function sign(SCIPInterval) for use in eval */
 CPPAD_DISCRETE_FUNCTION(SCIPInterval, sign)
+#endif
 
 /** defintion of CondExpOp for SCIPInterval (required by CppAD) */
 inline
