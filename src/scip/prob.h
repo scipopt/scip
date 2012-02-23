@@ -240,6 +240,13 @@ void SCIPprobAddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** sets the dual bound on objective function */
+extern
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
+   );
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern
 void SCIPprobSetObjlim(
@@ -355,6 +362,13 @@ void SCIPprobUpdateNObjVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             oldobj,             /**< old objective value for variable */
    SCIP_Real             newobj              /**< new objective value for variable */
+   );
+
+/** update the dual bound if its better as the current one */
+extern
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
 /** returns the external value of the given internal objective value */

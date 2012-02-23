@@ -6068,10 +6068,29 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat,
-      SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIPprobUpdateDualbound(scip->origprob, newbound);
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+      SCIPprobUpdateDualbound(scip->transprob, SCIPprobExternObjval(scip->transprob, scip->set, newbound));
+      break;
+
+   case SCIP_STAGE_SOLVING:
+      SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat,
+         SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return 0; /*lint !e527*/
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -7160,6 +7179,13 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   /* update dual bound of the root node if a valid dual bound is at hand */
+   if( scip->transprob->dualbound < SCIP_INVALID )
+   {
+      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat,
+         SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
+   }
 
    /* switch stage to SOLVING */
    scip->set->stage = SCIP_STAGE_SOLVING;

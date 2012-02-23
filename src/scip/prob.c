@@ -314,6 +314,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objoffset = 0.0;
    (*prob)->objscale = 1.0;
    (*prob)->objlim = SCIP_INVALID;
+   (*prob)->dualbound = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
 
@@ -449,6 +450,10 @@ SCIP_RETCODE SCIPprobTransform(
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
       SCIPprobSetObjlim(*target, source->objlim);
+
+   /* transform objective limit */
+   if( source->dualbound < SCIP_INVALID )
+      SCIPprobSetDualbound(*target, source->dualbound);
 
    /* transform and copy all variables to target problem */
    SCIP_CALL( probEnsureVarsMem(*target, set, source->nvars) );
@@ -1196,6 +1201,17 @@ void SCIPprobAddObjoffset(
    prob->objoffset += addval;
 }
 
+/** sets the dual bound on objective function */
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = dualbound;
+}
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 void SCIPprobSetObjlim(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1296,6 +1312,33 @@ void SCIPprobUpdateNObjVars(
       prob->nobjvars++;
 
    assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
+}
+
+/** update the dual bound if its better as the current one */
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   )
+{
+   if( prob->dualbound == SCIP_INVALID ) /*lint !e777*/
+      SCIPprobSetDualbound(prob, newbound);
+   else
+   {
+      switch( prob->objsense )
+      {
+      case SCIP_OBJSENSE_MINIMIZE:
+         prob->dualbound = MIN(newbound, prob->dualbound);
+         break;
+
+      case SCIP_OBJSENSE_MAXIMIZE:
+         prob->dualbound = MAX(newbound, prob->dualbound);
+         break;
+
+      default:
+         SCIPerrorMessage("invalid objective sense <%d>\n", prob->objsense);
+         SCIPABORT();
+      }
+   }
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
