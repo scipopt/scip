@@ -1739,7 +1739,7 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata->exprgraph != NULL);
 
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
-   linvarssize = SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode);
+   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linvarssize) );
 
@@ -2079,6 +2079,9 @@ SCIP_RETCODE reformReplaceNode(
          SCIP_CALL( SCIPexprgraphReleaseNode(exprgraph, &consdata->exprgraphnode) );
          consdata->exprgraphnode = replacement;
          SCIPexprgraphCaptureNode(replacement);
+
+         /* since we change the node, also the constraint changes, so ensure that it is presolved again */
+         consdata->ispresolved = FALSE;
       }
    }
    *node = NULL;
