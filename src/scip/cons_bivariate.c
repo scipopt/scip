@@ -71,6 +71,9 @@
 #define QUADCONSUPGD_PRIORITY      5000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   10000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
+/* activate the following define to get output on number of bivariate constraints for each convexity-type during INITSOL */
+/* #define TYPESTATISTICS */
+
 /*
  * Data structures
  */
@@ -5673,7 +5676,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
    int                nconvextypeslhs[(int)SCIP_BIVAR_UNKNOWN+1];
    int                nconvextypesrhs[(int)SCIP_BIVAR_UNKNOWN+1];
 #endif
@@ -5684,7 +5687,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
    BMSclearMemoryArray(nconvextypeslhs, (int)SCIP_BIVAR_UNKNOWN+1);
    BMSclearMemoryArray(nconvextypesrhs, (int)SCIP_BIVAR_UNKNOWN+1);
 #endif
@@ -5745,7 +5748,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       /* initialize data for cut generation */
       SCIP_CALL( initSepaData(scip, conshdlrdata->exprinterpreter, conss[c]) );  /*lint !e613*/
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
       if( !SCIPisInfinity(scip, -consdata->lhs) )
          ++nconvextypeslhs[consdata->convextype];
       if( !SCIPisInfinity(scip,  consdata->rhs) )
@@ -5763,10 +5766,26 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
       for( c = 0; c <= (int)SCIP_BIVAR_UNKNOWN; ++c )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type %d\n", nconvextypeslhs[c], nconvextypesrhs[c], c);
+         const char* typename;
+         switch( c )
+         {
+         case SCIP_BIVAR_ALLCONVEX:
+            typename = "allconvex";
+            break;
+         case SCIP_BIVAR_1CONVEX_INDEFINITE:
+            typename = "1-convex";
+            break;
+         case SCIP_BIVAR_CONVEX_CONCAVE:
+            typename = "convex-concave";
+            break;
+         case SCIP_BIVAR_UNKNOWN:
+            typename = "unknown";
+            break;
+         }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type [%s]\n", nconvextypeslhs[c], nconvextypesrhs[c], typename);
       }
 #endif
 
