@@ -112,6 +112,7 @@ fixed bugs:
 - fixed issue if a primal solution leads to a cutoff of the current focus node
 - fix compilation issues with zlib 1.2.6
 - fixed bug in NLP representation of abspower constraints handling (x+a)^2 with nonzero a
+- fixed bug parsing an and-constraint in cip format
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
