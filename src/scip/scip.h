@@ -7604,7 +7604,10 @@ SCIP_Real SCIPgetCutoffbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** updates the cutoff bound if it is better */
+/** updates the cutoff bound
+ *
+ *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
+ */
 extern
 SCIP_RETCODE SCIPupdateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */

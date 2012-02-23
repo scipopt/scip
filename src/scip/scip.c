@@ -20603,13 +20603,18 @@ SCIP_Real SCIPgetCutoffbound(
    return scip->primal->cutoffbound;
 }
 
-/** updates the cutoff bound if it is better */
+/** updates the cutoff bound
+ *
+ *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
+ */
 SCIP_RETCODE SCIPupdateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             cutoffbound         /**< new cutoff bound */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
    SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
          scip->transprob, scip->tree, scip->lp, cutoffbound) );
