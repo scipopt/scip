@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,6 +129,12 @@ SCIP_Longint SCIPpropGetNDomredsFound(
 /** should propagator be delayed, if other propagators found reductions? */
 extern
 SCIP_Bool SCIPpropIsDelayed(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** should propagator be delayed during presolving, if other propagators found reductions? */
+extern
+SCIP_Bool SCIPpropIsPresolDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 

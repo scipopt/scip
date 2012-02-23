@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -540,6 +540,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_prop(
    SCIP_CONS**        conss,              /**< array of constraints to process */
    int                nconss,             /**< number of constraints to process */
    int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_PROPTIMING    proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
    )
 {

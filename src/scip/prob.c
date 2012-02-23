@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -295,6 +295,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->deletedvars = NULL;
    (*prob)->deletedvarssize = 0;
    (*prob)->ndeletedvars = 0;
+   (*prob)->nobjvars = 0;
    if( set->misc_useconstable )
    {
       SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem,
@@ -458,6 +459,7 @@ SCIP_RETCODE SCIPprobTransform(
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
    assert((*target)->nvars == source->nvars);
+   assert((*target)->nobjvars == SCIPprobGetNObjVars(*target, set));
 
    /* call user data transformation */
    if( source->probtrans != NULL )
@@ -779,6 +781,9 @@ SCIP_RETCODE SCIPprobAddVar(
       /* issue VARADDED event */
       SCIP_CALL( SCIPeventCreateVarAdded(&event, blkmem, var) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+
+      /* update the number of variables with non-zero objective coefficient */
+      SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
    }
 
    return SCIP_OKAY;
@@ -1038,10 +1043,18 @@ SCIP_RETCODE SCIPprobAddCons(
       SCIPerrorMessage("constraint belongs to different scip instance\n");
       return SCIP_INVALIDDATA;
    }
+   /* check if we already added this constraint */
+   if( cons->isadded )
+   {
+      SCIPerrorMessage("try to add a constraint which was already added\n");
+      return SCIP_INVALIDDATA;
+   }
 #endif
-
    SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
+
+   /* mark the constraint added to a SCIP instance */
+   cons->isadded = TRUE;
 
    /* mark the constraint as problem constraint, and remember the constraint's position */
    cons->addconssetchg = NULL;
@@ -1275,6 +1288,25 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    return SCIP_OKAY;
 }
 
+/** update the number of variables with non-zero objective coefficient */
+void SCIPprobUpdateNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value for variable */
+   SCIP_Real             newobj              /**< new objective value for variable */
+   )
+{
+   assert(prob->transformed);
+
+   if( !SCIPsetIsZero(set, oldobj) )
+      prob->nobjvars--;
+
+   if( !SCIPsetIsZero(set, newobj) )
+      prob->nobjvars++;
+
+   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
+}
+
 /** if possible, scales objective function such that it is integral with gcd = 1 */
 SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1376,7 +1408,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   for( v = 0; v < nints; ++v )
                   {
                      SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(prob->vars[v]), objvals[v]);
-                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, primal, lp, eventqueue, objvals[v]) );
+                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, prob, primal, lp, eventqueue, objvals[v]) );
                   }
                   prob->objoffset *= intscalar;
                   prob->objscale /= intscalar;
@@ -1417,7 +1449,7 @@ void SCIPprobStoreRootSol(
          SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
-      SCIPlpStoreRootObjval(lp, set);
+      SCIPlpStoreRootObjval(lp, set, prob);
    }
 }
 
@@ -1540,6 +1572,26 @@ SCIP_PROBDATA* SCIPprobGetData(
    assert(prob != NULL);
 
    return prob->probdata;
+}
+
+/** returns the number of variables with non-zero objective coefficient */
+int SCIPprobGetNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int nobjvars;
+   int v;
+
+   nobjvars = 0;
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      if( !SCIPsetIsZero(set, SCIPvarGetObj(prob->vars[v])) )
+         nobjvars++;
+   }
+
+   return nobjvars;
 }
 
 /** returns the external value of the given internal objective value */

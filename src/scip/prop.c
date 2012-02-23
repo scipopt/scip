@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -153,7 +153,6 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
-   (*prop)->timingmask = timingmask;
    SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -182,6 +181,11 @@ SCIP_RETCODE SCIPpropCreate(
          "should propagator be delayed, if other propagators found reductions?",
          &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/timingmask", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when propagator should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+         (int*)(&(*prop)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
@@ -195,7 +199,7 @@ SCIP_RETCODE SCIPpropCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
-         "should presolver be delayed, if other propagators found reductions?",
+         "should presolving be delayed, if other presolvers found reductions?",
          &(*prop)->presoldelay, TRUE, presoldelay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
@@ -341,7 +345,13 @@ SCIP_RETCODE SCIPpropInitpre(
    /* call presolving initialization method of propagator */
    if( prop->propinitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->presoltime, set);
+
       SCIP_CALL( prop->propinitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(prop->presoltime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -375,7 +385,13 @@ SCIP_RETCODE SCIPpropExitpre(
    /* call presolving deinitialization method of propagator */
    if( prop->propexitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->presoltime, set);
+
       SCIP_CALL( prop->propexitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(prop->presoltime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -565,6 +581,7 @@ SCIP_RETCODE SCIPpropExec(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -583,21 +600,21 @@ SCIP_RETCODE SCIPpropExec(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
-         
+
          SCIPdebugMessage("executing propagator <%s>\n", prop->name);
-         
+
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         
+
          /* start timing */
          SCIPclockStart(prop->proptime, set);
-         
+
          /* call external propagation method */
-         SCIP_CALL( prop->propexec(set->scip, prop, result) );
-         
+         SCIP_CALL( prop->propexec(set->scip, prop, proptiming, result) );
+
          /* stop timing */
          SCIPclockStop(prop->proptime, set);
-         
+
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
             prop->ncalls++;
@@ -867,6 +884,16 @@ SCIP_Bool SCIPpropIsDelayed(
    assert(prop != NULL);
 
    return prop->delay;
+}
+
+/** should propagator be delayed during presolving, if other propagators found reductions? */
+SCIP_Bool SCIPpropIsPresolDelayed(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->presoldelay;
 }
 
 /** was propagator delayed at the last call? */

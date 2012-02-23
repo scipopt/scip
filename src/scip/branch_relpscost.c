@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -459,7 +459,7 @@ SCIP_RETCODE execRelpscost(
       if( inititer == 0 )
       {
          SCIP_Longint nlpiterations;
-         int nlps;
+         SCIP_Longint nlps;
 
          /* iteration limit is set to twice the average number of iterations spent to resolve a dual feasible SCIP_LP;
           * at the first few nodes, this average is not very exact, so we better increase the iteration limit on

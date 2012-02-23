@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1617,7 +1617,7 @@ SCIP_RETCODE removeFixedLinearVariables(
    }
 
    SCIPdebugMessage("removed fixations of linear variables from <%s>\n  -> ", SCIPconsGetName(cons));
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
 #ifndef NDEBUG
    for( i = 0; i < consdata->nlinvars; ++i )
@@ -1739,7 +1739,7 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata->exprgraph != NULL);
 
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
-   linvarssize = SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode);
+   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linvarssize) );
 
@@ -1885,7 +1885,7 @@ SCIP_RETCODE presolveUpgrade(
 
    SCIPdebugMessage("upgrading nonlinear constraint <%s> (up to %d upgrade methods):\n",
       SCIPconsGetName(cons), conshdlrdata->nnlconsupgrades);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
@@ -2020,7 +2020,7 @@ SCIP_RETCODE checkCurvature(
          if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
          {
             SCIPwarningMessage("indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
-            SCIPdebug( SCIPexprtreePrintWithNames(consdata->exprtrees[i], NULL) );
+            SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], NULL) ) );
             SCIPdebugPrintf("\n");
          }
       }
@@ -2079,6 +2079,9 @@ SCIP_RETCODE reformReplaceNode(
          SCIP_CALL( SCIPexprgraphReleaseNode(exprgraph, &consdata->exprgraphnode) );
          consdata->exprgraphnode = replacement;
          SCIPexprgraphCaptureNode(replacement);
+
+         /* since we change the node, also the constraint changes, so ensure that it is presolved again */
+         consdata->ispresolved = FALSE;
       }
    }
    *node = NULL;
@@ -3310,7 +3313,7 @@ SCIP_RETCODE reformulate(
       {
          SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
             (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );  /*lint !e613*/
          SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
       }
    }
@@ -5330,8 +5333,8 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             SCIPconsIsStickingAtNode(conss[c])) );
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -6610,7 +6613,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
          SCIPconsIsStickingAtNode(sourcecons)) );
 
    SCIPdebugMessage("created transformed nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *targetcons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *targetcons, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -7298,7 +7301,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
-   SCIP_Bool          doreformulations;
    int                c;
 
    assert(scip     != NULL);
@@ -7311,15 +7313,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->exprgraph != NULL);
-
-   /* if other presolvers did not find any changes (except for deleted conss) since last call,
-    * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
-    * otherwise, we wait with these
-    */
-   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
-      nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
-      nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
-   SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    havegraphchange = FALSE;
 
@@ -7364,7 +7357,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       assert(consdata != NULL);
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
 
       havechange = FALSE;
 
@@ -7434,34 +7427,46 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
 
-   if( doreformulations && conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
+   if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
-      int naddconssbefore;
-
-      naddconssbefore = conshdlrdata->naddedreformconss;
-      SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
-
-      if( conshdlrdata->naddedreformconss > naddconssbefore )
+      /* if other presolvers did not find enough changes for another presolving round,
+       * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
+       * otherwise, we wait with these
+       */
+      if( SCIPisPresolveFinished(scip) )
       {
-         *result = SCIP_SUCCESS;
-         *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
+         int naddconssbefore;
 
-         /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
-         for( c = 0; c < nconss; ++c )
+         SCIPdebugMessage("reformulating expression graph\n");
+
+         naddconssbefore = conshdlrdata->naddedreformconss;
+         SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
+
+         if( conshdlrdata->naddedreformconss > naddconssbefore )
          {
-            assert(conss[c] != NULL);  /*lint !e794*/
+            *result = SCIP_SUCCESS;
+            *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
 
-            consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
-            assert(consdata != NULL);
+            /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
+            for( c = 0; c < nconss; ++c )
+            {
+               assert(conss[c] != NULL);  /*lint !e794*/
 
-            consdata->ispresolved = FALSE;
+               consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
+               assert(consdata != NULL);
+
+               consdata->ispresolved = FALSE;
+            }
          }
       }
-   }
+      else
+      {
+         SCIPdebugMessage("presolving will wait with reformulation\n");
 
-   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-   if( !doreformulations )
-      *result = SCIP_DELAYED;
+         /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
+         *result = SCIP_DELAYED;
+      }
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -8019,7 +8024,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       if( conshdlrdata->nlconsupgrades[i]->nlconsupgd == nonlinconsupgd && conshdlrdata->nlconsupgrades[i]->nodereform == nodereform)
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname);
+         SCIPwarningMessage("Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname); /*lint !e611*/
 #endif
          return SCIP_OKAY;
       }
@@ -8143,7 +8148,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP_CALL( consdataSetExprtrees(scip, consdata, nexprtrees, exprtrees, nonlincoefs, TRUE) );
 
    SCIPdebugMessage("created nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -8236,7 +8241,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
    }
 
    SCIPdebugMessage("created nonlinear constraint ");
-   SCIPdebug( SCIPprintCons(scip, *cons, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
 
    return SCIP_OKAY;
 }

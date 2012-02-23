@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -806,7 +806,12 @@ SCIP_RETCODE analyzeConflictLowerbound(
    assert(SCIPisEQ(scip, SCIPvarGetUbLocal(infervar), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(infervar, NULL, TRUE), SCIPvarGetUbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisGT(scip, inferlb, SCIPvarGetUbLocal(infervar)));
-   
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+   /* check if conflict analysis is applicable */
+   if( !SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
    if( propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;
@@ -902,7 +907,12 @@ SCIP_RETCODE analyzeConflictUpperbound(
    assert(SCIPisEQ(scip, SCIPvarGetLbLocal(infervar), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(infervar, NULL, TRUE), SCIPvarGetLbAtIndex(infervar, NULL, FALSE)));
    assert(SCIPisLT(scip, inferub, SCIPvarGetLbLocal(infervar)));
-   
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
+   /* check if conflict analysis is applicable */
+   if( !SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
    if( propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;

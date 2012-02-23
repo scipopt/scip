@@ -1,4 +1,4 @@
-# SCIP version 2.1.2
+# SCIP version 2.1.1.3
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -177,8 +177,8 @@ limits/stallnodes = -1
 limits/memory = 1e+20
 
 # solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value
-# [type: real, range: [0,1.79769313486232e+308], default: 1e-08]
-limits/gap = 1e-08
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+limits/gap = 0
 
 # solving stops, if the absolute gap = |primalbound - dualbound| is below the given value
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
@@ -401,8 +401,8 @@ numerics/epsilon = 1e-09
 numerics/sumepsilon = 1e-06
 
 # feasibility tolerance for constraints
-# [type: real, range: [1e-17,0.001], default: 1e-08]
-numerics/feastol = 1e-08
+# [type: real, range: [1e-17,0.001], default: 1e-06]
+numerics/feastol = 1e-06
 
 # feasibility tolerance for reduced costs in LP solution
 # [type: real, range: [1e-17,0.001], default: 1e-09]
@@ -604,6 +604,10 @@ constraints/nonlinear/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/nonlinear/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/nonlinear/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/nonlinear/eagerfreq = 100
@@ -667,6 +671,10 @@ constraints/quadratic/sepafreq = 1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/quadratic/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/quadratic/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -768,6 +776,10 @@ constraints/linear/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/linear/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/linear/eagerfreq = 100
@@ -868,6 +880,10 @@ constraints/abspower/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/abspower/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 15]
+constraints/abspower/timingmask = 15
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/abspower/eagerfreq = 100
@@ -944,6 +960,10 @@ constraints/and/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/and/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/and/eagerfreq = 100
@@ -996,6 +1016,10 @@ constraints/bivariate/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/bivariate/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/bivariate/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/bivariate/eagerfreq = 100
@@ -1029,8 +1053,8 @@ constraints/nonlinear/upgrade/bivariate = FALSE
 constraints/bivariate/minefficacysepa = 0.0001
 
 # minimal target efficacy of a cut in order to add it to relaxation during enforcement (may be ignored)
-# [type: real, range: [0,1e+20], default: 2e-08]
-constraints/bivariate/minefficacyenfo = 2e-08
+# [type: real, range: [0,1e+20], default: 2e-06]
+constraints/bivariate/minefficacyenfo = 2e-06
 
 # maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
 # [type: real, range: [0,1e+20], default: 10000000]
@@ -1064,6 +1088,10 @@ constraints/bounddisjunction/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/bounddisjunction/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/bounddisjunction/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/bounddisjunction/eagerfreq = 100
@@ -1096,6 +1124,10 @@ constraints/conjunction/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/conjunction/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/conjunction/eagerfreq = 100
@@ -1123,6 +1155,10 @@ constraints/countsols/sepafreq = -1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/countsols/propfreq = -1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/countsols/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1179,6 +1215,10 @@ constraints/cumulative/sepafreq = 1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/cumulative/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/cumulative/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1244,6 +1284,10 @@ constraints/disjunction/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/disjunction/propfreq = -1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/disjunction/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/disjunction/eagerfreq = 100
@@ -1271,6 +1315,10 @@ constraints/indicator/sepafreq = 10
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/indicator/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/indicator/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1312,6 +1360,14 @@ constraints/indicator/addcoupling = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/addcouplingcons = FALSE
 
+# Should the coupling inequalities be separated dynamically?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepacouplingcuts = FALSE
+
+# Allow to use local bounds in order to separated coupling inequalities?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepacouplinglocal = FALSE
+
 # remove indicator constraint if corresponding variable bound constraint has been added?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/removeindicators = FALSE
@@ -1328,9 +1384,17 @@ constraints/indicator/trysolutions = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/indicator/enforcecuts = FALSE
 
+# should dual reduction steps be performed?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/indicator/dualreductions = TRUE
+
 # maximum coefficient for binary variable in coupling constraint
 # [type: real, range: [0,1000000000], default: 10000]
 constraints/indicator/maxcouplingvalue = 10000
+
+# maximum coefficient for binary variable in separated coupling constraint
+# [type: real, range: [0,1000000000], default: 10000]
+constraints/indicator/sepacouplingvalue = 10000
 
 # maximum estimated condition of the solution basis matrix of the alternative LP to be trustworthy (0.0 to disable check)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
@@ -1347,6 +1411,14 @@ constraints/indicator/conflictsupgrade = FALSE
 # fraction of binary variables that need to be fixed before restart occurs (in forcerestart)
 # [type: real, range: [0,1], default: 0.9]
 constraints/indicator/restartfrac = 0.9
+
+# maximal number of cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 100]
+constraints/indicator/maxsepacuts = 100
+
+# maximal number of cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 2000]
+constraints/indicator/maxsepacutsroot = 2000
 
 # Separate using the alternative LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -1367,6 +1439,10 @@ constraints/integral/sepafreq = -1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/integral/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1395,6 +1471,10 @@ constraints/knapsack/sepafreq = 0
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/knapsack/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1476,6 +1556,10 @@ constraints/linking/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linking/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/linking/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/linking/eagerfreq = 100
@@ -1511,6 +1595,10 @@ constraints/logicor/sepafreq = 0
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/logicor/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1560,6 +1648,10 @@ constraints/or/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/or/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/or/eagerfreq = 100
@@ -1588,6 +1680,10 @@ constraints/orbitope/sepafreq = 5
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/orbitope/propfreq = -1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/orbitope/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/orbitope/eagerfreq = -1
@@ -1615,6 +1711,10 @@ constraints/pseudoboolean/sepafreq = -1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/pseudoboolean/propfreq = -1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/pseudoboolean/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1664,6 +1764,10 @@ constraints/setppc/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/setppc/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/setppc/eagerfreq = 100
@@ -1712,6 +1816,10 @@ constraints/SOS1/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/SOS1/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/SOS1/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/SOS1/eagerfreq = 100
@@ -1752,6 +1860,10 @@ constraints/SOS2/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/SOS2/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/SOS2/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/SOS2/eagerfreq = 100
@@ -1779,6 +1891,10 @@ constraints/soc/sepafreq = 1
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/soc/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/soc/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1856,6 +1972,10 @@ constraints/varbound/sepafreq = 0
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
 
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/varbound/timingmask = 1
+
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/varbound/eagerfreq = 100
@@ -1891,6 +2011,10 @@ constraints/xor/sepafreq = 0
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/xor/propfreq = 1
+
+# timing when constraint propagation should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+constraints/xor/timingmask = 1
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -2056,6 +2180,30 @@ presolving/boundshift/flipping = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 presolving/boundshift/integer = TRUE
 
+# priority of presolver <convertinttobin>
+# [type: int, range: [-536870912,536870911], default: 6000000]
+presolving/convertinttobin/priority = 6000000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+presolving/convertinttobin/maxrounds = 0
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/convertinttobin/delay = FALSE
+
+# absolute value of maximum domain size for converting an integer variable to binaries variables
+# [type: longint, range: [0,9223372036854775807], default: 9223372036854775807]
+presolving/convertinttobin/maxdomainsize = 9223372036854775807
+
+# should only integer variables with a domain size of 2^p - 1 be converted(, there we don't need an knapsack-constraint for restricting the sum of the binaries)
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/convertinttobin/onlypoweroftwo = FALSE
+
+# should only integer variables with uplocks equals downlocks be converted
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/convertinttobin/samelocksinbothdirections = FALSE
+
 # priority of presolver <dualfix>
 # [type: int, range: [-536870912,536870911], default: 8000000]
 presolving/dualfix/priority = 8000000
@@ -2103,42 +2251,6 @@ presolving/trivial/maxrounds = -1
 # should presolver be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 presolving/trivial/delay = FALSE
-
-# priority of presolver <concomp>
-# [type: int, range: [-536870912,536870911], default: -9200000]
-presolving/concomp/priority = -9200000
-
-# maximal number of presolving rounds the presolver participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-presolving/concomp/maxrounds = -1
-
-# should presolver be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-presolving/concomp/delay = TRUE
-
-# search for connected components (0: no search, 1: do search)
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-presolving/concomp/dosearch = TRUE
-
-# show single sizes (0: no, 1: show)
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-presolving/concomp/showsizes = FALSE
-
-# should the single components be written as an .lp-file?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-presolving/concomp/writeproblems = FALSE
-
-# maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving)
-# [type: int, range: [-1,2147483647], default: 20]
-presolving/concomp/maxintvars = 20
-
-# maximum number of nodes to be solved in subproblems
-# [type: longint, range: [-1,9223372036854775807], default: 10000]
-presolving/concomp/nodelimit = 10000
-
-# the weight of an integer variable compared to binary variables
-# [type: real, range: [0,1.79769313486232e+308], default: 1]
-presolving/concomp/intfactor = 1
 
 # priority of node selection rule <bfs> in standard mode
 # [type: int, range: [-536870912,536870911], default: 100000]
@@ -2191,6 +2303,10 @@ nodeselection/estimate/maxplungequot = 0.25
 # frequency at which the best node instead of the best estimate is selected (0: never)
 # [type: int, range: [0,2147483647], default: 10]
 nodeselection/estimate/bestnodefreq = 10
+
+# depth until breadth-fisrt search is applied
+# [type: int, range: [-1,2147483647], default: -1]
+nodeselection/estimate/breadthfirstdepth = -1
 
 # priority of node selection rule <hybridestim> in standard mode
 # [type: int, range: [-536870912,536870911], default: 50000]
@@ -2261,7 +2377,7 @@ branching/fullstrong/maxdepth = -1
 branching/fullstrong/maxbounddist = 1
 
 # number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node
-# [type: int, range: [0,2147483647], default: 10]
+# [type: longint, range: [0,9223372036854775807], default: 10]
 branching/fullstrong/reevalage = 10
 
 # priority of branching rule <inference>
@@ -3372,6 +3488,10 @@ heuristics/rens/uselprows = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/rens/copycuts = TRUE
 
+# should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/rens/extratime = FALSE
+
 # priority of heuristic <rins>
 # [type: int, range: [-536870912,536870911], default: -1101000]
 heuristics/rins/priority = -1101000
@@ -3750,7 +3870,11 @@ heuristics/undercover/inferenceweight = 1
 
 # maximum coversize (as fraction of total number of variables)
 # [type: real, range: [0,1], default: 1]
-heuristics/undercover/maxcoversize = 1
+heuristics/undercover/maxcoversizevars = 1
+
+# maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints)
+# [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
+heuristics/undercover/maxcoversizeconss = 1.79769313486232e+308
 
 # factor by which the heuristic should at least improve the incumbent
 # [type: real, range: [-1,1], default: 0]
@@ -3783,6 +3907,10 @@ heuristics/undercover/onlyconvexify = FALSE
 # should the nlp heuristic be called to polish a feasible solution?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/undercover/postnlp = TRUE
+
+# should bounddisjunction constraints be covered (or just copied)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/undercover/coverbd = FALSE
 
 # maximum number of backtracks in fix-and-propagate
 # [type: int, range: [0,2147483647], default: 6]
@@ -3952,6 +4080,10 @@ propagating/probing/freq = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/probing/delay = TRUE
 
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 4]
+propagating/probing/timingmask = 4
+
 # presolving priority of propagator <probing>
 # [type: int, range: [-536870912,536870911], default: -100000]
 propagating/probing/presolpriority = -100000
@@ -3960,7 +4092,7 @@ propagating/probing/presolpriority = -100000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/probing/maxprerounds = -1
 
-# should presolver be delayed, if other propagators found reductions?
+# should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/probing/presoldelay = TRUE
 
@@ -3989,8 +4121,8 @@ propagating/probing/maxtotaluseless = 50
 propagating/probing/maxsumuseless = 0
 
 # priority of propagator <pseudoobj>
-# [type: int, range: [-536870912,536870911], default: 100000]
-propagating/pseudoobj/priority = 100000
+# [type: int, range: [-536870912,536870911], default: 3000000]
+propagating/pseudoobj/priority = 3000000
 
 # frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4000,6 +4132,10 @@ propagating/pseudoobj/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/pseudoobj/delay = FALSE
 
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 5]
+propagating/pseudoobj/timingmask = 5
+
 # presolving priority of propagator <pseudoobj>
 # [type: int, range: [-536870912,536870911], default: 6000000]
 propagating/pseudoobj/presolpriority = 6000000
@@ -4008,7 +4144,7 @@ propagating/pseudoobj/presolpriority = 6000000
 # [type: int, range: [-1,2147483647], default: -1]
 propagating/pseudoobj/maxprerounds = -1
 
-# should presolver be delayed, if other propagators found reductions?
+# should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/presoldelay = TRUE
 
@@ -4020,7 +4156,7 @@ propagating/pseudoobj/minuseless = 100
 # [type: real, range: [0,1], default: 0.1]
 propagating/pseudoobj/maxvarsfrac = 0.1
 
-# do we want to propagate full if we are propagating the root node, despite the number of maxcand
+# do we want to propagate all none binary variables if we are propagating the root node
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propfullinroot = TRUE
 
@@ -4036,9 +4172,21 @@ propagating/pseudoobj/force = FALSE
 # [type: int, range: [0,2147483647], default: 1000]
 propagating/pseudoobj/maxnewvars = 1000
 
+# use implications to strengthen the propagation of binary variable (increasing the objective change)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/propuseimplics = TRUE
+
+# use implications to strengthen the resolve propagation of binary variable (increasing the objective change)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/respropuseimplics = TRUE
+
+# maximum number of binary variables the implications are used if turned on (-1: unlimited)?
+# [type: int, range: [-1,2147483647], default: 50000]
+propagating/pseudoobj/maximplvars = 50000
+
 # priority of propagator <redcost>
-# [type: int, range: [-536870912,536870911], default: 10000000]
-propagating/redcost/priority = 10000000
+# [type: int, range: [-536870912,536870911], default: 1000000]
+propagating/redcost/priority = 1000000
 
 # frequency for calling propagator <redcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4048,6 +4196,10 @@ propagating/redcost/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/redcost/delay = FALSE
 
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 2]
+propagating/redcost/timingmask = 2
+
 # presolving priority of propagator <redcost>
 # [type: int, range: [-536870912,536870911], default: 0]
 propagating/redcost/presolpriority = 0
@@ -4056,7 +4208,7 @@ propagating/redcost/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: 0]
 propagating/redcost/maxprerounds = 0
 
-# should presolver be delayed, if other propagators found reductions?
+# should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/redcost/presoldelay = TRUE
 
@@ -4065,8 +4217,8 @@ propagating/redcost/presoldelay = TRUE
 propagating/redcost/continuous = FALSE
 
 # priority of propagator <rootredcost>
-# [type: int, range: [-536870912,536870911], default: 1000000]
-propagating/rootredcost/priority = 1000000
+# [type: int, range: [-536870912,536870911], default: 10000000]
+propagating/rootredcost/priority = 10000000
 
 # frequency for calling propagator <rootredcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4076,6 +4228,10 @@ propagating/rootredcost/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/rootredcost/delay = FALSE
 
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+propagating/rootredcost/timingmask = 1
+
 # presolving priority of propagator <rootredcost>
 # [type: int, range: [-536870912,536870911], default: 0]
 propagating/rootredcost/presolpriority = 0
@@ -4084,7 +4240,7 @@ propagating/rootredcost/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: 0]
 propagating/rootredcost/maxprerounds = 0
 
-# should presolver be delayed, if other propagators found reductions?
+# should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/rootredcost/presoldelay = TRUE
 
@@ -4100,6 +4256,10 @@ propagating/vbounds/freq = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/vbounds/delay = FALSE
 
+# timing when propagator should be called (1:BEFORELP, 2:DURINGLPLOOP, 4:AFTERLPLOOP, 15:ALWAYS))
+# [type: int, range: [1,15], default: 1]
+propagating/vbounds/timingmask = 1
+
 # presolving priority of propagator <vbounds>
 # [type: int, range: [-536870912,536870911], default: 0]
 propagating/vbounds/presolpriority = 0
@@ -4108,7 +4268,7 @@ propagating/vbounds/presolpriority = 0
 # [type: int, range: [-1,2147483647], default: 0]
 propagating/vbounds/maxprerounds = 0
 
-# should presolver be delayed, if other propagators found reductions?
+# should presolving be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/vbounds/presoldelay = TRUE
 
@@ -4236,9 +4396,9 @@ separating/cgmip/maxroundsroot = 50
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cgmip/maxdepth = -1
 
-# should generated cuts be removed from the LP if they are no longer tight?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/dynamiccuts = TRUE
+# Use decision tree to turn separation on/off?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/decisiontree = FALSE
 
 # time limit for sub-MIP
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
@@ -4248,37 +4408,93 @@ separating/cgmip/timelimit = 1e+20
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 separating/cgmip/memorylimit = 1e+20
 
-# node limit for sub-MIP (-1: unlimited)
-# [type: longint, range: [-1,9223372036854775807], default: 10000]
-separating/cgmip/nodelimit = 10000
+# minimum number of nodes considered for sub-MIP (-1: unlimited)
+# [type: longint, range: [-1,9223372036854775807], default: 500]
+separating/cgmip/minnodelimit = 500
 
-# weight used for the row combination coefficient in the sub-MIP objective
-# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
-separating/cgmip/objweight = 0.001
+# maximum number of nodes considered for sub-MIP (-1: unlimited)
+# [type: longint, range: [-1,9223372036854775807], default: 5000]
+separating/cgmip/maxnodelimit = 5000
 
-# use CMIR-generator (otherwise add cut directly)?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/usecmir = TRUE
+# bounds on the values of the coefficients in the CG-cut
+# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+separating/cgmip/cutcoefbnd = 1000
 
-# tell CMIR-generator which bounds to used in rounding?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/cmirownbounds = FALSE
-
-# allow to generate local cuts?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/allowlocal = FALSE
-
-# generate cuts for problems with only integer variables?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/onlyintvars = FALSE
-
-# use only active rows to generate cuts?
+# Use only active rows to generate cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cgmip/onlyactiverows = FALSE
 
 # maximal age of rows to consider if onlyactiverows is false
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cgmip/maxrowage = -1
+
+# Separate only rank 1 inequalities?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/onlyrankone = FALSE
+
+# Generate cuts for problems with only integer variables?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/onlyintvars = FALSE
+
+# Allow to generate local cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/allowlocal = FALSE
+
+# Convert some integral variables to be continuous to reduce the size of the sub-MIP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/contconvert = FALSE
+
+# fraction of integral variables converted to be continuous (if contconvert)
+# [type: real, range: [0,1], default: 0.1]
+separating/cgmip/contconvfrac = 0.1
+
+# minimum number of integral variables before some are converted to be continuous
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cgmip/contconvmin = 100
+
+# Convert some integral variables attaining fractional values to have integral value?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/intconvert = FALSE
+
+# fraction of frac. integral variables converted to have integral value (if intconvert)
+# [type: real, range: [0,1], default: 0.1]
+separating/cgmip/intconvfrac = 0.1
+
+# minimum number of integral variables before some are converted to have integral value
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cgmip/intconvmin = 100
+
+# Skip the upper bounds on the multipliers in the sub-MIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/skipmultbounds = TRUE
+
+# Should the objective of the sub-MIP minimize the l1-norm of the multipliers?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/objlone = FALSE
+
+# weight used for the row combination coefficient in the sub-MIP objective
+# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
+separating/cgmip/objweight = 0.001
+
+# Weigh each row by its size?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/objweighsize = FALSE
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/dynamiccuts = TRUE
+
+# use CMIR-generator (otherwise add cut directly)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/usecmir = TRUE
+
+# use strong CG-function to strengthen cut?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/usestrongcg = FALSE
+
+# tell CMIR-generator which bounds to used in rounding?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/cmirownbounds = FALSE
 
 # use cutpool to store CG-cuts even if the are not efficient?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -4288,17 +4504,13 @@ separating/cgmip/usecutpool = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cgmip/primalseparation = TRUE
 
-# whether only rank 1 inequalities should be separated
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/onlyrankone = FALSE
-
 # terminate separation if a violated (but possibly sub-optimal) cut has been found?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cgmip/earlyterm = TRUE
 
-# add constraint to subscip that only allows violated cuts?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/addviolationcons = TRUE
+# add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/addviolationcons = FALSE
 
 # add constraint handler to filter out violated cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -4307,22 +4519,6 @@ separating/cgmip/addviolconshdlr = FALSE
 # should the violation constraint handler use the norm of a cut to check for feasibility?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cgmip/conshdlrusenorm = TRUE
-
-# should the objective of the sub-MIP minimize the l1-norm of the multipliers?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/objlone = FALSE
-
-# convert some integral variables to be continuous to reduce the size of the sub-MIP?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/contconvert = TRUE
-
-# fraction of integral variables converted to be continuous (if contconvert)
-# [type: real, range: [0,1], default: 0.5]
-separating/cgmip/contconvfrac = 0.5
-
-# minimum number of integral variables before some are converted to be continuous
-# [type: int, range: [-1,2147483647], default: 100]
-separating/cgmip/contconvmin = 100
 
 # priority of separator <cmir>
 # [type: int, range: [-536870912,536870911], default: -3000]
@@ -4680,9 +4876,9 @@ separating/oddcycle/maxbounddist = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/oddcycle/delay = FALSE
 
-# should classical search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.
+# should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/oddcycle/useclassical = TRUE
+separating/oddcycle/usegls = TRUE
 
 # should odd cycle cuts be lifted?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -4775,6 +4971,10 @@ separating/oddcycle/maxcutslevel = 50
 # minimal weight on an edge (in level graph or bipartite graph)
 # [type: int, range: [0,2147483647], default: 0]
 separating/oddcycle/maxreference = 0
+
+# number of unsuccessful calls at current node
+# [type: int, range: [0,2147483647], default: 3]
+separating/oddcycle/maxunsucessfull = 3
 
 # priority of separator <rapidlearning>
 # [type: int, range: [-536870912,536870911], default: -1200000]
@@ -5142,6 +5342,10 @@ display/conflicts/active = 1
 # display activation status of display column <strongbranchs> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/strongbranchs/active = 1
+
+# display activation status of display column <pseudoobj> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/pseudoobj/active = 1
 
 # display activation status of display column <lpobj> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

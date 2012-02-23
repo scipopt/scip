@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP_VAR*             var,                /**< variables to propagate */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
-   int*                  nchgbds             /**< pointer to store the number of changed bounds */
+   SCIP_Bool*            tightened           /**< pointer to if the domain was tightened */
    );
 
 #ifdef __cplusplus

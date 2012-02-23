@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1480,7 +1480,7 @@ SCIP_RETCODE readBounds(
          SCIP_CALL( SCIPaddCons(scip, cons) );
          
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }

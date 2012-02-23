@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -162,7 +162,7 @@ SCIP_RETCODE createObjRow(
       SCIP_CALL( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
       SCIPdebugMessage("created objective value row: ");
-      SCIPdebug(SCIPprintRow(scip, sepadata->objrow, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, sepadata->objrow, NULL) ) );
    }
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -274,7 +274,13 @@ SCIP_RETCODE SCIPpresolInitpre(
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(presol->presolclock, set);
+
       SCIP_CALL( presol->presolinitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(presol->presolclock, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -308,7 +314,13 @@ SCIP_RETCODE SCIPpresolExitpre(
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
    {
+      /* start timing */
+      SCIPclockStart(presol->presolclock, set);
+
       SCIP_CALL( presol->presolexitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(presol->presolclock, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED && *result != SCIP_FEASIBLE )

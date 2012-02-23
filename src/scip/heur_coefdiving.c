@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -603,6 +603,13 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          if( success )
          {
             SCIPdebugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+
+            /* try to correct indicator constraints */
+            if ( nindconss > 0 )
+            {
+               assert( heurdata->indconshdlr != NULL );
+               SCIP_CALL( SCIPmakeIndicatorsFeasible(scip, heurdata->indconshdlr, heurdata->sol, &success) );
+            }
 
             /* try to add solution to SCIP */
             SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );

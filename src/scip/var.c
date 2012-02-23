@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3319,7 +3319,7 @@ SCIP_RETCODE SCIPvarFix(
 
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to fixed, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -4079,7 +4079,7 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
-   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
@@ -4856,7 +4856,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, prob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -5347,6 +5347,7 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5367,7 +5368,7 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
-            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
+            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -5380,6 +5381,10 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
@@ -5442,6 +5447,10 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
@@ -5721,8 +5730,12 @@ SCIP_RETCODE varEventGlbChanged(
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
 
-   /* check, if the variable is being tracked for bound changes */
-   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_GLBCHANGED) != 0) )
+   /* check, if the variable is being tracked for bound changes
+    * COLUMN and LOOSE variables are tracked always, because global/root pseudo objective value has to be updated
+    */
+   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_GLBCHANGED) != 0)
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
       SCIP_EVENT* event;
 
@@ -5753,8 +5766,12 @@ SCIP_RETCODE varEventGubChanged(
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
 
-   /* check, if the variable is being tracked for bound changes */
-   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_GUBCHANGED) != 0) )
+   /* check, if the variable is being tracked for bound changes
+    * COLUMN and LOOSE variables are tracked always, because global/root pseudo objective value has to be updated
+    */
+   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_GUBCHANGED) != 0)
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
       SCIP_EVENT* event;
 
@@ -11093,58 +11110,6 @@ SCIP_Real SCIPvarGetUbLP(
    }
 }
 
-/** gets best local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetBestBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.lb;
-   else
-      return var->locdom.ub;
-}
-
-/** gets worst local bound of variable with respect to the objective function */
-SCIP_Real SCIPvarGetWorstBound(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return var->locdom.ub;
-   else
-      return var->locdom.lb;
-}
-
-/** gets type (lower or upper) of best bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_LOWER;
-   else
-      return SCIP_BOUNDTYPE_UPPER;
-}
-
-/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
-SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   if( var->obj >= 0.0 )
-      return SCIP_BOUNDTYPE_UPPER;
-   else
-      return SCIP_BOUNDTYPE_LOWER;
-}
-
 /** gets primal LP solution value of variable */
 SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
@@ -11160,7 +11125,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return SCIPvarGetLPSol(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
@@ -11284,13 +11249,15 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+   {
+      SCIP_Real pseudosolval;
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
@@ -11299,10 +11266,11 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetPseudoSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
-      return var->data.aggregate.scalar * SCIPvarGetPseudoSol(var->data.aggregate.var) + var->data.aggregate.constant;
-
+      pseudosolval = SCIPvarGetPseudoSol(var->data.aggregate.var);
+      assert(pseudosolval > -SCIP_DEFAULT_INFINITY);
+      assert(pseudosolval < +SCIP_DEFAULT_INFINITY);
+      return var->data.aggregate.scalar * pseudosolval + var->data.aggregate.constant;
+   }
    case SCIP_VARSTATUS_MULTAGGR:
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
@@ -13985,9 +13953,15 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetLbGlobal
 #undef SCIPvarGetUbGlobal
 #undef SCIPvarGetHolelistGlobal
+#undef SCIPvarGetBestBoundGlobal
+#undef SCIPvarGetWorstBoundGlobal
 #undef SCIPvarGetLbLocal
 #undef SCIPvarGetUbLocal
 #undef SCIPvarGetHolelistLocal
+#undef SCIPvarGetBestBoundLocal
+#undef SCIPvarGetWorstBoundLocal
+#undef SCIPvarGetBestBoundType
+#undef SCIPvarGetWorstBoundType
 #undef SCIPvarGetLbLazy
 #undef SCIPvarGetUbLazy
 #undef SCIPvarGetBranchFactor
@@ -14617,6 +14591,32 @@ SCIP_HOLELIST* SCIPvarGetHolelistGlobal(
    return var->glbdom.holelist;
 }
 
+/** gets best global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.lb;
+   else
+      return var->glbdom.ub;
+}
+
+/** gets worst global bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundGlobal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->glbdom.ub;
+   else
+      return var->glbdom.lb;
+}
+
 /** gets current lower bound of variable */
 SCIP_Real SCIPvarGetLbLocal(
    SCIP_VAR*             var                 /**< problem variable */
@@ -14645,6 +14645,58 @@ SCIP_HOLELIST* SCIPvarGetHolelistLocal(
    assert(var != NULL);
    
    return var->locdom.holelist;
+}
+
+/** gets best local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetBestBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.lb;
+   else
+      return var->locdom.ub;
+}
+
+/** gets worst local bound of variable with respect to the objective function */
+SCIP_Real SCIPvarGetWorstBoundLocal(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return var->locdom.ub;
+   else
+      return var->locdom.lb;
+}
+
+/** gets type (lower or upper) of best bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetBestBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_LOWER;
+   else
+      return SCIP_BOUNDTYPE_UPPER;
+}
+
+/** gets type (lower or upper) of worst bound of variable with respect to the objective function */
+SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->obj >= 0.0 )
+      return SCIP_BOUNDTYPE_UPPER;
+   else
+      return SCIP_BOUNDTYPE_LOWER;
 }
 
 /** gets lazy lower bound of variable, returns -infinity if the variable has no lazy lower bound */
@@ -14971,7 +15023,7 @@ SCIP_Real SCIPvarGetPseudoSol(
    assert(var != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPvarGetBestBound(var);
+      return SCIPvarGetBestBoundLocal(var);
    else
       return SCIPvarGetPseudoSol_rec(var);
 }

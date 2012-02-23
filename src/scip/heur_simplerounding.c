@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -261,7 +261,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");
-         SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
       }

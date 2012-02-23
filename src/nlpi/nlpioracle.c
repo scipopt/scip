@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -897,7 +897,7 @@ SCIP_RETCODE evalFunctionGradient(
 
       SCIPdebugMessage("eval gradient of ");
       SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); printf("\n");} )
+      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); /*lint !e613*/ printf("\n");} )
 
       SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, g) );  /*lint !e644*/
 
@@ -965,7 +965,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
       if( colnz[quadelems->idx2] == NULL || !SCIPsortedvecFindInt(colnz[quadelems->idx2], quadelems->idx1, colnnz[quadelems->idx2], &pos) )
       {
          SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[quadelems->idx2], &collen[quadelems->idx2], colnnz[quadelems->idx2]+1) );
-         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2]);
+         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2], NULL);
          ++(*nzcount);
       }
    }
@@ -1034,7 +1034,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
          if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
          {
             SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], colnnz[row]+1) );
-            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row]);
+            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
             ++(*nzcount);
          }
       }
@@ -2689,7 +2689,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
             SCIPdebugMessage("eval gradient of ");
             SCIPdebug( SCIPexprtreePrint(cons->exprtree, NULL, NULL, NULL) );
-            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); printf("\n");} )
+            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); /*lint !e613*/ printf("\n");} )
 
             SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, grad) );  /*lint !e644*/
 

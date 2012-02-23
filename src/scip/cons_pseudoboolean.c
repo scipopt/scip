@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -796,6 +796,7 @@ SCIP_RETCODE addCoefLinear(
 
    /* save all data */
    consdata->linvars[consdata->nlinvars] = var; 
+   consdata->lincoefs[consdata->nlinvars] = val;
    ++(consdata->nlinvars);
 
    /* install rounding locks for new variable */
@@ -1547,6 +1548,7 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< pseudo boolean constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
+   SCIP_Bool             printreason,        /**< print reason of violation (if any) */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -1560,28 +1562,28 @@ SCIP_RETCODE checkCons(
 
    SCIPdebugMessage("checking pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    *violated = FALSE;
    activity = 0.0;
-   
+
    /* compute linear activity */
    for( t = 0; t < consdata->nlinvars; ++t )
       activity += consdata->lincoefs[t] * SCIPgetSolVal(scip, sol, consdata->linvars[t]);
-   
+
    /* add nonlinear activity */
    for( t = 0; t < consdata->nnonlinterms; ++t )
    {
       TERM* term;
       SCIP_Real factor;
       int v;
-      
+
       term = consdata->nonlinterms[t];
       factor = consdata->nonlincoefs[t];
-      
-      /* maybe take Value of resultant */
+
+      /* maybe take value of resultant */
       if( term->resultant != NULL )
       {
 #ifndef NDEBUG
@@ -1613,11 +1615,50 @@ SCIP_RETCODE checkCons(
 
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, sol=%p)\n",
       activity, consdata->lhs, consdata->rhs, (void*)sol);
-   
+
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+      if ( printreason )
+      {
+         SCIPinfoMessage(scip, NULL, "violation <%s>: %g <= ", SCIPconsGetName(cons), consdata->lhs);
+         /* print linear part */
+         for( t = 0; t < consdata->nlinvars; ++t )
+         {
+            if ( t > 0 )
+            {
+               if ( consdata->lincoefs[t] > 0 )
+                  SCIPinfoMessage(scip, NULL, " +");
+            }
+            SCIPinfoMessage(scip, NULL, " %g <%s> [%g]", consdata->lincoefs[t], SCIPvarGetName(consdata->linvars[t]),
+               SCIPgetSolVal(scip, sol, consdata->linvars[t]));
+         }
+         for( t = 0; t < consdata->nnonlinterms; ++t )
+         {
+            TERM* term;
+            SCIP_Real factor;
+            int v;
+
+            term = consdata->nonlinterms[t];
+            factor = consdata->nonlincoefs[t];
+
+            if ( t > 0 )
+               SCIPinfoMessage(scip, NULL, "+ ");
+            SCIPinfoMessage(scip, NULL, "%g ", consdata->nonlincoefs[t]);
+
+            /* maybe take value of resultant */
+            if( term->resultant != NULL )
+               SCIPinfoMessage(scip, NULL, " * <%s> [%g]", SCIPvarGetName(term->resultant), SCIPgetSolVal(scip, sol, term->resultant));
+            else
+            {
+               for( v = 0; v < term->nvars && !SCIPisZero(scip, factor); ++v )
+                  SCIPinfoMessage(scip, NULL, " * <%s> [%g]", SCIPvarGetName(term->vars[v]), SCIPgetSolVal(scip, sol, term->vars[v]));
+            }
+         }
+         SCIPinfoMessage(scip, NULL, " <= %g\n", consdata->rhs);
+      }
    }
    else
    {
@@ -2919,7 +2960,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, &violated) );
    }
 
    if( violated )
@@ -2948,7 +2989,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, &violated) );
    }
 
    if( violated )
@@ -2974,7 +3015,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    assert(result != NULL);
 
    violated = FALSE;
-   
+
    /* check all pseudo boolean constraints for feasibility */
    for( c = 0; c < nconss && !violated; ++c )
    {
@@ -2990,7 +3031,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
          if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
             continue;
       }
-      SCIP_CALL( checkCons(scip, conss[c], sol, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, printreason, &violated) );
    }
 
    if( violated )

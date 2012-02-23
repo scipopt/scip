@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -133,6 +133,8 @@ BEGIN {
    contvars = 0;
    cons = 0;
    lincons = 0;
+   quadcons = 0;
+   nonlincons = 0;
    origvars = 0;
    origcons = 0;
    objsense = 0;
@@ -296,6 +298,8 @@ BEGIN {
 /^Constraints        :/ {
    incons = 1;
    lincons = 0;
+   quadcons = 0;
+   nonlincons = 0;
 }
 /^  knapsack         :/ {
    if( incons == 1 ) {
@@ -321,10 +325,40 @@ BEGIN {
       lincons += a[1];
    }
 }
-/^  varbound         :/ { 
+/^  varbound         :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       lincons += a[1];
+   }
+}
+/^  quadratic        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      quadcons += a[1];
+   }
+}
+/^  soc              :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      quadcons += a[1];
+   }
+}
+/^  bivariate        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
+   }
+}
+/^  nonlinear        :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
+   }
+}
+/^  abspower         :/ { 
+   if( incons == 1 ) {
+      n  = split ($3, a, "+");
+      nonlincons += a[1];
    }
 }
 /^Constraint Timings :/ {
@@ -445,16 +479,17 @@ BEGIN {
       }
       
       #print header of table when this regular expression is matched for the first time
-      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+";
-      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |";
-      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+";
-      
-      if( printsoltimes == 1 ) {  
+      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+
+      if( printsoltimes == 1 ) 
+      {
          tablehead1 = tablehead1"----------+---------+";
          tablehead2 = tablehead2" To First | To Best |";
          tablehead3 = tablehead3"----------+---------+";
       } 
-      
+ 
       tablehead1 = tablehead1"--------\n";
       tablehead2 = tablehead2"       \n";
       tablehead3 = tablehead3"--------\n";
@@ -531,22 +566,29 @@ BEGIN {
          gapstr = " Large";
       
       if( vars == 0 )
-         probtype = "--";
+         probtype = "   --";
       else if( lincons < cons )
-         probtype = "CIP";
+      {
+	 if( cons == lincons+quadcons )  
+	    probtype = "MIQCP";
+	 else if( cons == lincons+quadcons+nonlincons )  
+	    probtype = "MINLP";
+	 else
+	    probtype = "  CIP";
+      }
       else if( binvars == 0 && intvars == 0 )
-         probtype = "LP";
+         probtype = "   LP";
       else if( contvars == 0 ) {
          if( intvars == 0 && implvars == 0 )
-            probtype = "BP";
+            probtype = "   BP";
          else
-            probtype = "IP";
+            probtype = "   IP";
       }
       else {
          if( intvars == 0 )
-            probtype = "MBP";
+            probtype = "  MBP";
          else
-            probtype = "MIP";
+            probtype = "  MIP";
       }
 
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
@@ -815,7 +857,7 @@ BEGIN {
             printf("\\\\\n") > TEXFILE;
          }
 
-         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
                 shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);

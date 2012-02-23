@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1346,9 +1346,32 @@ SCIP_RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_GLBCHANGED:
+      var = event->data.eventbdchg.var;
+      assert(var != NULL);
+
+      /* inform LP about global bound change */
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      {
+         assert(SCIPvarGetProbindex(var) >= 0);
+         SCIP_CALL( SCIPlpUpdateVarLbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
+               event->data.eventbdchg.newbound) );
+      }
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+
    case SCIP_EVENTTYPE_GUBCHANGED:
       var = event->data.eventbdchg.var;
       assert(var != NULL);
+
+      /* inform LP about global bound change */
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      {
+         assert(SCIPvarGetProbindex(var) >= 0);
+         SCIP_CALL( SCIPlpUpdateVarUbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
+               event->data.eventbdchg.newbound) );
+      }
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,12 @@
  * Further, domain propagation is implemented to propagate bound changes on \f$x\f$ onto \f$z\f$, and vice versa, and
  * repropagation is implemented to allow for conflict analysis.
  * During presolve, a pairwise comparison of absolute power constraints may allow to fix or aggregate some variables.
+ * See also
+ *
+ * @par
+ * Stefan Vigerske@n
+ * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
+ * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

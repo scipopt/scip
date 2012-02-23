@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -828,7 +828,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       if( stored )
       {
          SCIPdebugMessage("found feasible shifted solution:\n");
-         SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
          *result = SCIP_FOUNDSOL;
       }
    }

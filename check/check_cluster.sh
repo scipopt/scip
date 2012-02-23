@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -154,6 +154,48 @@ do
   #       available
   HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
+  # in case of srun the time needs to be formatted
+  if test  "$QUEUETYPE" = "srun"
+    MYMINUTES=0
+    MYHOURS=0
+    MYDAYS=0
+    #calculate seconds, minutes, hours and days
+    MYSECONDS=`expr $HARDTIMELIMIT % 60`
+    TMP=`expr $HARDTIMELIMIT / 60`
+    if test "$TMP" != "0"
+    then
+	MYMINUTES=`expr $TMP % 60`
+	TMP=`expr $TMP / 60`
+	if test "$TMP" != "0"
+	then
+	    MYHOURS=`expr $TMP % 24`
+	    MYDAYS=`expr $TMP / 24`
+	fi
+    fi
+    #format seconds to have two characters
+    if test ${MYSECONDS} -lt 10
+    then
+	MYSECONDS=0${MYSECONDS}
+    fi
+    #format minutes to have two characters
+    if test ${MYMINUTES} -lt 10
+    then
+	MYMINUTES=0${MYMINUTES}
+    fi
+    #format hours to have two characters
+    if test ${MYHOURS} -lt 10
+    then
+	MYHOURS=0${MYHOURS}
+    fi
+    #format HARDTIMELIMT
+    if test ${MYDAYS} = "0"
+    then
+	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    else
+	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    fi
+
+
   # check if problem instance exists 
   if test -f $SCIPPATH/$i
   then
@@ -228,7 +270,7 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT}${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
 	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 

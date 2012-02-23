@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -339,6 +339,22 @@ SCIP_RETCODE SCIPprobSetName(
 extern
 SCIP_PROBDATA* SCIPprobGetData(
    SCIP_PROB*            prob                /**< problem */
+   );
+
+/** returns the number of variables with non-zero objective coefficient */
+extern
+int SCIPprobGetNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** update the number of variables with non-zero objective coefficient */
+extern
+void SCIPprobUpdateNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value for variable */
+   SCIP_Real             newobj              /**< new objective value for variable */
    );
 
 /** returns the external value of the given internal objective value */

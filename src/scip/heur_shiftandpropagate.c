@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -533,7 +533,7 @@ SCIP_RETCODE initMatrix(
       {
          *infeasible = TRUE;
          SCIPdebugMessage("  Matrix initialization stopped because of row infeasibility! \n");
-         SCIPdebug( SCIPprintRow(scip, row, NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          break;
       }
 
@@ -1714,7 +1714,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          *result = SCIP_FOUNDSOL;
 
          SCIPdebugMessage("found feasible shifted solution:\n");
-         SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
          /* print the solution value to the console */
          STATISTIC(
@@ -1777,7 +1777,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          if( stored )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
             STATISTIC(
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,8 @@
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -209,7 +211,7 @@ SCIP_RETCODE readXMLSol(
    assert( filename != NULL );
 
    /* read xml file */
-   start = xml_process(filename);
+   start = xmlProcess(filename);
 
    if( start == NULL )
    {
@@ -224,11 +226,11 @@ SCIP_RETCODE readXMLSol(
    
    /* find variable sections */
    tag = "variables";
-   varsnode = xml_find_node_maxdepth(start, tag, 0, 3);
+   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
-      xml_free_node(start);
+      xmlFreeNode(start);
 
       SCIPerrorMessage("Variable section not found.\n");
       return SCIP_READERROR;
@@ -236,7 +238,7 @@ SCIP_RETCODE readXMLSol(
 
    /* loop through all variables */
    unknownvariablemessage = FALSE;
-   for( varnode = xml_first_child(varsnode); varnode != NULL; varnode = xml_next_sibl(varnode) )
+   for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
    {
       const char* varname;
       const char* varvalue;
@@ -245,7 +247,7 @@ SCIP_RETCODE readXMLSol(
       int nread;
 
       /* find variable name */
-      varname = xml_get_attrval(varnode, "name");
+      varname = xmlGetAttrval(varnode, "name");
       if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
@@ -268,7 +270,7 @@ SCIP_RETCODE readXMLSol(
       }
 
       /* find value of variable */
-      varvalue = xml_get_attrval(varnode, "value");
+      varvalue = xmlGetAttrval(varnode, "value");
       if( varvalue == NULL )
       {
          SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
@@ -326,13 +328,13 @@ SCIP_RETCODE readXMLSol(
       SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
       /* free xml data */
-      xml_free_node(start);
+      xmlFreeNode(start);
 
       return SCIP_READERROR;
    }
 
    /* free xml data */
-   xml_free_node(start);
+   xmlFreeNode(start);
 
    return SCIP_OKAY;
 }

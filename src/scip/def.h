@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,9 +49,9 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                212 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2011 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                211 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -102,6 +102,7 @@ extern "C" {
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_RECOMPFAC        1e+07  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID                  1e+99  /**< floating point value is not valid */

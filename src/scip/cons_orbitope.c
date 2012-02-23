@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -592,7 +592,7 @@ SCIP_RETCODE separateSCIs(
 
             /* generate cut */
 #ifdef SCIP_DEBUG
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
@@ -769,44 +769,50 @@ SCIP_RETCODE propagateCons(
                i, firstnonzeroinrow, lastoneinrow);
          }
 #endif
-
-         /* perform conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         /* add bounds (variables fixed to 0) that result in the first nonzero entry */
-         for (j = 0; j <= lastcolumn; ++j)
+         /* check if conflict analysis is applicable */
+         if( SCIPisConflictAnalysisApplicable(scip) )
          {
-            if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-               break;
-            if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
-               break;
+            /* conflict analysis only applicable in SOLVING stage */
+            assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
-            /* at this point the variable should be fixed to 0 */
-            assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-         }
+            /* perform conflict analysis */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-         /* add bounds that result in the last one - check top left entry for packing case */
-         if ( ! ispart && lastones[0] == -1 )
-         {
-            assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
-         }
-
-         /* add bounds that result in the last one - pass through rows */
-         for (k = 1; k < i; ++k)
-         {
-            int l;
-            l = lastones[k] + 1;
-
-            /* if the frontier has not moved and we are not beyond the matrix boundaries */
-            if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
+            for (j = 0; j <= lastcolumn; ++j)
             {
-               assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                  break;
+               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+                  break;
+
+               /* at this point the variable should be fixed to 0 */
+               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             }
+
+            /* add bounds that result in the last one - check top left entry for packing case */
+            if ( ! ispart && lastones[0] == -1 )
+            {
+               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+            }
+
+            /* add bounds that result in the last one - pass through rows */
+            for (k = 1; k < i; ++k)
+            {
+               int l;
+               l = lastones[k] + 1;
+
+               /* if the frontier has not moved and we are not beyond the matrix boundaries */
+               if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+               {
+                  assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+               }
+            }
+            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
          }
-         SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
          *infeasible = TRUE;
          goto TERMINATE;
@@ -835,37 +841,43 @@ SCIP_RETCODE propagateCons(
             /* if entry is fixed to one -> infeasible node */
             if ( *infeasible )
             {
-               int k;
-
                SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
-
-               /* perform conflict analysis */
-               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-               /* add current bound */
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
-
-               /* add bounds that result in the last one - check top left entry for packing case */
-               if ( ! ispart && lastones[0] == -1 )
+               /* check if conflict analysis is applicable */
+               if( SCIPisConflictAnalysisApplicable(scip) )
                {
-                  assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
-               }
+                  int k;
 
-               /* add bounds that result in the last one - pass through rows */
-               for (k = 1; k < i; ++k)
-               {
-                  int l;
-                  l = lastones[k] + 1;
+                  /* conflict analysis only applicable in SOLVING stage */
+                  assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
-                  /* if the frontier has not moved and we are not beyond the matrix boundaries */
-                  if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+                  /* perform conflict analysis */
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+                  /* add current bound */
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+
+                  /* add bounds that result in the last one - check top left entry for packing case */
+                  if ( ! ispart && lastones[0] == -1 )
                   {
-                     assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+                     assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
                   }
+
+                  /* add bounds that result in the last one - pass through rows */
+                  for (k = 1; k < i; ++k)
+                  {
+                     int l;
+                     l = lastones[k] + 1;
+
+                     /* if the frontier has not moved and we are not beyond the matrix boundaries */
+                     if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+                     {
+                        assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+                     }
+                  }
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
                }
-               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
                goto TERMINATE;
             }

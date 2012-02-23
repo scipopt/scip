@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -327,7 +327,7 @@ SCIP_RETCODE addBoundViolated(
       SCIP_Real bestbound;
 
       /* add variable, if zero is not best bound w.r.t. objective function */
-      bestbound = SCIPvarGetBestBound(var);
+      bestbound = SCIPvarGetBestBoundLocal(var);
       if( !SCIPsetIsZero(set, bestbound) )
       {
          SCIPdebugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
