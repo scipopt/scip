@@ -116,10 +116,49 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
-# in case of qsub queue the memory is measured in kB
+# in case of qsub queue the memory is measured in kB and in case of srun the time needs to be formatted
 if test  "$QUEUETYPE" = "qsub"
 then
     HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
+else
+    MYMINUTES=0
+    MYHOURS=0
+    MYDAYS=0
+    #calculate seconds, minutes, hours and days
+    MYSECONDS=`expr $HARDTIMELIMIT % 60`
+    TMP=`expr $HARDTIMELIMIT / 60`
+    if test "$TMP" != "0"
+    then
+	MYMINUTES=`expr $TMP % 60`
+	TMP=`expr $TMP / 60`
+	if test "$TMP" != "0"
+	then
+	    MYHOURS=`expr $TMP % 24`
+	    MYDAYS=`expr $TMP / 24`
+	fi
+   fi
+    #format seconds to have two characters
+    if test ${MYSECONDS} -lt 10
+    then
+	MYSECONDS=0${MYSECONDS}
+    fi
+    #format minutes to have two characters
+    if test ${MYMINUTES} -lt 10
+    then
+	MYMINUTES=0${MYMINUTES}
+    fi
+    #format hours to have two characters
+    if test ${MYHOURS} -lt 10
+    then
+	MYHOURS=0${MYHOURS}
+    fi
+    #format HARDTIMELIMT
+    if test ${MYDAYS} = "0"
+    then
+	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    else
+	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    fi
 fi
 
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
@@ -209,7 +248,7 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=0:${HARDTIMELIMIT}${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
 	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 
