@@ -38,6 +38,7 @@
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
 
+#define DEFAULT_ONLYSETPART       FALSE /**< should only set-partitioning constraints be extrated and no and-constraints */
 
 
 /*
@@ -74,6 +75,7 @@ struct SCIP_PresolData
    SCIP_Bool usefullogicorexist;
    SCIP_Bool newsetppchashdatas;
    SCIP_Bool initialized;
+   SCIP_Bool onlysetpart;
 };
 
 
@@ -1068,7 +1070,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 	       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 	    }
 	    /* did we find two set-packing constraints for the upgrade to the gate constraint */
-	    else if( nfound == 2 )
+	    else if( !presoldata->onlysetpart && nfound == 2 )
 	    {
 	       SCIP_VAR* vars[2];
 	       SCIP_VAR* resvar = NULL;
@@ -1214,7 +1216,10 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
          presoldata) );
 
    /* add gateextraction presolver parameters */
-   /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/"PRESOL_NAME"/onlysetpart",
+         "should we only try to extract set-partitioning constraints and no and-constraints",
+         &presoldata->onlysetpart, TRUE, DEFAULT_ONLYSETPART, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -92,6 +92,8 @@ parameters:
   to be decreased in order to recompute the value from scratch
 - new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
   separating/cgmip/nodelimit.
+- new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
+  only extract set-partitioning and no and-constraints
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
