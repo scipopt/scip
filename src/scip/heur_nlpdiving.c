@@ -1200,6 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_Real objval;
    SCIP_Real oldobjval;
    SCIP_Real origfeastol;
+   SCIP_Real fixquot;
    SCIP_Bool bestcandmayround;
    SCIP_Bool bestcandroundup;
    SCIP_Bool nlperror;
@@ -1209,7 +1210,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_Bool solvenlp;
    SCIP_Bool covercomputed;
    SCIP_Bool solvesubmip;
-   SCIP_Bool setnlpinitguess;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nnlpiterations;
@@ -1432,7 +1432,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPcreateNLPSol(scip, &nlpstartsol, heur) );
       SCIP_CALL( SCIPunlinkSol(scip, nlpstartsol) );
    }
-   setnlpinitguess = FALSE;
 
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -1538,7 +1537,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    lastnlpsolvedepth = 0;
-
+   backtracked = FALSE;    /* whether we are in backtracking */
+   fixquot = heurdata->fixquot;
    nfeasnlps = 1;
    startnnlpcands = nnlpcands;
    solvesubmip = heurdata->solvesubmip;
@@ -1616,7 +1616,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
       var = nlpcands[bestcand];
 
-      backtracked = FALSE;
       do
       {
          SCIP_Real frac;
@@ -1686,7 +1685,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, nlpcandssol[bestcand])) );
 
                /* remember variable for backtracking, if we have none yet (e.g., we are just after NLP solve) or we are half way to the next NLP solve */
-               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)/2.0)) )
+               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(fixquot * nnlpcands, nlpbranchcands)/2.0)) )
                {
                   backtrackdepth   = divedepth;
                   backtrackvar     = var;
@@ -1705,7 +1704,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, nlpcandssol[bestcand])) );
 
                /* remember variable for backtracking, if we have none yet (e.g., we are just after NLP solve) or we are half way to the next NLP solve */
-               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)/2.0)) )
+               if( backtrackdepth == -1 || (divedepth - lastnlpsolvedepth == (int)(MIN(fixquot * nnlpcands, nlpbranchcands)/2.0)) )
                {
                   backtrackdepth   = divedepth;
                   backtrackvar     = var;
@@ -1835,12 +1834,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
          }
 
-         /* check whether we want to solve the NLP */
-         solvenlp = FALSE;
-         if( !cutoff )
+         /* check whether we want to solve the NLP, which is the case if
+          * - we are in backtracking, or
+          * - we have (actively) fixed/rounded fixquot*nnlpcands variables
+          * - all fractional variables were rounded/fixed (due to fixing and domain propagation)
+          */
+         solvenlp = backtracked;
+         if( !solvenlp && !cutoff )
          {
-            /* solvenlp = (lastnlpsolvedepth < divedepth - MIN(heurdata->fixquot * nnlpcands, nlpbranchcands)); */
-            solvenlp = (lastnlpsolvedepth < divedepth - heurdata->fixquot * nnlpcands);
+            solvenlp = (lastnlpsolvedepth < divedepth - fixquot * nnlpcands);
             if( !solvenlp )
             {
                /* check if fractional NLP variables are left (some may have been fixed by propagation) */
@@ -1869,20 +1871,19 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
-            if( heurdata->nlpstart != 'n' && setnlpinitguess )
+            if( heurdata->nlpstart != 'n' && backtracked )
             {
                assert(nlpstartsol != NULL);
 
                SCIPdebugMessage("setting NLP initial guess\n");
 
                SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, nlpstartsol) );
-               setnlpinitguess = FALSE;
             }
 
             SCIP_CALL( SCIPsolveNLP(scip) );
             STATISTIC( ++heurdata->nnlpsolves; )
 
-               termstat = SCIPgetNLPTermstat(scip);
+            termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
             {
                SCIPwarningMessage("Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
@@ -1941,11 +1942,13 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
                SCIP_CALL( SCIPnewProbingNode(scip) );
                divedepth = backtrackdepth;
-               /* @todo if backtrackdepth is lastnlpsolvedepth-1, reduce fixquot, so we don't wait with NLP solves for too long */
+               /* in case, we are feasible after backtracking, fix less variables at once in continuing diving
+                * @todo should we remember the fixquot in heurdata for the next run?
+                */
+               fixquot *= 0.5;
             }
+            /* remember that we are backtracking now */
             backtracked = TRUE;
-            /* remember that we have to initialize the NLP start solution before the next NLP solve */
-            setnlpinitguess = TRUE;
          }
          else
             backtracked = FALSE;
