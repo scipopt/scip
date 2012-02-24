@@ -1383,6 +1383,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* get fractional variables that should be integral */
    SCIP_CALL( SCIPgetNLPFracVars(scip, &nlpcands, &nlpcandssol, &nlpcandsfrac, &nnlpcands, NULL) );
+   assert(nnlpcands <= npseudocands);
+   assert(SCIPgetNLPBranchCands(scip) <= npseudocands);
 
    lpsolstat = SCIPgetLPSolstat(scip);
    if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
