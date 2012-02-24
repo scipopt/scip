@@ -3626,7 +3626,9 @@ SCIP_RETCODE nlpDelNlRowPos(
 static
 SCIP_RETCODE nlpUpdateVarBounds(
    SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_VAR*             var                 /**< variable which bounds have changed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable which bounds have changed */
+   SCIP_Bool             tightened           /**< whether the bound change was a bound tightening */
    )
 {
    int pos;
@@ -3657,6 +3659,24 @@ SCIP_RETCODE nlpUpdateVarBounds(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
+
+   /* if we have a feasible NLP solution and it satisfies the new bounds, then it is still feasible
+    * if the NLP was globally or locally infeasible and we tightened a bound, then it stays that way
+    * if the NLP was unbounded and we tightened a bound, then this may not be the case anymore
+    */
+   if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+      if( !tightened ||
+         ((SCIPsetIsInfinity(set, -lb) || SCIPsetIsFeasLE(set, lb, SCIPvarGetNLPSol(var))) &&
+          (SCIPsetIsInfinity(set,  ub) || SCIPsetIsFeasGE(set, ub, SCIPvarGetNLPSol(var)))) )
+         nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+      else
+         nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+   }
+   else if( !tightened || nlp->solstat == SCIP_NLPSOLSTAT_UNBOUNDED )
+   {
+      nlp->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+   }
 
    return SCIP_OKAY;
 }
@@ -3709,6 +3729,10 @@ SCIP_RETCODE nlpUpdateObjCoef(
    pos = nlp->varmap_nlp2nlpi[pos];
    objidx = -1;
    SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
+
+   /* if we had a solution and it was locally (or globally) optimal, then now we can only be sure that it is still feasible */
+   if( nlp->solstat < SCIP_NLPSOLSTAT_FEASIBLE )
+      nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -4928,7 +4952,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
       SCIPdebugMessage( "-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
-      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, var) );
+      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )
    {
