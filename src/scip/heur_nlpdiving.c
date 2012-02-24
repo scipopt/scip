@@ -1594,7 +1594,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       assert(bestcand != -1);
 
       /* if all candidates are roundable, try to round the solution */
-      if( bestcandmayround )
+      if( bestcandmayround && backtrackdepth == -1 )
       {
          SCIP_Bool success;
 
@@ -1920,7 +1920,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                /* forget previous backtrack variable, we will never go back to a depth before the current one */
                backtrackdepth = -1;
                /* store NLP solution for warmstarting, if nlpstart is 'f' */
-               if( heurdata->nlpstart == 'f' )
+               if( heurdata->nlpstart == 'f' && SCIPhasNLPSolution(scip) )
                {
                   assert(nlpstartsol != NULL);
 
