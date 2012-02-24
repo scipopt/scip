@@ -5132,6 +5132,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)
       || (col->sbupvalid && SCIPsetIsGE(set, col->sbup, lp->cutoffbound)
          && SCIPsetFeasFloor(set, col->primsol+1.0) <= col->ub + 0.5));
+   assert(SCIPtreeGetCurrentDepth(tree) > 0);
 
    if( downconflict != NULL )
       *downconflict = FALSE;
@@ -5145,6 +5146,9 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
+
+   /* inform the LPI that strong branch is (temporary) finished */
+   SCIP_CALL( SCIPlpiEndStrongbranch(lp->lpi) );
 
    /* start timing */
    SCIPclockStart(conflict->sbanalyzetime, set);
@@ -5305,6 +5309,9 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
    /* stop timing */
    SCIPclockStop(conflict->sbanalyzetime, set);
+
+   /* inform the LPI that strong branch starts (again) */
+   SCIP_CALL( SCIPlpiStartStrongbranch(lp->lpi) );
 
    return SCIP_OKAY;
 }
