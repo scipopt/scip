@@ -54,8 +54,8 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXNLPITERQUOT     0.05 /**< maximal fraction of diving LP iterations compared to node NLP iterations */
-#define DEFAULT_MAXNLPITEROFS      1000 /**< additional number of allowed NLP iterations */
+#define DEFAULT_MAXNLPITERQUOT     0.05 /**< maximal fraction of diving NLP iterations compared to node NLP iterations */
+#define DEFAULT_MAXNLPITEROFS       200 /**< additional number of allowed NLP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -72,7 +72,7 @@
 #define DEFAULT_SOLVESUBMIP       FALSE /**< should a sub-MIP be solved if all cover variables are fixed? */
 #define DEFAULT_NLPSTART            's' /**< which point should be used as starting point for the NLP solver? */
 #define DEFAULT_VARSELRULE          'f' /**< which variable selection should be used? ('f'ractionality, 'c'oefficient) */
-#define MINNLPITER                 1000 /**< minimal number of NLP iterations allowed in each NLP solving call */
+#define MINNLPITER                  200 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -1283,7 +1283,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* calculate the maximal number of NLP iterations until heuristic is aborted */
-   nnlpiterations = 100; /* @todo what should we set here? was SCIPgetNNodeLPIterations(scip) */
+   nnlpiterations = MINNLPITER; /* @todo what should we set here? was SCIPgetNNodeLPIterations(scip) */
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterquot * nnlpiterations);
@@ -1333,44 +1333,52 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
-   /* solve NLP relaxation */
-   SCIP_CALL( SCIPsolveNLP(scip) );
-   STATISTIC( ++heurdata->nnlpsolves; )
-
-      /* give up, if no feasible solution found */
-      nlpsolstat = SCIPgetNLPSolstat(scip);
-   if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   /* solve NLP relaxation, if not solved already */
+   nlpsolstat = SCIPgetNLPSolstat(scip);
+   if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
+      SCIP_NLPSTATISTICS* nlpstatistics;
+
+      SCIP_CALL( SCIPsolveNLP(scip) );
+      STATISTIC( ++heurdata->nnlpsolves; )
 
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
       {
-         SCIP_NLPSTATISTICS* nlpstatistics;
-
          SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
          SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
          heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
          SCIPnlpStatisticsFree(&nlpstatistics);
-
-         STATISTIC( heurdata->nfailcutoff++; )
-            }
-      else
-      {
-         STATISTIC( heurdata->nfailnlperror++; )
-            }
-
-      /* reset changed NLP parameters */
-      SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
-      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
-
-      /* free copied best solution */
-      if( heurdata->varselrule == 'g' )
-      {
-         SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
       }
 
-      return SCIP_OKAY;
+      nlpsolstat = SCIPgetNLPSolstat(scip);
+
+      /* give up, if no feasible solution found */
+      if( nlpsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+      {
+         SCIPdebugMessage("initial NLP infeasible or not solvable --> stop\n");
+
+         if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+         {
+            STATISTIC( heurdata->nfailcutoff++; )
+         }
+         else
+         {
+            STATISTIC( heurdata->nfailnlperror++; )
+         }
+
+         /* reset changed NLP parameters */
+         SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
+         SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+
+         /* free copied best solution */
+         if( heurdata->varselrule == 'g' )
+         {
+            SCIP_CALL( SCIPfreeSol(scip, &bestsol) );
+         }
+
+         return SCIP_OKAY;
+      }
    }
 
    /* get fractional variables that should be integral */
@@ -2135,11 +2143,11 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/maxnlpiterquot",
-         "maximal fraction of diving LP iterations compared to node LP iterations",
+         "maximal fraction of diving NLP iterations compared to node NLP iterations",
          &heurdata->maxnlpiterquot, FALSE, DEFAULT_MAXNLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/"HEUR_NAME"/maxnlpiterofs",
-         "additional number of allowed LP iterations",
+         "additional number of allowed NLP iterations",
          &heurdata->maxnlpiterofs, FALSE, DEFAULT_MAXNLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/maxdiveubquot",
