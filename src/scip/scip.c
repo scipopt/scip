@@ -17929,7 +17929,7 @@ SCIP_RETCODE SCIPgetPseudoBranchCands(
    int*                  npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob,
          pseudocands, npseudocands, npriopseudocands) );
@@ -17942,7 +17942,7 @@ int SCIPgetNPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbranchcandGetNPseudoCands(scip->branchcand);
 }
@@ -17952,7 +17952,7 @@ int SCIPgetNPrioPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPbranchcandGetNPrioPseudoCands(scip->branchcand);
 }
