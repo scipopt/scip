@@ -17,6 +17,7 @@
  * @brief  inference history branching rule
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,7 +52,52 @@ struct SCIP_BranchruleData
    SCIP_Bool             useweightedsum;     /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 };
 
+/** evaluate the given candidate with the given score against the currently best know candidate */
+static
+void evaluateCand(
+   SCIP_VAR*            cand,                /**< candidate to be checked */
+   SCIP_Real            score,               /**< score of the candidate */
+   SCIP_VAR**           bestcand,            /**< pointer to the currently best candidate */
+   SCIP_Real*           bestscore            /**< pointer to the score of the currently best candidate */
+   )
+{
 
+   /* evaluate the candidate against the currently best candidate */
+   if( (*bestscore) < score )
+   {
+      /* the score of the candidate is better than the currently best know candidate */
+      (*bestscore) = score;
+      (*bestcand) = cand;
+   }
+   else if( (*bestscore) == score )
+   {
+      SCIP_Real bestobj;
+      SCIP_Real candobj;
+
+      bestobj = REALABS(SCIPvarGetObj(*bestcand));
+      candobj = REALABS(SCIPvarGetObj(cand));
+
+      /* the candidate has the same score as the best known candidate; therefore we use a second and third
+       * criteria to detect a unique best candidate;
+       *
+       * - the second criteria prefers the candidate with a larger absolute value of its objective coefficient
+       *   since branching on that variable might trigger further propagation w.r.t. objective function
+       * - if the absolute values of the objective coefficient are equal the variable index is used to define a
+       *   unique best candidate
+       *
+       * @note It is very important to select a unique best candidate. Otherwise the solver might vary w.r.t. the
+       *       performance to much since the candidate array which is used here (SCIPgetPseudoBranchCands() or
+       *       SCIPgetLPBranchCands()) gets dynamically changed during the solution process. In particular,
+       *       starting a probing mode might already change the order of these arrays. To be independent of that
+       *       the selection should be unique. Otherwise, to selection process can get influenced by starting a
+       *       probing or not.
+       */
+      if( bestobj < candobj || (bestobj == candobj && SCIPvarGetIndex(*bestcand) < SCIPvarGetIndex(cand)) )
+      {
+         (*bestcand) = cand;
+      }
+   }
+}
 
 /** selects a variable out of the given candidate array and performs the branching */
 static
@@ -65,51 +111,65 @@ SCIP_RETCODE performBranching(
    SCIP_Bool             useweightedsum      /**< should a weighted sum of inference, conflict and cutoff weights be used? */
    )
 {
-   SCIP_VAR* var;
+   SCIP_VAR* bestcand;
+   SCIP_VAR* cand;
    SCIP_Real bestscore;
    SCIP_Real score;
-   int bestcand;
    int c;
 
-   /* search for variable with best score w.r.t. average inferences per branching */
-   bestscore = 0.0;
-   bestcand = -1;
+   assert(ncands > 0);
+
+   /* check if the weighted sum between the average inferences and conflict score should be used */
    if( useweightedsum )
-   { 
-      for( c = 0; c < ncands; ++c )
+   {
+      bestcand = cands[0];
+      bestscore = conflictweight * SCIPgetVarConflictScore(scip, cands[0])
+         + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cands[0], cutoffweight);
+
+      for( c = 1; c < ncands; ++c )
       {
-         score = conflictweight * SCIPgetVarConflictScore(scip, cands[c])
-            + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
-         if( score > bestscore )
-         {
-            bestscore = score;
-            bestcand = c;
-         }
-         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
-            SCIPgetVarSol(scip, cands[c]), score);
+         cand = cands[c];
+         assert(cand != NULL);
+
+         /* compute weighted score for the candidate */
+         score = conflictweight * SCIPgetVarConflictScore(scip, cand)
+            + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cand, cutoffweight);
+
+         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
+            SCIPgetVarSol(scip, cand), score);
+
+         /* evaluate the candidate against the currently best candidate */
+         evaluateCand(cand, score, &bestcand, &bestscore);
       }
    }
    else
    {
-      for( c = 0; c < ncands; ++c )
+      bestcand = cands[0];
+      bestscore = SCIPgetVarAvgInferenceScore(scip, cands[0]);
+
+      /* search for variable with best score w.r.t. average inferences per branching */
+      for( c = 1; c < ncands; ++c )
       {
-         score = SCIPgetVarAvgInferenceScore(scip, cands[c]);
-         if( score > bestscore )
-         {
-            bestscore = score;
-            bestcand = c;
-         }
-         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
-            SCIPgetVarSol(scip, cands[c]), score);
+         cand = cands[c];
+         assert(cand != NULL);
+
+         score = SCIPgetVarAvgInferenceScore(scip, cand);
+
+         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
+            SCIPgetVarSol(scip, cand), score);
+
+         /* evaluate the candidate against the currently best candidate */
+         evaluateCand(cand, score, &bestcand, &bestscore);
       }
    }
-   assert(0 <= bestcand && bestcand < ncands);
-   var = cands[bestcand];
+
+   assert(bestcand != NULL);
+
+   SCIPdebugMessage(" -> %d candidates, selected variable <%s> (prio=%d, solval=%.12f, score=%g)\n",
+      ncands, SCIPvarGetName(bestcand), SCIPvarGetBranchPriority(bestcand), SCIPgetVarSol(scip, bestcand), bestscore);
 
    /* perform the branching */
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (prio=%d, solval=%.12f, score=%g)\n",
-      ncands, bestcand, SCIPvarGetName(var), SCIPvarGetBranchPriority(var), SCIPgetVarSol(scip, var), bestscore);
-   SCIP_CALL( SCIPbranchVar(scip, var, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPbranchVar(scip, bestcand, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -131,7 +191,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyInference)
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -175,7 +235,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    int ncands;
 
    SCIPdebugMessage("Execlp method of inference branching\n");
-   
+
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -196,7 +256,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
-   
+
    return SCIP_OKAY;
 }
 
@@ -214,7 +274,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    int ncands;
 
    SCIPdebugMessage("Execps method of inference branching\n");
-   
+
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -227,7 +287,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
-   
+
    return SCIP_OKAY;
 }
 
@@ -247,7 +307,7 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
 
    /* create inference branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   
+
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
