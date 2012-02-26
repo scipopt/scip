@@ -5815,7 +5815,7 @@ SCIP_RETCODE varEventGholeAdded(
 }
 
 /** increases root bound change statistics after a global bound change */
-static            
+static
 void varIncRootboundchgs(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -12144,12 +12144,17 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 /** increases VSIDS of the variable by the given weight */
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in VSIDS */
    )
 {
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -12159,7 +12164,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
          SCIPerrorMessage("cannot update VSIDS of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncVSIDS(var->data.original.transvar, dir, weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->data.original.transvar, stat, dir, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -12175,12 +12180,12 @@ SCIP_RETCODE SCIPvarIncVSIDS(
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, dir, weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, stat, dir, weight) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, SCIPbranchdirOpposite(dir), weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), weight) );
       }
       return SCIP_OKAY;
       
@@ -12189,7 +12194,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncVSIDS(var->negatedvar, SCIPbranchdirOpposite(dir), weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->negatedvar, stat, SCIPbranchdirOpposite(dir), weight) );
       return SCIP_OKAY;
       
    default:
@@ -12248,12 +12253,17 @@ SCIP_RETCODE SCIPvarScaleVSIDS(
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             length              /**< length of the conflict */
    )
 {
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -12263,7 +12273,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
          SCIPerrorMessage("cannot update conflict score of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.original.transvar, dir, length) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.original.transvar, stat, dir, length) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -12279,12 +12289,12 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, dir, length) );
+         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, dir, length) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, SCIPbranchdirOpposite(dir), length) );
+         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), length) );
       }
       return SCIP_OKAY;
       
@@ -12293,7 +12303,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, SCIPbranchdirOpposite(dir), length) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir), length) );
       return SCIP_OKAY;
       
    default:
@@ -12493,6 +12503,10 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -12554,6 +12568,10 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -12614,6 +12632,10 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    assert(var != NULL);
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {

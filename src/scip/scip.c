@@ -12880,20 +12880,20 @@ SCIP_RETCODE SCIPinitVarBranchStats(
    assert(downconflen >= 0.0 && upconflen >= 0.0);
    assert(downinfer >= 0.0 && upinfer >= 0.0);
    assert(downcutoff >= 0.0 && upcutoff >= 0.0);
-   
+
    if( !SCIPisFeasZero(scip, downpscost) || !SCIPisFeasZero(scip, downvsids)
       || !SCIPisFeasZero(scip, downinfer) || !SCIPisFeasZero(scip, downcutoff) )
    {
       SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_DOWNWARDS) );
-      SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, -1.0, downpscost, 1.0) );  
-      SCIP_CALL( SCIPvarIncInferenceSum(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downinfer) );  
-      SCIP_CALL( SCIPvarIncVSIDS(var, SCIP_BRANCHDIR_DOWNWARDS, downvsids) ); 
-      SCIP_CALL( SCIPvarIncCutoffSum(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downcutoff) ); 
+      SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, -1.0, downpscost, 1.0) );
+      SCIP_CALL( SCIPvarIncInferenceSum(var,  scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downinfer) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downvsids) );
+      SCIP_CALL( SCIPvarIncCutoffSum(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downcutoff) );
    }
-   
+
    if( !SCIPisFeasZero(scip, downconflen) )
    {
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIP_BRANCHDIR_DOWNWARDS, downconflen) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downconflen) );
    }
 
    if( !SCIPisFeasZero(scip, uppscost) || !SCIPisFeasZero(scip, upvsids)
@@ -12902,13 +12902,13 @@ SCIP_RETCODE SCIPinitVarBranchStats(
       SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_UPWARDS) );
       SCIP_CALL( SCIPvarUpdatePseudocost(var, scip->set, scip->stat, 1.0, uppscost, 1.0) );  
       SCIP_CALL( SCIPvarIncInferenceSum(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upinfer) );
-      SCIP_CALL( SCIPvarIncVSIDS(var, SCIP_BRANCHDIR_UPWARDS, upvsids) );     
+      SCIP_CALL( SCIPvarIncVSIDS(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upvsids) );
       SCIP_CALL( SCIPvarIncCutoffSum(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upcutoff) );   
    }
    
    if( !SCIPisFeasZero(scip, upconflen) )
    {
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIP_BRANCHDIR_UPWARDS, upconflen) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upconflen) );
    }
 
    return SCIP_OKAY;

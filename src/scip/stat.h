@@ -52,6 +52,18 @@ SCIP_RETCODE SCIPstatFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** diables the collection of any statistic for a variable */
+extern
+void SCIPstatDisableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** enables the collection of statistics for a variable */
+extern
+void SCIPstatEnableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
 /** marks statistics to be able to reset them when solving process is freed */
 extern
 void SCIPstatMark(

@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->userinterrupt = FALSE;
    (*stat)->userrestart = FALSE;
    (*stat)->inrestart = FALSE;
+   (*stat)->collectvarhistory = TRUE;
    (*stat)->subscipdepth = 0;
 
    SCIPstatReset(*stat);
@@ -112,6 +113,26 @@ SCIP_RETCODE SCIPstatFree(
    BMSfreeMemory(stat);
 
    return SCIP_OKAY;
+}
+
+/** diables the collection of any statistic for a variable */
+void SCIPstatDisableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = FALSE;
+}
+
+/** enables the collection of statistics for a variable */
+void SCIPstatEnableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = TRUE;
 }
 
 /** marks statistics to be able to reset them when solving process is freed */

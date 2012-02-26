@@ -1177,6 +1177,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in conflict score */
    );
@@ -1191,6 +1192,7 @@ SCIP_RETCODE SCIPvarScaleVSIDS(
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             length              /**< length of the conflict */
    );

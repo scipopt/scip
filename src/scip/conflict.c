@@ -1246,13 +1246,13 @@ SCIP_RETCODE conflictAddConflictCons(
                SCIP_VAR* var;
                SCIP_BRANCHDIR branchdir;
                unsigned int boundtype;
-               
+
                var = conflictset->bdchginfos[i]->var;
                boundtype =  conflictset->bdchginfos[i]->boundtype;
-               assert(stat != NULL);               
+               assert(stat != NULL);
                branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS); /*lint !e641*/
-               
-               SCIP_CALL( SCIPvarIncNActiveConflicts(var, branchdir, (SCIP_Real)conflictlength) );
+
+               SCIP_CALL( SCIPvarIncNActiveConflicts(var, stat,  branchdir, (SCIP_Real)conflictlength) );
                SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, (SCIP_Real)conflictlength);
                SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, (SCIP_Real)conflictlength);
             }
@@ -1895,17 +1895,18 @@ SCIP_RETCODE conflictQueueBound(
 /** increases the conflict score of the variable in the given direction */
 static
 SCIP_RETCODE incVSIDS(
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound for which the score should be increased */
    )
 {
    SCIP_BRANCHDIR branchdir;
 
+   assert(var != NULL);
    assert(stat != NULL);
 
    branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
-   SCIP_CALL( SCIPvarIncVSIDS(var, branchdir, stat->vsidsweight) );
+   SCIP_CALL( SCIPvarIncVSIDS(var, stat, branchdir, stat->vsidsweight) );
    SCIPhistoryIncVSIDS(stat->glbhistory, branchdir, stat->vsidsweight);
    SCIPhistoryIncVSIDS(stat->glbhistorycrun, branchdir, stat->vsidsweight);
 
@@ -2000,7 +2001,7 @@ SCIP_RETCODE SCIPconflictAddBound(
 
    /* put bound change information into priority queue */
    SCIP_CALL( conflictQueueBound(conflict, set, bdchginfo) );
-   SCIP_CALL( incVSIDS(stat, var, boundtype) );
+   SCIP_CALL( incVSIDS(var, stat, boundtype) );
 
    return SCIP_OKAY;
 }
@@ -4239,7 +4240,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
             lbchginfoposs[v] == var->nlbchginfos ? SCIPvarGetLbLP(var, set) : SCIPvarGetUbLP(var, set),
             SCIPvarGetStatus(var), SCIPvarGetType(var));
          SCIP_CALL( conflictAddConflictBound(conflict, blkmem, set, bdchginfo) );
-         SCIP_CALL( incVSIDS(stat, var, SCIPbdchginfoGetBoundtype(bdchginfo)) );
+         SCIP_CALL( incVSIDS(var, stat, SCIPbdchginfoGetBoundtype(bdchginfo)) );
          nbdchgs++;
       }
       else
@@ -4255,7 +4256,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
                SCIPbdchginfoGetPos(&var->lbchginfos[lbchginfoposs[v]]),
                SCIPbdchginfoGetChgtype(&var->lbchginfos[lbchginfoposs[v]]));
             SCIP_CALL( conflictQueueBound(conflict, set, &var->lbchginfos[lbchginfoposs[v]]) );
-            SCIP_CALL( incVSIDS(stat, var, SCIP_BOUNDTYPE_LOWER) );
+            SCIP_CALL( incVSIDS(var, stat, SCIP_BOUNDTYPE_LOWER) );
             nbdchgs++;
          }
          if( ubchginfoposs[v] >= 0 )
@@ -4268,7 +4269,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
                SCIPbdchginfoGetPos(&var->ubchginfos[ubchginfoposs[v]]),
                SCIPbdchginfoGetChgtype(&var->ubchginfos[ubchginfoposs[v]]));
             SCIP_CALL( conflictQueueBound(conflict, set, &var->ubchginfos[ubchginfoposs[v]]) );
-            SCIP_CALL( incVSIDS(stat, var, SCIP_BOUNDTYPE_UPPER) );
+            SCIP_CALL( incVSIDS(var, stat, SCIP_BOUNDTYPE_UPPER) );
             nbdchgs++;
          }
       }
