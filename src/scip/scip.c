@@ -18565,7 +18565,7 @@ SCIP_RETCODE SCIPlinkPseudoSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPlinkPseudoSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPlinkPseudoSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsolLinkPseudoSol(sol, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp) );
 

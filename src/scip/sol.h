@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
@@ -205,7 +205,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    );
 

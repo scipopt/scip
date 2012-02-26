@@ -244,7 +244,7 @@ static
 void solStamp(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_Bool             checktime           /**< should the time be updated? */
    )
 {
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPsolCreate(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -431,7 +431,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
@@ -486,7 +486,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -667,7 +667,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -683,7 +683,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    /* link solution to pseudo solution */
    sol->obj = SCIPlpGetPseudoObjval(lp, set, prob);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -728,7 +728,7 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    return SCIP_OKAY;
 }
@@ -745,7 +745,7 @@ SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    return SCIP_OKAY;
 }
@@ -908,7 +908,7 @@ SCIP_RETCODE SCIPsolIncVal(
       {
          SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
          sol->obj += SCIPvarGetObj(var) * incval;
-         solStamp(sol, stat, tree,FALSE);
+         solStamp(sol, stat, tree, FALSE);
          return SCIP_OKAY;
       }
       else
@@ -919,7 +919,7 @@ SCIP_RETCODE SCIPsolIncVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
       sol->obj += SCIPvarGetObj(var) * incval;
-      solStamp(sol, stat, tree,FALSE);
+      solStamp(sol, stat, tree, FALSE);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
