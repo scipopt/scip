@@ -73,7 +73,6 @@ fixed bugs:
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
 - fixed bug with strong branching with the LP status for conflict analysis
 - fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
-- workaround for trying to add variable bounds with to small coefficients
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -166,6 +165,7 @@ fixed bugs:
 - gams writer now also substitutes $-sign from variable/equation names
 - fixed bug in SCIPsortedvecDelPos...() templates
 - fixed bug in heur_shiftandpropagate.c concerning the treatment of unbounded variables
+- workaround for trying to add variable bounds with to small coefficients
 
 parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
