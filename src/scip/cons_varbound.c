@@ -2665,9 +2665,9 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
          vbdind = 1;
       else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
-         vbdind = 0;
-      else
          vbdind = 1;
+      else
+         vbdind = 0;
 
       var = vars[1-vbdind];
       vbdvar = vars[vbdind];
@@ -3093,8 +3093,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
             
             *nchgbds += nlocalchgbds;
 
-            /* if lhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if lhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef >= 0.0 )
                {
@@ -3139,8 +3141,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
             *nchgbds += nlocalchgbds;
 
-            /* if rhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if rhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef > 0.0 )
                {

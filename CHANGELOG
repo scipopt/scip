@@ -73,6 +73,7 @@ fixed bugs:
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
 - fixed bug with strong branching with the LP status for conflict analysis
 - fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
+- workaround for trying to add variable bounds with to small coefficients
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
