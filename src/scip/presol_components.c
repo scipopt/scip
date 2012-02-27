@@ -755,17 +755,47 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   freeStatistics(scip, presoldata);
-
    SCIPfreeMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
 }
 
+/** initialization method of presolver (called after problem was transformed) */
+static
+SCIP_DECL_PRESOLINIT(presolInitComponents)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   /* initialize statistics */
+   SCIP_CALL( initStatistics(scip, presoldata) );
+
+   presoldata->didsearch = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of presolver (called before transformed problem is freed) */
+static
+SCIP_DECL_PRESOLEXIT(presolExitComponents)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   freeStatistics(scip, presoldata);
+
+   return SCIP_OKAY;
+}
+
 /* define unused callbacks as NULL */
-#define presolInitComponents NULL
-#define presolExitComponents NULL
 #define presolInitpreComponents NULL
 #define presolExitpreComponents NULL
 
@@ -799,10 +829,6 @@ SCIP_RETCODE SCIPincludePresolComponents(
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
-   presoldata->didsearch = FALSE;
-
-   /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip,
