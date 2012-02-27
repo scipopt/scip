@@ -1425,11 +1425,13 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
 #endif
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
+#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
+#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), sizeof(**(ptr))) )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
+#define SCIPsetFreeBuffer(set,ptr)             ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 
 #ifdef __cplusplus
