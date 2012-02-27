@@ -5298,7 +5298,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       SCIPclockStart(stat->conflictlptime, set);
 
       /* resolve the LP */
-      retcode = SCIPlpiSolveDual(lp->lpi);
+      SCIP_CALL( SCIPlpiSolveDual(lp->lpi) );
 
       /* stop LP timer */
       SCIPclockStop(stat->conflictlptime, set);
