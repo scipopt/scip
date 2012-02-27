@@ -38,7 +38,7 @@
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
 
-#define DEFAULT_ONLYSETPART       FALSE /**< should only set-partitioning constraints be extrated and no and-constraints */
+#define DEFAULT_ONLYSETPART       TRUE  /**< should only set-partitioning constraints be extrated and no and-constraints */
 
 
 /*
