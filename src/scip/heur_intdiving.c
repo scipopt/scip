@@ -302,6 +302,9 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 

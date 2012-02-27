@@ -3806,6 +3806,18 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable to delete */
    );
 
+/** enables the collection of statistics for a variable */
+extern
+void SCIPenableVarHistory(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** diables the collection of any statistic for a variable */
+extern
+void SCIPdisableVarHistory(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
  *  the update is ignored, if the objective value difference is infinite

@@ -12515,6 +12515,26 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    return SCIP_OKAY;
 }
 
+/** enables the collection of statistics for a variable */
+void SCIPenableVarHistory(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPenableVarHistory", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPstatEnableVarHistory(scip->stat);
+}
+
+/** disables the collection of any statistic for a variable */
+void SCIPdisableVarHistory(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPdisableVarHistory", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPstatDisableVarHistory(scip->stat);
+}
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
  *  the update is ignored, if the objective value difference is infinite
@@ -17309,6 +17329,9 @@ SCIP_Bool SCIPinProbing(
 
 /** initiates probing, making methods SCIPnewProbingNode(), SCIPbacktrackProbing(), SCIPchgVarLbProbing(),
  *  SCIPchgVarUbProbing(), SCIPfixVarProbing(), SCIPpropagateProbing(), and SCIPsolveProbingLP() available
+ *
+ *  @note The collection of variable statistics is turned off during probing. If these statistics should be collected
+ *        during probing use the method SCIPenableVarHistory() to turn the collection explicitly on.
  */
 SCIP_RETCODE SCIPstartProbing(
    SCIP*                 scip                /**< SCIP data structure */
@@ -17329,6 +17352,9 @@ SCIP_RETCODE SCIPstartProbing(
    }
 
    SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp) );
+
+   /* disables the collection of any statistic for a variable */
+   SCIPstatDisableVarHistory(scip->stat);
 
    return SCIP_OKAY;
 }
@@ -17415,6 +17441,9 @@ SCIP_RETCODE SCIPendProbing(
    /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
    SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->lp,
          scip->branchcand, scip->eventqueue, scip->eventfilter) );
+
+   /* enables the collection of statistics for a variable */
+   SCIPstatEnableVarHistory(scip->stat);
 
    return SCIP_OKAY;
 }

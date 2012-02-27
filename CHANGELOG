@@ -41,6 +41,8 @@ interface
 - new method SCIPconsIsAdded() which returns whether a constraint was already added to a SCIP instance
 - new method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the current
   presolving round, given no further reductions will be found; can be used to ensure that a presolver is called very late
+- new methods SCIPenableVarHistory() and SCIPdisableVarHistory() which can be used to turn off and on the collection
+  of variables statistics which is used for example for branching
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

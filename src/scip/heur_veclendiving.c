@@ -301,6 +301,9 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
    /* get LP objective value */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);

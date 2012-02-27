@@ -1717,6 +1717,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
    /* get NLP objective value*/
    objval = SCIPgetNLPObjval(scip);
 

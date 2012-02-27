@@ -11918,6 +11918,10 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    assert(var != NULL);
    assert(stat != NULL);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:

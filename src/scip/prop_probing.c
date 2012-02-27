@@ -299,6 +299,9 @@ SCIP_RETCODE applyProbingVar(
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
    /* fix variable */
    if( probingdir == FALSE )
    {

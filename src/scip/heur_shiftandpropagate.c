@@ -1367,6 +1367,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* enables collection of variable statistics during probing */
+   SCIPenableVarHistory(scip);
+
    SCIP_CALL( SCIPnewProbingNode(scip) );
    ncutoffs = 0;
    nprobings = 0;
