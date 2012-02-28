@@ -3462,7 +3462,11 @@ int* SCIPdigraphGetOutgoingEdges(
    int                   node                /**< node for which the array of outgoing edges is returned */
    );
 
-/** compute components on the given directed graph */
+/** compute components on the given directed graph
+ *
+ *  @note The graph should be the directed representation of an undirected
+ *        graph, i.e., for each edge, its reverse should exist.
+ */
 extern
 SCIP_RETCODE SCIPdigraphComputeComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -3472,13 +3476,12 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
    int*                  ncomponents         /**< pointer to store the number of components */
    );
 
-/** Computes (undirected) components on the directed graph and sorts the components
- *  (almost) topologically w.r.t. the directed graph.
+/** Computes (undirected) components on the directed graph and sorts
+ *  the components (almost) topologically w.r.t. the directed graph.
  *
- * Topologically sorted means, a variable which influences the lower (upper) bound of another
- * variable y is located before y in the corresponding variable array. Note, that in general
- * a topological sort is not unique. Note, that there might be directed cycles, that are
- * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
  */
 extern
 SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
