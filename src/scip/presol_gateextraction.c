@@ -186,7 +186,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    for( v = 1; v >= 0; --v )
       hashval |= (1<<(SCIPvarGetIndex(hashdata->vars[v])%32));
 #else
-   hashval = (SCIPvarGetIndex(hashdata->vars[1])<<16) + SCIPvarGetIndex(hashdata->vars[0]);
+   hashval = (SCIPvarGetIndex(hashdata->vars[1])<<16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 #endif
 
    return hashval;
@@ -418,7 +418,7 @@ SCIP_RETCODE cleanupHashDatas(
 	    SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
 
 	    /* remove hashdata entry from hashtable */
-	    SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]);
+	    SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
 
 	    /* release old constraints */
 	    SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
@@ -433,7 +433,7 @@ SCIP_RETCODE cleanupHashDatas(
 	    if( c < presoldata->nsetppchashdatas - 1 )
 	    {
 	       /* remove old hashdata entry from hashtable */
-	       SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]);
+	       SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]) );
 	    }
 
 	    /* move last content to free position */
@@ -444,7 +444,7 @@ SCIP_RETCODE cleanupHashDatas(
 	    if( c < presoldata->nsetppchashdatas - 1 )
 	    {
 	       /* add new hashdata entry from hashtable */
-	       SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]);
+	       SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
 	    }
 	    --(presoldata->nsetppchashdatas);
 	 }
@@ -744,7 +744,7 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
 	 SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
 
 	 /* remove hashdata entry from hashtable */
-	 SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]);
+	 SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
 
 	 /* release variables */
 	 SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
