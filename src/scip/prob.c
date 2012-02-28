@@ -1043,18 +1043,9 @@ SCIP_RETCODE SCIPprobAddCons(
       SCIPerrorMessage("constraint belongs to different scip instance\n");
       return SCIP_INVALIDDATA;
    }
-   /* check if we already added this constraint */
-   if( cons->isadded )
-   {
-      SCIPerrorMessage("try to add a constraint which was already added\n");
-      return SCIP_INVALIDDATA;
-   }
 #endif
    SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
-
-   /* mark the constraint added to a SCIP instance */
-   cons->isadded = TRUE;
 
    /* mark the constraint as problem constraint, and remember the constraint's position */
    cons->addconssetchg = NULL;

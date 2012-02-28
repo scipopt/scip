@@ -4678,7 +4678,6 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateobsolete = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
-   (*cons)->isadded = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -6345,5 +6344,5 @@ SCIP_Bool SCIPconsIsAdded(
 {
    assert(cons != NULL);
 
-   return cons->isadded;
+   return (cons->addarraypos >= 0);
 }
