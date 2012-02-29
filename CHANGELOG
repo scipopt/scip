@@ -101,6 +101,8 @@ features:
 - the check script now recognizes MIQCP and MINLP instances
 - new column showing the pseudo objective value
 - time for initpre and exitpre methods is now also measured in presolving time
+- digraph structure added to misc.c and pub_misc.h that can be used to handle directed graphs, compute undirected
+  components in the graph, and sort these components (almost) topologically
 
 SCIP version 2.1.2
 ==================

@@ -442,9 +442,8 @@ SCIP_RETCODE fillDigraph(
             idx2 = SCIPvarGetProbindex(consvars[v]);
             assert(idx2 >= 0);
 
-            /* we add a directed edge in both directions */
+            /* we add only one directed edge, because the other direction is automatically added for component computation */
             SCIP_CALL( SCIPdigraphAddEdge(digraph, idx1, idx2) );
-            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx2, idx1) );
          }
       }
    }
@@ -516,10 +515,8 @@ SCIP_RETCODE splitProblem(
    compvarsstart = 0;
    compconssstart = 0;
 
-   /* loop over all components
-    * start loop from 1 because components are numbered from 1 to n
-    */
-   for( comp = 1; comp <= ncomponents && !SCIPisStopped(scip); comp++ )
+   /* loop over all components */
+   for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
    {
       nbinvars = 0;
       nintvars = 0;
@@ -690,7 +687,7 @@ SCIP_RETCODE presolComponents(
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
          /* compute independent components */
-         SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
+         SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
 
          /* create subproblems from independent components and solve them in dependence on their size */
          SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,

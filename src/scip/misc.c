@@ -3916,6 +3916,8 @@ SCIP_RETCODE SCIPdigraphCreate(
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
+   (*digraph)->ncomponents = 0;
+   (*digraph)->componentstartsize = 0;
 
    return SCIP_OKAY;
 }
@@ -3959,6 +3961,11 @@ void SCIPdigraphFree(
          BMSfreeMemoryArray(&(*digraph)->adjnodes[i]);
       }
    }
+
+   /* free components structure */
+   SCIPdigraphFreeComponents(*digraph);
+   assert((*digraph)->ncomponents == 0);
+   assert((*digraph)->componentstartsize == 0);
 
    /* free directed graph data structure */
    BMSfreeMemoryArray(&(*digraph)->adjnodessize);
@@ -4053,7 +4060,7 @@ SCIP_RETCODE SCIPdigraphAddEdgeSafe(
 }
 
 /** returns the number of edges originating at the given node */
-int SCIPdigraphGetNOutgoingEdges(
+int SCIPdigraphGetNOutEdges(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the number of outgoing edges is returned */
    )
@@ -4068,7 +4075,7 @@ int SCIPdigraphGetNOutgoingEdges(
 }
 
 /** returns the array of edges originating at the given node; this array must not be changed from outside */
-int* SCIPdigraphGetOutgoingEdges(
+int* SCIPdigraphGetOutEdges(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the array of outgoing edges is returned */
    )
@@ -4156,117 +4163,44 @@ void depthFirstSearch(
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note The graph should be the directed representation of an undirected
- *        graph, i.e., for each edge, its reverse should exist.
+ *  @note For each edge, its reverse is added, so the graph does not need
+ *        to be the directed representation of an undirected graph.
  */
-SCIP_RETCODE SCIPdigraphComputeComponents(
+SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< all components with less nodes are ignored */
    int*                  components,         /**< array with as many slots as there are nodes in the directed graph
                                               *   to store for each node the component to which it belongs
-                                              *   (components are numbered 1 to ncomponents) */
-   int*                  ncomponents         /**< pointer to store the number of components */
-   )
-{
-   SCIP_Bool* visited;
-   int* stackadjvisited;
-   int* dfsstack;
-   int* dfsnodes;
-   int ndfsnodes;
-   int v;
-   int i;
-
-   assert(digraph != NULL);
-   assert(components != NULL);
-   assert(ncomponents != NULL);
-   assert(digraph->nnodes > 0);
-
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-
-   *ncomponents = 0;
-#ifndef NDEBUG
-   BMSclearMemoryArray(components, digraph->nnodes);
-#endif
-
-   for( v = 0; v < digraph->nnodes; ++v )
-   {
-      if( visited[v] )
-         continue;
-
-      ndfsnodes = 0;
-      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
-
-      (*ncomponents)++;
-
-      for( i = 0; i < ndfsnodes; ++i )
-      {
-         components[dfsnodes[i]] = *ncomponents;
-      }
-   }
-
-#ifndef NDEBUG
-   for( v = 0; v < digraph->nnodes; ++v )
-      assert(components[v] != 0);
-#endif
-
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&dfsnodes);
-   BMSfreeMemoryArray(&visited);
-
-   return SCIP_OKAY;
-}
-
-/** Computes (undirected) components on the directed graph and sorts
- *  the components (almost) topologically w.r.t. the directed graph.
- *
- *  Note, that in general a topological sort is not unique.
- *  Note, that there might be directed cycles, that are randomly broken,
- *  which is the reason for having only almost topologically sorted arrays.
- */
-SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   minsize,            /**< minimum size a component should have */
-   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
-                                              *   to store the nodes of the components one component after the other,
-                                              *   with the nodes of one component being (almost) topologically sorted */
-   int*                  componentstart,     /**< array to store for each component, where it starts in array components;
-                                              *   at position ncomponents+1, the total number of nodes is stored */
-   int                   componentstartsize, /**< size of componentstart array; if this is smaller than the number of components+1,
-                                              *   only the start indices of the first components are stored and the method should
-                                              *   be called again after enlarging the componentstart array */
-   int*                  ncomponents         /**< pointer to store the number of components */
+                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
+                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
+   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
+                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
    )
 {
    SCIP_Bool* visited;
    int* ndirectedadjnodes;
-   int* comps;
-   int* compstart;
    int* stackadjvisited;
    int* dfsstack;
-   int* dfsnodes;
    int ndfsnodes;
-   int ncomps;
+   int compstart;
+   int v;
    int i;
    int j;
-   int k;
-   int idx;
 
    assert(digraph != NULL);
-   assert(components != NULL);
-   assert(componentstart != NULL);
-   assert(ncomponents != NULL);
    assert(digraph->nnodes > 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&comps, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&compstart, digraph->nnodes + 1) );
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 10;
+
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
+
+   digraph->componentstarts[0] = 0;
 
    /* store the number of directed arcs per node */
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
@@ -4276,77 +4210,176 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    {
       for( j = 0; j < ndirectedadjnodes[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddEdgeSafe(digraph, digraph->adjnodes[i][j], i) );
+         SCIP_CALL( SCIPdigraphAddEdge(digraph, digraph->adjnodes[i][j], i) );
       }
    }
 
-   /* compute components in the undirected graph;
-    * this time, we store the node indices of the components, sorted by the components
-    */
-   ncomps = 0;
-   compstart[ncomps] = 0;
-   for( i = 0; i < digraph->nnodes; ++i )
+   for( v = 0; v < digraph->nnodes; ++v )
    {
-      if( visited[i] )
+      if( visited[v] )
          continue;
 
+      compstart = digraph->componentstarts[digraph->ncomponents];
       ndfsnodes = 0;
-      depthFirstSearch(digraph, i, visited, dfsstack, stackadjvisited, &(comps[compstart[ncomps]]), &ndfsnodes);
+      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited,
+         &digraph->components[compstart], &ndfsnodes);
 
       /* forget about this component if it is too small */
       if( ndfsnodes >= minsize )
       {
-         ncomps++;
-         compstart[ncomps] = compstart[ncomps-1] + ndfsnodes;
+         digraph->ncomponents++;
+
+         /* enlarge componentstartsize array, if needed */
+         if( digraph->ncomponents >= digraph->componentstartsize )
+         {
+            digraph->componentstartsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < digraph->componentstartsize);
+
+            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+         }
+         digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
+
+         /* store component number for contained nodes if array was given */
+         if( components != NULL )
+         {
+            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >=  compstart; --i )
+            {
+               components[digraph->components[i]] = digraph->ncomponents - 1;
+            }
+         }
       }
    }
-   assert(compstart[ncomps] <= digraph->nnodes);
 
    /* restore the number of directed arcs per node */
    BMScopyMemoryArray(digraph->nadjnodes, ndirectedadjnodes, digraph->nnodes);
    BMSclearMemoryArray(visited, digraph->nnodes);
 
-   /* now, sort the components (almost) topologically */
+   /* return number of components, if the pointer was given */
+   if( ncomponents != NULL )
+      (*ncomponents) = digraph->ncomponents;
+
+   BMSfreeMemoryArray(&ndirectedadjnodes);
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
+   BMSfreeMemoryArray(&visited);
+
+   return SCIP_OKAY;
+}
+
+/** Performes an (almost) topological sort on the undirected components of the directed graph.
+ *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+ *
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
+ */
+SCIP_RETCODE SCIPdigraphTopoSortComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   SCIP_Bool* visited;
+   int* comps;
+   int* compstarts;
+   int* stackadjvisited;
+   int* dfsstack;
+   int* dfsnodes;
+   int ndfsnodes;
+   int ncomps;
+   int i;
+   int j;
+   int k;
+   int endidx;
+
+   assert(digraph != NULL);
+
+   ncomps = digraph->ncomponents;
+   comps = digraph->components;
+   compstarts = digraph->componentstarts;
+
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+
+   /* sort the components (almost) topologically */
    for( i = 0; i < ncomps; ++i )
    {
-      idx = compstart[i+1] - 1;
-      for( j = compstart[i]; j < compstart[i+1]; ++j )
+      endidx = compstarts[i+1] - 1;
+      ndfsnodes = 0;
+      for( j = compstarts[i]; j < compstarts[i+1]; ++j )
       {
          if( visited[comps[j]] )
             continue;
 
-         ndfsnodes = 0;
-         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
-
-         /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
-          * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
-          * they will be added before these variables, which gives a valid topological sorting
+         /* perform depth first search, nodes visited in this call are appended to the list dfsnodes in reverse
+          * dfs order, after the nodes already contained;
+          * so at every point in time, the nodes in dfsnode are in reverse (almost) topological order
           */
-         for( k = 0; k < ndfsnodes; ++k )
-         {
-            components[idx - k] = dfsnodes[k];
-         }
-         idx -= ndfsnodes;
+         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
       }
-      assert(idx == compstart[i] - 1);
-   }
+      assert(endidx - ndfsnodes == compstarts[i] - 1);
 
-   /* copy start indices of components and number of components */
-   for( i = 0; i <= ncomps && i < componentstartsize; ++i )
-   {
-      componentstart[i] = compstart[i];
+      /* copy reverse (almost) topologically sorted array of nodes reached by the dfs searches;
+       * reverse their order to get an (almost) topologically sort
+       */
+      for( k = 0; k < ndfsnodes; ++k )
+      {
+         digraph->components[endidx - k] = dfsnodes[k];
+      }
    }
-   *ncomponents = ncomps;
 
    BMSfreeMemoryArray(&stackadjvisited);
    BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
-   BMSfreeMemoryArray(&compstart);
-   BMSfreeMemoryArray(&comps);
-   BMSfreeMemoryArray(&ndirectedadjnodes);
 
    return SCIP_OKAY;
+}
+
+/** returns the number of previously computed undirected components for the given directed graph */
+int SCIPdigraphGetNComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+   assert(digraph->componentstartsize > 0); /* components should have been computed */
+
+   return digraph->ncomponents;
+}
+
+/** Returns the number of previously computed undirected components for the given directed graph.
+ *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
+ */
+void SCIPdigraphGetComponent(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the component to return */
+   int**                 nodes,              /**< pointer to store the nodes in the component */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   )
+{
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+
+   (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
+   (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+}
+
+/** frees the component information for the given directed graph */
+void SCIPdigraphFreeComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+
+   /* free components structure */
+   if( digraph->componentstartsize > 0 )
+   {
+      BMSfreeMemoryArray(&digraph->componentstarts);
+      BMSfreeMemoryArray(&digraph->components);
+   }
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 0;
 }
 
 
