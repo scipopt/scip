@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /* uncomment to get statistical output at the end of SCIP run */
 /* #define STATISTIC_INFORMATION */
 
@@ -838,6 +838,8 @@ SCIP_RETCODE chooseDoubleVar(
       SCIP_Real lpsolceil;
       SCIP_Real nlpsolceil;
       SCIP_Real boundval;
+      SCIP_Real floorval;
+      SCIP_Real ceilval;
 
       var = pseudocands[c];
       lpsol = pseudocandslpsol[c];
@@ -856,27 +858,31 @@ SCIP_RETCODE chooseDoubleVar(
       if( mayround && !(*bestcandmayround) )
          continue;
 
+      if( SCIPisFeasEQ(scip, lpsol, nlpsol) && SCIPisFeasIntegral(scip, lpsol))
+         continue;
+
       lpsolfloor = SCIPfeasFloor(scip, lpsol);
       nlpsolfloor =  SCIPfeasFloor(scip, nlpsol);
       lpsolceil = SCIPfeasCeil(scip, lpsol);
       nlpsolceil =  SCIPfeasCeil(scip, nlpsol);
-
+      floorval = MIN(lpsolfloor,nlpsolfloor);
+      ceilval =  MAX(lpsolceil,nlpsolceil);
       /* if both values are in the same interval, find out which integer is (in sum) the closer one, this will be the
        * new bound. The minima and maxima are necessary since one or both values with be integer
        */
-      if( SCIPvarIsBinary(var) ||  MAX(lpsolceil,nlpsolceil)-MIN(lpsolfloor,nlpsolfloor) < 1.5 )
+      if( SCIPvarIsBinary(var) || ceilval-floorval < 1.5 )
       {
-         frac = lpsol+nlpsol-lpsolfloor-nlpsolfloor;
-         if( frac < 1.0 )
+
+         frac = 0.33*(lpsol-floorval) + 0.67*(nlpsol-floorval);
+         if( frac < 0.5 )
          {
-            /* frac < 1.0 <=> frac < 2.0-frac */
             roundup = FALSE;
             boundval = MIN(lpsolfloor,nlpsolfloor);
          }
          else
          {
             roundup = TRUE;
-            frac = 2.0-frac;
+            frac = 1.0-frac;
             boundval = MAX(nlpsolceil,lpsolceil);
          }
       }
@@ -919,6 +925,8 @@ SCIP_RETCODE chooseDoubleVar(
       }
       assert(bestfrac < SCIP_INVALID);
    }
+
+   printf("var %s lpsol %f nlpsol %f\n", SCIPvarGetName(pseudocands[*bestcand]), pseudocandslpsol[*bestcand], pseudocandsnlpsol[*bestcand]);
 
    if( *bestcandroundup )
       *bestboundval -= 0.5;
@@ -1776,7 +1784,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
-            assert(nnlpcands <= npseudocands);
+            assert(backtrackdepth > 0 || nnlpcands <= npseudocands);
             assert(SCIPgetNLPBranchCands(scip) <= npseudocands);
             SCIP_CALL( SCIPgetSolVals(scip, NULL, npseudocands, pseudocands, pseudocandslpsol) );
             SCIP_CALL( SCIPgetSolVals(scip, heurdata->sol, npseudocands, pseudocands, pseudocandsnlpsol) );
