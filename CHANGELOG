@@ -103,6 +103,7 @@ features:
 - time for initpre and exitpre methods is now also measured in presolving time
 - digraph structure added to misc.c and pub_misc.h that can be used to handle directed graphs, compute undirected
   components in the graph, and sort these components (almost) topologically
+- beta-version of a MATLAB interface can be found under interfaces/matlab
 
 SCIP version 2.1.2
 ==================
