@@ -1992,7 +1992,7 @@ SCIP_RETCODE resolvePropagation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(!SCIPisZero(scip, consdata->zcoef));
+   assert(consdata->zcoef != 0.0);
 
    switch( proprule )
    {
@@ -2731,7 +2731,10 @@ SCIP_RETCODE propagateVarbounds(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->z != NULL);
-   assert(!SCIPisZero(scip, consdata->zcoef));
+
+   /* don't do anything if it looks like we have numerical troubles */
+   if( SCIPisZero(scip, consdata->zcoef) )
+      return SCIP_OKAY;
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
@@ -3620,7 +3623,7 @@ SCIP_RETCODE proposeFeasibleSolution(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
       assert(consdata->z != NULL);
-      assert(!SCIPisZero(scip, consdata->zcoef));
+      assert(consdata->zcoef != 0.0);
 
       /* recompute violation w.r.t. current solution */
       SCIP_CALL( computeViolation(scip, conss[c], newsol, &viol) );  /*lint !e613*/
