@@ -900,7 +900,7 @@ BEGIN {
             gamsprobtype = "MIP";
          #InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime
          #NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables
-         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 1 : 0, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
+         printf("%s,%s,SCIP_%s,%d,%d,%d,%g,%g,%g,", pavprob, gamsprobtype, settings, objsense == 1 ? 0 : 1, modelstat, solverstat, pb, db, tottime+pavshift) > PAVFILE;
          printf("%d,%d,%d,%d\n", bbnodes, simpiters, cons, vars) > PAVFILE;
       }
    }
