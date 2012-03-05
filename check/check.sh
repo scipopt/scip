@@ -168,7 +168,7 @@ do
             echo read $i                           >> $TMPFILE
 #            echo write genproblem cipreadparsetest.cip >> $TMPFILE
 #            echo read cipreadparsetest.cip         >> $TMPFILE
-            echo presolve                          >> $TMPFILE
+            echo optimize                          >> $TMPFILE
             echo display statistics                >> $TMPFILE
 #           echo display solution                  >> $TMPFILE
             echo checksol                          >> $TMPFILE
