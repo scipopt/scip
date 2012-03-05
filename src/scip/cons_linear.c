@@ -8761,7 +8761,184 @@ SCIP_RETCODE fullDualPresolve(
    return SCIP_OKAY;
 }
 
+/** updates the cutoff if the given primal bound  (which is implied by the given constraint) is better */
+static
+SCIP_RETCODE updateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real             primalbound         /**< feasible primal bound */
+   )
+{
+   SCIP_Real cutoffbound;
 
+   SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+      SCIPconsGetName(cons), primalbound);
+
+   /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are still
+    * excepted
+    */
+   cutoffbound = primalbound + SCIPcutoffbounddelta(scip);
+
+   if( cutoffbound < SCIPgetCutoffbound(scip) )
+   {
+      SCIPdebugMessage("update cutoff bound <%g>\n", cutoffbound);
+
+      SCIP_CALL( SCIPupdateCutoffbound(scip, cutoffbound) );
+   }
+   else
+   {
+      /* in case the cutoff bound is worse then currently known one we avoid additionaly enforcement and
+       * propagation
+       */
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons, FALSE) );
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check if the linear constraint is parallel to objective function; if so update the cutoff bound and avoid that the
+ *  constraint enters the LP by setting the initial and separated flag to FALSE
+ */
+static
+SCIP_RETCODE checkParallelObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Real offset;
+   SCIP_Real scale;
+   SCIP_Real objval;
+   SCIP_Bool applicable;
+   SCIP_Bool negated;
+   int nobjvars;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   nobjvars = SCIPgetNObjVars(scip);
+
+   /* check if the knapsack constraints has the same number of variables as the objective function and if the initial
+    * and/or separated flag is set to FALSE
+    */
+   if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   applicable = TRUE;
+   offset = 0.0;
+   scale = 1.0;
+
+   for( v = 0; v < nvars && applicable; ++v )
+   {
+      negated = FALSE;
+      var = vars[v];
+      assert(vars != NULL);
+
+      if( SCIPvarIsNegated(var) )
+      {
+         negated = TRUE;
+         var = SCIPvarGetNegatedVar(var);
+         assert(var != NULL);
+      }
+
+      objval = SCIPvarGetObj(var);
+
+      /* if a variable has a zero objective coefficient the knapsack constraint is not parallel to objective function */
+      if( SCIPisZero(scip, objval) )
+         applicable = FALSE;
+      else
+      {
+         SCIP_Real val;
+
+         val = consdata->vals[v];
+
+         if( negated )
+         {
+            if( v == 0 )
+            {
+               /* the first variable defines the scale */
+               scale = val / -objval;
+
+               offset += val;
+            }
+            else if( SCIPisEQ(scip, -objval * scale, val) )
+               offset += val;
+            else
+               applicable = FALSE;
+         }
+         else if( v == 0 )
+         {
+            /* the first variable define the scale */
+            scale = val / objval;
+         }
+         else if( !SCIPisEQ(scip, objval * scale, val) )
+            applicable = FALSE;
+      }
+   }
+
+   if( applicable )
+   {
+      /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
+      SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
+
+      if( SCIPisPositive(scip, scale) )
+      {
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_Real primalbound;
+
+            primalbound = (consdata->rhs - offset) / scale;
+
+            SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
+         }
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_Real dualbound;
+
+            dualbound = (consdata->lhs - offset) / scale;
+
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+               SCIPconsGetName(cons), dualbound);
+
+            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+         }
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_Real dualbound;
+
+            dualbound = (consdata->rhs - offset) / scale;
+
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+               SCIPconsGetName(cons), dualbound);
+
+            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+         }
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_Real primalbound;
+
+            primalbound = (consdata->lhs - offset) / scale;
+
+            SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -10072,6 +10249,9 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( SCIPconsIsActive(cons) )
          {
             SCIP_CONS* upgdcons;
+
+            /* check if linear constraint is parallel to objective function */
+            SCIP_CALL( checkParallelObjective(scip, cons) );
 
             SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
             if( upgdcons != NULL )
