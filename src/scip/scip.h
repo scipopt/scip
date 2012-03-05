@@ -7997,6 +7997,12 @@ SCIP_Real SCIPbarrierconvtol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** return the cutoff bound delta */
+extern
+SCIP_Real SCIPcutoffbounddelta(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** sets the feasibility tolerance for constraints */
 extern
 SCIP_RETCODE SCIPchgFeastol(
