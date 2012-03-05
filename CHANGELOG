@@ -124,6 +124,7 @@ fixed bugs:
 - fixed bug in NLP representation of abspower constraints handling (x+a)^2 with nonzero a
 - fixed bug parsing an and-constraint in cip format
 - fixed bug in cons_setppc, did not handle new constraints with inactive variables
+- fixed bug in heur_oneopt.c which forgot to check LP rows if local rows are present
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
