@@ -6357,11 +6357,6 @@ SCIP_RETCODE checkParallelObjective(
 
    if( applicable )
    {
-      SCIP_VAR** vars;
-
-      vars = consdata->vars;
-      assert(vars != NULL);
-
       /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
       SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
       SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
