@@ -8803,7 +8803,7 @@ SCIP_RETCODE updateCutoffbound(
 static
 SCIP_RETCODE checkParallelObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons                /**< linear constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8821,11 +8821,15 @@ SCIP_RETCODE checkParallelObjective(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* ignore equalities since these are covert by the method checkPartialObjective() */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      return SCIP_OKAY;
+
    nvars = consdata->nvars;
    nobjvars = SCIPgetNObjVars(scip);
 
-   /* check if the knapsack constraints has the same number of variables as the objective function and if the initial
-    * and/or separated flag is set to FALSE
+   /* check if the linear inequality constraints has the same number of variables as the objective function and if the
+    * initial and/or separated flag is set to FALSE
     */
    if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
       return SCIP_OKAY;
@@ -8850,7 +8854,7 @@ SCIP_RETCODE checkParallelObjective(
 
       objval = SCIPvarGetObj(var);
 
-      /* if a variable has a zero objective coefficient the knapsack constraint is not parallel to objective function */
+      /* if a variable has a zero objective coefficient the linear constraint is not parallel to objective function */
       if( SCIPisZero(scip, objval) )
          applicable = FALSE;
       else
@@ -8885,7 +8889,7 @@ SCIP_RETCODE checkParallelObjective(
 
    if( applicable )
    {
-      /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
+      /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
       SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
       SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
 
@@ -10111,6 +10115,12 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
 
+      /* check if an inequality is parallel to the objective function */
+      if( !cutoff && SCIPconsIsActive(cons) )
+      {
+         SCIP_CALL( checkParallelObjective(scip, cons) );
+      }
+
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -10249,9 +10259,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( SCIPconsIsActive(cons) )
          {
             SCIP_CONS* upgdcons;
-
-            /* check if linear constraint is parallel to objective function */
-            SCIP_CALL( checkParallelObjective(scip, cons) );
 
             SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
             if( upgdcons != NULL )
