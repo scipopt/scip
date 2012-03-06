@@ -1553,10 +1553,10 @@ SCIP_RETCODE resolvePropagation(
 }
 
 /** check if at least two operands or one operand and the resultant are in one clique, if so, we can fix the resultant
- *  to zero and in the former case we can also delete this constraint, the clique information should not have been
- *  arisen by this constraint
+ *  to zero and in the former case we can also delete this constraint but we need to extract the clique information as
+ *  constraint
  *
- *  x == AND(y, z) and clique(y,z) => x = 0, delete constraint
+ *  x == AND(y, z) and clique(y,z) => x = 0, delete constraint and create y + z <= 1
  *  x == AND(y, z) and clique(x,y) => x = 0
  *
  *  special handled cases are:
@@ -1742,6 +1742,10 @@ SCIP_RETCODE cliquePresolve(
 
 	 if( SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
 	 {
+	    SCIP_CONS* cliquecons;
+	    SCIP_VAR* consvars[2];
+	    char name[SCIP_MAXSTRLEN];
+
 	    SCIPdebugMessage("constraint <%s> redundant: because variable <%s> and variable <%s> are in a clique, the resultant <%s> can be fixed to 0\n",
 	       SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2), SCIPvarGetName(consdata->resvar));
 
@@ -1749,6 +1753,35 @@ SCIP_RETCODE cliquePresolve(
 	    *cutoff = *cutoff || infeasible;
 	    if( fixed )
 	       ++(*nfixedvars);
+
+
+	    /* create clique constraint which lead to the last fixing */
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq", SCIPconsGetName(cons), v2);
+
+	    if( value1 )
+	       consvars[0] = var1;
+	    else
+	    {
+	       SCIP_CALL( SCIPgetNegatedVar(scip, var1, &(consvars[0])) );
+	    }
+
+	    if( value2 )
+	       consvars[1] = var2;
+	    else
+	    {
+	       SCIP_CALL( SCIPgetNegatedVar(scip, var2, &(consvars[1])) );
+	    }
+
+	    SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, 2, consvars,
+		  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+		  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+		  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+		  SCIPconsIsStickingAtNode(cons)) );
+	    SCIPdebugMessage(" -> adding clique constraint: ");
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+	    SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+	    ++(*naddconss);
 
 	    SCIP_CALL( SCIPdelCons(scip, cons) );
 	    ++(*ndelconss);
@@ -1801,7 +1834,7 @@ SCIP_RETCODE cliquePresolve(
    else
       value1 = TRUE;
 
-   /* check if two operands are in a clique */
+   /* check if one operands is in a clique with the resultant */
    for( v = nvars - 1; v >= 0; --v )
    {
       var2 = vars[v];
@@ -1848,7 +1881,7 @@ SCIP_RETCODE cliquePresolve(
 
 	    for( v2 = nvars - 1; v2 >= 0; --v2 )
 	    {
-	       var2 = vars[v];
+	       var2 = vars[v2];
 	       negated = FALSE;
 	       SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
 
