@@ -165,7 +165,7 @@ EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
 
 # counter to define file names for a test set uniquely 
-COUNT=1
+COUNT=0
 
 for i in `cat testset/$TSTNAME.test` DONE
 do
@@ -173,6 +173,9 @@ do
       then
       break
   fi
+
+  # increase the index for the inctance tried to solve, even if the filename does not exist
+  COUNT=`expr $COUNT + 1`
 
   # check if problem instance exists 
   if test -f $SCIPPATH/$i
@@ -254,7 +257,4 @@ do
   else
       echo "input file "$SCIPPATH/$i" not found!"
   fi
-
-  # increase the index for the inctance tried to solve, even if the filename does not exist
-  COUNT=`expr $COUNT + 1`
 done
