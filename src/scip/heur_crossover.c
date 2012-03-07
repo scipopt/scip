@@ -39,22 +39,23 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent     */
-#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.666          /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NUSEDSOLS     3              /* number of solutions that will be taken into account                 */
-#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait      */
-#define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                 */
-#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?     */
+#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent       */
+#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINFIXINGRATE 0.666          /* minimum percentage of integer variables that have to be fixed         */
+#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes            */
+#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
+#define DEFAULT_NUSEDSOLS     3              /* number of solutions that will be taken into account                   */
+#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
+#define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                   */
+#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
 #define DEFAULT_USELPROWS    FALSE           /* should subproblem be created out of the rows in the LP rows,
                                               * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE           /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                              * cutpool of the original scip be copied to constraints of the subscip */
-
-#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic       */
+                                              * cutpool of the original scip be copied to constraints of the subscip
+                                              */
+#define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
+#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
 
 
 /*
@@ -91,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
+   SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -895,6 +897,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
+   /* permute the subproblem to increase diversification */
+   if( heurdata->permute )
+   {
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int) SCIPheurGetNCalls(heur), TRUE, TRUE, TRUE, TRUE, TRUE) );
+   }
+
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
    retcode = SCIPsolve(subscip);
@@ -1052,6 +1060,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/permute",
+         "should the subproblem be permuted to increase diversification?",
+         &heurdata->permute, TRUE, DEFAULT_PERMUTE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
