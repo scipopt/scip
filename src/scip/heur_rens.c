@@ -61,6 +61,7 @@
 #define DEFAULT_EXTRATIME    FALSE      /* should the RENS sub-CIP get its own full time limit? This is only
                                          * implemented for testing and not recommended to be used!
                                          */
+#define DEFAULT_ADDALLSOLS   FALSE      /* should all subproblem solutions be added to the original SCIP?       */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -92,6 +93,8 @@ struct SCIP_HeurData
    SCIP_Bool             extratime;          /**< should the RENS sub-CIP get its own full time limit? This is only
                                               *   implemented for testing and not recommended to be used!
                                               */
+   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
+
 };
 
 
@@ -575,12 +578,13 @@ SCIP_RETCODE SCIPapplyRens(
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
+      for( i = 0; i < nsubsols && (!success || heurdata->addallsols); ++i )
       {
          SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+         if( success )
+            *result = SCIP_FOUNDSOL;
       }
-      if( success )
-         *result = SCIP_FOUNDSOL;
+
       STATISTIC(
          SCIPinfoMessage(scip, NULL, "RENS statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %d nodes, solution %10.4f found at node %"SCIP_LONGINT_FORMAT"\n", 
             intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip), 
@@ -801,6 +805,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/extratime",
          "should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!",
          &heurdata->extratime, TRUE, DEFAULT_EXTRATIME, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/addallsols",
+         "should all subproblem solutions be added to the original SCIP?",
+         &heurdata->addallsols, TRUE, DEFAULT_ADDALLSOLS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
