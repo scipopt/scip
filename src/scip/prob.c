@@ -524,6 +524,59 @@ SCIP_RETCODE SCIPprobResetBounds(
    return SCIP_OKAY;
 }
 
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int ncontvars;
+   int nvars;
+   int v;
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   nbinvars = prob->nbinvars;
+   nintvars = prob->nintvars;
+   nimplvars = prob->nimplvars;
+   ncontvars = prob->ncontvars;
+
+   assert(vars != NULL);
+   assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+
+   SCIPdebugMessage("entering sorting with respect to original block structure! \n");
+
+   /* sort binaries */
+   if( nbinvars > 0 )
+      SCIPsortPtr((void**)vars, SCIPvarComp, nbinvars);
+
+   /* sort integers */
+   if( nintvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
+
+   /* sort implicit variables */
+   if( nimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+
+   /* sort continuous variables*/
+   if( ncontvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+
+   /* after sorting, the problem index of each variable has to be adjusted */
+   for( v = 0; v < nvars; ++v )
+   {
+      vars[v]->probindex = v;
+      SCIPdebugMessage("Variable: Problem index <%d>, original index <%d> \n", vars[v]->probindex, vars[v]->index);
+   }
+}
 
 
 

@@ -123,7 +123,16 @@ SCIP_RETCODE SCIPprobResetBounds(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+extern
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 
 /*
