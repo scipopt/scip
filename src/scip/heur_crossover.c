@@ -229,6 +229,24 @@ SCIP_RETCODE createSolTuple(
    return SCIP_OKAY;
 }
 
+/* checks whether the new solution was found at the same node by the same heuristic as an already selected one */
+static
+SCIP_Bool solHasNewSource(
+   SCIP_SOL**            sols,               /**< feasible SCIP solutions */
+   int*                  selection,          /**< pool of solutions crossover uses */
+   int                   selectionsize,      /**< size of solution pool */
+   int                   newsol              /**< candidate solution */
+)
+{
+   int i;
+
+   for( i = 0; i < selectionsize; i++)
+      if( SCIPsolGetHeur(sols[selection[i]]) == SCIPsolGetHeur(sols[newsol])
+         && SCIPsolGetNodenum(sols[selection[i]]) == SCIPsolGetNodenum(sols[newsol]) )
+         return FALSE;
+
+   return TRUE;
+}
 
 /** randomly selects the solutions crossover will use from the pool of all solutions found so far */
 static
@@ -246,32 +264,48 @@ SCIP_RETCODE selectSolsRandomized(
    int nusedsols;        /* number of solutions which will be chosen */
 
    SOLTUPLE* elem;
+   SCIP_SOL** sols;
 
    /* initialization */
    nusedsols = heurdata->nusedsols;
    lastsol = SCIPgetNSols(scip);
+   sols = SCIPgetSols(scip);
    assert(nusedsols < lastsol);
 
    i = 0;
    *success = FALSE;
 
-   /* perform at maximum 100 restarts and stop as soon as a new set of solutions is found */
-   while( !*success && i < 100 )
+   /* perform at maximum 10 restarts and stop as soon as a new set of solutions is found */
+   while( !*success && i < 10 )
    {
-      for( j = 0; j < nusedsols; j++ )
+      SCIP_Bool validtuple;
+
+      validtuple = TRUE;
+      for( j = 0; j < nusedsols && validtuple; j++ )
       {
-         selection[j] = SCIPgetRandomInt(nusedsols-j-1, lastsol-1, &heurdata->randseed);
-         lastsol = selection[j];
+         int k;
+         k = SCIPgetRandomInt(nusedsols-j-1, lastsol-1, &heurdata->randseed);
+
+         /* ensure that the solution does not have a similar source as the others */
+         while( k >= nusedsols-j-1 && !solHasNewSource(sols, selection, j, k) )
+            k--;
+
+         validtuple = (k >= nusedsols-j-1);
+         selection[j] = k;
+         lastsol = k;
       }
 
-      /* creates an object ready to be inserted into the hashtable */
-      SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
-
-      /* check whether the randomized set is already in the hashtable, if not, insert it */
-      if( !SCIPhashtableExists(heurdata->hashtable, elem) )
+      if( validtuple )
       {
-         SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
-         *success = TRUE;
+         /* creates an object ready to be inserted into the hashtable */
+         SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
+
+         /* check whether the randomized set is already in the hashtable, if not, insert it */
+         if( !SCIPhashtableExists(heurdata->hashtable, elem) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
+            *success = TRUE;
+         }
       }
       i++;
    }
@@ -444,28 +478,40 @@ SCIP_RETCODE setupSubproblem(
    if( !heurdata->randomization || nsols == nusedsols || heurdata->prevlastsol != sols[nusedsols-1] )
    {
       SOLTUPLE* elem;
+      SCIP_HEUR* solheur;
+      SCIP_Longint solnodenum;
+      SCIP_Bool allsame;
 
       for( i = 0; i < nusedsols; i++ )
          selection[i] = i;
       SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
 
-      /* check, whether solution tuple has already been tried */
-      if( SCIPhashtableExists(heurdata->hashtable, elem) )
-      {
-         *success = FALSE;
+      solheur = SCIPsolGetHeur(sols[0]);
+      solnodenum = SCIPsolGetNodenum(sols[0]);
+      allsame = TRUE;
 
-         /* if solution tuple has already been tried, randomization is allowed and enough solutions are at hand, try
-          * to randomize another tuple. E.g., this can happen if the last crossover solution was among the best ones */
-         if( heurdata->randomization && nsols > nusedsols )
-         {
-            SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
-         }
-      }
-      else
+      /* check, whether all solutions have been found by the same heuristic at the same node; in this case we do not run
+       * crossover, since it would probably just optimize over the same space as the other heuristic
+       */
+      for( i = 1; i < nusedsols; i++ )
+         if( SCIPsolGetHeur(sols[i]) != solheur || SCIPsolGetNodenum(sols[i]) != solnodenum )
+            allsame = FALSE;
+
+      *success = !allsame && !SCIPhashtableExists(heurdata->hashtable, elem);
+
+      /* check, whether solution tuple has already been tried */
+      if( !SCIPhashtableExists(heurdata->hashtable, elem) )
       {
-         *success = TRUE;
          SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
       }
+
+      /* if solution tuple has already been tried, randomization is allowed and enough solutions are at hand, try
+       * to randomize another tuple. E.g., this can happen if the last crossover solution was among the best ones */
+      if( !(*success) && heurdata->randomization && nsols > nusedsols )
+      {
+         SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
+      }
+
    }
    /* otherwise randomize the set of solutions */
    else
