@@ -7210,7 +7210,14 @@ SCIP_RETCODE freeSolve(
 
    /* mark that we are currently restarting */
    if( restart )
+   {
       scip->stat->inrestart = TRUE;
+
+      /* copy the current dual bound into the problem data structure such that it can be used initialize the new search
+       * tree
+       */
+      SCIPprobSetDualbound(scip->transprob, getDualbound(scip));
+   }
 
    /* remove focus from the current focus node */
    if( SCIPtreeGetFocusNode(scip->tree) != NULL )
