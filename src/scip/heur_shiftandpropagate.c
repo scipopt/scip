@@ -1325,12 +1325,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    *result = SCIP_DIDNOTRUN;
    SCIPdebugMessage("entering execution method of shift and propagate heuristic\n");
 
-   /* we have to collect the number of different variable types before we start probing since during probing variable
-    * can be created(e.g., cons_xor.c)
-    */
    ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
 
    /* heuristic is obsolete if there are only continuous variables */
    if( ndiscvars == 0 )
@@ -1345,6 +1340,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_Bool nodecutoff;
 
       nodecutoff = FALSE;
+      /* @note this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -1361,6 +1357,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    *result = SCIP_DIDNOTFIND;
    initialized = FALSE;
+
+   /* we have to collect the number of different variable types before we start probing since during probing variable
+    * can be created(e.g., cons_xor.c)
+    */
+   ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -1393,7 +1396,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    SCIPsolSetHeur(sol, heur);
-
 
    /* allocate arrays for execution method */
    SCIP_CALL( SCIPallocBufferArray(scip, &permutation, ndiscvars) );
