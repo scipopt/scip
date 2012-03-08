@@ -257,6 +257,7 @@ SCIP_RETCODE lpStoreSolVals(
    SCIP_LPSOLVALS* storedsolvals;
 
    assert(lp != NULL);
+   assert(lp->solved);
    assert(stat != NULL);
    assert(blkmem != NULL);
 
@@ -268,14 +269,12 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals = lp->storedsolvals;
 
    /* store values */
-   assert(lp->solved);
-   assert(lp->validsollp == stat->lpcount);
-
    storedsolvals->lpsolstat = lp->lpsolstat;
    storedsolvals->lpobjval = lp->lpobjval;
    storedsolvals->primalfeasible = lp->primalfeasible;
    storedsolvals->dualfeasible = lp->dualfeasible;
    storedsolvals->solisbasic = lp->solisbasic;
+   storedsolvals->solisvalid = lp->validsollp == stat->lpcount;
 
    return SCIP_OKAY;
 }
@@ -298,7 +297,7 @@ SCIP_RETCODE lpRestoreSolVals(
    if( storedsolvals != NULL )
    {
       lp->solved = TRUE;
-      lp->validsollp = validlp;
+      lp->validsollp = storedsolvals->solisvalid ? validlp : -1;
 
       lp->lpsolstat = storedsolvals->lpsolstat;
       lp->lpobjval = storedsolvals->lpobjval;
@@ -307,7 +306,7 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->solisbasic = storedsolvals->solisbasic;
 
       /* restore infeasible LPs always by resolving */
-      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
+      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE || lp->validsollp == -1);
    }
    /* no values available, mark LP as unsolved */
    else
@@ -15751,12 +15750,16 @@ SCIP_RETCODE SCIPlpStartDive(
    int r;
 
    assert(lp != NULL);
+   /** @todo can the assert(lp->solved) be relaxed? E.g., in prop_obbt LPs are solved which have very different
+    *  objective function and hence do not profit much from warmstarting anyway
+    */
    assert(lp->solved);
    assert(lp->flushed);
    assert(!lp->diving);
    assert(!lp->probing);
    assert(lp->divelpistate == NULL);
-   assert(lp->validsollp == stat->lpcount);
+   assert(lp->validsollp <= stat->lpcount);
+   assert(lp->validsollp < stat->lpcount || lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
    assert(blkmem != NULL);
    assert(set != NULL);
 
@@ -15782,8 +15785,9 @@ SCIP_RETCODE SCIPlpStartDive(
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
    assert(lp->storedsolvals != NULL);
-   if( !set->lp_resolverestore && lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE )
+   if( !set->lp_resolverestore && lp->validsollp == stat->lpcount )
    {
+      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
       for( c = 0; c < lp->ncols; ++c )
       {
          SCIP_CALL( colStoreSolVals(lp->cols[c], blkmem) );
@@ -15894,13 +15898,16 @@ SCIP_RETCODE SCIPlpEndDive(
 
       /* restore LP solution values in lp data, columns and rows */
       SCIP_CALL( lpRestoreSolVals(lp, blkmem, stat->lpcount) );
-      for( c = 0; c < lp->ncols; ++c )
+      if( lp->storedsolvals->solisvalid )
       {
-         SCIP_CALL( colRestoreSolVals(lp->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
-      }
-      for( r = 0; r < lp->nrows; ++r )
-      {
-         SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
+         for( c = 0; c < lp->ncols; ++c )
+         {
+            SCIP_CALL( colRestoreSolVals(lp->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
+         }
+         for( r = 0; r < lp->nrows; ++r )
+         {
+            SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
+         }
       }
    }
 
