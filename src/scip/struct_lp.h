@@ -112,6 +112,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             solisvalid;         /**< is current LP solution valid for the current LP, i.e., is
                                               *   lp->validsollp == stat->lpcount? */
+   SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
 
 /** LP column;

@@ -43,6 +43,7 @@ interface
   presolving round, given no further reductions will be found; can be used to ensure that a presolver is called very late
 - new methods SCIPenableVarHistory() and SCIPdisableVarHistory() which can be used to turn off and on the collection
   of variables statistics which is used for example for branching
+- allowed to start diving mode even if LP is unsolved or not solved to optimality
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

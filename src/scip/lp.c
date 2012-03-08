@@ -257,7 +257,6 @@ SCIP_RETCODE lpStoreSolVals(
    SCIP_LPSOLVALS* storedsolvals;
 
    assert(lp != NULL);
-   assert(lp->solved);
    assert(stat != NULL);
    assert(blkmem != NULL);
 
@@ -275,6 +274,7 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->dualfeasible = lp->dualfeasible;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->solisvalid = lp->validsollp == stat->lpcount;
+   storedsolvals->lpissolved = lp->solved;
 
    return SCIP_OKAY;
 }
@@ -296,7 +296,7 @@ SCIP_RETCODE lpRestoreSolVals(
    storedsolvals = lp->storedsolvals;
    if( storedsolvals != NULL )
    {
-      lp->solved = TRUE;
+      lp->solved = storedsolvals->lpissolved;
       lp->validsollp = storedsolvals->solisvalid ? validlp : -1;
 
       lp->lpsolstat = storedsolvals->lpsolstat;
@@ -15750,16 +15750,13 @@ SCIP_RETCODE SCIPlpStartDive(
    int r;
 
    assert(lp != NULL);
-   /** @todo can the assert(lp->solved) be relaxed? E.g., in prop_obbt LPs are solved which have very different
-    *  objective function and hence do not profit much from warmstarting anyway
-    */
-   assert(lp->solved);
    assert(lp->flushed);
    assert(!lp->diving);
    assert(!lp->probing);
    assert(lp->divelpistate == NULL);
    assert(lp->validsollp <= stat->lpcount);
    assert(lp->validsollp < stat->lpcount || lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
+   assert(lp->validsollp < stat->lpcount || lp->solved);
    assert(blkmem != NULL);
    assert(set != NULL);
 
@@ -15853,7 +15850,7 @@ SCIP_RETCODE SCIPlpEndDive(
 
    /* resolve LP to reset solution */
    assert(lp->storedsolvals != NULL);
-   if( set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( lp->storedsolvals->lpissolved && (set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) )
    {
       SCIP_Bool lperror;
 
