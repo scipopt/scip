@@ -92,6 +92,8 @@ interface
 - the resolve propagation methods for the constraint handler and propagator getting a new parameter called relaxedbd;
   explaining/resolving this relaxed bound is sufficient
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
+- default integer comparer SCIPsortCompInt() (see pub_misc.h)
+- data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

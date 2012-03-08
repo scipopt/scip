@@ -41,7 +41,8 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
 typedef struct SCIP_Stairmap SCIP_STAIRMAP;       /**< stair map */
 typedef struct SCIP_Digraph SCIP_DIGRAPH;         /**< adjacency list to store and handle graphs */
-
+typedef struct SCIP_BstNode SCIP_BSTNODE;         /**< search node of binary search tree */
+typedef struct SCIP_Bst SCIP_BST;                 /**< binary search tree */
 
 
 /** compares two element indices
@@ -68,6 +69,28 @@ typedef struct SCIP_Digraph SCIP_DIGRAPH;         /**< adjacency list to store a
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+
+/** method used to insert a search into a binary search tree
+ *
+ *  input:
+ *  - tree            : binary search tree
+ *  - node            : search node to be inserted
+ *
+ *  output:
+ *  - inserted        : pointer to store whether the node was inserted
+ */
+#define SCIP_DECL_BSTINSERT(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* inserted)
+
+/** method used to delete from a binarysearch tree
+ *
+ *  input:
+ *  - tree            : binary search tree
+ *  - node            : pointer to the search node to be deleted
+ *
+ *  output:
+ *  - inserted        : pointer to store whether the node was deleted
+ */
+#define SCIP_DECL_BSTDELETE(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* deleted)
 
 #ifdef __cplusplus
 }
