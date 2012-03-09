@@ -132,7 +132,7 @@ COUNT=1
 for j in `cat testset/$TSTNAME.ttest` DONE
 do
   if test "$j" = "DONE"
-      then
+  then
       break
   fi
 
@@ -156,6 +156,7 @@ do
 
   # in case of srun the time needs to be formatted
   if test  "$QUEUETYPE" = "srun"
+  then
     MYMINUTES=0
     MYHOURS=0
     MYDAYS=0
