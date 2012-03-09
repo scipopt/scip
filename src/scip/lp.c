@@ -4567,6 +4567,7 @@ SCIP_RETCODE rowScale(
     * this rounding can lead to
     */
    row->integral = TRUE;
+
    c = 0;
    while( c < row->len )
    {
@@ -4679,6 +4680,9 @@ SCIP_RETCODE rowScale(
    {}
    assert(row->integral == (c == row->len));
 #endif
+
+   /* invalid the activity */
+   row->validactivitylp = -1;
 
    return SCIP_OKAY;
 }
