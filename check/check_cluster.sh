@@ -194,6 +194,7 @@ do
     else
 	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
     fi
+  fi
 
 
   # check if problem instance exists 
