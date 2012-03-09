@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -859,7 +859,7 @@ SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
    /* link the dialogs as parent-child pair; the sub-dialogs are sorted non-decreasing w.r.t. their name */
-   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs, NULL);
    subdialog->parent = dialog;
 
    /* capture sub-dialog */

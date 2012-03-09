@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1653,7 +1653,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1686,7 +1685,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    for( i = 0; i < nvars; ++i )
    {
       /* put the clique into the sorted clique table of the variable */
-      SCIP_CALL( SCIPvarAddClique(vars[i], blkmem, set, prob, stat, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue,
             values != NULL ? values[i] : TRUE, clique, infeasible, nbdchgs) );
    }
 
@@ -1754,7 +1753,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1798,7 +1796,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
          if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, prob, stat, lp, cliquetable, branchcand, eventqueue,
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                   clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                   (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
          }
@@ -1811,15 +1809,13 @@ SCIP_RETCODE SCIPcliquetableCleanup(
             /* add variable upper or rather variable lower bound on vars[0] */
             if( clique->values[0] )
             {
-               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, prob, stat, lp, cliquetable, branchcand, eventqueue,
-                     clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0,
-                     FALSE, infeasible, NULL) );
+               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0, FALSE, infeasible, NULL) );
             }
             else
             {
-               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, prob, stat, lp, cliquetable, branchcand, eventqueue,
-                     clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0,
-                     FALSE, infeasible, NULL) );
+               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                     clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0, FALSE, infeasible, NULL) );
             }
          }
       }
@@ -1854,7 +1850,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
                SCIP_EVENT* event;
 
                SCIP_CALL( SCIPeventCreateImplAdded(&event, blkmem, clique->vars[j]) );
-               SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, NULL, &event) );
+               SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
             }
             clique->eventsissued = TRUE;
          }
@@ -1870,7 +1866,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupcliques = cliquetable->ncliques;
 
    /* process events */
-   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, prob, NULL, lp, branchcand, NULL) );
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, lp, branchcand, NULL) );
    
    return SCIP_OKAY;
 }

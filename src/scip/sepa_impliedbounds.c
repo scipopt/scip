@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,7 +83,7 @@ SCIP_RETCODE addCut(
       
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);
-      SCIPprintRow(scip, cut, NULL);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
       /* add cut */

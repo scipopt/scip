@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -731,10 +731,10 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of knapsack constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
@@ -1069,7 +1069,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       addval = 0.0;
       /* update solution information */
-      if( solitems != NULL)
+      if( solitems != NULL || solval != NULL )
       {
          SCIP_Longint i;
 
@@ -1079,16 +1079,25 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
          {
-            solitems[*nsolitems] = myitems[i];
-            ++(*nsolitems);
+            if( solitems != NULL)
+            {
+               assert(nonsolitems != NULL);
+               solitems[*nsolitems] = myitems[i];
+               ++(*nsolitems);
+            }
             addval += myprofits[i];
          }
 
-         /* the rest are not in the solution */
-         for( j = nmyitems - 1; j >= capacity; --j )
+         if( solitems != NULL)
          {
-            nonsolitems[*nnonsolitems] = myitems[j];
-            ++(*nnonsolitems);
+            assert(nonsolitems != NULL);
+
+            /* the rest are not in the solution */
+            for( j = nmyitems - 1; j >= capacity; --j )
+            {
+               nonsolitems[*nnonsolitems] = myitems[j];
+               ++(*nnonsolitems);
+            }
          }
       }
       /* update solution value */
@@ -4332,7 +4341,7 @@ SCIP_RETCODE mergeMultiples(
 }
 
 /** in case the knapsack constraint is independent of every else, solve the knapsack problem (exactly) and apply the
- *  fixings (dual reductions) 
+ *  fixings (dual reductions)
  */
 static
 SCIP_RETCODE dualPresolving(
@@ -4353,8 +4362,8 @@ SCIP_RETCODE dualPresolving(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Bool applicable;
-   int nsolitems;      
-   int nnonsolitems;      
+   int nsolitems;
+   int nnonsolitems;
    int nvars;
    int v;
 
@@ -4362,17 +4371,17 @@ SCIP_RETCODE dualPresolving(
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
     * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
-    * added to the problems have the check flag set to FALSE 
+    * added to the problems have the check flag set to FALSE
     */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
    vars = consdata->vars;
-      
+
    SCIP_CALL( SCIPallocBufferArray(scip, &profits, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &items, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solitems, nvars) );
@@ -4381,27 +4390,27 @@ SCIP_RETCODE dualPresolving(
    applicable = TRUE;
 
    /* check if we can apply the dual reduction; this can be done if the knapsack has the only locks on this constraint;
-    * collect object values which are the profits of the knapsack problem 
+    * collect object values which are the profits of the knapsack problem
     */
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Bool negated;
-      
+
       var = vars[v];
       assert(var != NULL);
 
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
-      
-      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 ) 
+
+      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 )
       {
          applicable = FALSE;
          break;
       }
 
       negated = FALSE;
-      
+
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
       assert(SCIPvarIsActive(var));
@@ -4411,11 +4420,11 @@ SCIP_RETCODE dualPresolving(
       else
          profits[v] = -SCIPvarGetObj(var);
 
-      SCIPdebugMessage("variable <%s> -> item size %"SCIP_LONGINT_FORMAT", profit <%g>\n", 
+      SCIPdebugMessage("variable <%s> -> item size %"SCIP_LONGINT_FORMAT", profit <%g>\n",
          SCIPvarGetName(vars[v]), consdata->weights[v], profits[v]);
       items[v] = v;
    }
-   
+
    if( applicable )
    {
       SCIP_Bool success;
@@ -4424,49 +4433,46 @@ SCIP_RETCODE dualPresolving(
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       /* solve knapsack problem exactly */
-      SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity, 
+      SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity,
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
 
-      if( !success )
-         goto TERMINATE;
-      
-      /* apply solution of the knapsack as dual reductions */
-      for( v = 0; v < nsolitems; ++v )
+      if( success )
       {
          SCIP_VAR* var;
-         
-         var = vars[solitems[v]];
-         assert(var != NULL);
-         
-         SCIPdebugMessage("variable <%s> only locked up in knapsack constraints: dual presolve <%s>[%.15g,%.15g] >= 1.0\n",
-            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         SCIP_CALL( SCIPtightenVarLb(scip, var, 1.0, TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-         assert(tightened);
-         (*nfixedvars)++;
-      }
-      
-      for( v = 0; v < nnonsolitems; ++v )
-      {
-         SCIP_VAR* var;
-         
-         var = vars[nonsolitems[v]];
-         assert(var != NULL);
 
-         SCIPdebugMessage("variable <%s> has no down locks: dual presolve <%s>[%.15g,%.15g] <= 0.0\n",
-            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         SCIP_CALL( SCIPtightenVarUb(scip, var, 0.0, TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-         assert(tightened);
-         (*nfixedvars)++;
-      }
+         /* apply solution of the knapsack as dual reductions */
+         for( v = 0; v < nsolitems; ++v )
+         {
+            var = vars[solitems[v]];
+            assert(var != NULL);
 
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      (*ndelconss)++;
-      (*deleted) = TRUE;
+            SCIPdebugMessage("variable <%s> only locked up in knapsack constraints: dual presolve <%s>[%.15g,%.15g] >= 1.0\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            SCIP_CALL( SCIPtightenVarLb(scip, var, 1.0, TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
+            assert(tightened);
+            (*nfixedvars)++;
+         }
+
+         for( v = 0; v < nnonsolitems; ++v )
+         {
+            var = vars[nonsolitems[v]];
+            assert(var != NULL);
+
+            SCIPdebugMessage("variable <%s> has no down locks: dual presolve <%s>[%.15g,%.15g] <= 0.0\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            SCIP_CALL( SCIPtightenVarUb(scip, var, 0.0, TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
+            assert(tightened);
+            (*nfixedvars)++;
+         }
+
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+         (*deleted) = TRUE;
+      }
    }
-   
- TERMINATE:
+
    SCIPfreeBufferArray(scip, &nonsolitems);
    SCIPfreeBufferArray(scip, &solitems);
    SCIPfreeBufferArray(scip, &items);
@@ -4775,20 +4781,27 @@ SCIP_RETCODE propagateCons(
                      {
                         SCIPdebugMessage(" -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[v]));
                         SCIP_CALL( SCIPinferBinvarCons(scip, myvars[v], TRUE, cons, SCIPvarGetIndex(myvars[i]), &infeasible, &tightened) );
+
                         if( infeasible )
                         {
                            assert( SCIPvarGetUbLocal(myvars[v]) < 0.5 );
-                          
-                           /* initialize the conflict analysis */
-                           SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-                           /* add the two variables which are fixed to zero within a negated clique */
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
-                           SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
+                           /* analyze the infeasibility if conflict analysis is applicable */
+                           if( SCIPisConflictAnalysisApplicable(scip) )
+                           {
+                              /* conflict analysis can only be applied in solving stage */
+                              assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
 
-                           /* start the conflict analysis */
-                           SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                              /* initialize the conflict analysis */
+                              SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+                              /* add the two variables which are fixed to zero within a negated clique */
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
+                              SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
+
+                              /* start the conflict analysis */
+                              SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                           }
                            *cutoff = TRUE;
                            break;
                         }
@@ -4883,7 +4896,8 @@ SCIP_RETCODE propagateCons(
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
 
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         /* analyze the cutoff if conflict analysis is applicable */
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
          {
             /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
             SCIP_Longint weight;
@@ -4968,7 +4982,8 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* analyze the cutoff in SOLVING stage and if conflict analysis is turned on */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          /* start conflict analysis with the fixed-to-one variables, add only as many as need to exceed the capacity */
          SCIP_Longint weight;
@@ -8219,7 +8234,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
@@ -9273,6 +9288,38 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    assert(consdata != NULL);
 
    return consdata->capacity;
+}
+
+/** changes capacity of the knapsack constraint
+ *
+ *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
+ */
+SCIP_RETCODE SCIPchgCapacityKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Longint          capacity            /**< new capacity of knapsack */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("method can only be called during problem creation stage\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->capacity = capacity;
+
+   return SCIP_OKAY;
 }
 
 /** gets the number of items in the knapsack constraint */

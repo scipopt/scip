@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -835,16 +835,16 @@ SCIP_RETCODE presolveFindDuplicates(
             if( *infeas )
             {
                SCIPdebugMessage("infeasibility detected while solving the equations, no solution exists\n");
-               SCIPdebug( SCIPprintCons(scip, cons0, NULL) );
-               SCIPdebug( SCIPprintCons(scip, cons1, NULL) );
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
                break;
             }
 
             SCIPdebugMessage("fixing variables <%s>[%g, %g] to %g and <%s>[%g, %g] to %g due to equations\n",
                SCIPvarGetName(consdata0->x), SCIPvarGetLbLocal(consdata0->x), SCIPvarGetUbLocal(consdata0->x), xval,
                SCIPvarGetName(consdata0->z), SCIPvarGetLbLocal(consdata0->z), SCIPvarGetUbLocal(consdata0->z), zval);
-            SCIPdebug( SCIPprintCons(scip, cons0, NULL) );
-            SCIPdebug( SCIPprintCons(scip, cons1, NULL) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
             if( SCIPvarGetStatus(SCIPvarGetProbvar(consdata0->x)) != SCIP_VARSTATUS_MULTAGGR )
             {
@@ -1273,7 +1273,7 @@ void computeBoundsZ(
    }
 
    SCIPdebugMessage("given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
 
    assert(!SCIPintervalIsEmpty(*zbnds));
 }
@@ -1326,7 +1326,7 @@ void computeBoundsX(
    }
 
    SCIPdebugMessage("given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
-   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+   SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
 
    assert(!SCIPintervalIsEmpty(*xbnds));
 }
@@ -2059,8 +2059,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_BOUNDTYPE        boundtype           /**< the type of the changed bound (lower or upper bound) */
    )
 {
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
@@ -3310,7 +3310,7 @@ SCIP_RETCODE generateCut(
    /* check numerics */
    if( *row != NULL )
    {
-      SCIPdebug( SCIPprintRow(scip, *row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *row, NULL) ) );
 
       /* check range of coefficients */
       SCIPdebugMessage(" -> found cut rhs=%f, min=%f, max=%f range=%g\n",
@@ -3445,7 +3445,9 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
+ * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
+ * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
+ * if separatedlpsol is NULL, then cut is added to cutpool only
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -3454,11 +3456,12 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
-   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found, or NULL if not of interest */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool addedtolp;
    SCIP_ROW* row;
    int c;
 
@@ -3502,6 +3505,8 @@ SCIP_RETCODE addLinearizationCuts(
       if( row == NULL )
          continue;
 
+      addedtolp = FALSE;
+
       assert(!SCIProwIsLocal(row));
 
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
@@ -3516,11 +3521,15 @@ SCIP_RETCODE addLinearizationCuts(
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
             *separatedlpsol = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            addedtolp = TRUE;
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
          }
       }
 
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      if( !addedtolp )
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
@@ -3742,6 +3751,7 @@ SCIP_RETCODE createNlRow(
          {
             linvars[0] = consdata->x;
             lincoefs[0] = sign * 2.0 * consdata->xoffset;
+            nlinvars = 1;
             constant = sign * consdata->xoffset * consdata->xoffset;
          }
       }
@@ -4538,7 +4548,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             x, z, exponent, xoffset, -1.0/signpowcoef, -constant/signpowcoef, -constant/signpowcoef,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -4565,7 +4575,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             x, z, exponent, xoffset, -1.0, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -4993,7 +5003,7 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
 #endif
 
 
-/** LP initialization method of constraint handler
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  * we add secant underestimators
  */
@@ -5789,7 +5799,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          )
       {
          SCIPdebugMessage("make z = <%s> implicit integer in cons <%s>\n", SCIPvarGetName(consdata->z), SCIPconsGetName(conss[c]));  /*lint !e613*/
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) ); /*lint !e613*/
          SCIP_CALL( SCIPchgVarType(scip, consdata->z, SCIP_VARTYPE_IMPLINT, &infeas) );
          if( infeas )
          {

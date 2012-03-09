@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1508,7 +1508,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       return SCIP_OKAY;
 
    SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
-   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
@@ -1537,8 +1537,8 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
          continue;
       }
 
-      SCIPdebugMessage("removing fixed quadratic variables from element %g <%s> <%s>",
-         elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
+      SCIPdebugMessage("removing fixed quadratic variables from %dth element %g <%s> <%s>\n",
+         i, elem.coef, SCIPvarGetName(nlrow->quadvars[elem.idx1]), SCIPvarGetName(nlrow->quadvars[elem.idx2]));
 
       /* if one of the variable is not active, we remove the element and insert new disaggregated ones */
       SCIP_CALL( nlrowDelQuadElemPos(nlrow, set, stat, nlp, i) );
@@ -1856,9 +1856,10 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       {
          if( !SCIPvarIsActive(nlrow->quadvars[i]) )
          {
-            /* it can have happened that a new quadratic variable was added that is multi-aggregated (when multiplying two multi-aggregations)
-             * in this case, the variable was only temporarily used and should not be used anymore, thus we can remove it */
-            assert(SCIPvarGetStatus(nlrow->quadvars[i]) == SCIP_VARSTATUS_MULTAGGR);
+            /* it can have happened that a new quadratic variable was added that is not active (when multiplying two multi-aggregations)
+             * in this case, the variable was only temporarily used and should not be used anymore (this is asserted in the next for-loop below),
+             * thus we can remove it
+             */
             newpos[i] = -1;
             ++offset;
          }
@@ -1906,7 +1907,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    SCIPsetFreeBufferArray(set, &used);
 
    SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
-   SCIPdebug( SCIPnlrowPrint(nlrow, NULL) );
+   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -2920,17 +2921,17 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
    {
       assert(nlrow->linvars[i] != NULL);
 
-      val1 = SCIPvarGetBestBound(nlrow->linvars[i]);
+      val1 = SCIPvarGetBestBoundLocal(nlrow->linvars[i]);
       nlrow->pseudoactivity += nlrow->lincoefs[i] * val1;
    }
 
    for( i = 0; i < nlrow->nquadelems; ++i )
    {
-      val1 = SCIPvarGetBestBound(nlrow->quadvars[nlrow->quadelems[i].idx1]);
+      val1 = SCIPvarGetBestBoundLocal(nlrow->quadvars[nlrow->quadelems[i].idx1]);
       if( val1 == 0.0 )
          continue;
 
-      val2 = SCIPvarGetBestBound(nlrow->quadvars[nlrow->quadelems[i].idx2]);
+      val2 = SCIPvarGetBestBoundLocal(nlrow->quadvars[nlrow->quadelems[i].idx2]);
       nlrow->pseudoactivity += nlrow->quadelems[i].coef * val1 * val2;
    }
 
@@ -2944,7 +2945,7 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
       SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
 
       for( i = 0; i < n; ++i )
-         varvals[i] = SCIPvarGetBestBound(SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+         varvals[i] = SCIPvarGetBestBoundLocal(SCIPexprtreeGetVars(nlrow->exprtree)[i]);
 
       SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val1) );
       nlrow->pseudoactivity += val1;
@@ -3766,7 +3767,7 @@ SCIP_RETCODE nlpAddVars(
       {
          assert(nlp->initialguess != NULL);
 
-         nlp->initialguess[nlp->nvars+i] = SCIPvarGetBestBound(var);
+         nlp->initialguess[nlp->nvars+i] = SCIPvarGetBestBoundLocal(var);
       }
 
       /* if we have a feasible NLP solution, then it remains feasible
@@ -3774,8 +3775,8 @@ SCIP_RETCODE nlpAddVars(
        */
       if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
-         SCIPvarSetNLPSol(var, set, SCIPvarGetBestBound(var));
-         nlp->primalsolobjval += SCIPvarGetObj(var) * SCIPvarGetBestBound(var);
+         SCIPvarSetNLPSol(var, set, SCIPvarGetBestBoundLocal(var));
+         nlp->primalsolobjval += SCIPvarGetObj(var) * SCIPvarGetBestBoundLocal(var);
          nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
       }
 
@@ -4761,7 +4762,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%d, nnlps=%d\n", nlp->validfracvars, stat->nnlps);
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%"SCIP_LONGINT_FORMAT", nnlps=%"SCIP_LONGINT_FORMAT"\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
@@ -5524,7 +5525,7 @@ SCIP_RETCODE SCIPnlpGetPseudoObjval(
 
       *pseudoobjval = 0.0;
       for( i = 0; i < nlp->nvars; ++i )
-         *pseudoobjval += SCIPvarGetObj(nlp->vars[i]) * SCIPvarGetBestBound(nlp->vars[i]);
+         *pseudoobjval += SCIPvarGetObj(nlp->vars[i]) * SCIPvarGetBestBoundLocal(nlp->vars[i]);
    }
 
    return SCIP_OKAY;

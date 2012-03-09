@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1117,8 +1117,8 @@ SCIP_RETCODE analyzeConflictOne(
 {
    SCIP_CONSDATA* consdata;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1150,8 +1150,8 @@ SCIP_RETCODE analyzeConflictZero(
 
    assert(!SCIPconsIsModifiable(cons));
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -2343,7 +2343,7 @@ SCIP_DECL_CONSTRANS(consTransAnd)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
@@ -2870,6 +2870,19 @@ SCIP_DECL_CONSPARSE(consParseAnd)
    }
    else
    {
+      char* strcopy;
+      char* token;
+      char* saveptr;
+
+      /* copy string for truncating it */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+
+      /* cutoff "== and(" form the constraint string */
+      (void) SCIPstrtok(strcopy, "(", &saveptr );
+
+      /* cutoff ")" form the constraint string */
+      token = SCIPstrtok(NULL, ")", &saveptr );
+
       varssize = 100;
       nvars = 0;
 
@@ -2877,8 +2890,8 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
 
       /* parse string */
-      SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-      str = endptr;
+      SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+      token = endptr;
 
       if( *success )
       {
@@ -2890,7 +2903,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
             
             /* parse string again with the correct size of the variable array */
-            SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
+            SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
          }
          
          assert(*success);
@@ -2903,6 +2916,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
 
       /* free variable buffer */
       SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &strcopy);
    }
    
    return SCIP_OKAY;

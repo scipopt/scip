@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,6 +93,7 @@ struct SCIP_Cons
    unsigned int          updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
    unsigned int          updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
+   unsigned int          isadded:1;          /**< TRUE iff constraint was added to a SCIP instance */
 };
 
 /** tracks additions and removals of the set of active constraints */
@@ -176,6 +177,8 @@ struct SCIP_Conshdlr
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
    SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
    SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
+   SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */
+   SCIP_Longint          lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int                   sepapriority;       /**< priority of the constraint handler for separation */
    int                   enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int                   checkpriority;      /**< priority of the constraint handler for checking infeasibility */
@@ -206,8 +209,6 @@ struct SCIP_Conshdlr
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
    int                   nenabledconss;      /**< total number of enabled constraints of the handler */
-   int                   lastsepalpcount;    /**< last LP number, where the separations was called */
-   int                   lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int                   lastnusefulpropconss;/**< number of already propagated useful constraints on current domains */
    int                   lastnusefulsepaconss;/**< number of already separated useful constraints on current solution */
    int                   lastnusefulenfoconss;/**< number of already enforced useful constraints on current solution */

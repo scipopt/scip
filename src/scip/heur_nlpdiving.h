@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,15 +13,22 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_concomp.h
- * @brief  small connected components presolver
- * @author Dieter Weninger
+/**@file   heur_nlpdiving.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
+ * @author Timo Berthold
+ * @author Stefan Vigerske
+ *
+ * Diving heuristic: Iteratively fixes some fractional variable and resolves the NLP-relaxation, thereby simulating a
+ * depth-first-search in the tree. Fractional Diving chooses the variable with the highest fractionality and rounds it to the
+ * nearest integer. One-level backtracking is applied: If the NLP gets infeasible, the last fixing is undone, and the
+ * opposite fixing is tried. If this is infeasible, too, the procedure aborts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_CONCOMP_H__
-#define __SCIP_PRESOL_CONCOMP_H__
+#ifndef __SCIP_HEUR_NLPDIVING_H__
+#define __SCIP_HEUR_NLPDIVING_H__
 
 
 #include "scip/scip.h"
@@ -30,9 +37,9 @@
 extern "C" {
 #endif
 
-/** creates the small connected components presolver and includes it in SCIP */
+/** creates the fracdiving heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludePresolConcomp(
+SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

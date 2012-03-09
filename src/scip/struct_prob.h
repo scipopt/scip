@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,6 +66,7 @@ struct SCIP_Prob
    int                   nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int                   deletedvarssize;    /**< available slots in deletedvars array */
    int                   ndeletedvars;       /**< number of deleted variables in the problem */
+   int                   nobjvars;           /**< number of variables with a non-zero objective coefficient */
    int                   consssize;          /**< available slots in conss array */
    int                   nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int                   maxnconss;          /**< maximum number of constraints existing at the same time */

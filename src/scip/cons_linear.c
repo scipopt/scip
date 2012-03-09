@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -104,6 +104,9 @@
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEFINTEGER        1e+06 /**< maximal coefficient value after scaling if all variables are of integral
+					   *   type
+					   */
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
@@ -1423,7 +1426,7 @@ void consdataUpdateActivities(
    /* update the activity, if the current value is valid and there was a change in the finite part */
    if( validact && (delta != 0.0) )
    {
-      /* if the absolute value of the activity is increased, this is regarded to be reliable,
+      /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
       newactivity = (*activity) + delta;
@@ -1443,7 +1446,7 @@ void consdataUpdateActivities(
             SCIPdebugMessage("%s%s activity of linear constraint unreliable after update: %16.9g\n", (global ? "global " : ""),
                (pseudo ? "pseudo" : ((boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) ? "min" : "max")), (*activity));
 
-            /* recompute the activity that was just changed and is not reliable anymore */
+            /* mark the activity that was just changed and is not reliable anymore to be invalid */
             if( global )
             {
                if( (boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) )
@@ -3344,15 +3347,17 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if we are in transformed problem, update minimum and maximum activities */
-   if( SCIPconsIsTransformed(cons) )
-      consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
-
    /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
    if( consdata->nvars <= 1 )
       consdataInvalidateActivities(consdata);
+   else
+   {
+      /* if we are in transformed problem, update minimum and maximum activities */
+      if( SCIPconsIsTransformed(cons) )
+         consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
+   }
 
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
@@ -3560,6 +3565,7 @@ SCIP_RETCODE performVarDeletions(
 
 
 /** normalizes a linear constraint with the following rules:
+ *  - if all coefficients have them same absolute value, change them to (-)1.0
  *  - multiplication with +1 or -1:
  *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
  *      if the current rule doesn't determine the sign):
@@ -3582,9 +3588,7 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-#ifndef NDEBUG
    SCIP_VAR** vars;
-#endif
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -3600,6 +3604,7 @@ SCIP_RETCODE normalizeCons(
    int nposcoeffs;
    int nnegcoeffs;
    int i;
+   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3619,11 +3624,77 @@ SCIP_RETCODE normalizeCons(
    /* get coefficient arrays */
    vals = consdata->vals;
    nvars = consdata->nvars;
-#ifndef NDEBUG
    vars = consdata->vars;
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
-#endif
+
+   if( nvars == 0 )
+   {
+      consdata->normalized = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* get maximal absolute coefficient */
+   maxabsval = consdataGetMaxAbsval(consdata);
+
+   /* check if all coefficients are in absolute value equal, and not 1.0 */
+   if( !SCIPisEQ(scip, maxabsval, 1.0) )
+   {
+      SCIP_Bool abscoefsequ;
+
+      abscoefsequ = TRUE;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
+	 {
+	    abscoefsequ = FALSE;
+	    break;
+	 }
+      }
+
+      /* all coefficients are in absolute value equal, so change them to (-)1.0 */
+      if( abscoefsequ )
+      {
+	 SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value th same\n", maxabsval);
+	 SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
+
+	 if( consdata->validmaxabsval )
+	 {
+	    if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
+	       consdata->maxabsval = 1.0;
+
+	    maxabsval = 1.0;
+	 }
+	 else
+	 {
+	    /* get maximal absolute coefficient */
+	    maxabsval = consdataGetMaxAbsval(consdata);
+	 }
+
+	 /* get new consdata information, because scalecons() might have deleted variables */
+	 vals = consdata->vals;
+	 nvars = consdata->nvars;
+	 vars = consdata->vars;
+
+	 assert(nvars == 0 || vars != NULL);
+	 assert(nvars == 0 || vals != NULL);
+      }
+   }
+
+   /* nvars might have changed */
+   if( nvars == 0 )
+   {
+      consdata->normalized = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(vars != NULL);
+   assert(vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
     *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
@@ -3634,8 +3705,36 @@ SCIP_RETCODE normalizeCons(
    epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
-   maxabsval = consdataGetMaxAbsval(consdata);
    maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
+
+   /* if all variables are of intergal type we will allow a greater multiplier */
+   if( consdata->sorted )
+   {
+      if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
+      {
+	 maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+      }
+   }
+   else
+   {
+      SCIP_Bool foundcont;
+
+      foundcont = FALSE;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+	 {
+	    foundcont = TRUE;
+	    break;
+	 }
+      }
+
+      if( !foundcont )
+      {
+	 maxmult = (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0)));
+      }
+   }
 
    /*
     * multiplication with +1 or -1
@@ -4305,8 +4404,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_Bool             reasonisrhs         /**< is the right hand side responsible for the conflict? */
    )
 {
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
@@ -6029,14 +6128,14 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Real newrhs;
       SCIP_Bool aggregated;
 
-      /* do not multi aggregate binary variables */
-      if( bestslacktype == SCIP_VARTYPE_BINARY )
-         return SCIP_OKAY;
-
       /* we found a slack variable that only occurs in at most one other constraint:
        *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
        */
       assert(bestslackpos < consdata->nvars);
+
+      /* do not multi aggregate binary variables */
+      if( SCIPvarIsBinary(vars[bestslackpos]) )
+         return SCIP_OKAY;
 
       /* convert equality into inequality by deleting the slack variable:
        *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
@@ -6564,7 +6663,7 @@ SCIP_RETCODE dualPresolve(
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, consdata->nvars-1) );
             
       /* set up the multi-aggregation */
-      SCIPdebug(SCIPprintCons(scip, cons, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
       supinf = FALSE;
@@ -8949,13 +9048,11 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          assert(!SCIPisZero(scip, consdata->vals[i]));
       }
 
-      SCIPdebugMessage("classifying constraint ");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-
       /* is constraint of type SCIP_CONSTYPE_EMPTY? */
       if( consdata->nvars == 0 )
       {
-         SCIPdebugMessage(" as EMPTY\n");
+         SCIPdebugMessage("classified as EMPTY: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_EMPTY]++;
          continue;
       }
@@ -8963,7 +9060,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_FREE? */
       if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIPdebugMessage(" as FREE\n");
+         SCIPdebugMessage("classified as FREE: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_FREE]++;
          continue;
       }
@@ -8971,7 +9069,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_SINGLETON? */
       if( consdata->nvars == 1 )
       {
-         SCIPdebugMessage(" as SINGLETON\n");
+         SCIPdebugMessage("classified as SINGLETON: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_SINGLETON] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -8979,7 +9078,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_AGGREGATION? */
       if( consdata->nvars == 2 && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       {
-         SCIPdebugMessage(" as AGGREGATION\n");
+         SCIPdebugMessage("classified as AGGREGATION: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_AGGREGATION]++;
          continue;
       }
@@ -8987,7 +9087,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* is constraint of type SCIP_CONSTYPE_{VARBOUND}? */
       if( consdata->nvars == 2 )
       {
-         SCIPdebugMessage(" as VARBOUND\n");
+         SCIPdebugMessage("classified as VARBOUND: ");
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          counter[SCIP_CONSTYPE_VARBOUND] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -9021,13 +9122,15 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                b = consdata->rhs/scale + nnegbinvars;
                if( SCIPisEQ(scip, 1.0, b) )
                {
-                  SCIPdebugMessage(" as SETPARTITION\n");
+                  SCIPdebugMessage("classified as SETPARTITION: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                   counter[SCIP_CONSTYPE_SETPARTITION]++;
                   continue;
                }
                else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
                {
-                  SCIPdebugMessage(" as CARDINALITY\n");
+                  SCIPdebugMessage("classified as CARDINALITY: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                   counter[SCIP_CONSTYPE_CARDINALITY]++;
                   continue;
                }
@@ -9036,13 +9139,15 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             b = consdata->rhs/scale + nnegbinvars;
             if( SCIPisEQ(scip, 1.0, b) )
             {
-               SCIPdebugMessage(" as SETPACKING\n");
+               SCIPdebugMessage("classified as SETPACKING: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_SETPACKING]++;
                consdata->rhs = SCIPinfinity(scip);
             }
             else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
             {
-               SCIPdebugMessage(" as INVKNAPSACK\n");
+               SCIPdebugMessage("classified as INVKNAPSACK: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_INVKNAPSACK]++;
                consdata->rhs = SCIPinfinity(scip);
             }
@@ -9050,7 +9155,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             b = consdata->lhs/scale + nnegbinvars;
             if( SCIPisEQ(scip, 1.0, b) )
             {
-               SCIPdebugMessage(" as SETCOVERING\n");
+               SCIPdebugMessage("classified as SETCOVERING: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_SETCOVERING]++;
                consdata->lhs = -SCIPinfinity(scip);
             }
@@ -9086,7 +9192,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          {
             if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
             {
-               SCIPdebugMessage(" as EQKNAPSACK\n");
+               SCIPdebugMessage("classified as EQKNAPSACK: ");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[SCIP_CONSTYPE_EQKNAPSACK]++;
                continue;
             }
@@ -9100,7 +9207,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                   matched = matched || SCIPisEQ(scip, b, REALABS(consdata->vals[i]));
                }
 
-               SCIPdebugMessage(" as %s\n", matched ? "BINPACKING" : "KNAPSACK");
+               SCIPdebugMessage("classified as %s: ", matched ? "BINPACKING" : "KNAPSACK");
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
                counter[matched ? SCIP_CONSTYPE_BINPACKING : SCIP_CONSTYPE_KNAPSACK]++;
             }
 
@@ -9131,7 +9239,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            SCIPdebugMessage(" as INTKNAPSACK\n");
+            SCIPdebugMessage("classified as INTKNAPSACK: ");
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             counter[SCIP_CONSTYPE_INTKNAPSACK]++;
 
             if( SCIPisInfinity(scip, -consdata->lhs) )
@@ -9156,14 +9265,16 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            SCIPdebugMessage(" as MIXEDBINARY (%d)\n", isRangedRow(scip, cons) ? 2 : 1);
+            SCIPdebugMessage("classified as MIXEDBINARY (%d): ", isRangedRow(scip, cons) ? 2 : 1);
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
             counter[SCIP_CONSTYPE_MIXEDBINARY] += isRangedRow(scip, cons) ? 2 : 1;
             continue;
          }
       }
 
       /* no special structure detected */
-      SCIPdebugMessage(" as GENERAL\n");
+      SCIPdebugMessage("classified as GENERAL: ");
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       counter[SCIP_CONSTYPE_GENERAL] += isRangedRow(scip, cons) ? 2 : 1;
    }
 
@@ -9377,7 +9488,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/

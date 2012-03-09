@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,10 +28,10 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
-#include "scip/type_prob.h"
 #include "scip/type_stat.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_prob.h"
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_branch.h"
@@ -100,8 +100,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

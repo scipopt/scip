@@ -28,15 +28,19 @@ interface
 - new method SCIPgetGlobalPseudoObjval() which returns the global pseudo objective value which is all variables
   set to their best (w.r.t. the objective function) global bound
 - new method SCIPhashtableClear() which removes all elements of a hash table
-- new callback method in constraint handler SCIP_DECL_CONSGETVARSDATA which is optional and returns for a constraint
-  the involved variables
-- new callback methods in constraint handler SCIP_DECL_CONSGETVAR and SCIP_DECL_CONSGETVAR which are optional and
+- new callback methods in constraint handler SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS which are optional and
   returns for a constraint the involved variables and the number of variables
 - new methods SCIPgetConsVars() and SCIPgetConsNVars() which return for a given constraint the involved variables and
   the number of variables if the corresponding constraint supports this (optional) callbacks
 - new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
   (e.g., for activities; uses new parameter misc/num_recompfac)
 - new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
+- added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective coefficient
+- new method SCIPupdateCutoffbound() which can be used to pass a cutoff bound
+- new method SCIPchgCapacityKnapsack() which can be used to change the capacity of a knapsack constraint
+- new method SCIPconsIsAdded() which returns whether a constraint was already added to a SCIP instance
+- new method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the current
+  presolving round, given no further reductions will be found; can be used to ensure that a presolver is called very late
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -49,16 +53,21 @@ performance improvements:
   from scratch again
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
-- improved pseduo objective propagator
- 
+- improved pseudo objective propagator
+- streamlined initlp functions in cons_indicator, cons_sos1, cons_sos2 (add rows only if needed)
+
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+- added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
+- fixed bug in cons_linear w.r.t recalculation of unreliable activities
+- fixed bug with strong branching with the LP status for conflict analysis
+- fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -74,17 +83,42 @@ parameters:
 - new parameters constraints/indicator/{sepacouplingcuts,sepacouplinglocal} to enable separation of (local) cuts
 - new parameters constraints/indicator/{maxsepacuts,maxsepacutsroot} to restrict the number of separated cuts
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
+- new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
+  to be decreased in order to recompute the value from scratch
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+  separating/cgmip/nodelimit.
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
   set relaxrows = FALSE
 - the check script now recognizes MIQCP and MINLP instances
 - new column showing the pseudo objective value
-
+- time for initpre and exitpre methods is now also measured in presolving time
 
 SCIP version 2.1.2
 ==================
 
+fixed bugs:
+- fixed bug in SCIPsolveKnapsackExactly()
+- fixed bug in varAddTransitiveImplic() in var.c, when adding implications on special aggregated, namely negated,
+  variables
+- fixed bug in cons_quadratic where bounds on activity of quadratic term were not always invalidated when quadratic
+  variables were removed
+- fixed bug in heur_undercover.c, where a variable with fixed bounds but not of status SCIP_VARSTATUS_FIXED was wrongly
+  handled
+- fixed bug in cons.c, where after a restart the arrays for all initial constraints were corrected in the initsol
+  process instead of the initpre process, this was to late because you might change the status in presolving which lead
+  to an assert()
+- fixed issue if a primal solution leads to a cutoff of the current focus node
+- fix compilation issues with zlib 1.2.6
+- fixed bug in NLP representation of abspower constraints handling (x+a)^2 with nonzero a
+- fixed bug parsing an and-constraint in cip format
+
+performance improvements:
+- fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
+  to exponential growth in running time
+- force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
+  optimality for convex NLPs
 
 SCIP version 2.1.1
 ==================
@@ -94,10 +128,12 @@ performance improvements:
 - improve SCIPintervalSolveBivariateQuadExpressionAllScalar for ax=0 case if x has 0 in the interval for the linear coef.
 - better domain propagation for quadratic constraints that consist of "non-overlapping" bilinear terms only
 - ensure that a fixing of a variable in an abspower constraint is propagated to a fixing of the other variable
+- improvements in undercover heuristic, e.g., bound disjunction constraints are considered when setting up the covering 
+  problem
 
 features:
-- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done 
-  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient 
+- the pseudo objective propagator can be forced to propagate if active pricers are present; this can be done
+  if for all (known or unknown) variables follows that: they have positive (negative) objective coefficient
   and the global lower (upper) bound is zero.
 
 fixed bugs:
@@ -125,8 +161,7 @@ fixed bugs:
 parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
   due to revision of the pseudo objective propagator
-- added parameters "heuristics/undercover/fixingorder"
-
+- added parameters "heuristics/undercover/coverbd" and "heuristics/undercover/fixingorder"
 
 SCIP version 2.1.0
 ==================
@@ -430,6 +465,8 @@ parameters:
   of continuous variables in problem to enable linearization of convex constraints in NLP relaxation solution in root
 - added parameter <conflict/separate> which enables or disables the separation of conflict constraints
 - added parameter <lp/clearinitialprobinglp> to clear LP state at end of probing mode, if LP was initially unsolved
+- changed default value of parameter <separating/gomory/maxroundsroot> to 10
+- changed default value of parameter <separating/gomory/maxsepacutsroot> to 50
 - added parameter <constraints/varbound/presolpairwise> that allows pairwise presolving of varbound constraints, default
   is TRUE
 - added parameter <pricing/delvars> and <pricing/delvarsroot> that define, whether variables created at a node / the
@@ -649,6 +686,7 @@ performance improvements:
 - fixed issue w.r.t. calling primal heuristics after presolving detected infeasibility
 - improved runtime and memory consumption in SCIPsolveKnapsackExactly() in cons_knapsack.c
 
+
 SCIP version 2.0.1
 ==================
 
@@ -723,6 +761,7 @@ parameters:
   <constraints/quadratic/minefficacyenfo>
 - added possible values 'a' and 'e' for <constraints/soc/nlpform> to enable automatic choice and convex exponential-sqrt
   form for SOC constraint representation in NLP
+
 
 SCIP version 2.0.0
 ==================
@@ -1411,6 +1450,7 @@ parameters:
 - new parameter <heuristics/oneopt/duringroot>, default value TRUE
 - display character of oneopt heuristic changed to 'b'
 
+
 SCIP version 1.1.0
 ==================
 
@@ -1708,6 +1748,7 @@ fixed bugs:
   calls to std::strlen
 - fixed bug with errors occurring in heuristic LPs. In opt mode a warning will be printed, abort in dbg mode
 
+
 SCIP version 1.00
 =================
 
@@ -1886,6 +1927,7 @@ fixed bugs:
 - fixed potential bug with non-existent LP in SCIPwrite{LP,MIP}
 - fixed bug with multiple pending bound changes on some variable
 - fixed bug with fractional coefficients of binary variables in cont --> impl int upgrading
+
 
 SCIP version 0.90
 =================

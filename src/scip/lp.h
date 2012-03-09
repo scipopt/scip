@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -214,6 +214,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
@@ -230,6 +231,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchInt(
    SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
@@ -248,6 +250,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
    int                   ncols,              /**< number of columns */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
@@ -266,6 +269,7 @@ SCIP_RETCODE SCIPcolGetStrongbranchesInt(
    int                   ncols,              /**< number of columns */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
@@ -299,7 +303,7 @@ void SCIPcolGetStrongbranchLast(
  *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
  */
 extern
-int SCIPcolGetStrongbranchLPAge(
+SCIP_Longint SCIPcolGetStrongbranchLPAge(
    SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
@@ -956,6 +960,7 @@ extern
 SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             cutoffbound         /**< new upper objective limit */
    );
 
@@ -1016,7 +1021,8 @@ SCIP_Bool SCIPlpIsRootLPRelax(
 extern
 SCIP_Real SCIPlpGetObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets part of objective value of current LP that results from COLUMN variables only */
@@ -1029,14 +1035,16 @@ SCIP_Real SCIPlpGetColumnObjval(
 extern
 SCIP_Real SCIPlpGetLooseObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** remembers the current LP objective value as root solution value */
 extern
 void SCIPlpStoreRootObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                 /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** invalidates the root LP solution value */
@@ -1045,11 +1053,24 @@ void SCIPlpInvalidateRootObjval(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** gets current pseudo objective value */
+/** gets the global pseudo objective value; that is all variables set to their best (w.r.t. the objective function)
+ *  global bound
+ */
+extern
+SCIP_Real SCIPlpGetGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 extern
 SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
@@ -1057,6 +1078,7 @@ extern
 SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */
@@ -1081,10 +1103,19 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
    SCIP_Real             newobj              /**< new objective value of variable */
+   );
+
+/** updates current root pseudo objective value for a global change in a variable's lower bound */
+extern
+SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldlb,              /**< old lower bound of variable */
+   SCIP_Real             newlb               /**< new lower bound of variable */
    );
 
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
@@ -1092,10 +1123,19 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarLb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
    SCIP_Real             newlb               /**< new lower bound of variable */
+   );
+
+/** updates current root pseudo objective value for a global change in a variable's upper bound */
+extern
+SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldub,              /**< old upper bound of variable */
+   SCIP_Real             newub               /**< new upper bound of variable */
    );
 
 /** updates current pseudo objective value for a change in a variable's upper bound */
@@ -1103,7 +1143,6 @@ extern
 SCIP_RETCODE SCIPlpUpdateVarUb(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldub,              /**< old upper bound of variable */
    SCIP_Real             newub               /**< new upper bound of variable */
@@ -1114,7 +1153,6 @@ extern
 SCIP_RETCODE SCIPlpUpdateAddVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that is now a LOOSE problem variable */
    );
 
@@ -1123,7 +1161,6 @@ extern
 SCIP_RETCODE SCIPlpUpdateDelVar(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    );
 
@@ -1337,6 +1374,19 @@ extern
 void SCIPlpRecalculateObjSqrNorm(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** compute relative interior point */
+extern
+SCIP_RETCODE SCIPlpComputeRelIntPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
+   SCIP_Real*            point,              /**< array to store relative interior point on exit */
+   SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    );
 
 #ifndef NDEBUG

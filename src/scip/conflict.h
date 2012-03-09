@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,6 +132,14 @@ void SCIPconflicthdlrSetPriority(
 /*
  * Conflict Analysis
  */
+
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+extern
+SCIP_Bool SCIPconflictApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
 
 /** creates conflict analysis data for propagation conflicts */
 extern

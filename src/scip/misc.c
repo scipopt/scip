@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -515,6 +515,29 @@ void SCIPhashtableFree(
    /* free main hast table data structure */
    BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
+}
+
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+void SCIPhashtableClear(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
 }
 
 /** inserts element in hash table (multiple inserts of same element possible) */
@@ -2835,6 +2858,13 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -3199,6 +3229,12 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealPtr
@@ -3567,8 +3603,8 @@ int stairmapInsertTimepoint(
    assert(pos + 1 < stairmap->arraysize);
 
    /* insert new time point into the (sorted) stair map */
-   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos], 
-      &stairmap->ntimepoints);
+   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos],
+      &stairmap->ntimepoints, NULL);
    
 #ifndef NDEBUG
    /* check if the time points are sorted */
@@ -4053,40 +4089,76 @@ void depthFirstSearch(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< node to start the depth-first-search */
    SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stackadjvisited,    /**< array of size number of nodes to store the number of adjacent nodes already visited
+                                              *   for each node on the stack; only needed for performance reasons */
    int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse dfs order */
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int v;
-   int adjnode;
+   int stacksize;
+   int currnode;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
    assert(startnode < digraph->nnodes);
+   assert(visited != NULL);
    assert(visited[startnode] == FALSE);
+   assert(dfsstack != NULL);
+   assert(dfsnodes != NULL);
+   assert(ndfsnodes != NULL);
 
-   /* mark startnode as visited */
-   visited[startnode] = TRUE;
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stackadjvisited[0] = 0;
+   stacksize = 1;
 
-   /* iterate over all nodes adjacent to current node */
-   for( v = 0; v < digraph->nadjnodes[startnode]; ++v )
+   while( stacksize > 0 )
    {
-      adjnode = digraph->adjnodes[startnode][v];
+      /* get next node from stack */
+      currnode = dfsstack[stacksize - 1];
 
-      /* check if the adjacent node was already visited */
-      if( !visited[adjnode] )
+      /* mark current node as visited */
+      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      visited[currnode] = TRUE;
+
+      /* iterate through the adjacency list until we reach unhandled node */
+      while( stackadjvisited[stacksize - 1] < digraph->nadjnodes[currnode]
+         && visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]] )
       {
-         /* recursively call depth-first-search */
-         depthFirstSearch(digraph, adjnode, visited, dfsnodes, ndfsnodes);
+         stackadjvisited[stacksize - 1]++;
+      }
+
+      /* the current node was completely handled, remove it from stack */
+      if( stackadjvisited[stacksize - 1] == digraph->nadjnodes[currnode] )
+      {
+         stacksize--;
+
+         /* store node in the sorted nodes array */
+         dfsnodes[(*ndfsnodes)] = currnode;
+         (*ndfsnodes)++;
+      }
+      /* handle next unhandled adjacent node */
+      else
+      {
+         assert(!visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]]);
+
+         /* put the adjacent node onto the stack */
+         dfsstack[stacksize] = digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]];
+         stackadjvisited[stacksize] = 0;
+         stackadjvisited[stacksize - 1]++;
+         stacksize++;
+         assert(stacksize <= digraph->nnodes);
       }
    }
-
-   /* store node in the sorted nodes array */
-   dfsnodes[(*ndfsnodes)] = startnode;
-   (*ndfsnodes)++;
 }
 
-/** compute components on the given directed graph */
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note The graph should be the directed representation of an undirected
+ *        graph, i.e., for each edge, its reverse should exist.
+ */
 SCIP_RETCODE SCIPdigraphComputeComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int*                  components,         /**< array with as many slots as there are nodes in the directed graph
@@ -4096,6 +4168,8 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
    )
 {
    SCIP_Bool* visited;
+   int* stackadjvisited;
+   int* dfsstack;
    int* dfsnodes;
    int ndfsnodes;
    int v;
@@ -4108,6 +4182,8 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
 
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
 
    *ncomponents = 0;
 #ifndef NDEBUG
@@ -4120,7 +4196,7 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
          continue;
 
       ndfsnodes = 0;
-      depthFirstSearch(digraph, v, visited, dfsnodes, &ndfsnodes);
+      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
 
       (*ncomponents)++;
 
@@ -4135,19 +4211,20 @@ SCIP_RETCODE SCIPdigraphComputeComponents(
       assert(components[v] != 0);
 #endif
 
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
 
    return SCIP_OKAY;
 }
 
-/** Computes (undirected) components on the directed graph and sorts the components
- *  (almost) topologically w.r.t. the directed graph.
+/** Computes (undirected) components on the directed graph and sorts
+ *  the components (almost) topologically w.r.t. the directed graph.
  *
- * Topologically sorted means, a variable which influences the lower (upper) bound of another
- * variable y is located before y in the corresponding variable array. Note, that in general
- * a topological sort is not unique. Note, that there might be directed cycles, that are
- * randomly broken, which is the reason for having only almost topologically sorted arrays.
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
  */
 SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -4157,19 +4234,21 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
                                               *   with the nodes of one component being (almost) topologically sorted */
    int*                  componentstart,     /**< array to store for each component, where it starts in array components;
                                               *   at position ncomponents+1, the total number of nodes is stored */
-   int                   componentstartsize, /**< size of componentstart array, if this is smaller than the number of components+1,
+   int                   componentstartsize, /**< size of componentstart array; if this is smaller than the number of components+1,
                                               *   only the start indices of the first components are stored and the method should
-                                              *   be called again after reallocating the componentstart array */
+                                              *   be called again after enlarging the componentstart array */
    int*                  ncomponents         /**< pointer to store the number of components */
    )
 {
+   SCIP_Bool* visited;
    int* ndirectedadjnodes;
    int* comps;
    int* compstart;
-   int ncomps;
-   SCIP_Bool* visited;
+   int* stackadjvisited;
+   int* dfsstack;
    int* dfsnodes;
    int ndfsnodes;
+   int ncomps;
    int i;
    int j;
    int k;
@@ -4186,6 +4265,8 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    SCIP_ALLOC( BMSallocMemoryArray(&compstart, digraph->nnodes + 1) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
 
    /* store the number of directed arcs per node */
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
@@ -4210,7 +4291,7 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
          continue;
 
       ndfsnodes = 0;
-      depthFirstSearch(digraph, i, visited, &(comps[compstart[ncomps]]), &ndfsnodes);
+      depthFirstSearch(digraph, i, visited, dfsstack, stackadjvisited, &(comps[compstart[ncomps]]), &ndfsnodes);
 
       /* forget about this component if it is too small */
       if( ndfsnodes >= minsize )
@@ -4235,7 +4316,7 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
             continue;
 
          ndfsnodes = 0;
-         depthFirstSearch(digraph, comps[j], visited, dfsnodes, &ndfsnodes);
+         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
 
          /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
           * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
@@ -4257,6 +4338,8 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    }
    *ncomponents = ncomps;
 
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
    BMSfreeMemoryArray(&compstart);
@@ -4548,6 +4631,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
+   SCIP_Real bestscalar;
    SCIP_Longint gcd;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4556,12 +4640,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real minval;
    SCIP_Real absval;
    SCIP_Real scaleval;
-   SCIP_Real twomultval;
    SCIP_Bool scalable;
-   SCIP_Bool twomult;
    SCIP_Bool rational;
    int c;
    int s;
+   int i;
 
    assert(vals != NULL);
    assert(nvals >= 0);
@@ -4600,86 +4683,66 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    }
    assert(minval > MIN(-mindelta, maxdelta));
 
-   /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
-   scalable = TRUE;
-   scaleval = 1.0/minval;
-   for( c = 0; c < nvals && scalable; ++c )
-   {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-    
-      absval = REALABS(val);
-      while( scaleval <= maxscale
-         && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-      {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-            {
-               scaleval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            scaleval *= 2.0;
-      }
-      scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
-         val, scaleval, val*scaleval, scalable);
-   }
-   if( scalable )
-   {
-      /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
-      assert(scaleval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = scaleval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
-      
-      return SCIP_OKAY;
-   }
+   bestscalar = SCIP_INVALID;
 
-   /* try, if values can be made integral by multiplying them by a power of 2 */
-   twomult = TRUE;
-   twomultval = 1.0;
-   for( c = 0; c < nvals && twomult; ++c )
+   for( i = 0; i < 2; ++i )
    {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-      
-      absval = REALABS(val);
-      while( twomultval <= maxscale
-         && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta)) )
+      scalable = TRUE;
+
+      /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
+      if( i == 0 )
+	 scaleval = 1.0/minval;
+      /* try, if values can be made integral by multiplying them by a power of 2 */
+      else
+	 scaleval = 1.0;
+
+      for( c = 0; c < nvals && scalable; ++c )
       {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta) )
-            {
-               twomultval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            twomultval *= 2.0;
+	 /* check, if the value can be scaled with a simple scalar */
+	 val = vals[c];
+	 if( val == 0.0 ) /* zeros are allowed in the vals array */
+	    continue;
+
+	 absval = REALABS(val);
+	 while( scaleval <= maxscale
+	    && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+	 {
+	    for( s = 0; s < nscalars; ++s )
+	    {
+	       if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+	       {
+		  scaleval *= scalars[s];
+		  break;
+	       }
+	    }
+	    if( s >= nscalars )
+	       scaleval *= 2.0;
+	 }
+	 scalable = (scaleval <= maxscale);
+	 SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
+	    val, scaleval, val*scaleval, scalable);
       }
-      twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
-         val, twomultval, val*twomultval, twomult);
-   }
-   if( twomult )
-   {
-      /* make values integral by multiplying them with a power of 2 */
-      assert(twomultval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = twomultval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
-      
-      return SCIP_OKAY;
+      if( scalable )
+      {
+	 /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+	 assert(scaleval <= maxscale);
+
+	 /* check if we found a better scaling value */
+	 if( scaleval < bestscalar )
+	    bestscalar = scaleval;
+
+	 SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
+
+	 /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
+	 if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
+	 {
+	    if( intscalar != NULL )
+	       *intscalar = bestscalar;
+	    *success = TRUE;
+
+	    return SCIP_OKAY;
+	 }
+      }
    }
 
    /* convert each value into a rational number, calculate the greatest common divisor of the nominators
@@ -4736,11 +4799,22 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    {
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
+
+      /* check if we found a better scaling value */
+      if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
+	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
+
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
+   }
+
+   if( bestscalar < SCIP_INVALID )
+   {
+      if( intscalar != NULL )
+         *intscalar = bestscalar;
+      *success = TRUE;
+
+      SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
 
    return SCIP_OKAY;
@@ -4888,6 +4962,66 @@ SCIP_Real SCIPgetRandomReal(
    )
 {
    return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+}
+
+
+/*
+ * Additional math functions
+ */
+
+/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
+ *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
+ *  big numbers or an negative value m (and m < n) and -1 will be returned
+ */
+SCIP_Longint SCIPcalcBinomCoef(
+   int                   n,                  /**< number of different elements */
+   int                   m                   /**< number to choose out of the above */
+   )
+{
+   if( m == 0 || m >= n )
+      return 1;
+
+   if( m < 0 )
+      return -1;
+
+   /* symmetry of the binomial coefficient, choose smaller m */
+   if( m > n/2 )
+      m = n - m;
+
+   /* trivial case m == 1 */
+   if( m == 1 )
+      return n;
+
+   /* abort on to big numbers */
+   if( m > 16 || n > 33 )
+      return -1;
+
+   /* simple case m == 2 */
+   if( m == 2 )
+      return (n*(n-1)/2);
+
+   /* simple case m == 3 */
+   if( m == 3 )
+      return (n*(n-1)*(n-2)/6);
+   else
+   {
+      /* first half of Pascal's triangle numbers(without the symmetric part) backwards from (33,16) over (32,16),
+       * (33,15), (32,15),(31,15, (30,15), (33,14) to (8,4) (rest is calculated directly)
+       *
+       * due to this order we can extract the right binomial coefficient by (16-m)^2+(16-m)+(33-n)
+       */
+      static const SCIP_Longint binoms[182] = {1166803110, 601080390, 1037158320, 565722720, 300540195, 155117520, 818809200, 471435600, 265182525, 145422675, 77558760, 40116600, 573166440, 347373600, 206253075, 119759850, 67863915, 37442160, 20058300, 10400600, 354817320, 225792840, 141120525, 86493225, 51895935, 30421755, 17383860, 9657700, 5200300, 2704156, 193536720, 129024480, 84672315, 54627300, 34597290, 21474180, 13037895, 7726160, 4457400, 2496144, 1352078, 705432, 92561040, 64512240, 44352165, 30045015, 20030010, 13123110, 8436285, 5311735, 3268760, 1961256, 1144066, 646646, 352716, 184756, 38567100, 28048800, 20160075, 14307150, 10015005, 6906900, 4686825, 3124550, 2042975, 1307504, 817190, 497420, 293930, 167960, 92378, 48620, 13884156, 10518300, 7888725, 5852925, 4292145, 3108105, 2220075, 1562275, 1081575, 735471, 490314, 319770, 203490, 125970, 75582, 43758, 24310, 12870, 4272048, 3365856, 2629575, 2035800, 1560780, 1184040, 888030, 657800, 480700, 346104, 245157, 170544, 116280, 77520, 50388, 31824, 19448, 11440, 6435, 3432, 1107568, 906192, 736281, 593775, 475020, 376740, 296010, 230230, 177100, 134596, 100947, 74613, 54264, 38760, 27132, 18564, 12376, 8008, 5005, 3003, 1716, 924, 237336, 201376, 169911, 142506, 118755, 98280, 80730, 65780, 53130, 42504, 33649, 26334, 20349, 15504, 11628, 8568, 6188, 4368, 3003, 2002, 1287, 792, 462, 252, 40920, 35960, 31465, 27405, 23751, 20475, 17550, 14950, 12650, 10626, 8855, 7315, 5985, 4845, 3876, 3060, 2380, 1820, 1365, 1001, 715, 495, 330, 210, 126, 70};
+
+      /* m can at most be 16 */
+      const int t = 16-m;
+      assert(t >= 0);
+      assert(n <= 33);
+
+      /* binoms array hast exactly 182 elements */
+      assert(t*(t+1)+(33-n) < 182);
+
+      return binoms[t*(t+1)+(33-n)];
+   }
 }
 
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1096,8 +1096,8 @@ SCIP_RETCODE analyzeConflict(
    SCIP_CONSDATA* consdata;
    int v;
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is applicable */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1625,8 +1625,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* even parity: constraints are redundant */
             SCIPdebugMessage("xor constraints <%s> and <%s> are redundant: delete <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -1635,8 +1635,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* odd parity: constraints are contradicting */
             SCIPdebugMessage("xor constraints <%s> and <%s> are contradicting\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             *cutoff = TRUE;
          }
       }
@@ -1651,8 +1651,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* only one additional variable in cons0: fix this variable according to the parity */
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1667,8 +1667,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* more than one additional variable in cons0: add cons1 to cons0, thus eliminating the equal variables */
             SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             for( v = 0; v < consdata1->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons0, conshdlrdata->eventhdlr, consdata1->vars[v]) );
@@ -1690,8 +1690,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* only one additional variable in cons1: fix this variable according to the parity */
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             SCIP_CALL( SCIPfixVar(scip, singlevar1, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1706,8 +1706,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* more than one additional variable in cons1: add cons0 to cons1, thus eliminating the equal variables */
             SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
             for( v = 0; v < consdata0->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons1, conshdlrdata->eventhdlr, consdata0->vars[v]) );
@@ -1891,7 +1891,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpXor)
 {  /*lint --e{715}*/

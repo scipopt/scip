@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -52,6 +52,17 @@ do
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
   then
+      # in case an output file exists, copy it away to save the results
+      DATEINT=`date +"%s"`
+      if test -e $OUTFILE
+      then
+	  cp $OUTFILE $OUTFILE.old-$DATEINT
+      fi
+      if test -e $ERRFILE
+      then
+	  cp $ERRFILE $ERRFILE.old-$DATEINT
+      fi
+
       echo > $OUTFILE
       echo > $ERRFILE
       echo create overall output and error file for $EVALFILE

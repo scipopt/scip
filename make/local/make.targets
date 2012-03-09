@@ -28,6 +28,12 @@ testclustercbc:
 		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER);
 
+.PHONY: testgamscluster
+testgamscluster:
+		cd check; \
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+
 SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
 
 .PHONY: testexamples

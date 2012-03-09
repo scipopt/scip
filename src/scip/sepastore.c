@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -261,7 +261,7 @@ SCIP_RETCODE sepastoreAddCut(
          SCIP_EVENT* event;
 
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[0]) );
-         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
       
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
@@ -340,7 +340,7 @@ SCIP_RETCODE sepastoreAddCut(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowAddedSepa(&event, blkmem, cut) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -370,7 +370,7 @@ SCIP_RETCODE sepastoreDelCut(
       SCIP_EVENT* event;
 
       SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[pos]) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    /* release the row */
@@ -431,8 +431,8 @@ SCIP_RETCODE sepastoreApplyLb(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -452,8 +452,8 @@ SCIP_RETCODE sepastoreApplyLb(
 
       if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
-               var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+               eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
       else
          *cutoff = TRUE;
@@ -471,8 +471,8 @@ SCIP_RETCODE sepastoreApplyUb(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -492,8 +492,8 @@ SCIP_RETCODE sepastoreApplyUb(
 
       if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
-               var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+               eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
       else
          *cutoff = TRUE;
@@ -511,8 +511,8 @@ SCIP_RETCODE sepastoreApplyBdchg(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -554,13 +554,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, lhs/vals[0], cutoff) );
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, lhs/vals[0], cutoff) );
       }
    }
@@ -573,13 +573,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       if( vals[0] > 0.0 )
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
-         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, rhs/vals[0], cutoff) );
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
-         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, prob, stat, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
                var, rhs/vals[0], cutoff) );
       }
    }
@@ -751,8 +751,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -771,7 +771,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
    assert(sepastore != NULL);
    assert(set != NULL);
-   assert(prob != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
@@ -812,7 +811,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
-         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, prob, stat, tree, lp, branchcand, eventqueue, cut, cutoff) );
+         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cut, cutoff) );
       }
       else
       {
@@ -895,7 +894,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
          SCIP_EVENT* event;
 
          SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[c]) );
-         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, eventfilter, &event) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
       }
       
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[c], blkmem, set, lp) );

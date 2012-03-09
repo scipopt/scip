@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -594,10 +594,10 @@ SCIP_RETCODE analyzeConflict(
 {
    assert(scip != NULL);
 
-   /* conflict analysis can only be applied in solving stage */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* conflict analysis can only be applied in solving stage and if it is turned on */
+   if( (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) || !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
-   
+
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
@@ -854,8 +854,8 @@ SCIP_RETCODE tightenedIntvar(
    
    if( infeasible )
    {
-      /* conflict analysis can only be applied in solving stage */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* conflict analysis can only be applied in solving stage and if conflict analysis is turned on */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {  
          int k;
          
@@ -913,7 +913,8 @@ SCIP_RETCODE tightenedIntvar(
    /* start conflict analysis if infeasible */
    if( infeasible ) 
    {
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* analyze the cutoff if if SOLVING stage and conflict analysis is turned on */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          int k;
          
@@ -1056,8 +1057,8 @@ SCIP_RETCODE processBinvarFixings(
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-      /* conflict analysis can only be applied in solving stage */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* conflict analysis can only be applied in solving stage and if it is applicable */
+      if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
          SCIP_VAR** vars;
          int nvars;
@@ -1104,8 +1105,8 @@ SCIP_RETCODE processBinvarFixings(
          *addcut = TRUE;
       else 
       {
-         /* conflict analysis can only be applied in solving stage */
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         /* conflict analysis can only be applied in solving stage and if it is applicable */
+         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
          {
             SCIP_VAR** vars;
             int nvars;
@@ -1809,7 +1810,7 @@ SCIP_DECL_CONSTRANS(consTransLinking)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
@@ -2096,7 +2097,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 /** domain propagation method of constraint handler */
 static
 SCIP_DECL_CONSPROP(consPropLinking)
-{  
+{  /*lint --e{715}*/
    SCIP_Bool cutoff;
    SCIP_Bool addcut;
    SCIP_Bool mustcheck;

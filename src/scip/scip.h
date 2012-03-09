@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -217,9 +217,24 @@ extern
 SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
-/** returns whether the solution process should be provably correct */
+/** returns whether the solution process should be probably correct */
 extern
 SCIP_Bool SCIPisExactSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the presolving process would be finished given no more presolving reductions are found in this
+ *  presolving round
+ *
+ *  Checks whether the number of presolving rounds is not exceeded and the presolving reductions found in the current
+ *  presolving round suffice to trigger another presolving round.
+ *
+ *  @note if subsequent presolvers find more reductions, presolving might continue even if the method returns FALSE
+ *  @note does not check whether infeasibility or unboundedness was already detected in presolving (which would result
+ *        in presolving being stopped although the method returns TRUE)
+ */
+extern
+SCIP_Bool SCIPisPresolveFinished(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -1973,8 +1988,12 @@ SCIP_RETCODE SCIPgetVarsData(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
-/** gets array with active problem variables; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
+/** gets array with active problem variables
+ *
+ *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(), SCIPfixVar(),
+ *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
+ *           accessed via this method) gets resized and/or resorted. This can invalid the data pointer which is returned
+ *           by this method.
  */
 extern
 SCIP_VAR** SCIPgetVars(
@@ -2008,6 +2027,16 @@ int SCIPgetNImplVars(
 /** gets number of continuous active problem variables */
 extern
 int SCIPgetNContVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of active problem variables with a non-zero objective coefficient
+ *
+ *  @note In case of the original problem the number of variables is counted. In case of the transformed problem the
+ *        number of variables is just return since it is stored
+ */
+extern
+int SCIPgetNObjVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -2162,7 +2191,11 @@ int SCIPgetNConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets array of globally valid constraints currently in the problem */
+/** gets array of globally valid constraints currently in the problem
+ *
+ *  @warning If your are using the method SCIPaddCons(), it can happen that the internal constraint array (which is
+ *           accessed via this method) gets resized. This can invalid the data pointer which is returned by this method.
+ */
 extern
 SCIP_CONS** SCIPgetConss(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2214,11 +2247,14 @@ SCIP_RETCODE SCIPaddConsNode(
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
  *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
  *  only active in a small part of the tree although it is valid in a larger part.
- *  In this case, one should pass the more global node where the constraint is valid as "validnode".
- *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *
  *  If the constraint is valid at the same node as it is inserted (the usual case), one should pass NULL as "validnode".
  *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
  *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
+ *
+ *  @note The same constraint cannot be added twice to the branching tree with different "validnode" parameters. This is
+ *        the case due internal data structures and performance issues. In such a case you should try to realize your
+ *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
  */
 extern
 SCIP_RETCODE SCIPaddConsLocal(
@@ -3021,7 +3057,7 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
  *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
  */
 extern
-int SCIPgetVarStrongbranchLPAge(
+SCIP_Longint SCIPgetVarStrongbranchLPAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get strong branching LP age for */
    );
@@ -3110,8 +3146,8 @@ SCIP_Real SCIPadjustedVarUb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3126,8 +3162,8 @@ SCIP_RETCODE SCIPchgVarLb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3165,8 +3201,8 @@ SCIP_RETCODE SCIPchgVarUbNode(
 /** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3180,8 +3216,8 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3225,8 +3261,8 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3245,8 +3281,8 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3265,8 +3301,8 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3287,8 +3323,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3324,8 +3360,8 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3346,8 +3382,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3382,8 +3418,8 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3401,8 +3437,8 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -3662,15 +3698,15 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
 
-/** changes type of variable in the problem; 
+/** changes type of variable in the problem;
  *
- * @note this type changes might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *  @warning This type changes might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *
- * @note if SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed; the variable type of the
- *       corresponding transformed variable is changed; the type of the original variable does not change
- * 
- * @note if the type changes from a continuous variable to a non-continuous variable the bound of the variable get
- *       adjusts w.r.t. to integrality information
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed; the variable type of the
+ *        corresponding transformed variable is changed; the type of the original variable does not change
+ *
+ *  @note If the type changes from a continuous variable to a non-continuous variable the bound of the variable get
+ *        adjusted w.r.t. to integrality information
  */
 extern
 SCIP_RETCODE SCIPchgVarType(
@@ -4045,6 +4081,14 @@ SCIP_RETCODE SCIPprintVar(
 
 /**@name Conflict Analysis Methods */
 /**@{ */
+
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+extern
+SCIP_Bool SCIPisConflictAnalysisApplicable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
  *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
@@ -4604,7 +4648,17 @@ SCIP_Real SCIPgetLPLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets pseudo objective value of the current LP */
+/** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
+ *  function) global bound
+ */
+extern
+SCIP_Real SCIPgetGlobalPseudoObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
 extern
 SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -4852,13 +4906,12 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    );
 
 /** compute relative interior point to current LP
- * @see computeLPRelIntPointOneNorm
- * @see computeLPRelIntPointSupNorm
+ * @see SCIPlpComputeRelIntPoint
  */
 extern
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             relaxrows,          /**< should the rows be relaxed, can be FALSE only if normtype is 'o' */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
    SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
    char                  normtype,           /**< which norm to use: 'o'ne-norm or 's'upremum-norm */
    SCIP_SOL**            point               /**< relative interior point on exit */
@@ -6071,6 +6124,12 @@ SCIP_Longint SCIPgetLastDivenode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether we are in diving mode */
+extern
+SCIP_Bool SCIPinDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 
@@ -6613,6 +6672,13 @@ SCIP_RETCODE SCIPfreeSol(
 /** links a primal solution to the current LP solution */
 extern
 SCIP_RETCODE SCIPlinkLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
+/** links a primal solution to the current NLP solution */
+extern
+SCIP_RETCODE SCIPlinkNLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
    );
@@ -7208,7 +7274,7 @@ int SCIPgetNNodesLeft(
 
 /** gets total number of LPs solved so far */
 extern
-int SCIPgetNLPs(
+SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7226,7 +7292,7 @@ SCIP_Longint SCIPgetNRootLPIterations(
 
 /** gets total number of primal LPs solved so far */
 extern
-int SCIPgetNPrimalLPs(
+SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7238,7 +7304,7 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
 
 /** gets total number of dual LPs solved so far */
 extern
-int SCIPgetNDualLPs(
+SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7250,7 +7316,7 @@ SCIP_Longint SCIPgetNDualLPIterations(
 
 /** gets total number of barrier LPs solved so far */
 extern
-int SCIPgetNBarrierLPs(
+SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7262,7 +7328,7 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
 
 /** gets total number of LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNResolveLPs(
+SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7276,7 +7342,7 @@ SCIP_Longint SCIPgetNResolveLPIterations(
 
 /** gets total number of primal LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNPrimalResolveLPs(
+SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7290,7 +7356,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
 
 /** gets total number of dual LPs solved so far that were resolved from an advanced start basis */
 extern
-int SCIPgetNDualResolveLPs(
+SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7304,7 +7370,7 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
 
 /** gets total number of LPs solved so far for node relaxations */
 extern
-int SCIPgetNNodeLPs(
+SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7316,7 +7382,7 @@ SCIP_Longint SCIPgetNNodeLPIterations(
 
 /** gets total number of LPs solved so far for initial LP in node relaxations */
 extern
-int SCIPgetNNodeInitLPs(
+SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7328,7 +7394,7 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
 
 /** gets total number of LPs solved so far during diving and probing */
 extern
-int SCIPgetNDivingLPs(
+SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7340,7 +7406,7 @@ SCIP_Longint SCIPgetNDivingLPIterations(
 
 /** gets total number of times, strong branching was called (each call represents solving two LPs) */
 extern
-int SCIPgetNStrongbranchs(
+SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7352,7 +7418,7 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
 
 /** gets total number of times, strong branching was called at the root node (each call represents solving two LPs) */
 extern
-int SCIPgetNRootStrongbranchs(
+SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -7536,6 +7602,13 @@ SCIP_Real SCIPgetUpperbound(
 extern
 SCIP_Real SCIPgetCutoffbound(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** updates the cutoff bound if it is better */
+extern
+SCIP_RETCODE SCIPupdateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
    );
 
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
@@ -8335,11 +8408,11 @@ SCIP_Bool SCIPisSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
- *  were cancelled out when increasing the value and are random after decreasing it.
- *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  were canceled out when increasing the value and are random after decreasing it.
+ *  We do not consider the cancellations which can occur during increasing the absolute value because they just cannot
  *  be expressed using fixed precision floating point arithmetic, anymore.
  *  In order to get more reliable values, the idea is to always store the last reliable value, where increasing the
  *  absolute of the value is viewed as preserving reliability. Then, after each update, the new absolute value can be

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1523,7 +1523,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       assert(row != NULL);
       assert(SCIProwGetLPPos(row) == i);
       SCIPdebugMessage("  Row <%d> is %sin LP: \n", i, SCIProwGetLPPos(row) >= 0 ? "" : "not ");
-      SCIPdebug( SCIPprintRow(scip, row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
 
       /* Heuristic does not provide infeasibility recovery, thus if any constraint is violated,

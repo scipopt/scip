@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1555,7 +1555,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 /** transforms constraint data into data belonging to the transformed problem */
 #define consTransCountsols NULL
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpCountsols NULL
 
 /** separation method of constraint handler for LP solutions */

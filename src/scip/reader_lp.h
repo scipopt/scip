@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,8 @@
  * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
  * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
  * special ordered set constraints are supported.
+ *
+ * The lp format is defined within the CPLEX documentation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

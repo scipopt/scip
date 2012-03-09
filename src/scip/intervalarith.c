@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3945,13 +3945,13 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             d = ay * (ay * bx * bx - axy * (bx * by + axy * c));
             if( !EPSN(d, 1e-9) )
             {
-               ymin = ay * bx + sqrt(MAX(d, 0.0));
+               ymin = -ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
                val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
                minval = MIN(val, minval);
 
-               ymin = ay * bx - sqrt(MAX(d, 0.0));
+               ymin = -ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
                val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);

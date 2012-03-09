@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,10 +17,12 @@
  * @brief  pseudo-Boolean file reader (opb format)
  * @author Stefan Heinz
  * @author Michael Winkler
- */
-
-/* http://www.cril.univ-artois.fr/PB07/solver_req.html
- * http://www.cril.univ-artois.fr/PB10/format.pdf
+ *
+ * This file reader parses the \f$opb\f$ format and is also used by the \f$wbo\f$ reader for the \f$wbo\f$ format. For a
+ * detailed description of this format see
+ *
+ * - http://www.cril.univ-artois.fr/PB07/solver_req.html
+ * - http://www.cril.univ-artois.fr/PB10/format.pdf
  *
  * The syntax of the input file format can be described by a simple Backus-Naur
  *  form. <formula> is the start symbol of this grammar.
@@ -2841,7 +2843,7 @@ void printPBRow(
    /* print non-linear part */
    for( t = 0; t < ntermvals; ++t )
    {
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[v] * (*mult))); /*lint !e613 */
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT, (SCIP_Longint) SCIPround(scip, termvals[t] * (*mult))); /*lint !e613 */
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
       for( v = 0; v < ntermvars[t]; ++v ) /*lint !e613 */

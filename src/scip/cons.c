@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1782,6 +1782,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    )
 {
    char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(conshdlr != NULL);
    assert(name != NULL);
@@ -1917,7 +1918,6 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->delayupdatecount = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
-   (*conshdlr)->timingmask = timingmask;
    (*conshdlr)->sepalpwasdelayed = FALSE;
    (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
@@ -1934,6 +1934,11 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+         (int*)(&(*conshdlr)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
@@ -2190,8 +2195,14 @@ SCIP_RETCODE SCIPconshdlrInitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2206,6 +2217,36 @@ SCIP_RETCODE SCIPconshdlrInitpre(
          return SCIP_INVALIDRESULT;
       }
    }
+
+   /* after a restart the LP is empty but the initial constraints are not included in the initialconss array anymore;
+    * we have to put them back into this array in order to obtain the correct initial root relaxation
+    */
+   if( stat->nruns >= 2 )
+   {
+      int c;
+
+      for( c = 0; c < conshdlr->nconss; ++c )
+      {
+         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+         {
+            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   /* check if all initial constraints are included in the initconss array */
+   {
+      int c;
+
+      for( c = 0; c < conshdlr->nconss; ++c )
+      {
+         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
+         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
+            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -2236,8 +2277,14 @@ SCIP_RETCODE SCIPconshdlrExitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2290,36 +2337,6 @@ SCIP_RETCODE SCIPconshdlrInitsol(
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
    }
-
-   /* after a restart the LP is empty but the initial constraints are not included in the initialconss array anymore;
-    * we have to put them back into this array in order to obtain the correct initial root relaxation
-    */
-   if( stat->nruns >= 2 )
-   {
-      int c;
-
-      for( c = 0; c < conshdlr->nconss; ++c )
-      {
-         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
-         {
-            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
-         }
-      }
-   }
-
-#ifndef NDEBUG
-   /* check if all initial constraints are included in the initconss array */
-   {
-      int c;
-
-      for( c = 0; c < conshdlr->nconss; ++c )
-      {
-         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
-         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
-            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
-      }
-   }
-#endif
 
    return SCIP_OKAY;
 }
@@ -2462,9 +2479,9 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
             SCIP_Longint oldnprobdomchgs;
+            SCIP_Longint lastsepalpcount;
             int oldncuts;
             int oldnactiveconss;
-            int lastsepalpcount;
             int lastnusefulsepaconss;
 
             SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
@@ -3057,6 +3074,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    int                   depth,              /**< depth of current node */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3147,7 +3165,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIPclockStart(conshdlr->proptime, set);
 
             /* call external method */
-            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+            SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, proptiming, result) );
             SCIPdebugMessage(" -> propagation returned result <%d>\n", *result);
 
             /* stop timing */
@@ -4660,6 +4678,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateobsolete = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
+   (*cons)->isadded = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -4732,7 +4751,7 @@ SCIP_RETCODE SCIPconsCopy(
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
-   
+
    if( sourceconshdlr->conscopy != NULL )
    {
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
@@ -5312,16 +5331,21 @@ SCIP_RETCODE SCIPconsSetPropagated(
 
    if( cons->propagate != propagate )
    {
-      cons->propagate = propagate;
-      if( cons->enabled && cons->propenabled )
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
       {
-         if( cons->propagate )
+         cons->propagate = propagate;
+      }
+      else if( cons->enabled && cons->propenabled )
+      {
+         if( propagate )
          {
+            cons->propagate = propagate;
             SCIP_CALL( conshdlrAddPropcons(cons->conshdlr, set, cons) );
          }
          else
          {
             conshdlrDelPropcons(cons->conshdlr, cons);
+            cons->propagate = propagate;
          }
       }
    }
@@ -5973,6 +5997,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsAdded
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -6311,4 +6336,14 @@ int SCIPconsGetNLocksNeg(
    assert(cons != NULL);
 
    return cons->nlocksneg;
+}
+
+/** returns if the constraint was already added to a SCIP instance */
+SCIP_Bool SCIPconsIsAdded(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->isadded;
 }

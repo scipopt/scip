@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -899,6 +899,12 @@ SCIP_Real SCIPsetPseudocostdelta(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** return the delta to use for computing the cutoff bound for integral objectives */
+extern
+SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns minimal decrease factor that causes the recomputation of a value
  *  (e.g., pseudo objective) instead of an update */
 extern
@@ -1336,6 +1342,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
+#define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
 #define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )

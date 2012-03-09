@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,9 @@
  * @brief  FlatZinc file reader
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * FlatZinc is a low-level solver input language that is the target language for MiniZinc. It is designed to be easy to
+ * translate into the form required by a solver. For more details see http://www.g12.cs.mu.oz.au/minizinc/ .
  *
  * @todo Support more general constraint types
  */
