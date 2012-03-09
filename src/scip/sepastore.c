@@ -439,27 +439,58 @@ SCIP_RETCODE sepastoreApplyLb(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new lower bound of variable */
+   SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
    )
 {
    assert(sepastore != NULL);
    assert(cutoff != NULL);
 
-   if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
+   if( local )
    {
-      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
-
-      if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
+      /* apply the local bound change or detect a cutoff */
+      if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
-               eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
-      }
-      else
-         *cutoff = TRUE;
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
-      if( !sepastore->initiallp )
-         sepastore->ncutsapplied++;
+         if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+                  eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+            *cutoff = TRUE;
+
+         /* count the bound change as applied cut */
+         if( !sepastore->initiallp )
+            sepastore->ncutsapplied++;
+      }
+   }
+   else
+   {
+      /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
+      if( SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(var)) )
+      {
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
+
+         if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+                  eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         }
+         else
+         {
+            /* we are done with solving since a global bound change is infeasible */
+            SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree);
+            *cutoff = TRUE;
+         }
+
+         /* count the bound change as applied cut */
+         if( !sepastore->initiallp )
+            sepastore->ncutsapplied++;
+      }
    }
 
    return SCIP_OKAY;
@@ -479,27 +510,58 @@ SCIP_RETCODE sepastoreApplyUb(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new upper bound of variable */
+   SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
    )
 {
    assert(sepastore != NULL);
    assert(cutoff != NULL);
 
-   if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
+   if( local )
    {
-      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
-
-      if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
+      /* apply the local bound change or detect a cutoff */
+      if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
-               eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      }
-      else
-         *cutoff = TRUE;
+         SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
-      if( !sepastore->initiallp )
-         sepastore->ncutsapplied++;
+         if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+                  eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+            *cutoff = TRUE;
+
+         /* count the bound change as applied cut */
+         if( !sepastore->initiallp )
+            sepastore->ncutsapplied++;
+      }
+   }
+   else
+   {
+      /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
+      if( SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(var)) )
+      {
+         SCIPdebugMessage(" -> applying global bound change: <%s>: [%g,%g] -> [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
+
+         if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
+         {
+            SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, prob, tree, lp, branchcand,
+                  eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         }
+         else
+         {
+            /* we are done with solving since a global bound change is infeasible */
+            SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree);
+            *cutoff = TRUE;
+         }
+
+         /* count the bound change as applied cut */
+         if( !sepastore->initiallp )
+            sepastore->ncutsapplied++;
+      }
    }
 
    return SCIP_OKAY;
@@ -526,6 +588,7 @@ SCIP_RETCODE sepastoreApplyBdchg(
    SCIP_VAR* var;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool local;
 
    assert(sepastore != NULL);
    assert(!SCIProwIsModifiable(cut));
@@ -537,10 +600,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
    /* get the single variable and its coefficient of the cut */
    cols = SCIProwGetCols(cut);
    assert(cols != NULL);
+
    var = SCIPcolGetVar(cols[0]);
    vals = SCIProwGetVals(cut);
    assert(vals != NULL);
    assert(!SCIPsetIsZero(set, vals[0]));
+
+   local = SCIProwIsLocal(cut);
 
    /* if the coefficient is nearly zero, we better ignore this cut for numerical reasons */
    if( SCIPsetIsFeasZero(set, vals[0]) )
@@ -555,13 +621,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
          SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], cutoff) );
+               var, lhs/vals[0], local, cutoff) );
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
          SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], cutoff) );
+               var, lhs/vals[0], local, cutoff) );
       }
    }
 
@@ -574,19 +640,15 @@ SCIP_RETCODE sepastoreApplyBdchg(
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
          SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], cutoff) );
+               var, rhs/vals[0], local, cutoff) );
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
          SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], cutoff) );
+               var, rhs/vals[0], local, cutoff) );
       }
    }
-
-   /* count the bound change as applied cut */
-   if( !sepastore->initiallp )
-      sepastore->ncutsapplied++;
 
    return SCIP_OKAY;
 }

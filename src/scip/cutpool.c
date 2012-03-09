@@ -579,13 +579,24 @@ SCIP_RETCODE SCIPcutpoolSeparate(
          row = cut->row;
 
          if( !SCIProwIsInLP(row) )
-         {         
-            if( SCIProwIsLPEfficacious(row, set, stat, lp, root) )
+         {
+            /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP
+             * row; hence, we want to remove the bound change cut from the SCIP cut pool
+             */
+            if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
+            {
+               /* insert bound change cut into separation store which will force that cut */
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+
+               SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
+            }
+            else if( SCIProwIsLPEfficacious(row, set, stat, lp, root) )
             {
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), SCIProwGetLPFeasibility(row, set, stat, lp));
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+
                found = TRUE;
                cut->age = 0;
             }
@@ -600,7 +611,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
          }
       }
    }
-   
+
    cutpool->processedlp = stat->lpcount;
    cutpool->firstunprocessed = cutpool->ncuts;
 
