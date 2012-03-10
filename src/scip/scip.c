@@ -6082,8 +6082,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
       break;
 
    case SCIP_STAGE_SOLVING:
-      SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat,
-         SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+      SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), SCIPprobInternObjval(scip->transprob, scip->set, newbound));
       break;
 
    default:
@@ -6105,7 +6104,7 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat, newbound);
+   SCIPupdateNodeLowerbound(scip, SCIPtreeGetCurrentNode(scip->tree), newbound);
 
    return SCIP_OKAY;
 }
@@ -6121,7 +6120,7 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
 {
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, SCIPprobInternObjval(scip->transprob, scip->set, newbound));
+   SCIPupdateNodeLowerbound(scip, node, SCIPprobInternObjval(scip->transprob, scip->set, newbound));
 
    return SCIP_OKAY;
 }
@@ -6138,6 +6137,16 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
    SCIP_CALL( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPnodeUpdateLowerbound(node, scip->stat, newbound);
+
+   /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
+    *
+    * If the node is an inner node (,not a child,) we need to cutoff the node manually if we exceed the
+    * cutoffbound. Internally the lowerbound is only changed before branching and the node is always a child, so
+    * therefore, we only implement this for the user.
+    *
+    */
+   if( SCIPisGE(scip, newbound, scip->primal->cutoffbound) )
+	 SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree);
 
    return SCIP_OKAY;
 }
