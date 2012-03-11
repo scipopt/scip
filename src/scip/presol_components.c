@@ -20,6 +20,8 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
+ * TODO: do not solve component if number of variables equals the total number of (unfixed) variables
+ * TODO: if no integer variables are present, set a node limit of 1 to avoid spending to much time in continuous nonlinear problems
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
