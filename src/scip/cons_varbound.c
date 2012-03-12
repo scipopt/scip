@@ -285,7 +285,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( catchEvents(scip, *consdata) );
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );  /*lint !e506*/
    (*consdata)->vars[0] = (*consdata)->var;
    (*consdata)->vars[1] = (*consdata)->vbdvar;
 
