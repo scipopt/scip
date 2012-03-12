@@ -6153,9 +6153,13 @@ SCIP_RETCODE convertLongEquality(
 static
 SCIP_Bool checkEqualObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,
-   SCIP_Real*            scale,
-   SCIP_Real*            offset
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real*            scale,              /**< pointer to store the scaling factor between the constraint and the
+					      *   objective function
+					      */
+   SCIP_Real*            offset              /**< pointer to store the offset of the objective function resulting by
+					      *   this constraint
+					      */
    )
 {
    SCIP_VAR** vars;
@@ -6228,7 +6232,7 @@ SCIP_Bool checkEqualObjective(
 static
 SCIP_RETCODE checkPartialObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons                /**< linear equation constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -6246,8 +6250,8 @@ SCIP_RETCODE checkPartialObjective(
    nvars = consdata->nvars;
    nobjvars = SCIPgetNObjVars(scip);
 
-   /* check if the linear equality constraints does not has more variables than the objective function */
-   if( nvars > nobjvars )
+   /* check if the linear equality constraints does not have more variables than the objective function */
+   if( nvars > nobjvars || nvars == 0 )
       return SCIP_OKAY;
 
    offset = consdata->rhs;
