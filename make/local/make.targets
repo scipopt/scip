@@ -1,11 +1,11 @@
-# this local Makefile includes the cluster targets 
+# this local Makefile includes the cluster targets
 
 OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
 
 -include make/local/make.$(OPTHOST)
 
 .PHONY: testcluster
-testcluster:		
+testcluster:
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
@@ -13,20 +13,20 @@ testcluster:
 		$(LPS) $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testclustercpx
-testclustercpx:		
+testclustercpx:
 		cd check; \
 		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR)  $(NOWAITCLUSTER);
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testclustercbc
-testclustercbc:		
+testclustercbc:
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER);
+		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 .PHONY: testgamscluster
 testgamscluster:

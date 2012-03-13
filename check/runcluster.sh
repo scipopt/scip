@@ -14,7 +14,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-# check if tmp-path exists 
+# check if tmp-path exists
 if test ! -d $CLIENTTMPDIR
 then
     echo Skipping test since the path for the tmp-dir does not exist.
@@ -27,14 +27,14 @@ TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
-echo @01 $FILENAME ===========      >> $OUTFILE 
+echo @01 $FILENAME ===========      >> $OUTFILE
 echo @01 $FILENAME ===========      >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
-$SOLVERPATH/../$BINNAME < $TMPFILE   >> $OUTFILE 2>>$ERRFILE
+$EXECNAME                < $TMPFILE >> $OUTFILE 2>>$ERRFILE
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
