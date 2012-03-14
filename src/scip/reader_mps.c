@@ -322,7 +322,7 @@ void mpsinputSetProbname(
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
 
-   (void)strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
+   (void)memccpy(mpsi->probname, probname, 0, MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective name in the mps input structure to given objective name */
@@ -336,7 +336,7 @@ void mpsinputSetObjname(
    assert(objname != NULL);
    assert(strlen(objname) < sizeof(mpsi->objname));
 
-   (void)strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
+   (void)memccpy(mpsi->objname, objname, 0, MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective sense in the mps input structure to given objective sense */
@@ -439,10 +439,10 @@ SCIP_Bool mpsinputReadLine(
       mpsi->f0 = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
 
-      /* Read until we have a not comment line. */
+      /* Read until we have not a comment line. */
       do
       {
-         BMSclearMemoryArray(mpsi->buf, MPS_MAX_LINELEN);
+         mpsi->buf[MPS_MAX_LINELEN-1] = '\0';
          if( NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp) )
             return FALSE;
          mpsi->lineno++;
@@ -896,7 +896,7 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-         (void)strncpy(colname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)memccpy(colname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
 
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
@@ -1005,7 +1005,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if( *rhsname == '\0' )
-         (void)strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)memccpy(rhsname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1128,7 +1128,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if( *rngname == '\0' )
-         (void)strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)memccpy(rngname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1299,7 +1299,7 @@ SCIP_RETCODE readBounds(
          break;
 
       if( *bndname == '\0' )
-         (void)strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)memccpy(bndname, mpsinputField2(mpsi), 0, MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
@@ -1579,7 +1579,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-            (void)strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+            (void)memccpy(name, mpsinputField2(mpsi), 0, MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */
