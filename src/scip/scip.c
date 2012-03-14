@@ -4706,19 +4706,21 @@ SCIP_RETCODE SCIPaddObjoffset(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddObjoffset", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   
-   scip->transprob->objoffset += addval;
-   
+
+   SCIPprobAddObjoffset(scip->transprob, addval);
+   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat,
+         scip->eventqueue, scip->transprob, scip->tree, scip->lp) );
+
    return SCIP_OKAY;
 }
 
 /** returns the objective offset of the original problem */
 SCIP_Real SCIPgetOrigObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
-   )   
+   )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetOrigObjoffset", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   
+
    return scip->origprob->objoffset;
 }
 
