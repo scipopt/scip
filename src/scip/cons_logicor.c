@@ -65,7 +65,7 @@
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
-#define DEFAULT_NEGATEDCLIQUE     FALSE /**< should negated clique information be used in presolving */
+#define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in presolving */
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */

@@ -43,6 +43,10 @@
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
+/* sorting of probing variables, two different variants are implemeneted */
+/*#define VARIANT_B*/
+
+
 
 /*
  * Default parameter settings
@@ -165,7 +169,8 @@ SCIP_RETCODE sortVariables(
 {
    SCIP_VAR** sortedvars;
    int nsortedvars;
-   int* scores;
+   SCIP_Real* scores;
+   SCIP_Real denom;
    int i;
    int minnprobings;
    int maxscore;
@@ -191,7 +196,9 @@ SCIP_RETCODE sortVariables(
    maxscore = -1;
    minnprobings = INT_MAX;
 
-   /* determine maximal possible score and minimal number of probings on each variable */
+   denom = (SCIP_Real) (4*SCIPgetNOrigVars(scip)+1);
+
+   /* determine maximal possible score and minimal number of probings over all variables */
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VAR* var;
@@ -205,9 +212,18 @@ SCIP_RETCODE sortVariables(
 
       if( SCIPvarIsActive(var) )
       {
-         tmp = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
-               + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
-               + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
+#ifndef VARIANT_B
+         tmp = -MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	    + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
+	    + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
+	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#else
+         tmp = - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
+	    + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	    + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
+	    + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
+	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#endif
 
          if( tmp > maxscore )
             maxscore = tmp;
@@ -244,19 +260,44 @@ SCIP_RETCODE sortVariables(
          assert(propdata->nprobed[SCIPvarGetIndex(var)] >= 0);
 
          if( propdata->nprobed[SCIPvarGetIndex(var)] == 0 )
-            scores[i] = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
-                        + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
-                        + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
+	 {
+#ifndef VARIANT_B
+	    scores[i] = -MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	       + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
+	       + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#else
+	    scores[i] = - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
+	       + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	       + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
+	       + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#endif
+
+	 }
          else
-            scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)] + SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
-                        + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
-                        + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
+	 {
+#ifndef VARIANT_B
+	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+	       - MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	       + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
+	       + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#else
+	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
+	       - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
+	       + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
+	       + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
+	       + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+#endif
+	 }
       }
       else
          scores[i] = INT_MIN;
    }
 
-   SCIPsortDownIntPtr(scores, (void**) sortedvars, nsortedvars);
+   SCIPsortDownRealPtr(scores, (void**) sortedvars, nsortedvars);
 
    SCIPfreeBufferArray(scip, &scores);
 
@@ -507,6 +548,52 @@ SCIP_RETCODE applyProbing(
          propdata->nuseless++;
          propdata->ntotaluseless++;
 
+         /* determine whether one probing should happen */
+         probingone = TRUE;
+         if( SCIPvarGetNLocksUp(vars[i]) == 0 )
+            probingone = FALSE;
+
+         if( probingone )
+         {
+            /* apply probing for fixing the variable to one */
+            SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
+               &localcutoff) );
+
+            if( localcutoff )
+            {
+               SCIP_Bool fixed;
+
+	       if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+               {
+                  /* the variable can be fixed to FALSE */
+                  SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, cutoff, &fixed) );
+                  assert(fixed);
+               }
+               else
+               {
+                  SCIP_CALL( SCIPtightenVarUb(scip, vars[i], 0.0, TRUE, cutoff, &fixed) );
+               }
+
+               if( fixed )
+               {
+                  SCIPdebugMessage("fixed probing variable <%s> to 0.0, nlocks=(%d/%d)\n",
+                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
+                  (*nfixedvars)++;
+                  propdata->nfixings++;
+                  propdata->nuseless = 0;
+                  propdata->ntotaluseless = 0;
+               }
+               continue; /* don't try downwards direction, because the variable is already fixed */
+            }
+
+            /* ignore variables, that were fixed, aggregated, or deleted in prior probings
+             * (propagators in one-probe might have found global fixings but did not trigger the localcutoff)
+             */
+            if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
+               || SCIPvarGetLbLocal(vars[i]) > 0.5 || SCIPvarGetUbLocal(vars[i]) < 0.5 )
+               continue;
+         }
+
          /* determine whether zero probing should happen */
          probingzero = TRUE;
          if( SCIPvarGetNLocksDown(vars[i]) == 0 )
@@ -535,52 +622,6 @@ SCIP_RETCODE applyProbing(
                if( fixed )
                {
                   SCIPdebugMessage("fixed probing variable <%s> to 1.0, nlocks=(%d/%d)\n",
-                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-                  (*nfixedvars)++;
-                  propdata->nfixings++;
-                  propdata->nuseless = 0;
-                  propdata->ntotaluseless = 0;
-               }
-               continue; /* don't try upwards direction, because the variable is already fixed */
-            }
-
-            /* ignore variables, that were fixed, aggregated, or deleted in prior probings
-             * (propagators in zero-probe might have found global fixings but did not trigger the localcutoff)
-             */
-            if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
-               || SCIPvarGetLbLocal(vars[i]) > 0.5 || SCIPvarGetUbLocal(vars[i]) < 0.5 )
-               continue;
-         }
-
-         /* determine whether one probing should happen */
-         probingone = TRUE;
-         if( SCIPvarGetNLocksUp(vars[i]) == 0 )
-            probingone = FALSE;
-
-         if( probingone )
-         {
-            /* apply probing for fixing the variable to one */
-            SCIP_CALL( applyProbingVar(scip, propdata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
-               &localcutoff) );
-
-            if( localcutoff )
-            {
-               SCIP_Bool fixed;
-
-               if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
-               {
-                  /* the variable can be fixed to FALSE */
-                  SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, cutoff, &fixed) );
-                  assert(fixed);
-               }
-               else
-               {
-                  SCIP_CALL( SCIPtightenVarUb(scip, vars[i], 0.0, TRUE, cutoff, &fixed) );
-               }
-
-               if( fixed )
-               {
-                  SCIPdebugMessage("fixed probing variable <%s> to 0.0, nlocks=(%d/%d)\n",
                      SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*nfixedvars)++;
                   propdata->nfixings++;

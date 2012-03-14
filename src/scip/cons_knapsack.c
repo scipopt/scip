@@ -75,7 +75,7 @@
 #define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
                                          *   to best node's dual bound for separating knapsack cuts */
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
-#define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify knapsacks */
+#define DEFAULT_SIMPLIFYINEQUALITIES TRUE/**< should presolving try to simplify knapsacks */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in solving process */
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for knapsack relaxation */
