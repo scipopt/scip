@@ -275,29 +275,28 @@ SCIP_Bool getNextLine(
 {
    int i;
    char* last;
-  
+
    assert(opbinput != NULL);
 
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !opbinput->endline && opbinput->comment )
-   { 
+   {
       SCIPdebugMessage("Throwing rest of comment away.\n");
-   
+
       do
       {
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
          (void)SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file);
       }
       while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
-         
+
       opbinput->comment = FALSE;
       opbinput->endline = TRUE;
    }
 
    /* clear the line */
-   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
    opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-   
+
    /* set line position */
    if( opbinput->endline )
    {
@@ -306,12 +305,12 @@ SCIP_Bool getNextLine(
    }
    else
       opbinput->linepos += OPB_MAX_LINELEN - 2;
-   
+
    if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
       return FALSE;
-   
+
    opbinput->bufpos = 0;
-      
+
    if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
    {
       /* overwrite the character to search the last blank from this position backwards */
@@ -323,24 +322,24 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!", 
+         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!",
             OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
       }
-      else 
+      else
       {
          SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
          SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
          *last = '\0';
       }
    }
-   else 
+   else
    {
       /* found end of line */
       opbinput->endline = TRUE;
    }
-   
+
    opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    opbinput->comment = FALSE;
@@ -358,6 +357,17 @@ SCIP_Bool getNextLine(
          opbinput->comment = TRUE;
          break;
       }
+   }
+
+   /* make sure that two \0 are at the end even when there is no comment */
+   if (!opbinput->comment)
+   {
+     int pos;
+
+     pos = strlen(opbinput->linebuf);
+     pos  = (pos < OPB_MAX_LINELEN - 2) ? pos + 1 : OPB_MAX_LINELEN - 1;
+
+     opbinput->linebuf[pos] = '\0';
    }
 
    SCIPdebugMessage("%s\n", opbinput->linebuf);
@@ -838,7 +848,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(opbinput->token, ":") == 0 )
          {
             /* the second token was a colon ':' the first token is a constraint name */
-            (void)strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
+            (void)memccpy(name, opbinput->tokenbuf, 0, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
 
@@ -1535,7 +1545,7 @@ SCIP_RETCODE readOPBFile(
 
    assert(scip != NULL);
    assert(opbinput != NULL);
-   
+
    /* open file */
    opbinput->file = SCIPfopen(filename, "r");
    if( opbinput->file == NULL )
@@ -1544,14 +1554,15 @@ SCIP_RETCODE readOPBFile(
       SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
-   
+
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
    SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename) );
 
    /* reading additional information about the number of and constraints in comments to avoid reallocating
-      "opbinput.andconss" */
+    * "opbinput.andconss"
+    */
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
-   
+
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
