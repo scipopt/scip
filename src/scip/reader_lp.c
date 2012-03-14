@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
+ * @author Lars Schewe
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -104,8 +105,6 @@ struct LpInput
 };
 typedef struct LpInput LPINPUT;
 
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+:<>=[]*^";
 static const char commentchars[] = "\\";
 
 
@@ -159,7 +158,19 @@ SCIP_Bool isDelimChar(
    char                  c                   /**< input character */
    )
 {
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
+   switch (c)
+   {
+   case ' ':
+   case '\f':
+   case '\n':
+   case '\r':
+   case '\t':
+   case '\v':
+   case '\0':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the given character is a single token */
@@ -168,7 +179,22 @@ SCIP_Bool isTokenChar(
    char                  c                   /**< input character */
    )
 {
-   return (strchr(tokenchars, c) != NULL);
+   switch (c)
+   {
+   case '-':
+   case '+':
+   case ':':
+   case '<':
+   case '>':
+   case '=':
+   case '[':
+   case ']':
+   case '*':
+   case '^':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the current character is member of a value string */
@@ -241,9 +267,6 @@ SCIP_Bool getNextLine(
       lpinput->endline = TRUE;
    }
 
-   /* clear the line */
-   BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
-
    /* read next line */
    lpinput->linepos = 0;
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
@@ -298,6 +321,17 @@ SCIP_Bool getNextLine(
          lpinput->comment = TRUE;
          break;
       }
+   }
+
+   /* make sure that two \0 are at the end even when there is no comment */
+   if (!lpinput->comment)
+   {
+     int pos;
+
+     pos = strlen(lpinput->linebuf);
+     pos  = (pos < LP_MAX_LINELEN - 2) ? pos + 1 : LP_MAX_LINELEN - 1;
+
+     lpinput->linebuf[pos] = '\0';
    }
 
    return TRUE;
@@ -873,7 +907,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
+            (void)memccpy(name, lpinput->tokenbuf, 0, LP_MAX_LINELEN);
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
@@ -2047,7 +2081,7 @@ SCIP_RETCODE readSos(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-            (void)strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+            (void)memccpy(name, lpinput->tokenbuf, 0, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
          else
@@ -2127,9 +2161,7 @@ SCIP_RETCODE readSos(
 
          /* check if we reached a new section */
          if( isNewSection(lpinput) )
-         {
             break;
-         }
 
          /* remember the token in the token buffer */
          swapTokenBuffer(lpinput);
