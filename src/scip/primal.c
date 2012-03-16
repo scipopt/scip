@@ -401,7 +401,7 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
 {
    assert(primal != NULL);
 
-   return (primal->nsols > 0 && primal->upperbound == SCIPsolGetObj(primal->sols[0], set, prob)); /*lint !e777*/
+   return (primal->nsols > 0 && SCIPsetIsEQ(set, primal->upperbound, SCIPsolGetObj(primal->sols[0], set, prob)));
 }
 
 /** adds primal solution to solution storage at given position */
