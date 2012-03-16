@@ -25,7 +25,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
@@ -33,6 +32,7 @@
 #include "scip/var.h"
 #include "scip/scip.h"
 #include "scip/prop.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 #include "scip/struct_prop.h"

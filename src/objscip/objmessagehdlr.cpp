@@ -138,7 +138,7 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    messagehdlrdata->deleteobject = deleteobject;
 
    /* create message handler */
-   retcode = SCIPmessagehdlrCreate(messagehdlr, objmessagehdlr->scip_bufferedoutput_, NULL, FALSE,
+   retcode = SCIPmessagehdlrCreate(messagehdlr, objmessagehdlr->scip_bufferedoutput_, (const char*)NULL, FALSE,
       messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
       messagehdlrFree, messagehdlrdata); /*lint !e429*/
 

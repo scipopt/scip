@@ -1623,6 +1623,8 @@ SCIP_RETCODE cliquePresolve(
     */
    for( v = nvars - 1; v >= 0; --v )
    {
+      assert(vars != NULL);
+
       if( SCIPvarGetLbGlobal(vars[v]) > 0.5 )
       {
 	 SCIPdebugMessage("In constraint <%s> the operand <%s> is fixed to 1 so remove it from the constraint\n",
@@ -1703,6 +1705,8 @@ SCIP_RETCODE cliquePresolve(
    /* check if two operands are in a clique */
    for( v = nvars - 1; v > 0; --v )
    {
+      assert(vars != NULL);
+
       var1 = vars[v];
       assert(var1 != NULL);
       negated = FALSE;
@@ -1810,6 +1814,8 @@ SCIP_RETCODE cliquePresolve(
 	 /* fix all operands to 1 */
 	 for( v = nvars - 1; v >= 0 && !(*cutoff); --v )
 	 {
+            assert(vars != NULL);
+
 	    SCIPdebugMessage("Fixing operand <%s> to 1.\n", SCIPvarGetName(vars[v]));
 
 	    SCIP_CALL( SCIPfixVar(scip, vars[v], 1.0, &infeasible, &fixed) );
@@ -1837,6 +1843,8 @@ SCIP_RETCODE cliquePresolve(
    /* check if one operands is in a clique with the resultant */
    for( v = nvars - 1; v >= 0; --v )
    {
+      assert(vars != NULL);
+
       var2 = vars[v];
       assert(var2 != NULL);
 

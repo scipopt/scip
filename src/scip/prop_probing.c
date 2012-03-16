@@ -173,7 +173,13 @@ SCIP_RETCODE sortVariables(
    SCIP_Real denom;
    int i;
    int minnprobings;
-   int maxscore;
+   SCIP_Real maxscore;
+   int nlocksdown;
+   int nlocksup;
+   int nimplzero;
+   int nimplone;
+   int nclqzero;
+   int nclqone;
 
    assert(propdata != NULL);
    assert(propdata->nprobed != NULL);
@@ -193,16 +199,16 @@ SCIP_RETCODE sortVariables(
    /* sort the variables by number of rounding locks and implications */
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, nsortedvars) );
 
-   maxscore = -1;
+   maxscore = -1.0;
    minnprobings = INT_MAX;
 
-   denom = (SCIP_Real) (4*SCIPgetNOrigVars(scip)+1);
+   denom = (SCIP_Real) (4*SCIPgetNOrigVars(scip)+1); /*lint !e790*/
 
    /* determine maximal possible score and minimal number of probings over all variables */
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VAR* var;
-      int tmp;
+      SCIP_Real tmp;
 
       var = vars[i];
 
@@ -212,17 +218,24 @@ SCIP_RETCODE sortVariables(
 
       if( SCIPvarIsActive(var) )
       {
+         nlocksdown = SCIPvarGetNLocksDown(var);
+         nlocksup = SCIPvarGetNLocksUp(var);
+         nimplzero = SCIPvarGetNImpls(var, FALSE);
+         nimplone = SCIPvarGetNImpls(var, TRUE);
+         nclqzero = SCIPvarGetNCliques(var, FALSE);
+         nclqone = SCIPvarGetNCliques(var, TRUE);
+
 #ifndef VARIANT_B
-         tmp = -MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	    + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
-	    + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
-	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+         tmp = -MAX(nlocksdown, nlocksup)
+	    + 10*MIN(nimplzero, nimplone)
+	    + 100*MIN(nclqzero, nclqone)
+	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #else
-         tmp = - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
-	    + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	    + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
-	    + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
-	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+         tmp = - ABS(nlocksdown - nlocksup)
+	    + MIN(nlocksdown, nlocksup)
+	    + 500 * nimplzero + 50 * nimplone
+	    + 50000 * nclqzero + 5000 * nclqone
+	    - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #endif
 
          if( tmp > maxscore )
@@ -256,22 +269,29 @@ SCIP_RETCODE sortVariables(
       /* prefer variables that we did not already probe on */
       if( SCIPvarIsActive(var) )
       {
+         nlocksdown = SCIPvarGetNLocksDown(var);
+         nlocksup = SCIPvarGetNLocksUp(var);
+         nimplzero = SCIPvarGetNImpls(var, FALSE);
+         nimplone = SCIPvarGetNImpls(var, TRUE);
+         nclqzero = SCIPvarGetNCliques(var, FALSE);
+         nclqone = SCIPvarGetNCliques(var, TRUE);
+
          assert(propdata->noldtotalvars > SCIPvarGetIndex(var));
          assert(propdata->nprobed[SCIPvarGetIndex(var)] >= 0);
 
          if( propdata->nprobed[SCIPvarGetIndex(var)] == 0 )
 	 {
 #ifndef VARIANT_B
-	    scores[i] = -MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	       + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
-	       + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+	    scores[i] = -MAX(nlocksdown, nlocksup)
+	       + 10*MIN(nimplzero, nimplone)
+	       + 100*MIN(nclqzero, nclqone)
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #else
-	    scores[i] = - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
-	       + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	       + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
-	       + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+	    scores[i] = - ABS(nlocksdown - nlocksup)
+	       + MIN(nlocksdown, nlocksup)
+	       + 500 * nimplzero + 50 * nimplone
+	       + 50000 * nclqzero + 5000 * nclqone
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #endif
 
 	 }
@@ -279,17 +299,17 @@ SCIP_RETCODE sortVariables(
 	 {
 #ifndef VARIANT_B
 	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - MAX(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	       + 10*MIN(SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE))
-	       + 100*MIN(SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE))
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+	       - MAX(nlocksdown, nlocksup)
+	       + 10*MIN(nimplzero, nimplone)
+	       + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #else
 	    scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
-	       - ABS(SCIPvarGetNLocksDown(var) - SCIPvarGetNLocksUp(var))
-	       + MIN(SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(var))
-	       + 500 * SCIPvarGetNImpls(var, FALSE) + 50 * SCIPvarGetNImpls(var, TRUE)
-	       + 50000 * SCIPvarGetNCliques(var, FALSE) + 5000 * SCIPvarGetNCliques(var, TRUE)
-	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */
+	       - ABS(nlocksdown - nlocksup)
+	       + MIN(nlocksdown, nlocksup)
+	       + 500 * nimplzero + 50 * nimplone
+	       + 50000 * nclqzero + 5000 * nclqone
+	       - SCIPvarGetIndex(var)/denom; /* to have a unique order */ /*lint !e790*/
 #endif
 	 }
       }

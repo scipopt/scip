@@ -23,8 +23,8 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/mem.h"
+#include "scip/pub_message.h"
 
 
 

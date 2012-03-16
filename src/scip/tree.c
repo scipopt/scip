@@ -25,7 +25,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
@@ -44,6 +43,7 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/pub_message.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */

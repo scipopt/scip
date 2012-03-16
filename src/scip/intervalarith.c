@@ -26,8 +26,8 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/intervalarith.h"
+#include "scip/pub_message.h"
 
 #ifdef ROUNDING_FE
 #define ROUNDING

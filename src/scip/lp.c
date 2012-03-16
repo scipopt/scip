@@ -37,7 +37,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
@@ -49,6 +48,7 @@
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/event.h"
+#include "scip/pub_message.h"
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 

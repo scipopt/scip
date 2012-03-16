@@ -25,14 +25,14 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/primal.h"
 #include "scip/scip.h"
-#include "scip/pub_misc.h"
 #include "scip/heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_heur.h"
 

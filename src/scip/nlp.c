@@ -33,7 +33,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
@@ -44,6 +43,7 @@
 #include "scip/sol.h"
 #include "scip/event.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/pub_expr.h"
@@ -5643,7 +5643,6 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
  */
 SCIP_RETCODE SCIPnlpSetInitialGuess(
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_Real*            initguess           /**< new initial guess, or NULL to clear previous one */
    )

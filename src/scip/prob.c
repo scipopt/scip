@@ -24,10 +24,8 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/pub_misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -36,6 +34,8 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */

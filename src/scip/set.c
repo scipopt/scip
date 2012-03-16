@@ -3982,9 +3982,13 @@ SCIP_Real SCIPsetCutoffbounddelta(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   SCIP_Real feastol;
+
    assert(set != NULL);
 
-   return MIN(100.0 * SCIPsetFeastol(set), 0.0001);
+   feastol = SCIPsetFeastol(set);
+
+   return MIN(100.0 * feastol, 0.0001);
 }
 
 /** returns minimal decrease factor that causes the recomputation of a value

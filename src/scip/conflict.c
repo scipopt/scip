@@ -112,13 +112,11 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/vbc.h"
 #include "scip/lpi.h"
-#include "scip/pub_misc.h"
 #include "scip/history.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
@@ -130,6 +128,8 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_conflict.h"
 

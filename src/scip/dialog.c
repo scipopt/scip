@@ -155,7 +155,7 @@ SCIP_RETCODE readLine(
 #endif
 
       /* display prompt */
-      SCIPmessagePrintDialog(prompt);
+      printf("%s", prompt);
 
       /* read line from stdin */
 #ifndef NDEBUG

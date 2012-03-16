@@ -65,7 +65,7 @@ public:
       FILE*              file,               /**< file stream to print into */
       const char*        msg                 /**< string to output into the file */
       )
-   {
+   { /*lint --e{715}*/
 
    }
 
@@ -78,7 +78,7 @@ public:
       FILE*              file,               /**< file stream to print into */
       const char*        msg                 /**< string to output into the file */
       )
-   {
+   { /*lint --e{715}*/
 
    }
 
@@ -91,7 +91,7 @@ public:
       FILE*              file,               /**< file stream to print into */
       const char*        msg                 /**< string to output into the file */
       )
-   {
+   { /*lint --e{715}*/
 
    }
 
@@ -105,7 +105,7 @@ public:
    virtual void scip_free(
       SCIP_MESSAGEHDLR*  messagehdlr         /**< the message handler itself */
       )
-   {
+   { /*lint --e{715}*/
 
    }
 };

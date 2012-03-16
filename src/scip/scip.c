@@ -15563,7 +15563,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
 
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, scip->messagehdlr, SCIPblkmem(scip), initialguess) );
+      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), initialguess) );
    }
    else
    {
@@ -15588,7 +15588,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
       SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
-      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, scip->messagehdlr, SCIPblkmem(scip), vals) );
+      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
       SCIPfreeBufferArray(scip, &vals);
    }
    else

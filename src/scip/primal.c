@@ -23,7 +23,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/vbc.h"
@@ -35,6 +34,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/disp.h"
+#include "scip/pub_message.h"
 
 
 

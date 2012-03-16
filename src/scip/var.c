@@ -39,7 +39,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
@@ -54,6 +53,7 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/pub_message.h"
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */
@@ -10236,7 +10236,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
 	 {
 	    SCIPerrorMessage("original variable has no transformed variable attached\n");
 	    SCIPABORT();
-	    return SCIP_INVALIDDATA;
+	    return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
 	 tmpvars[ntmpvars] = var->data.original.transvar;
 	 ++ntmpvars;
@@ -10280,7 +10280,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
          }
 
 	 /* copy all multi-aggregation variables into our working array */
-	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars);
+	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars); /*lint !e866*/
 
 	 /* get active, fixed or multi-aggregated corresponding variables for all new ones */
 	 SCIPvarsGetProbvar(&tmpvars[ntmpvars], nmultvars);
@@ -10312,7 +10312,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
       default:
 	 SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
-	 return SCIP_INVALIDDATA;
+	 return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -10361,7 +10361,9 @@ void SCIPvarsGetProbvar(
 
    for( v = nvars - 1; v >= 0; --v )
    {
+      assert(vars != NULL);
       assert(vars[v] != NULL);
+
       vars[v] = SCIPvarGetProbvar(vars[v]);
       assert(vars[v] != NULL);
    }

@@ -584,7 +584,6 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
 extern
 SCIP_RETCODE SCIPnlpSetInitialGuess(
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_Real*            initguess           /**< new initial guess, or NULL to clear previous one */
    );

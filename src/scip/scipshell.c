@@ -215,13 +215,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
 
    if( !paramerror )
    {
-      SCIP_Bool error;
-
       /***********************************
        * create log file message handler *
        ***********************************/
-
-      error = FALSE;
 
       if( quiet )
       {
@@ -233,44 +229,41 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIPsetMessagehdlrLogfile(scip, logname);
       }
 
-      if( !error )
+      /***********************************
+       * Version and library information *
+       ***********************************/
+
+      SCIPprintVersion(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIPprintExternalCodes(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /*****************
+       * Load settings *
+       *****************/
+
+      if( settingsname != NULL )
       {
-         /***********************************
-          * Version and library information *
-          ***********************************/
+         SCIP_CALL( readParams(scip, settingsname) );
+      }
+      else if( defaultsetname != NULL )
+      {
+         SCIP_CALL( readParams(scip, defaultsetname) );
+      }
 
-         SCIPprintVersion(scip, NULL);
+      /**************
+       * Start SCIP *
+       **************/
+
+      if( probname != NULL )
+      {
+         SCIP_CALL( fromCommandLine(scip, probname) );
+      }
+      else
+      {
          SCIPinfoMessage(scip, NULL, "\n");
-
-         SCIPprintExternalCodes(scip, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /*****************
-          * Load settings *
-          *****************/
-
-         if( settingsname != NULL )
-         {
-            SCIP_CALL( readParams(scip, settingsname) );
-         }
-         else if( defaultsetname != NULL )
-         {
-            SCIP_CALL( readParams(scip, defaultsetname) );
-         }
-
-         /**************
-          * Start SCIP *
-          **************/
-
-         if( probname != NULL )
-         {
-            SCIP_CALL( fromCommandLine(scip, probname) );
-         }
-         else
-         {
-            SCIPinfoMessage(scip, NULL, "\n");
-            SCIP_CALL( SCIPstartInteraction(scip) );
-         }
+         SCIP_CALL( SCIPstartInteraction(scip) );
       }
    }
    else

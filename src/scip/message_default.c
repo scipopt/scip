@@ -32,7 +32,6 @@
 /** prints a message to the given file stream and writes the same messate to the log file */
 static
 void logMessage(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print message into */
    const char*           msg                 /**< message to print */
    )
@@ -48,22 +47,22 @@ void logMessage(
 /** warning message print method of message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
-{
-   logMessage(messagehdlr, file, msg);
+{  /*lint --e{715}*/
+   logMessage(file, msg);
 }
 
 /** dialog message print method of message handler */
 static
 SCIP_DECL_MESSAGEDIALOG(messageDialogDefault)
-{
-   logMessage(messagehdlr, file, msg);
+{  /*lint --e{715}*/
+   logMessage(file, msg);
 }
 
 /** info message print method of message handler */
 static
 SCIP_DECL_MESSAGEINFO(messageInfoDefault)
-{
-   logMessage(messagehdlr, file, msg);
+{  /*lint --e{715}*/
+   logMessage(file, msg);
 }
 
 /** Create default message handler. To free the message handler use SCIPmessagehdlrFree() */

@@ -23,7 +23,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
@@ -37,6 +36,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/cons.h"
+#include "scip/pub_message.h"
 
 #ifndef NDEBUG
 #include "scip/struct_sol.h"

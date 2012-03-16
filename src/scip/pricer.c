@@ -25,7 +25,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
@@ -33,8 +32,9 @@
 #include "scip/prob.h"
 #include "scip/pricestore.h"
 #include "scip/scip.h"
-#include "scip/pub_misc.h"
 #include "scip/pricer.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_pricer.h"
 

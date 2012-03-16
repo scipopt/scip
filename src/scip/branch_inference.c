@@ -69,7 +69,7 @@ void evaluateCand(
       (*bestscore) = score;
       (*bestcand) = cand;
    }
-   else if( (*bestscore) == score )
+   else if( (*bestscore) == score ) /*lint !e777*/
    {
       SCIP_Real bestobj;
       SCIP_Real candobj;
@@ -92,7 +92,7 @@ void evaluateCand(
        *       the selection should be unique. Otherwise, to selection process can get influenced by starting a
        *       probing or not.
        */
-      if( bestobj < candobj || (bestobj == candobj && SCIPvarGetIndex(*bestcand) < SCIPvarGetIndex(cand)) )
+      if( bestobj < candobj || (bestobj == candobj && SCIPvarGetIndex(*bestcand) < SCIPvarGetIndex(cand)) ) /*lint !e777*/
       {
          (*bestcand) = cand;
       }
