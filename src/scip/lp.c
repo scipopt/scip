@@ -273,7 +273,6 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->primalfeasible = lp->primalfeasible;
    storedsolvals->dualfeasible = lp->dualfeasible;
    storedsolvals->solisbasic = lp->solisbasic;
-   storedsolvals->solisvalid = lp->validsollp == stat->lpcount;
    storedsolvals->lpissolved = lp->solved;
 
    return SCIP_OKAY;
@@ -297,7 +296,7 @@ SCIP_RETCODE lpRestoreSolVals(
    if( storedsolvals != NULL )
    {
       lp->solved = storedsolvals->lpissolved;
-      lp->validsollp = storedsolvals->solisvalid ? validlp : -1;
+      lp->validsollp = validlp;
 
       lp->lpsolstat = storedsolvals->lpsolstat;
       lp->lpobjval = storedsolvals->lpobjval;
@@ -305,8 +304,8 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->dualfeasible = storedsolvals->dualfeasible;
       lp->solisbasic = storedsolvals->solisbasic;
 
-      /* restore infeasible LPs always by resolving */
-      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE || lp->validsollp == -1);
+      /* solution values are stored only for LPs solved to optimality or unboundedness */
+      assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY || lp->validsollp == -1);
    }
    /* no values available, mark LP as unsolved */
    else
@@ -15754,13 +15753,11 @@ SCIP_RETCODE SCIPlpStartDive(
    int r;
 
    assert(lp != NULL);
-   assert(lp->flushed);
+   assert(lp->flushed || !lp->solved);
    assert(!lp->diving);
    assert(!lp->probing);
    assert(lp->divelpistate == NULL);
    assert(lp->validsollp <= stat->lpcount);
-   assert(lp->validsollp < stat->lpcount || lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
-   assert(lp->validsollp < stat->lpcount || lp->solved);
    assert(blkmem != NULL);
    assert(set != NULL);
 
@@ -15786,9 +15783,22 @@ SCIP_RETCODE SCIPlpStartDive(
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
    assert(lp->storedsolvals != NULL);
-   if( !set->lp_resolverestore && lp->validsollp == stat->lpcount )
+   if( !set->lp_resolverestore && lp->solved
+      && (lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
-      assert(lp->lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE);
+      /* ensure that solution values in LP data structures are up-to-date */
+      if( lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
+      }
+      else
+      {
+         assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+         SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
+      }
+
+      assert(lp->validsollp == stat->lpcount);
+
       for( c = 0; c < lp->ncols; ++c )
       {
          SCIP_CALL( colStoreSolVals(lp->cols[c], blkmem) );
@@ -15854,7 +15864,8 @@ SCIP_RETCODE SCIPlpEndDive(
 
    /* resolve LP to reset solution */
    assert(lp->storedsolvals != NULL);
-   if( lp->storedsolvals->lpissolved && (set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) )
+   if( lp->storedsolvals->lpissolved
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
       SCIP_Bool lperror;
 
@@ -15898,9 +15909,10 @@ SCIP_RETCODE SCIPlpEndDive(
       stat->lpcount++;
 
       /* restore LP solution values in lp data, columns and rows */
-      SCIP_CALL( lpRestoreSolVals(lp, blkmem, stat->lpcount) );
-      if( lp->storedsolvals->solisvalid )
+      if( lp->storedsolvals->lpissolved && (lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
       {
+         SCIP_CALL( lpRestoreSolVals(lp, blkmem, stat->lpcount) );
+
          for( c = 0; c < lp->ncols; ++c )
          {
             SCIP_CALL( colRestoreSolVals(lp->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
@@ -15909,6 +15921,10 @@ SCIP_RETCODE SCIPlpEndDive(
          {
             SCIP_CALL( rowRestoreSolVals(lp->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
          }
+      }
+      else
+      {
+         SCIP_CALL( lpRestoreSolVals(lp, blkmem, -1) );
       }
    }
 

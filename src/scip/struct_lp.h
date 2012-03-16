@@ -110,8 +110,6 @@ struct SCIP_LpSolVals
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
-   SCIP_Bool             solisvalid;         /**< is current LP solution valid for the current LP, i.e., is
-                                              *   lp->validsollp == stat->lpcount? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
 

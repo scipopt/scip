@@ -6063,7 +6063,13 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
 /**@name LP Diving Methods */
 /**@{ */
 
-/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
+/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available
+ *
+ *  @note diving is allowed even if the current LP is not flushed, not solved, or not solved to optimality; be aware
+ *  that solving the (first) diving LP may take longer than expect and that the latter two cases could stem from
+ *  numerical troubles during the last LP solve; because of this, most users will want to call this method only if
+ *  SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL
+ */
 extern
 SCIP_RETCODE SCIPstartDive(
    SCIP*                 scip                /**< SCIP data structure */
@@ -6120,7 +6126,11 @@ SCIP_Real SCIPgetVarUbDive(
    SCIP_VAR*             var                 /**< variable to get the bound for */
    );
 
-/** solves the LP of the current dive; no separation or pricing is applied */
+/** solves the LP of the current dive; no separation or pricing is applied
+ *
+ *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
+ *  compare the explanation of SCIPstartDive()
+ */
 extern
 SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
