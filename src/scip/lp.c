@@ -7579,7 +7579,7 @@ SCIP_RETCODE SCIPlpCreate(
    SCIP_ALLOC( BMSallocMemory(lp) );
 
    /* open LP Solver interface */
-   SCIP_CALL( SCIPlpiCreate(&(*lp)->lpi, name, SCIP_OBJSEN_MINIMIZE, messagehdlr) );
+   SCIP_CALL( SCIPlpiCreate(&(*lp)->lpi, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
 
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;
@@ -17393,7 +17393,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    }
 
    /* create auxiliary LP */
-   SCIP_CALL( SCIPlpiCreate(&lpi, "relativeInterior", SCIP_OBJSEN_MAXIMIZE, messagehdlr) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
 
    /* get storage */
    if( normtype == 'o' )

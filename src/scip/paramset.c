@@ -52,8 +52,8 @@ SCIP_DECL_HASHGETKEY(hashGetKeyParam)
 static
 SCIP_RETCODE paramCheckBool(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Bool             value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -73,8 +73,8 @@ SCIP_RETCODE paramCheckBool(
 static
 SCIP_RETCODE paramCheckInt(
    SCIP_PARAM*           param,              /**< parameter */
-   int                   value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   int                   value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -94,8 +94,8 @@ SCIP_RETCODE paramCheckInt(
 static
 SCIP_RETCODE paramCheckLongint(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Longint          value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Longint          value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -115,8 +115,8 @@ SCIP_RETCODE paramCheckLongint(
 static
 SCIP_RETCODE paramCheckReal(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Real             value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -136,8 +136,8 @@ SCIP_RETCODE paramCheckReal(
 static
 SCIP_RETCODE paramCheckChar(
    SCIP_PARAM*           param,              /**< parameter */
-   char                  value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   char                  value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -172,8 +172,8 @@ SCIP_RETCODE paramCheckChar(
 static
 SCIP_RETCODE paramCheckString(
    SCIP_PARAM*           param,              /**< parameter */
-   const char*           value,              /**< value to check */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           value               /**< value to check */
    )
 {
    unsigned int i;
@@ -359,7 +359,7 @@ SCIP_RETCODE paramSetLongint(
    if( param != NULL )
    {
       assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
-      SCIP_CALL( SCIPparamSetLongint(param,  set, messagehdlr, value, quiet) );
+      SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, value, quiet) );
    }
 #ifndef NDEBUG
    else
@@ -3552,7 +3552,7 @@ SCIP_RETCODE  SCIPparamSetBool(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   SCIP_CALL_QUIET( paramCheckBool(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.boolparam.valueptr != NULL )
@@ -3586,7 +3586,7 @@ SCIP_RETCODE SCIPparamSetInt(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   SCIP_CALL_QUIET( paramCheckInt(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckInt(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.intparam.valueptr != NULL )
@@ -3620,7 +3620,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   SCIP_CALL_QUIET( paramCheckLongint(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckLongint(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.longintparam.valueptr != NULL )
@@ -3656,7 +3656,7 @@ SCIP_RETCODE SCIPparamSetReal(
    /* check, if value is possible for the parameter */
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
-   SCIP_CALL_QUIET( paramCheckReal(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckReal(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.realparam.valueptr != NULL )
@@ -3690,7 +3690,7 @@ SCIP_RETCODE SCIPparamSetChar(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   SCIP_CALL_QUIET( paramCheckChar(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckChar(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.charparam.valueptr != NULL )
@@ -3724,7 +3724,7 @@ SCIP_RETCODE SCIPparamSetString(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   SCIP_CALL_QUIET( paramCheckString(param, value, messagehdlr) );
+   SCIP_CALL_QUIET( paramCheckString(param, messagehdlr, value) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )

@@ -757,7 +757,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %"SCIP_LONGINT_FORMAT"): ", 
          SCIPconsGetName(cons), consdata->capacity);
-      SCIPdebug( SCIPprintRow(scip, consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
    }
 

@@ -84,7 +84,7 @@ void xprs_error(
          char errmsg[512];                              \
          const char *msg;                               \
          xprs_error((p), restat, &msg, errmsg);         \
-         SCIPmessagePrintWarning(messagehdlr, msg, restat, errmsg);      \
+         SCIPmessagePrintWarning((messagehdlr), msg, restat, errmsg);   \
       }                                                 \
    }
 
@@ -710,9 +710,9 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen,             /**< objective sense */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
+   SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
    int izero = 0;

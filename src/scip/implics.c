@@ -28,10 +28,10 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_implics.h"

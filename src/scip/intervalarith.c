@@ -188,7 +188,7 @@ void SCIPintervalSetRoundingMode(
    SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
    )
 {  /*lint --e{715}*/
-   SCIPmessagePrintWarning(messagehdlr, "setting rounding mode not available - interval arithmetic is invalid!\n");
+   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
 }
 
 /** gets current rounding mode of floating point operations */
@@ -258,7 +258,7 @@ SCIP_Real negate(
    SCIP_Real             x                   /**< number that should be negated */
    )
 {
-   SCIPmessagePrintWarning(messagehdlr, "setting rounding mode not available - interval arithmetic is invalid!\n");
+   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
    return -x;
 }
 

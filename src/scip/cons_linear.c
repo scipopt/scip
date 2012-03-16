@@ -4814,7 +4814,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
    }
 
@@ -6997,7 +6997,6 @@ SCIP_RETCODE fixVariables(
 /** gets weight for variable in a "weighted number of variables" sum */
 static
 int getVarWeight(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get weight for */
    )
 {
@@ -7452,7 +7451,7 @@ SCIP_RETCODE aggregateConstraints(
             aggrcoef = a * consdata0->vals[commonidx0[i]] + b * consdata1->vals[commonidx1[i]];
             if( !SCIPisZero(scip, aggrcoef) )
             {
-               varweight += getVarWeight(scip, consdata0->vars[commonidx0[i]]);
+               varweight += getVarWeight(consdata0->vars[commonidx0[i]]);
                nvars++;
             }
          }
@@ -8208,7 +8207,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             {
                diffidx0minus1[nvars0minus1] = v0;
                nvars0minus1++;
-               diffidx0minus1weight += getVarWeight(scip, var);
+               diffidx0minus1weight += getVarWeight(var);
             }
             v0++;
             coefsequal = FALSE;
@@ -8224,7 +8223,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             {
                diffidx1minus0[nvars1minus0] = v1;
                nvars1minus0++;
-               diffidx1minus0weight += getVarWeight(scip, var);
+               diffidx1minus0weight += getVarWeight(var);
             }
             v1++;
             coefsequal = FALSE;
@@ -8242,7 +8241,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                commonidx0[nvarscommon] = v0;
                commonidx1[nvarscommon] = v1;
                nvarscommon++;
-               commonidxweight += getVarWeight(scip, var);
+               commonidxweight += getVarWeight(var);
             }
             v0++;
             v1++;

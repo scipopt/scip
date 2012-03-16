@@ -48,7 +48,7 @@
 
 #define CPX_CALL(x)                     do                                                                                  \
                                         {                                                                                   \
-                                           int _cpxstat_;                                                                   \
+                                           int _cpxstat_;               \
                                            if( (_cpxstat_ = (x)) != 0 )                                                     \
                                            {                                                                                \
                                               SCIPmessagePrintWarning(m_messagehdlr, "CPLEX error <%d>; SoPlex result unchecked\n", _cpxstat_); \
@@ -133,7 +133,7 @@ using namespace soplex;
       catch(SPxException E)                                             \
       {                                                                 \
          std::string s = E.what();                                      \
-         SCIPmessagePrintWarning(messagehdlr, "SoPlex threw an exception: %s\n", s.c_str()); \
+         SCIPmessagePrintWarning((messagehdlr), "SoPlex threw an exception: %s\n", s.c_str()); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }                                                                    \
@@ -1407,16 +1407,16 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen,             /**< objective sense */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
+   SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
    assert(lpi != NULL);
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   SOPLEX_TRYLPIPTR( (*lpi)->spx = new SPxSCIP(messagehdlr, name) );
+   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new SPxSCIP(messagehdlr, name) );
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -1611,7 +1611,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRYLPI( lpi->spx->removeColRange(firstcol, lastcol) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeColRange(firstcol, lastcol) );
 
    return SCIP_OKAY;
 }
@@ -1642,7 +1642,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    for( i = 0; i < ncols; ++i )
       dstat[i] *= -1;
 
-   SOPLEX_TRYLPI( lpi->spx->removeCols(dstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeCols(dstat) );
 
    return SCIP_OKAY;
 }
@@ -1724,7 +1724,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRYLPI( lpi->spx->removeRowRange(firstrow, lastrow) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeRowRange(firstrow, lastrow) );
 
    return SCIP_OKAY;
 }
@@ -1755,7 +1755,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
    for( i = 0; i < nrows; ++i )
       dstat[i] *= -1;
 
-   SOPLEX_TRYLPI( lpi->spx->removeRows(dstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeRows(dstat) );
 
    return SCIP_OKAY;
 }
@@ -1773,7 +1773,7 @@ SCIP_RETCODE SCIPlpiClear(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
-   SOPLEX_TRYLPI( lpi->spx->clear() );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->clear() );
 
    return SCIP_OKAY;
 }
@@ -1879,7 +1879,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRYLPI( lpi->spx->changeElement(row, col, newval) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElement(row, col, newval) );
 
    return SCIP_OKAY;
 }
@@ -1899,7 +1899,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRYLPI( lpi->spx->setSense(spxObjsen(objsen)) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setSense(spxObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -3600,7 +3600,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          SCIPABORT();
       }
    }
-   SOPLEX_TRYLPI( lpi->spx->setBasis(spxrstat, spxcstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
 
    delete[] spxcstat;
    delete[] spxrstat;
@@ -4105,7 +4105,7 @@ SCIP_RETCODE SCIPlpiReadState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool success;
-   SOPLEX_TRYLPI( success = lpi->spx->readBasisFile(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFile(fname, 0, 0) );
 
    return success ? SCIP_OKAY : SCIP_ERROR;
 }
@@ -4121,7 +4121,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool res;
-   SOPLEX_TRYLPI( res = lpi->spx->writeBasisFile(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
       return SCIP_ERROR;

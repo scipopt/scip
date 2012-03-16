@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
-#define WITH_STATISTICS
+
 /**@file   presol_components.c
  * @brief  solve independent components in advance
  * @author Dieter Weninger
@@ -783,6 +782,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
 static
 SCIP_DECL_PRESOLEXIT(presolExitComponents)
 {  /*lint --e{715}*/
+#ifdef WITH_STATISTICS
    SCIP_PRESOLDATA* presoldata;
 
    /* free presolver data */
@@ -790,6 +790,7 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    assert(presoldata != NULL);
 
    freeStatistics(scip, presoldata);
+#endif
 
    return SCIP_OKAY;
 }

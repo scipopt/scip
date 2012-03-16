@@ -1159,7 +1159,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
 
          SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-         /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
          SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );

@@ -370,7 +370,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
    }
 

@@ -32,7 +32,6 @@
 #include "scip/clock.h"
 #include "scip/vbc.h"
 #include "scip/interrupt.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -55,6 +54,7 @@
 #include "scip/relax.h"
 #include "scip/sepa.h"
 #include "scip/prop.h"
+#include "scip/pub_misc.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */

@@ -590,9 +590,9 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
-   SCIP_OBJSEN           objsen,             /**< objective sense */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to use for printing messages, or NULL */
+   SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
    assert(lpi != NULL);

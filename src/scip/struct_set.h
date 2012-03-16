@@ -77,7 +77,6 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
-   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler for output handling, or NULL */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
    int                   nreaders;           /**< number of file readers */

@@ -28,7 +28,7 @@
 #include "scip/type_message.h"
 #include "scip/struct_message.h"
 #include "scip/def.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "blockmemshell/memory.h"
 
 

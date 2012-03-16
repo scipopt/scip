@@ -832,7 +832,7 @@ SCIP_RETCODE checkIIS(
    nconss = SCIPconshdlrGetNConss(conshdlr);
 
    /* create LP */
-   SCIP_CALL( SCIPlpiCreate(&lp, "checkLP", SCIP_OBJSEN_MINIMIZE, SCIPgetMessagehdlr(scip)) );
+   SCIP_CALL( SCIPlpiCreate(&lp, SCIPgetMessagehdlr(scip), "checkLP", SCIP_OBJSEN_MINIMIZE) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
@@ -1151,7 +1151,7 @@ SCIP_RETCODE initAlternativeLP(
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
 
    /* create alternative LP */
-   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, "altlp", SCIP_OBJSEN_MINIMIZE, SCIPgetMessagehdlr(scip)) );
+   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, SCIPgetMessagehdlr(scip), "altlp", SCIP_OBJSEN_MINIMIZE) );
 
    /* add first row */
    lhs = -1.0;

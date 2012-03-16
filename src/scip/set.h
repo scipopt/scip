@@ -46,8 +46,8 @@
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
-
 #include "scip/struct_set.h"
+
 
 #ifdef NDEBUG
 #include "scip/pub_misc.h"
@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPsetCopyParams(
 extern
 SCIP_RETCODE SCIPsetCreate(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP*                 scip                /**< SCIP data structure */
    );

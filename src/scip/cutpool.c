@@ -27,10 +27,10 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_cutpool.h"
 

@@ -66,7 +66,7 @@ interface
 - removed SCIPparamSetReal() please use SCIPchgRealParam()
 - removed SCIPparamSetChar() please use SCIPchgCharParam()
 - removed SCIPparamSetString() please use SCIPchgStringParam()
-- remove SCIPcolPrint() and SCIProwPrint()
+- remove SCIPcolPrint() and SCIProwPrint() please use SCIPprintCol() SCIPprintRow() see scip.h
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

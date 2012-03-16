@@ -534,7 +534,7 @@ SCIP_RETCODE SCIPcreate(
    SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
 
    SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
-   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
+   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
    SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -2327,7 +2327,7 @@ SCIP_RETCODE SCIPchgBoolParam(
 
    SCIP_CALL( checkStage(scip, "SCIPchgBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   retcode = SCIPsetChgBoolParam(scip->set, scip->messagehdlr,  param, value);
+   retcode = SCIPsetChgBoolParam(scip->set, scip->messagehdlr, param, value);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {

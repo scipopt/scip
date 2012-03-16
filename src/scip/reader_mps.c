@@ -353,7 +353,6 @@ void mpsinputSetObjsense(
 
 static
 void mpsinputSyntaxerror(
-   SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
@@ -635,7 +634,7 @@ SCIP_RETCODE readName(
    /* This has to be the Line with the NAME section. */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME") )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -645,7 +644,7 @@ SCIP_RETCODE readName(
    /* This hat to be a new section */
    if( !mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL) )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -661,7 +660,7 @@ SCIP_RETCODE readName(
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -682,7 +681,7 @@ SCIP_RETCODE readObjsen(
    /* This has to be the Line with MIN or MAX. */
    if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -692,14 +691,14 @@ SCIP_RETCODE readObjsen(
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MAXIMIZE);
    else
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
    /* Look for ROWS, USERCUTS, LAZYCONS, or OBJNAME Section */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -713,7 +712,7 @@ SCIP_RETCODE readObjsen(
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -734,7 +733,7 @@ SCIP_RETCODE readObjname(
    /* This has to be the Line with the name. */
    if( !mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -743,7 +742,7 @@ SCIP_RETCODE readObjname(
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
    if( !strcmp(mpsinputField0(mpsi), "ROWS") )
@@ -753,7 +752,7 @@ SCIP_RETCODE readObjname(
    else if( !strcmp(mpsinputField0(mpsi), "LAZYCONS") )
       mpsinputSetSection(mpsi, MPS_LAZYCONS);
    else
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
 
    return SCIP_OKAY;
 }
@@ -781,7 +780,7 @@ SCIP_RETCODE readRows(
          else if( !strcmp(mpsinputField0(mpsi), "COLUMNS") )
             mpsinputSetSection(mpsi, MPS_COLUMNS);
          else
-            mpsinputSyntaxerror(scip, mpsi);
+            mpsinputSyntaxerror(mpsi);
 
          return SCIP_OKAY;
       }
@@ -839,14 +838,14 @@ SCIP_RETCODE readRows(
                   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
             break;
          default :
-            mpsinputSyntaxerror(scip, mpsi);
+            mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
-   mpsinputSyntaxerror(scip, mpsi);
+   mpsinputSyntaxerror(mpsi);
 
    return SCIP_OKAY;
 }
@@ -957,7 +956,7 @@ SCIP_RETCODE readCols(
          }
       }
    }
-   mpsinputSyntaxerror(scip, mpsi);
+   mpsinputSyntaxerror(mpsi);
 
    return SCIP_OKAY;
 }
@@ -1082,7 +1081,7 @@ SCIP_RETCODE readRhs(
          }
       }
    }
-   mpsinputSyntaxerror(scip, mpsi);
+   mpsinputSyntaxerror(mpsi);
 
    return SCIP_OKAY;
 }
@@ -1218,7 +1217,7 @@ SCIP_RETCODE readRanges(
          }
       }
    }
-   mpsinputSyntaxerror(scip, mpsi);
+   mpsinputSyntaxerror(mpsi);
 
    return SCIP_OKAY;
 }
@@ -1295,7 +1294,7 @@ SCIP_RETCODE readBounds(
       }
       else
       {
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -1416,7 +1415,7 @@ SCIP_RETCODE readBounds(
             /* don't assert feasibility here because the presolver will and should detect a infeasibility */
             break;
          default:
-            mpsinputSyntaxerror(scip, mpsi);
+            mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
       }
@@ -1426,14 +1425,14 @@ SCIP_RETCODE readBounds(
          assert(*bndname != '\0');
          if( strcmp(bndname, mpsinputField3(mpsi)) == 0 && shifted )
          {
-            mpsinputSyntaxerror(scip, mpsi);
+            mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
          
          mpsinputEntryIgnored(scip, mpsi, "bound", mpsinputField2(mpsi), "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
       }
    }
-   mpsinputSyntaxerror(scip, mpsi);
+   mpsinputSyntaxerror(mpsi);
    
    
  READBOUNDS_FINISH:
@@ -1558,7 +1557,7 @@ SCIP_RETCODE readSOS(
       if( mpsinputField1(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -1617,7 +1616,7 @@ SCIP_RETCODE readSOS(
          if( consType != 1 && consType != 2 )
          {
             SCIPerrorMessage("missing SOS type specification.\n");
-            mpsinputSyntaxerror(scip, mpsi);
+            mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
 
@@ -1635,7 +1634,7 @@ SCIP_RETCODE readSOS(
             if( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
             {
                SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
-               mpsinputSyntaxerror(scip, mpsi);
+               mpsinputSyntaxerror(mpsi);
                return SCIP_OKAY;
             }
 
@@ -1731,7 +1730,7 @@ SCIP_RETCODE readQMatrix(
       if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          SCIPfreeBufferArray(scip, &quadvars1);
          SCIPfreeBufferArray(scip, &quadvars2);
          SCIPfreeBufferArray(scip, &quadcoefs);
@@ -1762,7 +1761,7 @@ SCIP_RETCODE readQMatrix(
             if( endptr == mpsinputField3(mpsi) || *endptr != '\0' )
             {
                SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
-               mpsinputSyntaxerror(scip, mpsi);
+               mpsinputSyntaxerror(mpsi);
                SCIPfreeBufferArray(scip, &quadvars1);
                SCIPfreeBufferArray(scip, &quadvars2);
                SCIPfreeBufferArray(scip, &quadcoefs);
@@ -1884,7 +1883,7 @@ SCIP_RETCODE readQCMatrix(
    if( mpsinputField1(mpsi) == NULL )
    {
       SCIPerrorMessage("no row name in QCMATRIX line.\n");
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
    
@@ -1894,7 +1893,7 @@ SCIP_RETCODE readQCMatrix(
    if( lincons == NULL )
    {
       SCIPerrorMessage("no row under name <%s> processed so far.\n");
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
@@ -1929,7 +1928,7 @@ SCIP_RETCODE readQCMatrix(
       if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          SCIPfreeBufferArray(scip, &quadvars1);
          SCIPfreeBufferArray(scip, &quadvars2);
          SCIPfreeBufferArray(scip, &quadcoefs);
@@ -1960,7 +1959,7 @@ SCIP_RETCODE readQCMatrix(
             if( endptr == mpsinputField3(mpsi) || *endptr != '\0' )
             {
                SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
-               mpsinputSyntaxerror(scip, mpsi);
+               mpsinputSyntaxerror(mpsi);
                SCIPfreeBufferArray(scip, &quadvars1);
                SCIPfreeBufferArray(scip, &quadvars2);
                SCIPfreeBufferArray(scip, &quadcoefs);
@@ -2091,7 +2090,7 @@ SCIP_RETCODE readIndicators(
       if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2099,7 +2098,7 @@ SCIP_RETCODE readIndicators(
       if( strcmp(mpsinputField1(mpsi), "IF") != 0 )
       {
          SCIPerrorMessage("Indicator constraints need to be introduced by 'IF' in column 1.\n");
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2108,7 +2107,7 @@ SCIP_RETCODE readIndicators(
       if( lincons == NULL )
       {
          SCIPerrorMessage("row <%s> does not exist.\n", mpsinputField2(mpsi));
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2117,7 +2116,7 @@ SCIP_RETCODE readIndicators(
       if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
       {
          SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2126,7 +2125,7 @@ SCIP_RETCODE readIndicators(
       if( binvar == NULL )
       {
          SCIPerrorMessage("binary variable <%s> does not exist.\n", mpsinputField3(mpsi));
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2134,7 +2133,7 @@ SCIP_RETCODE readIndicators(
       if( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
       {
          SCIPerrorMessage("variable <%s> is not binary.\n", mpsinputField3(mpsi));
-         mpsinputSyntaxerror(scip, mpsi);
+         mpsinputSyntaxerror(mpsi);
          return SCIP_OKAY;
       }
 
@@ -2153,7 +2152,7 @@ SCIP_RETCODE readIndicators(
             if( *mpsinputField4(mpsi) != '1' )
             {
                SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
-               mpsinputSyntaxerror(scip, mpsi);
+               mpsinputSyntaxerror(mpsi);
                return SCIP_OKAY;
             }
          }
@@ -2176,7 +2175,7 @@ SCIP_RETCODE readIndicators(
             if( !SCIPisEQ(scip, lhs, rhs) )
             {
                SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
-               mpsinputSyntaxerror(scip, mpsi);
+               mpsinputSyntaxerror(mpsi);
                return SCIP_OKAY;
             }
             else
@@ -2344,7 +2343,7 @@ SCIP_RETCODE readMps(
       SCIP_CALL( readIndicators(mpsi, scip) );
    }
    if( mpsinputSection(mpsi) != MPS_ENDATA )
-      mpsinputSyntaxerror(scip, mpsi);
+      mpsinputSyntaxerror(mpsi);
 
    SCIPfclose(fp);
 
