@@ -98,7 +98,7 @@ main(
    retcode = runShell(argc, argv, "scip.set");
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       return -1;
    }
 

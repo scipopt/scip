@@ -158,7 +158,7 @@ int main(
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       return -1;
    }
 
