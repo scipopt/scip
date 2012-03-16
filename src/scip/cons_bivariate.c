@@ -20,6 +20,11 @@
  * @author Stefan Vigerske
  */
 
+/** @todo check whether the constraint handler correctly distinguishes between constraints added to SCIP and those that
+ *        were only created; if the latter are automatically added to the expressiongraph, they might be enforced although not
+ *        valid
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
