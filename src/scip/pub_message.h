@@ -38,6 +38,9 @@
 extern "C" {
 #endif
 
+/** define to identify SCIP version with thread-safe version of message handlers */
+#define SCIP_THREADSAFE_MESSAGEHDLRS
+
 /** prints an error message */
 #define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILE__, __LINE__); \
                                         SCIPmessagePrintError
