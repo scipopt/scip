@@ -344,7 +344,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
           *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
-          *       leads to cut a of the form \sum a_i x_i \geq 1.Rumors are that these cuts are better.
+          *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
           */
 
          SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
@@ -391,11 +391,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
-                  /* @todo Trying to make the Gomory cut integral might fail. Due to numerical reasons/arguments we are
-                   *       currently ignore such cuts. If the cut, however, has small rank lets say smaller or equal to
-                   *       5 we might want to add that cut (even it does not has integral coefficients). To be able to
-                   *       do that we need to add a rang to the data structure of a row. The rang of original rows are
-                   *       zero for aggregated rows its the maximum over all used rows plus one.
+                  /* @todo Trying to make the Gomory cut integral might fail. Due to numerical reasons/arguments we
+                   *       currently ignore such cuts. If the cut, however, has small support (let's say smaller or equal to
+                   *       5), we might want to add that cut (even it does not have integral coefficients). To be able to
+                   *       do that we need to add a rank to the data structure of a row. The rank of original rows are
+                   *       zero and for aggregated rows it is the maximum over all used rows plus one.
                    */
                }
 
