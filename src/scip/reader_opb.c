@@ -164,8 +164,6 @@ struct OpbInput
 
 typedef struct OpbInput OPBINPUT;
 
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+:<>=;[]";
 static const char commentchars[] = "*";
 /*
  * Local methods (for reading)
@@ -211,7 +209,19 @@ SCIP_Bool isDelimChar(
    char                  c                   /**< input character */
    )
 {
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
+   switch (c)
+   {
+   case ' ':
+   case '\f':
+   case '\n':
+   case '\r':
+   case '\t':
+   case '\v':
+   case '\0':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the given character is a single token */
@@ -220,7 +230,21 @@ SCIP_Bool isTokenChar(
    char                  c                   /**< input character */
    )
 {
-   return (strchr(tokenchars, c) != NULL);
+   switch (c)
+   {
+   case '-':
+   case '+':
+   case ':':
+   case '<':
+   case '>':
+   case '=':
+   case '[':
+   case ']':
+   case ';':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the current character is member of a value string */
@@ -359,17 +383,6 @@ SCIP_Bool getNextLine(
          opbinput->comment = TRUE;
          break;
       }
-   }
-
-   /* make sure that two \0 are at the end even when there is no comment */
-   if (!opbinput->comment)
-   {
-     int pos;
-
-     pos = strlen(opbinput->linebuf);
-     pos  = (pos < OPB_MAX_LINELEN - 2) ? pos + 1 : OPB_MAX_LINELEN - 1;
-
-     opbinput->linebuf[pos] = '\0';
    }
 
    SCIPdebugMessage("%s\n", opbinput->linebuf);
@@ -851,7 +864,8 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(opbinput->token, ":") == 0 )
          {
             /* the second token was a colon ':' the first token is a constraint name */
-            (void)memccpy(name, opbinput->tokenbuf, 0, SCIP_MAXSTRLEN);
+	    (void)SCIPmemccpy(name, opbinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
 
@@ -1493,7 +1507,9 @@ SCIP_RETCODE getMaxAndConsDim(
             nproducts = strstr(opbinput->linebuf, "#product= ");
             if( nproducts != NULL )
             {
+	       const char delimchars[] = " \t";
                char* pos;
+
                nproducts += strlen("#product= ");
 
                pos = strtok(nproducts, delimchars);

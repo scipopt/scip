@@ -322,7 +322,7 @@ void mpsinputSetProbname(
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
 
-   (void)memccpy(mpsi->probname, probname, 0, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->probname, probname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective name in the mps input structure to given objective name */
@@ -336,7 +336,7 @@ void mpsinputSetObjname(
    assert(objname != NULL);
    assert(strlen(objname) < sizeof(mpsi->objname));
 
-   (void)memccpy(mpsi->objname, objname, 0, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->objname, objname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective sense in the mps input structure to given objective sense */
@@ -899,7 +899,7 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-         (void)memccpy(colname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
@@ -1008,7 +1008,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if( *rhsname == '\0' )
-         (void)memccpy(rhsname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1131,7 +1131,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if( *rngname == '\0' )
-         (void)memccpy(rngname, mpsinputField1(mpsi), 0, MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1302,7 +1302,7 @@ SCIP_RETCODE readBounds(
          break;
 
       if( *bndname == '\0' )
-         (void)memccpy(bndname, mpsinputField2(mpsi), 0, MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
@@ -1582,7 +1582,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-            (void)memccpy(name, mpsinputField2(mpsi), 0, MPS_MAX_NAMELEN - 1);
+	    (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */

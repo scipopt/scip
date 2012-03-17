@@ -766,6 +766,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    str = (const char*)key;
    sum = 0;
+
    while( *str != '\0' )
    {
       sum *= 31;
@@ -775,7 +776,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    return sum;
 }
-
 
 
 
@@ -5180,6 +5180,31 @@ SCIP_RETCODE SCIPgetRandomSubset(
 /*
  * Strings
  */
+
+
+/** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
+ *  'cnt' characters have been copied, whichever comes first.
+ *
+ *  @note undefined behaviuor on overlapping arrays
+ */
+int SCIPmemccpy(
+   char*                 dest,               /**< destination pointer to copy to */
+   const char*           src,                /**< source pointer to copy to */
+   char                  stop,               /**< character when found stop copying */
+   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   )
+{
+   if( dest == NULL || src == NULL || cnt == 0 )
+      return -1;
+   else
+   {
+      char* destination = dest;
+
+      while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
+
+      return (destination - dest);
+   }
+}
 
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,

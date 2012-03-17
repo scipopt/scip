@@ -67,6 +67,8 @@ interface
 - removed SCIPparamSetChar() please use SCIPchgCharParam()
 - removed SCIPparamSetString() please use SCIPchgStringParam()
 - remove SCIPcolPrint() and SCIProwPrint() please use SCIPprintCol() SCIPprintRow() see scip.h
+- new method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a source
+  string to a destination string or until it hits a stoping character
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -84,6 +86,7 @@ performance improvements:
 - added clique presolving for and-constraints, which checks if two operands or one operand and the resultant are in a
   clique and then fixes the resultant to 0 and in the former case we can delete the and-constraint too
 - improved probing by ordering the variables differently and applying the one-branch before the zero-branch
+- improved lp-, mps-, opb-reading time
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

@@ -3694,6 +3694,19 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Strings
  */
 
+/** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
+ *  'cnt' characters have been copied, whichever comes first.
+ *
+ *  @note undefined behaviuor on overlapping arrays
+ */
+extern
+int SCIPmemccpy(
+   char*                 dest,               /**< destination pointer to copy to */
+   const char*           src,                /**< source pointer to copy to */
+   char                  stop,               /**< character when found stop copying */
+   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   );
+
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
  *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be

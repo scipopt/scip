@@ -324,17 +324,6 @@ SCIP_Bool getNextLine(
       }
    }
 
-   /* make sure that two \0 are at the end even when there is no comment */
-   if (!lpinput->comment)
-   {
-     int pos;
-
-     pos = strlen(lpinput->linebuf);
-     pos  = (pos < LP_MAX_LINELEN - 2) ? pos + 1 : LP_MAX_LINELEN - 1;
-
-     lpinput->linebuf[pos] = '\0';
-   }
-
    return TRUE;
 }
 
@@ -372,6 +361,7 @@ SCIP_Bool getNextToken(
    {
       swapPointers(&lpinput->token, &lpinput->pushedtokens[lpinput->npushedtokens-1]);
       lpinput->npushedtokens--;
+
       SCIPdebugMessage("(line %d) read token again: '%s'\n", lpinput->linenumber, lpinput->token);
       return TRUE;
    }
@@ -548,16 +538,16 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(lpinput);
       if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "TO") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "TO") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -568,21 +558,21 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(lpinput);
       if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "THAT") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "THAT") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
 
-   if( strcasecmp(lpinput->token, "st") == 0
+   if( strcasecmp(lpinput->token, "ST") == 0
       || strcasecmp(lpinput->token, "S.T.") == 0
       || strcasecmp(lpinput->token, "ST.") == 0 )
    {
@@ -599,16 +589,16 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(lpinput);
       if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = TRUE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = TRUE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -619,16 +609,16 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(lpinput);
       if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "CUTS") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = TRUE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "CUTS") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = TRUE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -910,7 +900,8 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)memccpy(name, lpinput->tokenbuf, 0, LP_MAX_LINELEN);
+	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', LP_MAX_LINELEN);
+
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
@@ -2084,7 +2075,8 @@ SCIP_RETCODE readSos(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-            (void)memccpy(name, lpinput->tokenbuf, 0, SCIP_MAXSTRLEN);
+	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
          else
