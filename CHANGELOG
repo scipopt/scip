@@ -46,27 +46,27 @@ interface
 - allowed to start diving mode even if LP is not flushed, not solved, or not solved to optimality
 - changed the message handler system within SCIP heavily such that it is thread save
 - the follwing methods need additionally the SCIP pointer as parameter to make the output thread save:
-  SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr() and SCIPwarningMessage()
-- the following methods need additionally a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
-  handler methods see pub_message.h, SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
-- new method SCIPsetMessagehdlrFree() which frees the currently instance message handler and adds the given one
+  SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr(), and SCIPwarningMessage()
+- the following methods additionally need a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
+  handler methods (see pub_message.h), SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
+- new method SCIPsetMessagehdlrFree() which frees the current instance message handler and adds the given one
 - new method SCIPsetMessagehdlrLogfile() which can be used to write into a log file
-- new method SCIPsetMessagehdlrQuiet() which can be used to turn on and off the screen output
-- removed method SCIPcreateMesshdlr() please use SCIPmessagehdlrCreate() see pub_message.c
-- removed method SCIPfreeMesshdlr() please use SCIPmessagehdlrFree() see pub_message.c
-- the error message are not handled via the message handler anymore; per default the error message a written to stderr
-- the error printing method can be replace using the method SCIPmessageSetErrorPrinting(); the default error message
+- new method SCIPsetMessagehdlrQuiet() which can be used to turn the screen output on and off
+- removed method SCIPcreateMesshdlr(), please use SCIPmessagehdlrCreate() (see pub_message.c)
+- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrFree() (see pub_message.c)
+- the error messages are not handled via the message handler anymore; per default the error message a written to stderr
+- the error printing method can be replaced using the method SCIPmessageSetErrorPrinting(); the default error message
   printing can be recoverd via SCIPmessageSetErrorPrintingDefault(), (see pub_message.h)
-- method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback
-- since the error messages are not handler via the messages handler anymore the parameter list of SCIPmessagehdlrCreate()
-  changes; see pub_message.h and type_message.h
-- removed SCIPparamSetBool() please use SCIPchgBoolParam()
-- removed SCIPparamSetInt() please use SCIPchgIntParam()
-- removed SCIPparamSetLongint() please use SCIPchgLongintParam()
-- removed SCIPparamSetReal() please use SCIPchgRealParam()
-- removed SCIPparamSetChar() please use SCIPchgCharParam()
-- removed SCIPparamSetString() please use SCIPchgStringParam()
-- remove SCIPcolPrint() and SCIProwPrint() please use SCIPprintCol() SCIPprintRow() see scip.h
+- method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
+- since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
+  changes; see pub_message.h and type_message.h.
+- removed SCIPparamSetBool(), please use SCIPchgBoolParam()
+- removed SCIPparamSetInt(), please use SCIPchgIntParam()
+- removed SCIPparamSetLongint(), please use SCIPchgLongintParam()
+- removed SCIPparamSetReal(), please use SCIPchgRealParam()
+- removed SCIPparamSetChar(), please use SCIPchgCharParam()
+- removed SCIPparamSetString(), please use SCIPchgStringParam()
+- remove SCIPcolPrint() and SCIProwPrint(), please use SCIPprintCol() SCIPprintRow() see scip.h
 - new method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a source
   string to a destination string or until it hits a stoping character
 

@@ -906,7 +906,7 @@ void SCIPmessageSetErrorPrinting(
 
 /** Method to set the error printing method to default version prints everything the stderr.
  *
- *  @note The error printing method is static variable. That means all occurring errors are handled via that methods
+ *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
 void SCIPmessageSetErrorPrintingDefault(
    void
