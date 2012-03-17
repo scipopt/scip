@@ -17,12 +17,15 @@
  * @ingroup PUBLICMETHODS
  * @brief  public methods for message output
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_PUB_MESSAGE_H__
 #define __SCIP_PUB_MESSAGE_H__
+
+#include <stdarg.h>
 
 #include "scip/def.h"
 #include "scip/type_message.h"
@@ -278,7 +281,7 @@ void SCIPmessagePrintError(
 
 /** Method to set the error printing method. Setting the error printing method to NULL will suspend all error methods.
  *
- *  @note The error printing method is static variable. That means all occurring errors are handled via that methods
+ *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
 extern
 void SCIPmessageSetErrorPrinting(
@@ -288,7 +291,7 @@ void SCIPmessageSetErrorPrinting(
 
 /** Method to set the error printing method to default version prints everything the stderr.
  *
- *  @note The error printing method is static variable. That means all occurring errors are handled via that methods
+ *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
 extern
 void SCIPmessageSetErrorPrintingDefault(
@@ -337,4 +340,3 @@ SCIP_Bool SCIPmessagehdlrIsQuiet(
 #endif
 
 #endif
-
