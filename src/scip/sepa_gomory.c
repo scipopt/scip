@@ -16,12 +16,13 @@
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau)
  *
- * @todo It happends that the SICPcalcMir() function returns with the same cut for differen calls. Check if this is a
- *       bug or not use for that the MIP bellow and turn off presolving and all heuristics:
+ * @todo It happends that the SICPcalcMir() function returns with the same cut for different calls. Check if this is a
+ *       bug or do not use it for the MIP below and turn off presolving and all heuristics:
  *
  *  Max y
  *  Subject to
@@ -64,13 +65,13 @@
 #define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still use the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 
-#define BOUNDSWITCH              0.9999
-#define USEVBDS                    TRUE
-#define ALLOWLOCAL                 TRUE
-#define FIXINTEGRALRHS            FALSE
-#define MAKECONTINTEGRAL          FALSE
-#define MINFRAC                    0.05
-#define MAXFRAC                    0.95
+#define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
+#define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
+#define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
+#define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
+#define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
+#define MINFRAC                    0.05 /**< minimal fractionality of a basis variable in order to try Gomory cut */
+#define MAXFRAC                    0.95 /**< maximal fractionality of a basis variable in order to try Gomory cut */
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
