@@ -379,6 +379,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             }
             assert(SCIProwGetNNonz(cut) > 0);
 
+            /* A cut with one non-zero coefficients is a bound change which will be performed internally. These cuts are
+             * always taken.
+             */
             if( SCIProwGetNNonz(cut) == 1 || SCIPisCutEfficacious(scip, NULL, cut) )
             {
                SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
@@ -391,6 +394,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
+                  /* only take cuts which where successfully transformed to integral coefficients except the force flag
+                   * is set to TRUE
+                   */
+                  if( !sepadata->forcecuts && !success )
+                  {
+                     SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
+                        cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
+                     continue;
+                  }
+
                   /* @todo Trying to make the Gomory cut integral might fail. Due to numerical reasons/arguments we
                    *       currently ignore such cuts. If the cut, however, has small support (let's say smaller or equal to
                    *       5), we might want to add that cut (even it does not have integral coefficients). To be able to
@@ -399,33 +412,25 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                    */
                }
 
-               if( sepadata->forcecuts || success )
+               SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                  cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                  SCIPgetCutEfficacy(scip, NULL, cut),
+                  SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                  SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+
+               /* flush all changes before adding the cut */
+               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+
+               /* add global cuts which are not implicit bound changes to the cut pool */
+               if( !cutislocal && SCIProwGetNNonz(cut) > 1 )
                {
-                  SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                     cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                     SCIPgetCutEfficacy(scip, NULL, cut),
-                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-
-                  /* flush all changes before adding the cut */
-                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
-
-                  /* add global cuts which are not implicit bound changes to the cut pool */
-                  if( !cutislocal && SCIProwGetNNonz(cut) > 1 )
-                  {
-                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                  }
-
-                  *result = SCIP_SEPARATED;
-                  ncuts++;
+                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
-               else
-               {
-                  SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
-                     cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
-               }
+
+               *result = SCIP_SEPARATED;
+               ncuts++;
             }
 
             /* release the row */
