@@ -435,6 +435,12 @@ SCIP_RETCODE SCIPmessagehdlrFree(
          SCIP_CALL( (*messagehdlr)->messagehdlrfree(*messagehdlr) );
       }
 
+      /* close the log file if one exists */
+      if( (*messagehdlr)->logfile != NULL )
+      {
+         fclose((*messagehdlr)->logfile);
+      }
+
       /* free buffer arrays */
       BMSfreeMemoryArrayNull(&(*messagehdlr)->warningbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->dialogbuffer);
@@ -463,8 +469,9 @@ SCIP_RETCODE SCIPmessagehdlrSetData(
 void SCIPmessagehdlrSetLogfile(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename            /**< log file name where to copy messages into, or NULL */
-    )
+   )
 {
+   /* close the old log file if one exists */
    if( messagehdlr->logfile != NULL )
    {
       fclose(messagehdlr->logfile);
