@@ -1407,7 +1407,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          /* copy filename */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
          extension = NULL;
-         
+
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
+         SCIPinfoMessage(scip, NULL, "============\n");
+         SCIPinfoMessage(scip, NULL, "\n");
+
          do
          {
             retcode = SCIPreadProb(scip, tmpfilename, extension);
@@ -1416,9 +1421,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                if( extension == NULL )
                   SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", tmpfilename);
                else
-                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n", 
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n",
                      tmpfilename, extension);
-               
+
                SCIP_CALL( SCIPfreeProb(scip) );
                break;
             }
@@ -1431,10 +1436,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 
                   SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
                   displayReaders(scip, TRUE, FALSE);
-               
-                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+
+                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
                         "select a suitable reader by extension (or return): ", &extension, &endoffile) );
-               
+
                   if( extension[0] == '\0' )
                      break;
                }
@@ -1450,9 +1455,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                SCIP_CALL( retcode );
                break;
             }
-         }           
+         }
          while( extension != NULL );
-             
+
          /* free buffer array */
          SCIPfreeBufferArray(scip, &tmpfilename);
       }
