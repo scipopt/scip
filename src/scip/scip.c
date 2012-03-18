@@ -521,7 +521,12 @@ void SCIPprintError(
  * general SCIP methods
  */
 
-/** creates and initializes SCIP data structures */
+/** creates and initializes SCIP data structures
+ *
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
+ *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output.
+ */
 SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
    )
@@ -918,7 +923,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
    return scip->messagehdlr;
 }
 
-/** sets the log file name for the message handler */
+/** sets the log file name for the currently installed message handler */
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of log file, or NULL (stdout) */
