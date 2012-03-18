@@ -506,10 +506,10 @@ SCIP_Bool mpsinputReadLine(
                || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
                || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
-            /* len < 13 is handle ROW lines with embedded spaces
+            /* len < 14 is handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 13 )
+            if( number || len < 14 )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
