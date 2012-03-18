@@ -21,6 +21,10 @@
 
 /**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau)
  *
+ * @todo Try cuts on the objective tableau row.
+ *
+ * @todo Also try negative basis inverse row?
+ *
  * @todo It happends that the SICPcalcMir() function returns with the same cut for different calls. Check if this is a
  *       bug or do not use it for the MIP below and turn off presolving and all heuristics:
  *
@@ -379,9 +383,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             }
             assert(SCIProwGetNNonz(cut) > 0);
 
-            /* A cut with one non-zero coefficients is a bound change which will be performed internally. These cuts are
-             * always taken.
-             */
+            /* Only take efficacious cuts, except for cuts with one non-zero coefficients (= bound
+               changes); the latter cuts will be handeled internally in sepastore. */
             if( SCIProwGetNNonz(cut) == 1 || SCIPisCutEfficacious(scip, NULL, cut) )
             {
                SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
@@ -394,9 +397,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
-                  /* only take cuts which where successfully transformed to integral coefficients except the force flag
-                   * is set to TRUE
-                   */
+                  /* only take cuts that have been successfully transformed, except the force flag is TRUE */
                   if( !sepadata->forcecuts && !success )
                   {
                      SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
