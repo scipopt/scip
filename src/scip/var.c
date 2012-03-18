@@ -13950,6 +13950,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPholelistGetRight
 #undef SCIPholelistGetNext
 #undef SCIPvarGetName
+#undef SCIPvarGetNUses
 #undef SCIPvarGetData
 #undef SCIPvarSetData
 #undef SCIPvarSetDelorigData
@@ -14158,6 +14159,16 @@ const char* SCIPvarGetName(
    assert(var != NULL);
 
    return var->name;
+}
+
+/** gets number of times, the variable is currently captured */
+int SCIPvarGetNUses(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->nuses;
 }
 
 /** returns the user data of the variable */
