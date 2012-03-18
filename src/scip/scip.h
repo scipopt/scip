@@ -149,14 +149,17 @@ int SCIPsubversion(
    void
    );
 
-/** prints a version information line to a file stream */
+/** prints a version information line to a file stream via the message handler system
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 extern
 void SCIPprintVersion(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** prints error message for the given SCIP return code */
+/** prints error message for the given SCIP return code via the error prints method */
 extern
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
@@ -197,7 +200,10 @@ SCIP_STAGE SCIPgetStage(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** outputs SCIP stage and solution status if applicable */
+/** outputs SCIP stage and solution status if applicable via the message handler
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 extern
 SCIP_RETCODE SCIPprintStage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1721,7 +1727,10 @@ int SCIPgetNExternalCodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** prints information on external codes to a file stream */
+/** prints information on external codes to a file stream via the message handler system
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 extern
 void SCIPprintExternalCodes(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2536,6 +2545,8 @@ SCIP_RETCODE SCIPwriteVarName(
  *  i. e. the variables x1, x2, ..., xn with given delimiter ',' are written as: \<x1\>, \<x2\>, ..., \<xn\>;
  *
  *  the method SCIPparseVarsList() can parse such a string
+ *
+ *  @note The printing process is done via the message handler system.
  */
 extern
 SCIP_RETCODE SCIPwriteVarsList(
@@ -2547,10 +2558,12 @@ SCIP_RETCODE SCIPwriteVarsList(
    char                  delimiter           /**< character which is used for delimitation */
    );
 
-/** print the given variables and coefficients as linear sum in the following form 
+/** print the given variables and coefficients as linear sum in the following form
  *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
- *  
+ *
  *  This string can be parsed by the method SCIPparseVarsLinearsum().
+ *
+ *  @note The printing process is done via the message handler system.
  */
 extern
 SCIP_RETCODE SCIPwriteVarsLinearsum(
@@ -2566,6 +2579,8 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
+ *
+ *  @note The printing process is done via the message handler system.
  */
 extern
 SCIP_RETCODE SCIPwriteVarsPolynomial(
@@ -4117,7 +4132,10 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP_Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
    );
 
-/** outputs variable information to file stream */
+/** outputs variable information to file stream via the message system
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 extern
 SCIP_RETCODE SCIPprintVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4593,7 +4611,10 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** outputs constraint information to file stream */
+/** outputs constraint information to file stream via the message handler system
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
 extern
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4950,9 +4971,10 @@ SCIP_RETCODE SCIPgetLPI(
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
    );
 
-/** displays quality information about the current LP solution
- * an LP solution need to be available
- * information printed is subject to what the LP solver supports
+/** Displays quality information about the current LP solution. An LP solution need to be available. Information printed
+ *  is subject to what the LP solver supports
+ *
+ *  @note The printing process is done via the message handler system.
  */
 extern
 SCIP_RETCODE SCIPprintLPSolutionQuality(
@@ -5256,7 +5278,7 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** output row to file stream */
+/** output row to file stream via the message handler system */
 extern
 SCIP_RETCODE SCIPprintRow(
    SCIP*                 scip,               /**< SCIP data structure */
