@@ -99,7 +99,7 @@ features:
 - new column showing the pseudo objective value
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
-
+- added clique presolving for xor constraints
 
 SCIP version 2.1.2
 ==================

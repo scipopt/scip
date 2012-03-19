@@ -37,6 +37,7 @@
 
 #include "scip/pub_misc.h"
 #include "scip/cons_xor.h"
+#include "scip/cons_setppc.h"
 
 
 /* constraint handler properties */
@@ -774,9 +775,20 @@ SCIP_RETCODE applyFixings(
       {
          SCIP_VAR* repvar;
          SCIP_Bool negated;
-         
+
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+
+	 /* remove all negations by replacing them with the active variable
+	  * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
+	  */
+	 if( negated )
+	 {
+	    assert(SCIPvarIsNegated(repvar));
+
+	    repvar = SCIPvarGetNegationVar(repvar);
+	    consdata->rhs = !consdata->rhs;
+	 }
 
          /* check, if the variable should be replaced with the representative */
          if( repvar != var )
@@ -1308,6 +1320,252 @@ SCIP_RETCODE resolvePropagation(
    default:
       SCIPerrorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/* try to use clique information to delete a part of the xor constraint or even fix variables */
+static
+SCIP_RETCODE cliquePresolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   int*                  nchgcoefs,          /**< pointer to add up the number of deleted entries */
+   int*                  ndelconss,          /**< pointer to add up the number of deleted constraints */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if the node can be cut off */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Bool breaked;
+   SCIP_Bool restart;
+   int posnotinclq1;
+   int posnotinclq2;
+   int v;
+   int v1;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(nchgcoefs != NULL);
+   assert(ndelconss != NULL);
+   assert(cutoff != NULL);
+
+   /* propagation can only be applied, if we know all operator variables */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+
+   if( nvars < 3 )
+      return SCIP_OKAY;
+
+#if 0
+   if( !consdata->changed )
+      return SCIP_OKAY;
+#endif
+
+   /* @todo: if clique information would have saved the type of the clique, like <= 1, or == 1 we could do more
+    *        presolving like:
+    *
+    *        (xor(x1,x2,x3,x4) = 1 and clique(x1,x2) == 1)  =>  xor(x3,x4) = 0
+    *        (xor(x1,x2,x3,x4) = 1 and clique(x1,x2,x3) == 1)  =>  (x4 = 0 and delete xor constraint)
+    */
+
+   /* 1. we have only clique information "<=", so we can check if all variables are in the same clique
+    *
+    * (xor(x1,x2,x3) = 1 and clique(x1,x2,x3) <= 1)  =>  (add set-partioning constraint x1 + x2 + x3 = 1 and delete old
+    *                                                     xor-constraint)
+    *
+    * (xor(x1,x2,x3) = 0 and clique(x1,x2,x3) <= 1)  =>  (fix all variables x1 = x2 = x3 = 0 and delete old xor-
+    *                                                     constraint)
+    */
+
+   /* 2. we have only clique information "<=", so we can check if all but one variable are in the same clique
+    *
+    * (xor(x1,x2,x3,x4) = 1 and clique(x1,x2,x3) <= 1)  =>  (add set-partioning constraint x1 + x2 + x3 + x4 = 1 and
+    *                                                        delete old xor constraint)
+    *
+    * (xor(x1,x2,x3,x4) = 0 and clique(x1,x2,x3) <= 1)  =>  (add set-partioning constraint x1 + x2 + x3 + ~x4 = 1 and
+    *                                                        delete old xor constraint)
+    */
+
+   posnotinclq1 = -1;
+   posnotinclq2 = -1;
+   breaked = FALSE;
+   restart = FALSE;
+
+   v =  nvars - 2;
+   while( v >= 0 )
+   {
+      assert(SCIPvarIsActive(vars[v]));
+
+      if( posnotinclq1 == v )
+      {
+	 --v;
+	 continue;
+      }
+
+      for( v1 = v+1; v1 < nvars; ++v1 )
+      {
+	 if( posnotinclq1 == v1 )
+	    continue;
+
+	 if( !SCIPvarsHaveCommonClique(vars[v], TRUE, vars[v1], TRUE, TRUE) )
+	 {
+	    /* if the position of the variable which is not in the clique with all other variables is not yet
+	     * initialized, than do now, one of both variables does not fit
+	     */
+	    if( posnotinclq1 == -1 )
+	    {
+	       posnotinclq1 = v;
+	       posnotinclq2 = v1;
+	    }
+	    else
+	    {
+	       /* no clique with exactly nvars-1 variables */
+	       if( restart )
+	       {
+		  breaked = TRUE;
+		  break;
+	       }
+
+	       /* check the second variables for not fitting */
+	       posnotinclq1 = posnotinclq2;
+	       restart = TRUE;
+	       v = nvars - 1;
+	    }
+
+	    break;
+	 }
+      }
+
+      if( breaked )
+	 break;
+
+      --v;
+   }
+
+   /* at least nvars-1 variables are in one clique */
+   if( !breaked )
+   {
+      /* all variables are in one clique, case 1 */
+      if( posnotinclq1 == -1 )
+      {
+	 /* all variables of xor constraints <%s> (with rhs == 1) are in one clique, so create a setpartitioning
+	  * constraint with all variables and delete this xor-constraint
+	  */
+	 if( consdata->rhs )
+	 {
+	    SCIP_CONS* newcons;
+	    char consname[SCIP_MAXSTRLEN];
+
+	    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_complete_clq", SCIPconsGetName(cons));
+	    SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
+		  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+		  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+		  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+		  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+               SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+	 }
+	 /* all variables of xor constraints <%s> (with rhs == 0) are in one clique, so fixed all variables to 0 */
+	 else
+	 {
+	    SCIP_Bool infeasible;
+	    SCIP_Bool fixed;
+
+	    SCIPdebugMessage("all variables of xor constraints <%s> are in one clique, so fixed all variables to 0\n",
+	       SCIPconsGetName(cons));
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+	    for( v = nvars - 1; v >= 0; --v )
+	    {
+	       SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
+
+	       assert(infeasible || fixed);
+
+	       if( infeasible )
+	       {
+		  *cutoff = infeasible;
+
+		  return SCIP_OKAY;
+	       }
+	       else
+		  ++(*nfixedvars);
+	    }
+
+	 }
+      }
+      /* all but one variable are in one clique, case 2 */
+      else
+      {
+	 SCIP_CONS* newcons;
+	 char consname[SCIP_MAXSTRLEN];
+
+	 assert(restart == TRUE);
+	 assert(posnotinclq1 == posnotinclq2);
+
+	 (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
+
+	 /* complete clique by creating a set partioning constraint over all variables */
+
+	 /* if rhs == FALSE we need to exchange the variable not appaering in the clique with the negated variables */
+	 if( !consdata->rhs )
+	 {
+	    SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, 0, NULL,
+		  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+		  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+		  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+		  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+	    for( v = 0; v < nvars; ++v )
+	    {
+	       if( v ==  posnotinclq1 )
+	       {
+		  SCIP_VAR* var;
+
+		  SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
+		  assert(var != NULL);
+
+		  SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
+	       }
+	       else
+	       {
+		  SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[v]) );
+	       }
+	    }
+	 }
+	 /* if rhs == TRUE we can add all variables to the clique constraint directly */
+	 else
+	 {
+	    SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
+		  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+		  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+		  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+		  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+	 }
+
+	 SCIP_CALL( SCIPaddCons(scip, newcons) );
+	 SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+
+	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
+
+      /* delete old redundant xor-constraint */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++(*ndelconss);
    }
 
    return SCIP_OKAY;
@@ -2145,13 +2403,13 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
          {
             SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, rhs=%u\n",
                SCIPconsGetName(cons), consdata->rhs);
-            
+
             assert(consdata->vars != NULL);
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[1]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[1]), 1.0));
-            
+
             if( !consdata->rhs )
             {
                /* aggregate variables: vars[0] - vars[1] == 0 */
@@ -2183,6 +2441,11 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                (*ndelconss)++;
             }
          }
+	 else
+	 {
+	    /* try to use clique information to delete a part of the xor constraint or even fix variables */
+	    SCIP_CALL( cliquePresolve(scip, cons, nfixedvars, nchgcoefs, ndelconss, &cutoff) );
+	 }
       }
    }
 
