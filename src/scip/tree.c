@@ -760,6 +760,9 @@ SCIP_RETCODE nodeAssignParent(
    }
    SCIPdebugMessage("assigning parent #%"SCIP_LONGINT_FORMAT" to node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
       parent != NULL ? SCIPnodeGetNumber(parent) : -1, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
+#ifdef NODESEL_OUT
+   SCIPdebugMessage("   node<%lld>: lb<%.20f> est<%.20f>\n", SCIPnodeGetNumber(node), node->lowerbound, node->estimate);
+#endif
 
    /* register node in the childlist of the focus (the parent) node */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
@@ -1736,6 +1739,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
+#ifdef NODESEL_OUT
+      SCIPdebugMessage(" -> node<%lld>: newpseudoobjval<%.14f> -> lb<%.14f>\n", SCIPnodeGetNumber(node), newpseudoobjval,
+         SCIPnodeGetLowerbound(node));
+#endif
    }
    else
    {

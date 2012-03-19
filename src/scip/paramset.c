@@ -2197,6 +2197,8 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/maxprerounds", 0) );
 #ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/maxprerounds", -1) );
+#else
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/maxprerounds", 0) );
 #endif
 
    /* turn off domain propagation */
@@ -2205,6 +2207,8 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/propfreq", -1) );
 #ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/propfreq", -1) );
+#else
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/propfreq", -1) );
 #endif
 
    /* turn off conflict analysis */
@@ -2217,6 +2221,8 @@ SCIP_RETCODE SCIPparamsetSetReducedsolve(
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/integral/sepafreq", -1) );
 #ifdef WITH_EXACTSOLVE
    SCIP_CALL( paramSetInt(scip, paramset, "constraints/exactlp/sepafreq", 1) );
+#else
+   SCIP_CALL( paramSetInt(scip, paramset, "constraints/linear/sepafreq", -1) );
 #endif
 
    return SCIP_OKAY;
