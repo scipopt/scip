@@ -41,6 +41,8 @@
 #ifdef WITH_LPSCHECK
 #include <cplex.h>
 
+#define WITH_BOUNDFLIPPING
+
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
 #define CHECK_SPXSTRONGBRANCH           true /**< shall the SoPlex results in SCIPlpStrongbranch() be double checked using CPLEX? */
 #define EXIT_AT_WRONG_RESULT            false/**< shall program be exited if CPLEX returns different result than SoPlex? */
