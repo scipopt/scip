@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -185,7 +186,8 @@ void SCIPhashtableRemoveAll(
 /** prints statistics about hash table usage */
 extern
 void SCIPhashtablePrintStatistics(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** standard hash key comparator for string keys */
@@ -259,7 +261,8 @@ SCIP_RETCODE SCIPhashmapRemove(
 /** prints statistics about hash map usage */
 extern
 void SCIPhashmapPrintStatistics(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** indicates whether a hash map has no entries */
@@ -3347,6 +3350,7 @@ SCIP_RETCODE SCIPstairmapResize(
 extern
 void SCIPstairmapPrint(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
@@ -3412,12 +3416,120 @@ int SCIPstairmapGetLatestFeasibleStart(
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    );
 
+/*
+ * Directed graph
+ */
+
+/** creates directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+extern
+SCIP_RETCODE SCIPdigraphSetSizes(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   );
+
+/** frees given directed graph structure */
+extern
+void SCIPdigraphFree(
+   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
+   );
+
+/** add (directed) edge to the directed graph structure
+ *  @note: if the edge is already contained, it is added a second time
+ */
+extern
+SCIP_RETCODE SCIPdigraphAddEdge(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** add (directed) edge to the directed graph structure, if it is not contained, yet */
+extern
+SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   );
+
+/** returns the number of edges originating at the given node */
+extern
+int SCIPdigraphGetNOutEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the number of outgoing edges is returned */
+   );
+
+/** returns the array of edges originating at the given node; this array must not be changed from outside */
+extern
+int* SCIPdigraphGetOutEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing edges is returned */
+   );
+
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note For each edge, its reverse is added, so the graph does not need
+ *        to be the directed representation of an undirected graph.
+ */
+extern
+SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< all components with less nodes are ignored */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
+                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
+   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
+                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
+   );
+
+/** Performes an (almost) topological sort on the undirected components of the directed graph.
+ *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+ *
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
+ */
+extern
+SCIP_RETCODE SCIPdigraphTopoSortComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the number of previously computed undirected components for the given directed graph */
+extern
+int SCIPdigraphGetNComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** Returns the number of previously computed undirected components for the given directed graph.
+ *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
+ */
+extern
+void SCIPdigraphGetComponent(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the component to return */
+   int**                 nodes,              /**< pointer to store the nodes in the component */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   );
+
+/** frees the component information for the given directed graph */
+extern
+void SCIPdigraphFreeComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
 
 /*
  * Numerical methods
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
+extern
 SCIP_Real SCIPcalcMachineEpsilon(
    void
    );
@@ -3587,6 +3699,19 @@ SCIP_RETCODE SCIPgetRandomSubset(
 /*
  * Strings
  */
+
+/** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
+ *  'cnt' characters have been copied, whichever comes first.
+ *
+ *  @note undefined behaviuor on overlapping arrays
+ */
+extern
+int SCIPmemccpy(
+   char*                 dest,               /**< destination pointer to copy to */
+   const char*           src,                /**< source pointer to copy to */
+   char                  stop,               /**< character when found stop copying */
+   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   );
 
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -25,17 +25,50 @@ OUTFILE=$CLIENTTMPDIR/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/$BASENAME.err
 LSTFILE=$CLIENTTMPDIR/$BASENAME.lst
 TRCFILE=$CLIENTTMPDIR/$BASENAME.trc
-SCRDIR=$CLIENTTMPDIR/$BASENAME.scr
+WORKDIR=$CLIENTTMPDIR/$BASENAME.scr
 
 # setup scratch directory
-mkdir -p $SCRDIR
-GAMSOPTS="$GAMSOPTS SCRDIR=$SCRDIR"
+mkdir -p $WORKDIR
+GAMSOPTS="$GAMSOPTS curdir=$WORKDIR"
+
+# ensure scratch directory is deleted and results are copied when exiting (normally or due to abort/interrupt)
+trap "
+  rm -r $WORKDIR;
+  test -e $OUTFILE && mv $OUTFILE results/$BASENAME.out
+  test -e $LSTFILE && mv $LSTFILE results/$BASENAME.lst
+  test -e $ERRFILE && mv $ERRFILE results/$BASENAME.err
+  test -e $TRCFILE && mv $TRCFILE results/$BASENAME.trc
+" EXIT
 
 # initialize trace file
 echo "* Trace Record Definition" > $TRCFILE
 echo "* GamsSolve" >> $TRCFILE
 echo "* InputFileName,ModelType,SolverName,OptionFile,Direction,NumberOfEquations,NumberOfVariables,NumberOfDiscreteVariables,NumberOfNonZeros,NumberOfNonlinearNonZeros," >> $TRCFILE
 echo "* ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime,ETSolver,NumberOfIterations,NumberOfNodes" >> $TRCFILE
+
+# setup gams file that sets cutoff
+# this only works for models that include %gams.u1% and where the model name is m (e.g., MINLPLib instances)
+if test -n "$CUTOFF"
+then
+  echo "m.cutoff = $CUTOFF;" > $WORKDIR/include.u1
+  GAMSOPTS="$GAMSOPTS u1=$WORKDIR/include.u1"
+fi
+
+# add commands to .u1 file to read start solutions from available gdx files, if any
+if test "$PASSSTARTSOL" = 1 ; then
+  for sol in $INPUTDIR/${GMSFILE/%.gms/}*.gdx ;
+  do
+    if test -e $sol ; then
+      # create .u1 file if not existing yet and add u1 command to GAMS options
+      if test ! -e $WORKDIR/include.u1 ;
+      then
+        touch $WORKDIR/include.u1
+        GAMSOPTS="$GAMSOPTS u1=$WORKDIR/include.u1"
+      fi
+      echo "execute_loadpoint '$sol'" >> $WORKDIR/include.u1
+    fi
+  done
+fi
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
@@ -63,10 +96,3 @@ echo -----------------------------  >> $OUTFILE
 date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
-
-mv $OUTFILE results/$BASENAME.out
-mv $LSTFILE results/$BASENAME.lst
-mv $ERRFILE results/$BASENAME.err
-mv $TRCFILE results/$BASENAME.trc
-
-rm -r $SCRDIR

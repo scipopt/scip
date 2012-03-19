@@ -1,4 +1,4 @@
-# SCIP version 2.1.0.2
+# SCIP version 2.1.1.3
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -423,6 +423,10 @@ numerics/pseudocosteps = 0.1
 # minimal objective distance value to use for branching pseudo cost updates
 # [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
 numerics/pseudocostdelta = 0.0001
+
+# minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update
+# [type: real, range: [0,1.79769313486232e+308], default: 10000000]
+numerics/recomputefac = 10000000
 
 # maximal number of presolving rounds (-1: unlimited, 0: off)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -3484,6 +3488,10 @@ heuristics/rens/uselprows = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/rens/copycuts = TRUE
 
+# should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/rens/extratime = FALSE
+
 # priority of heuristic <rins>
 # [type: int, range: [-536870912,536870911], default: -1101000]
 heuristics/rins/priority = -1101000
@@ -3862,7 +3870,11 @@ heuristics/undercover/inferenceweight = 1
 
 # maximum coversize (as fraction of total number of variables)
 # [type: real, range: [0,1], default: 1]
-heuristics/undercover/maxcoversize = 1
+heuristics/undercover/maxcoversizevars = 1
+
+# maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints)
+# [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
+heuristics/undercover/maxcoversizeconss = 1.79769313486232e+308
 
 # factor by which the heuristic should at least improve the incumbent
 # [type: real, range: [-1,1], default: 0]
@@ -4109,8 +4121,8 @@ propagating/probing/maxtotaluseless = 50
 propagating/probing/maxsumuseless = 0
 
 # priority of propagator <pseudoobj>
-# [type: int, range: [-536870912,536870911], default: 100000]
-propagating/pseudoobj/priority = 100000
+# [type: int, range: [-536870912,536870911], default: 3000000]
+propagating/pseudoobj/priority = 3000000
 
 # frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4144,7 +4156,7 @@ propagating/pseudoobj/minuseless = 100
 # [type: real, range: [0,1], default: 0.1]
 propagating/pseudoobj/maxvarsfrac = 0.1
 
-# do we want to propagate full if we are propagating the root node, despite the number of maxcand
+# do we want to propagate all none binary variables if we are propagating the root node
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 propagating/pseudoobj/propfullinroot = TRUE
 
@@ -4160,9 +4172,21 @@ propagating/pseudoobj/force = FALSE
 # [type: int, range: [0,2147483647], default: 1000]
 propagating/pseudoobj/maxnewvars = 1000
 
+# use implications to strengthen the propagation of binary variable (increasing the objective change)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/propuseimplics = TRUE
+
+# use implications to strengthen the resolve propagation of binary variable (increasing the objective change)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/pseudoobj/respropuseimplics = TRUE
+
+# maximum number of binary variables the implications are used if turned on (-1: unlimited)?
+# [type: int, range: [-1,2147483647], default: 50000]
+propagating/pseudoobj/maximplvars = 50000
+
 # priority of propagator <redcost>
-# [type: int, range: [-536870912,536870911], default: 10000000]
-propagating/redcost/priority = 10000000
+# [type: int, range: [-536870912,536870911], default: 1000000]
+propagating/redcost/priority = 1000000
 
 # frequency for calling propagator <redcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4193,8 +4217,8 @@ propagating/redcost/presoldelay = TRUE
 propagating/redcost/continuous = FALSE
 
 # priority of propagator <rootredcost>
-# [type: int, range: [-536870912,536870911], default: 1000000]
-propagating/rootredcost/priority = 1000000
+# [type: int, range: [-536870912,536870911], default: 10000000]
+propagating/rootredcost/priority = 10000000
 
 # frequency for calling propagator <rootredcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -4372,47 +4396,31 @@ separating/cgmip/maxroundsroot = 50
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cgmip/maxdepth = -1
 
-# should generated cuts be removed from the LP if they are no longer tight?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/dynamiccuts = TRUE
+# Use decision tree to turn separation on/off?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/decisiontree = FALSE
 
 # time limit for sub-MIP
-# [type: real, range: [0,1.79769313486232e+308], default: 500]
-separating/cgmip/timelimit = 500
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+separating/cgmip/timelimit = 1e+20
 
 # memory limit for sub-MIP
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 separating/cgmip/memorylimit = 1e+20
 
-# node limit for sub-MIP (-1: unlimited)
-# [type: longint, range: [-1,9223372036854775807], default: 10000]
-separating/cgmip/nodelimit = 10000
+# minimum number of nodes considered for sub-MIP (-1: unlimited)
+# [type: longint, range: [-1,9223372036854775807], default: 500]
+separating/cgmip/minnodelimit = 500
 
-# weight used for the row combination coefficient in the sub-MIP objective
-# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
-separating/cgmip/objweight = 0.001
+# maximum number of nodes considered for sub-MIP (-1: unlimited)
+# [type: longint, range: [-1,9223372036854775807], default: 5000]
+separating/cgmip/maxnodelimit = 5000
 
-# use CMIR-generator (otherwise add cut directly)?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/usecmir = TRUE
+# bounds on the values of the coefficients in the CG-cut
+# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+separating/cgmip/cutcoefbnd = 1000
 
-# tell CMIR-generator which bounds to used in rounding?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/cmirownbounds = FALSE
-
-# use strong CG-function to strengthen cut?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/usestrongcg = FALSE
-
-# allow to generate local cuts?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/allowlocal = FALSE
-
-# generate cuts for problems with only integer variables?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/onlyintvars = FALSE
-
-# use only active rows to generate cuts?
+# Use only active rows to generate cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cgmip/onlyactiverows = FALSE
 
@@ -4420,39 +4428,19 @@ separating/cgmip/onlyactiverows = FALSE
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cgmip/maxrowage = -1
 
-# use cutpool to store CG-cuts even if the are not efficient?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/usecutpool = TRUE
-
-# only separate cuts that are tight for the best feasible solution?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/primalseparation = TRUE
-
-# whether only rank 1 inequalities should be separated
+# Separate only rank 1 inequalities?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cgmip/onlyrankone = FALSE
 
-# terminate separation if a violated (but possibly sub-optimal) cut has been found?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/earlyterm = TRUE
-
-# add constraint to subscip that only allows violated cuts?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/addviolationcons = TRUE
-
-# add constraint handler to filter out violated cuts?
+# Generate cuts for problems with only integer variables?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/addviolconshdlr = FALSE
+separating/cgmip/onlyintvars = FALSE
 
-# should the violation constraint handler use the norm of a cut to check for feasibility?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/cgmip/conshdlrusenorm = TRUE
-
-# should the objective of the sub-MIP minimize the l1-norm of the multipliers?
+# Allow to generate local cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/objlone = FALSE
+separating/cgmip/allowlocal = FALSE
 
-# convert some integral variables to be continuous to reduce the size of the sub-MIP?
+# Convert some integral variables to be continuous to reduce the size of the sub-MIP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cgmip/contconvert = FALSE
 
@@ -4464,7 +4452,7 @@ separating/cgmip/contconvfrac = 0.1
 # [type: int, range: [-1,2147483647], default: 100]
 separating/cgmip/contconvmin = 100
 
-# convert some integral variables attaining fractional values to have integral value?
+# Convert some integral variables attaining fractional values to have integral value?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cgmip/intconvert = FALSE
 
@@ -4476,9 +4464,61 @@ separating/cgmip/intconvfrac = 0.1
 # [type: int, range: [-1,2147483647], default: 100]
 separating/cgmip/intconvmin = 100
 
-# use decision tree to turn separation on/off?
+# Skip the upper bounds on the multipliers in the sub-MIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/skipmultbounds = TRUE
+
+# Should the objective of the sub-MIP minimize the l1-norm of the multipliers?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cgmip/decisiontree = FALSE
+separating/cgmip/objlone = FALSE
+
+# weight used for the row combination coefficient in the sub-MIP objective
+# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
+separating/cgmip/objweight = 0.001
+
+# Weigh each row by its size?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/objweighsize = FALSE
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/dynamiccuts = TRUE
+
+# use CMIR-generator (otherwise add cut directly)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/usecmir = TRUE
+
+# use strong CG-function to strengthen cut?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/usestrongcg = FALSE
+
+# tell CMIR-generator which bounds to used in rounding?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/cmirownbounds = FALSE
+
+# use cutpool to store CG-cuts even if the are not efficient?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/usecutpool = TRUE
+
+# only separate cuts that are tight for the best feasible solution?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/primalseparation = TRUE
+
+# terminate separation if a violated (but possibly sub-optimal) cut has been found?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/earlyterm = TRUE
+
+# add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/addviolationcons = FALSE
+
+# add constraint handler to filter out violated cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/addviolconshdlr = FALSE
+
+# should the violation constraint handler use the norm of a cut to check for feasibility?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/conshdlrusenorm = TRUE
 
 # priority of separator <cmir>
 # [type: int, range: [-536870912,536870911], default: -3000]
@@ -4836,9 +4876,9 @@ separating/oddcycle/maxbounddist = 1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/oddcycle/delay = FALSE
 
-# should classical search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.
+# should the search method by Groetschel, Lovasz, Schrijver be used? Otherwise use levelgraph method by Hoffman, Padberg.
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/oddcycle/useclassical = TRUE
+separating/oddcycle/usegls = TRUE
 
 # should odd cycle cuts be lifted?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -4931,6 +4971,10 @@ separating/oddcycle/maxcutslevel = 50
 # minimal weight on an edge (in level graph or bipartite graph)
 # [type: int, range: [0,2147483647], default: 0]
 separating/oddcycle/maxreference = 0
+
+# number of unsuccessful calls at current node
+# [type: int, range: [0,2147483647], default: 3]
+separating/oddcycle/maxunsucessfull = 3
 
 # priority of separator <rapidlearning>
 # [type: int, range: [-536870912,536870911], default: -1200000]

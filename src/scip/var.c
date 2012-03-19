@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,6 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
@@ -54,6 +53,7 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/pub_message.h"
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */
@@ -2114,6 +2114,7 @@ SCIP_RETCODE parseBounds(
 static
 SCIP_RETCODE varParse(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           str,                /**< string to parse */
    char*                 name,               /**< pointer to store the variable name */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
@@ -2158,7 +2159,7 @@ SCIP_RETCODE varParse(
       (*vartype) = SCIP_VARTYPE_CONTINUOUS;
    else
    {
-      SCIPwarningMessage("unknown variable type\n");
+      SCIPmessagePrintWarning(messagehdlr, "unknown variable type\n");
       (*success) = FALSE;
       return SCIP_OKAY;
    }
@@ -2226,6 +2227,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -2245,13 +2247,13 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VARTYPE vartype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
-   
+
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
-   
+
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
 
    if( *success )
    {
@@ -2269,7 +2271,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
       /* set lazy status of variable bounds */
       (*var)->lazylb = lazylb;
       (*var)->lazyub = lazyub;
-      
+
       /* capture variable */
       SCIPvarCapture(*var);
    }
@@ -2285,6 +2287,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -2310,14 +2313,14 @@ SCIP_RETCODE SCIPvarParseTransformed(
    assert(blkmem != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
 
    if( *success )
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
             varcopy, vardelorig, vartrans, vardeltrans, vardata) );
-      
+
       /* create event filter for transformed variable */
       SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
 
@@ -2612,9 +2615,10 @@ void SCIPvarInitSolve(
 }
 
 /** outputs the given bounds into the file stream */
-static 
+static
 void printBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Real             lb,                 /**< lower bound */
    SCIP_Real             ub,                 /**< upper bound */
@@ -2622,26 +2626,27 @@ void printBounds(
    )
 {
    assert(set != NULL);
-   
-   SCIPmessageFPrintInfo(file, ", %s=", name);
+
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=", name);
    if( SCIPsetIsInfinity(set, lb) )
-      SCIPmessageFPrintInfo(file, "[+inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "[+inf,");
    else if( SCIPsetIsInfinity(set, -lb) )
-      SCIPmessageFPrintInfo(file, "[-inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
+      SCIPmessageFPrintInfo(messagehdlr, file, "[%.15g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
-      SCIPmessageFPrintInfo(file, "+inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
-      SCIPmessageFPrintInfo(file, "-inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%.15g]", ub);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15g]", ub);
 }
 
 /** prints hole list to file stream */
 static
 void printHolelist(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
    const char*           name                /**< hole type name */
@@ -2652,22 +2657,22 @@ void printHolelist(
 
    if( holelist == NULL )
       return;
-   
+
    left = SCIPholelistGetLeft(holelist);
    right = SCIPholelistGetRight(holelist);
-   
+
    /* display first hole */
-   SCIPmessageFPrintInfo(file, ", %s=(%g,%g)", name, left, right);
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=(%g,%g)", name, left, right);
    holelist = SCIPholelistGetNext(holelist);
-   
+
    while(holelist != NULL  )
    {
       left = SCIPholelistGetLeft(holelist);
       right = SCIPholelistGetRight(holelist);
 
       /* display hole */
-      SCIPmessageFPrintInfo(file, "(%g,%g)", left, right);
-   
+      SCIPmessageFPrintInfo(messagehdlr, file, "(%g,%g)", left, right);
+
       /* get next hole */
       holelist = SCIPholelistGetNext(holelist);
    }
@@ -2677,6 +2682,7 @@ void printHolelist(
 void SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -2691,16 +2697,16 @@ void SCIPvarPrint(
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
-      SCIPmessageFPrintInfo(file, "  [binary]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
       break;
    case SCIP_VARTYPE_INTEGER:
-      SCIPmessageFPrintInfo(file, "  [integer]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
       break;
    case SCIP_VARTYPE_IMPLINT:
-      SCIPmessageFPrintInfo(file, "  [implicit]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [implicit]");
       break;
    case SCIP_VARTYPE_CONTINUOUS:
-      SCIPmessageFPrintInfo(file, "  [continuous]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
       break;
    default:
       SCIPerrorMessage("unknown variable type\n");
@@ -2708,10 +2714,10 @@ void SCIPvarPrint(
    }
 
    /* name */
-   SCIPmessageFPrintInfo(file, " <%s>:", var->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
 
    /* objective value */
-   SCIPmessageFPrintInfo(file, " obj=%.15g", var->obj);
+   SCIPmessageFPrintInfo(messagehdlr, file, " obj=%.15g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
    if( !SCIPvarIsTransformed(var) )
@@ -2719,7 +2725,7 @@ void SCIPvarPrint(
       /* output original bound */
       lb = SCIPvarGetLbOriginal(var);
       ub = SCIPvarGetUbOriginal(var);
-      printBounds(set, file, lb, ub, "original bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "original bounds");
 
       /* output lazy bound */
       lb = SCIPvarGetLbLazy(var);
@@ -2727,40 +2733,40 @@ void SCIPvarPrint(
 
       /* only display the lazy bounds if they are different from [-infinity,infinity] */
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, file, lb, ub, "lazy bounds");
+         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       holelist = SCIPvarGetHolelistOriginal(var);
-      printHolelist(set, file, holelist, "original holes");
+      printHolelist(set, messagehdlr, file, holelist, "original holes");
    }
    else
    {
       /* output global bound */
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
-      printBounds(set, file, lb, ub, "global bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "global bounds");
 
       /* output local bound */
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
-      printBounds(set, file, lb, ub, "local bounds");
+      printBounds(set, messagehdlr, file, lb, ub, "local bounds");
 
       /* output lazy bound */
       lb = SCIPvarGetLbLazy(var);
       ub = SCIPvarGetUbLazy(var);
-   
+
       /* only display the lazy bounds if they are different from [-infinity,infinity] */
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, file, lb, ub, "lazy bounds");
+         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       /* global hole list */
       holelist = SCIPvarGetHolelistGlobal(var);
-      printHolelist(set, file, holelist, "global holes");
+      printHolelist(set, messagehdlr, file, holelist, "global holes");
 
       /* local hole list */
       holelist = SCIPvarGetHolelistLocal(var);
-      printHolelist(set, file, holelist, "local holes");
+      printHolelist(set, messagehdlr, file, holelist, "local holes");
    }
-    
+
    /* fixings and aggregations */
    switch( SCIPvarGetStatus(var) )
    {
@@ -2768,34 +2774,34 @@ void SCIPvarPrint(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       break;
-      
+
    case SCIP_VARSTATUS_FIXED:
-      SCIPmessageFPrintInfo(file, ", fixed:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", fixed:");
       if( SCIPsetIsInfinity(set, var->glbdom.lb) )
-         SCIPmessageFPrintInfo(file, "+inf");
+         SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
       else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-         SCIPmessageFPrintInfo(file, "-inf");
+         SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
       else
-         SCIPmessageFPrintInfo(file, "%.15g", var->glbdom.lb);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", var->glbdom.lb);
       break;
-      
+
    case SCIP_VARSTATUS_AGGREGATED:
-      SCIPmessageFPrintInfo(file, ", aggregated:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.aggregate.constant);
-      SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %.15g", var->data.aggregate.constant);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
-      
+
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPmessageFPrintInfo(file, ", aggregated:");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.multaggr.constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %.15g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIPmessageFPrintInfo(file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      SCIPmessageFPrintInfo(messagehdlr, file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:
@@ -2803,7 +2809,7 @@ void SCIPvarPrint(
       SCIPABORT();
    }
 
-   SCIPmessageFPrintInfo(file, "\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 }
 
 /** issues a VARUNLOCKED event on the given variable */
@@ -3320,7 +3326,7 @@ SCIP_RETCODE SCIPvarFix(
 
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to fixed, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -4082,7 +4088,7 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
-   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+   SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
@@ -4864,7 +4870,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
-      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -5355,6 +5361,7 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5375,7 +5382,7 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
-            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
+            SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -5388,6 +5395,10 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
@@ -5451,6 +5462,10 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
+
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(transprob, set, oldobj, var->obj);
+
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
@@ -5815,7 +5830,7 @@ SCIP_RETCODE varEventGholeAdded(
 }
 
 /** increases root bound change statistics after a global bound change */
-static            
+static
 void varIncRootboundchgs(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5960,14 +5975,14 @@ SCIP_RETCODE varProcessChgLbGlobal(
       case SCIP_VARSTATUS_ORIGINAL:
          SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
@@ -5976,8 +5991,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb,
-                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
+               || (SCIPsetIsZero(set, parentvar->glbdom.lb / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             else
@@ -5991,8 +6007,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
-                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+               || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
+               || (SCIPsetIsZero(set, parentvar->glbdom.ub / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             else
@@ -6638,14 +6655,14 @@ SCIP_RETCODE varProcessChgLbLocal(
       case SCIP_VARSTATUS_ORIGINAL:
          SCIP_CALL( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
-         
+
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          return SCIP_INVALIDDATA;
-      
+
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
          if( SCIPsetIsPositive(set, parentvar->data.aggregate.scalar) )
@@ -6654,8 +6671,9 @@ SCIP_RETCODE varProcessChgLbLocal(
 
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -parentvar->locdom.lb) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
-                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
+               || (SCIPsetIsZero(set, parentvar->locdom.lb / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -6674,15 +6692,16 @@ SCIP_RETCODE varProcessChgLbLocal(
                parentnewbound = newbound;
             SCIP_CALL( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, parentnewbound) );
          }
-         else 
+         else
          {
             SCIP_Real parentnewbound;
 
             /* a < 0 -> change upper bound of y */
             assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             assert((SCIPsetIsInfinity(set, parentvar->locdom.ub) && SCIPsetIsInfinity(set, -oldbound))
-               || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
-                  oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+               || SCIPsetIsFeasEQ(set, parentvar->locdom.ub, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
+               || (SCIPsetIsZero(set, parentvar->locdom.ub / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
@@ -10226,7 +10245,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
 	 {
 	    SCIPerrorMessage("original variable has no transformed variable attached\n");
 	    SCIPABORT();
-	    return SCIP_INVALIDDATA;
+	    return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
 	 tmpvars[ntmpvars] = var->data.original.transvar;
 	 ++ntmpvars;
@@ -10270,7 +10289,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
          }
 
 	 /* copy all multi-aggregation variables into our working array */
-	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars);
+	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars); /*lint !e866*/
 
 	 /* get active, fixed or multi-aggregated corresponding variables for all new ones */
 	 SCIPvarsGetProbvar(&tmpvars[ntmpvars], nmultvars);
@@ -10302,7 +10321,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
       default:
 	 SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
-	 return SCIP_INVALIDDATA;
+	 return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -10351,7 +10370,9 @@ void SCIPvarsGetProbvar(
 
    for( v = nvars - 1; v >= 0; --v )
    {
+      assert(vars != NULL);
       assert(vars[v] != NULL);
+
       vars[v] = SCIPvarGetProbvar(vars[v]);
       assert(vars[v] != NULL);
    }
@@ -11914,6 +11935,10 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    assert(var != NULL);
    assert(stat != NULL);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -12144,12 +12169,17 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 /** increases VSIDS of the variable by the given weight */
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in VSIDS */
    )
 {
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -12159,7 +12189,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
          SCIPerrorMessage("cannot update VSIDS of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncVSIDS(var->data.original.transvar, dir, weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->data.original.transvar, stat, dir, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -12175,12 +12205,12 @@ SCIP_RETCODE SCIPvarIncVSIDS(
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, dir, weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, stat, dir, weight) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, SCIPbranchdirOpposite(dir), weight) );
+         SCIP_CALL( SCIPvarIncVSIDS(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), weight) );
       }
       return SCIP_OKAY;
       
@@ -12189,7 +12219,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncVSIDS(var->negatedvar, SCIPbranchdirOpposite(dir), weight) );
+      SCIP_CALL( SCIPvarIncVSIDS(var->negatedvar, stat, SCIPbranchdirOpposite(dir), weight) );
       return SCIP_OKAY;
       
    default:
@@ -12248,12 +12278,17 @@ SCIP_RETCODE SCIPvarScaleVSIDS(
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             length              /**< length of the conflict */
    )
 {
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -12263,7 +12298,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
          SCIPerrorMessage("cannot update conflict score of original untransformed variable\n");
          return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.original.transvar, dir, length) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.original.transvar, stat, dir, length) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -12279,12 +12314,12 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, dir, length) );
+         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, dir, length) );
       }
       else
       {
          assert(var->data.aggregate.scalar < 0.0);
-         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, SCIPbranchdirOpposite(dir), length) );
+         SCIP_CALL( SCIPvarIncNActiveConflicts(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir), length) );
       }
       return SCIP_OKAY;
       
@@ -12293,7 +12328,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, SCIPbranchdirOpposite(dir), length) );
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var->negatedvar, stat, SCIPbranchdirOpposite(dir), length) );
       return SCIP_OKAY;
       
    default:
@@ -12493,6 +12528,10 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -12554,6 +12593,10 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -12614,6 +12657,10 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    assert(var != NULL);
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -13912,6 +13959,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPholelistGetRight
 #undef SCIPholelistGetNext
 #undef SCIPvarGetName
+#undef SCIPvarGetNUses
 #undef SCIPvarGetData
 #undef SCIPvarSetData
 #undef SCIPvarSetDelorigData
@@ -14120,6 +14168,16 @@ const char* SCIPvarGetName(
    assert(var != NULL);
 
    return var->name;
+}
+
+/** gets number of times, the variable is currently captured */
+int SCIPvarGetNUses(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->nuses;
 }
 
 /** returns the user data of the variable */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
 {
    SCIP_PRESOLDATA* presoldata;
 
-   /* create boundshift presolver data */
+   /* create convertinttobin presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    presoldata->maxdomainsize = DEFAULT_MAXDOMAINSIZE;
@@ -327,19 +327,19 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
          presolInitpreConvertinttobin, presolExitpreConvertinttobin, presolExecConvertinttobin,
          presoldata) );
 
-   /* add probing presolver parameters */
+   /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/"PRESOL_NAME"/maxdomainsize",
          "absolute value of maximum domain size for converting an integer variable to binaries variables",
          &presoldata->maxdomainsize, TRUE, DEFAULT_MAXDOMAINSIZE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   /* add probing presolver parameters */
+   /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/"PRESOL_NAME"/onlypoweroftwo",
          "should only integer variables with a domain size of 2^p - 1 be converted(, there we don't need an knapsack-constraint for restricting the sum of the binaries)",
          &presoldata->onlypoweroftwo, TRUE, DEFAULT_ONLYPOWERSOFTWO, NULL, NULL) );
 
-   /* add probing presolver parameters */
+   /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/"PRESOL_NAME"/samelocksinbothdirections",
          "should only integer variables with uplocks equals downlocks be converted",

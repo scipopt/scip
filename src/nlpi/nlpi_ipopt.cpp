@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -317,12 +317,14 @@ public:
 protected:
    void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
    {
-      SCIPmessagePrintInfo(str);
+      //SCIPmessagePrintInfo(str);
+      printf(str);
    }
 
    void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
    {
-      SCIPmessageVPrintInfo(pformat, ap);
+      //SCIPmessageVPrintInfo(pformat, ap);
+      vprintf(pformat, ap);
    }
 
    void FlushBufferImpl() { }
@@ -948,7 +950,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                ! (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
-               SCIPwarningMessage("Do not have expression interpreter that can compute function values and gradients. Cannot solve NLP with Ipopt.\n");
+               SCIPerrorMessage("Do not have expression interpreter that can compute function values and gradients. Cannot solve NLP with Ipopt.\n");
                problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
                problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
                return SCIP_OKAY;
@@ -967,7 +969,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
       }
       else
-         status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
+      {
+         /* for now, do not use ReOptimizeNLP, since it may not return a solution within bounds if all variables are fixed, see Ipopt ticket #179 */
+         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
+      }
 
       // catch the very bad status codes
       switch( status ) {
@@ -1255,7 +1260,7 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIPwarningMessage("from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
+         printf("from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
       }
       else
       {
@@ -1505,7 +1510,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      SCIPwarningMessage("Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
+      printf("Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
       break;
    }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1441,7 +1441,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOS1)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpSOS1)
 {
@@ -1464,10 +1464,9 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
       SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* put corresponding rows into LP if they are useful */
-      if ( consdata->row != NULL )
+      if ( consdata->row != NULL && ! SCIProwIsInLP(consdata->row) )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
-
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }
@@ -2005,7 +2004,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsSOS1)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nvars )
+   if( varssize < consdata->nvars )
       (*success) = FALSE;
    else
    {

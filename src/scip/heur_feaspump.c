@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -953,8 +953,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             SCIP_CALL( retcode );
          }
 #endif
-         SCIPwarningMessage("Error while solving LP in Feaspump heuristic; LP solve terminated with code <%d>\n", retcode);
-         SCIPwarningMessage("This does not affect the remaining solution procedure --> continue\n");
+         SCIPwarningMessage(scip, "Error while solving LP in Feaspump heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(scip, "This does not affect the remaining solution procedure --> continue\n");
       }
 
       /* update iteration count */
@@ -1125,7 +1125,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          retcode = SCIPsolve(probingscip);
          if( retcode != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while solving sub-SCIP in stage 3 of feasibility pump heuristic; sub-SCIP terminated with code <%d>\n",
+            SCIPwarningMessage(scip, "Error while solving sub-SCIP in stage 3 of feasibility pump heuristic; sub-SCIP terminated with code <%d>\n",
                retcode);
          }
 #else

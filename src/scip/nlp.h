@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,6 +95,14 @@ extern
 SCIP_RETCODE SCIPnlrowFree(
    SCIP_NLROW**          nlrow,              /**< pointer to NLP row */
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** output nonlinear row to file stream */
+extern
+SCIP_RETCODE SCIPnlrowPrint(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** increases usage counter of NLP nonlinear row */
@@ -526,6 +534,7 @@ SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -569,7 +578,9 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
    );
 
 /** set initial guess (approximate primal solution) for next solve
- * array initguess must be NULL or have length at least SCIPnlpGetNVars */
+ *
+ *  array initguess must be NULL or have length at least SCIPnlpGetNVars()
+ */
 extern
 SCIP_RETCODE SCIPnlpSetInitialGuess(
    SCIP_NLP*             nlp,                /**< current NLP data */
@@ -582,6 +593,7 @@ extern
 SCIP_RETCODE SCIPnlpWrite(
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname               /**< file name */
    );
 
@@ -648,6 +660,7 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 

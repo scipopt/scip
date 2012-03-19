@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1732,6 +1732,7 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
 SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of constraint handler */
    const char*           desc,               /**< description of constraint handler */
@@ -1926,42 +1927,42 @@ SCIP_RETCODE SCIPconshdlrCreate(
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for separating cuts (-1: never, 0: only in root node)",
          &(*conshdlr)->sepafreq, FALSE, sepafreq, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
          (int*)(&(*conshdlr)->timingmask), TRUE, timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
          &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
          &(*conshdlr)->maxprerounds, TRUE, maxprerounds, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should separation method be delayed, if other separators found cuts?",
          &(*conshdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delayprop", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should propagation method be delayed, if other propagators found reductions?",
          &(*conshdlr)->delayprop, TRUE, delayprop, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaypresol", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should presolving method be delayed, if other presolvers found reductions?",
          &(*conshdlr)->delaypresol, TRUE, delaypresol, NULL, NULL) ); /*lint !e740*/
 
@@ -2195,8 +2196,14 @@ SCIP_RETCODE SCIPconshdlrInitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2271,8 +2278,14 @@ SCIP_RETCODE SCIPconshdlrExitpre(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->presoltime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -4740,7 +4753,7 @@ SCIP_RETCODE SCIPconsCopy(
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
    (*success) = FALSE;
-   
+
    if( sourceconshdlr->conscopy != NULL )
    {
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
@@ -4749,7 +4762,7 @@ SCIP_RETCODE SCIPconsCopy(
 #if 0
    else
    {
-      SCIPwarningMessage("constraint handler <%s> doesn't support copying constraints\n", sourceconshdlr->name);
+      SCIPwarningMessage(scip, "constraint handler <%s> doesn't support copying constraints\n", sourceconshdlr->name);
    }
 #endif
    return SCIP_OKAY;
@@ -4766,6 +4779,7 @@ SCIP_RETCODE SCIPconsCopy(
 SCIP_RETCODE SCIPconsParse(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler of target SCIP */
    const char*           str,                /**< name of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -4848,11 +4862,11 @@ SCIP_RETCODE SCIPconsParse(
    {
       if( conshdlr == NULL )
       {
-         SCIPwarningMessage("constraint handler <%s> doesn't exist in SCIP data structure\n", conshdlrname);
+         SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't exist in SCIP data structure\n", conshdlrname);
       }
       else if( conshdlr->consparse == NULL )
       {
-         SCIPwarningMessage("constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
+         SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
       }
    }
 
@@ -4970,6 +4984,7 @@ SCIP_RETCODE SCIPconsRelease(
 SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -4981,15 +4996,15 @@ SCIP_RETCODE SCIPconsPrint(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
    
-   SCIPmessageFPrintInfo(file, "  [%s] <%s>: ", conshdlr->name, cons->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  [%s] <%s>: ", conshdlr->name, cons->name);
    
    if( conshdlr->consprint != NULL )
    {
       SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
-      SCIPmessageFPrintInfo(file, ";\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, ";\n");
    }
    else 
-      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
+      SCIPmessageFPrintInfo(messagehdlr, file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
    
    return SCIP_OKAY;
 }
@@ -5320,16 +5335,21 @@ SCIP_RETCODE SCIPconsSetPropagated(
 
    if( cons->propagate != propagate )
    {
-      cons->propagate = propagate;
-      if( cons->enabled && cons->propenabled )
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
       {
-         if( cons->propagate )
+         cons->propagate = propagate;
+      }
+      else if( cons->enabled && cons->propenabled )
+      {
+         if( propagate )
          {
+            cons->propagate = propagate;
             SCIP_CALL( conshdlrAddPropcons(cons->conshdlr, set, cons) );
          }
          else
          {
             conshdlrDelPropcons(cons->conshdlr, cons);
+            cons->propagate = propagate;
          }
       }
    }
@@ -5904,14 +5924,14 @@ SCIP_RETCODE SCIPconsCheck(
 
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
-   
+
    /* call external method */
    SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
-   
+
    if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )
    {
-      SCIPerrorMessage("feasibility check of constraint handler <%s> on constraint <%s> returned invalid result <%d>\n", 
+      SCIPerrorMessage("feasibility check of constraint handler <%s> on constraint <%s> returned invalid result <%d>\n",
          conshdlr->name, cons->name, *result);
       return SCIP_INVALIDRESULT;
    }
@@ -5981,6 +6001,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsLocked
 #undef SCIPconsGetNLocksPos
 #undef SCIPconsGetNLocksNeg
+#undef SCIPconsIsAdded
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -6319,4 +6340,14 @@ int SCIPconsGetNLocksNeg(
    assert(cons != NULL);
 
    return cons->nlocksneg;
+}
+
+/** returns if the constraint was already added to a SCIP instance */
+SCIP_Bool SCIPconsIsAdded(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->addarraypos >= 0);
 }

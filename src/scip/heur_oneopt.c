@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -293,6 +293,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_Bool localrows;
    SCIP_Bool valid;
    int nchgbound;
    int nbinvars;
@@ -401,6 +402,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
+   localrows = FALSE;
    valid = TRUE;
 
    /* initialize activities */
@@ -423,6 +425,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             break;
          }
       }
+      else
+         localrows = TRUE;
    }
 
    if(!valid)
@@ -533,7 +537,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+         /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
+          * TRUE if local rows are present
+          */
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, localrows, &success) );
 
          if( success )
          {
@@ -578,6 +585,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          /* solve LP */
          SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
 
+         /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
@@ -585,7 +593,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          retstat = SCIPsolveDiveLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
          { 
-            SCIPwarningMessage("Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
+            SCIPwarningMessage(scip, "Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
          }
 #else
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );

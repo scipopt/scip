@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,13 +26,13 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/pub_misc.h"
 #include "scip/scip.h"
 #include "scip/disp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_disp.h"
 
@@ -73,6 +73,7 @@ SCIP_RETCODE SCIPdispCopyInclude(
 SCIP_RETCODE SCIPdispCreate(
    SCIP_DISP**           disp,               /**< pointer to store display column */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of display column */
    const char*           desc,               /**< description of display column */
@@ -125,12 +126,12 @@ SCIP_RETCODE SCIPdispCreate(
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
          (int*)(&(*disp)->dispstatus), FALSE, (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
    return SCIP_OKAY;
 }
-   
+
 /** frees memory of display column */
 SCIP_RETCODE SCIPdispFree(
    SCIP_DISP**           disp,               /**< pointer to display column data structure */
@@ -360,6 +361,7 @@ SCIP_Bool SCIPdispIsInitialized(
 /** prints one line of output with the active display columns */
 SCIP_RETCODE SCIPdispPrintLine(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
@@ -395,17 +397,17 @@ SCIP_RETCODE SCIPdispPrintLine(
             if( set->disps[i]->active )
             {
                if( stripline )
-                  SCIPmessageFPrintInfo(file, "|");
+                  SCIPmessageFPrintInfo(messagehdlr, file, "|");
                fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
-                  SCIPmessageFPrintInfo(file, " ");
-               SCIPmessageFPrintInfo(file, "%s", (const char*)set->disps[i]->header);
+                  SCIPmessageFPrintInfo(messagehdlr, file, " ");
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s", (const char*)set->disps[i]->header);
                for( j = 0; j < (fillspace+1)/2; ++j )
-                  SCIPmessageFPrintInfo(file, " ");
+                  SCIPmessageFPrintInfo(messagehdlr, file, " ");
                stripline = set->disps[i]->stripline;
             }
          }
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
 
       /* display node information line */
@@ -416,12 +418,12 @@ SCIP_RETCODE SCIPdispPrintLine(
          if( set->disps[i]->active )
          {
             if( stripline )
-               SCIPmessageFPrintInfo(file, "|");
+               SCIPmessageFPrintInfo(messagehdlr, file, "|");
             SCIP_CALL( SCIPdispOutput(set->disps[i], set, file) );
             stripline = set->disps[i]->stripline;
          }
       }
-      SCIPmessageFPrintInfo(file, "\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       fflush(stdout);
 
       stat->lastdispnode = stat->nnodes;
@@ -501,6 +503,7 @@ const char decpowerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
 
 /** displays a long integer in decimal form fitting in a given width */
 void SCIPdispLongint(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    SCIP_Longint          val,                /**< value to display */
    int                   width               /**< width to fit into */
@@ -511,11 +514,11 @@ void SCIPdispLongint(
    if( width == 1 )
    {
       if( val < 0 )
-         SCIPmessageFPrintInfo(file, "-");
+         SCIPmessageFPrintInfo(messagehdlr, file, "-");
       else if( val < 10 )
-         SCIPmessageFPrintInfo(file, "%"SCIP_LONGINT_FORMAT, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT, val);
       else
-         SCIPmessageFPrintInfo(file, "+");
+         SCIPmessageFPrintInfo(messagehdlr, file, "+");
    }
    else
    {
@@ -538,20 +541,21 @@ void SCIPdispLongint(
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
-         SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "-%c", decpowerchar[decpower]);
       else
-         SCIPmessageFPrintInfo(file, (const char*)format, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, (const char*)format, val);
    }
 }
 
 /** displays an integer in decimal form fitting in a given width */
 void SCIPdispInt(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    int                   val,                /**< value to display */
    int                   width               /**< width to fit into */
    )
 {
-   SCIPdispLongint(file, (SCIP_Longint)val, width);
+   SCIPdispLongint(messagehdlr, file, (SCIP_Longint)val, width);
 }
 
 
@@ -562,6 +566,7 @@ const SCIP_Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
 
 /** displays a time value fitting in a given width */
 void SCIPdispTime(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    SCIP_Real             val,                /**< value in seconds to display */
    int                   width               /**< width to fit into */
@@ -572,11 +577,11 @@ void SCIPdispTime(
    if( width == 1 )
    {
       if( val < 0.0 )
-         SCIPmessageFPrintInfo(file, "-");
+         SCIPmessageFPrintInfo(messagehdlr, file, "-");
       else if( val < 10.0 )
-         SCIPmessageFPrintInfo(file, "%.0f", val);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.0f", val);
       else
-         SCIPmessageFPrintInfo(file, "+");
+         SCIPmessageFPrintInfo(messagehdlr, file, "+");
    }
    else
    {
@@ -602,8 +607,8 @@ void SCIPdispTime(
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);
 
       if( width == 2 && val < 0.0 )
-         SCIPmessageFPrintInfo(file, "-%c", timepowerchar[timepower]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "-%c", timepowerchar[timepower]);
       else
-         SCIPmessageFPrintInfo(file, (const char*)format, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, (const char*)format, val);
    }
 }

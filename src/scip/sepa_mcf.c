@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -800,7 +800,7 @@ void printCommodities(
       if( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
          MCFdebugMessage(" row <%s>\n", SCIProwGetName(rows[r]));
-         /*SCIPdebug( SCIPprintRow(scip, rows[r], NULL) );*/
+         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[r], NULL)) );*/
       }
    }
    MCFdebugMessage("\n");
@@ -1027,7 +1027,7 @@ SCIP_RETCODE extractFlowRows(
 #ifdef SCIP_DEBUG
    for( r = 0; r < mcfdata->nflowcands; r++ )
    {
-      /*SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));*/
+      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL)) );*/
       SCIPdebugMessage("%4d [score: %2g]: %s\n", mcfdata->flowcands[r], flowrowscores[mcfdata->flowcands[r]],
                        SCIProwGetName(rows[mcfdata->flowcands[r]]));
    }
@@ -1393,7 +1393,7 @@ SCIP_RETCODE extractCapacityRows(
    {
       SCIPdebugMessage("row %4d [score: %2g]: %s\n", mcfdata->capacitycands[r],
                        capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
-      /*SCIPdebug(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL));*/
+      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL)) );*/
    }
 #endif
 
@@ -1583,7 +1583,7 @@ void addFlowrowToCommodity(
    SCIPdebugMessage("adding flow row %d <%s> with sign %+d%s to commodity %d [score:%g]\n",
                     r, SCIProwGetName(row), rowscale, (rowsign & INVERTED) != 0 ? " (inverted)" : "",
                     k, mcfdata->flowrowscores[r]);
-   /*SCIPdebug( SCIPprintRow(scip, row, NULL) );*/
+   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );*/
 
    /* add row to commodity */
    rowcommodity[r] = k;
@@ -5818,7 +5818,7 @@ SCIP_RETCODE addCut(
    {
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
-      /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
 
       if( !cutislocal )
@@ -6163,7 +6163,7 @@ SCIP_RETCODE generateClusterCuts(
             rowweights[r] = arccapacityscales[a];
             SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
                              SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
-            /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
+            /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, arccapacityrows[a], NULL)) );*/
 
             if( sepadata->separateflowcutset )
             {
@@ -6317,7 +6317,7 @@ SCIP_RETCODE generateClusterCuts(
                      SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
                                       v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                       SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
-                     /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
+                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, nodeflowrows[v][k], NULL)) );*/
                      if( sepadata->separateflowcutset )
                      {
                         if( nodeflowscales[v][k] > 0.0 )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,6 +81,7 @@ struct SCIP_ConsData
    SCIP_ROW*             row1;               /**< LP row for the linking itself */
    SCIP_ROW*             row2;               /**< LP row ensuring the set partitioning condition of the binary variables */
    int                   nbinvars;           /**< number of binary variables */
+   int                   sizebinvars;        /**< size of the binary variable array */
    int                   offset;             /**< offset of the binary representation */
    int                   nfixedzeros;        /**< current number of variables fixed to zero in the constraint */
    int                   nfixedones;         /**< current number of variables fixed to one in the constraint */
@@ -402,9 +403,11 @@ SCIP_RETCODE consdataCreateBinvars(
    int lb;
    int ub;
    int b;
-      
+
    assert(scip != NULL);
    assert(consdata != NULL);
+   assert(consdata->nbinvars == 0);
+   assert(consdata->binvars == NULL);
 
    SCIPdebugMessage("create binary variables for integer variable <%s>\n", SCIPvarGetName(consdata->intvar));
 
@@ -413,10 +416,11 @@ SCIP_RETCODE consdataCreateBinvars(
    ub = (int)(SCIPvarGetUbGlobal(intvar) + 0.5);
    nbinvars = ub-lb+1;
    assert(nbinvars > 0);
-  
+
    /* allocate block memory for the binary variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->binvars, nbinvars) );
-   
+   consdata->sizebinvars = nbinvars;
+
    /* check if the integer variable is fixed */
    if( nbinvars == 1 )
    {
@@ -426,7 +430,7 @@ SCIP_RETCODE consdataCreateBinvars(
       SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 1.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
             FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) ); 
       SCIP_CALL( SCIPaddVar(scip, binvar) );
-      
+
       consdata->binvars[0] = binvar;
       SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
    }
@@ -435,18 +439,18 @@ SCIP_RETCODE consdataCreateBinvars(
       for( b = lb; b <= ub; ++b)
       {
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d]", SCIPvarGetName(intvar), b);
-         
+
          /* creates and captures variables */
          SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-         
+
          /* add variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, binvar) );
          consdata->binvars[b-lb] = binvar;
          SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
       }
    }
-   
+
    consdata->nbinvars = nbinvars;
    consdata->offset = lb;
 
@@ -457,7 +461,7 @@ SCIP_RETCODE consdataCreateBinvars(
    {
       /* (rounding) lock binary variable */
       SCIP_CALL( lockRounding(scip, cons, consdata->binvars, consdata->nbinvars) );
-      
+
       /* catch bound change events of variables */
       SCIP_CALL( catchAllEvents(scip, consdata, eventhdlr) );
 
@@ -476,8 +480,7 @@ SCIP_RETCODE consdataCreateBinvars(
    }
 
    return SCIP_OKAY;
-}   
-
+}
 
 /** creates consdata */
 static
@@ -496,16 +499,17 @@ SCIP_RETCODE consdataCreate(
    assert(intvar != NULL);
    assert(binvars != NULL || nbinvars == 0);
    assert(SCIPvarGetType(intvar) != SCIP_VARTYPE_CONTINUOUS);
-   
+
    /* allocate memory for consdata */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
    (*consdata)->intvar = intvar;
+   (*consdata)->nbinvars = nbinvars;
+   (*consdata)->sizebinvars = nbinvars;
+   (*consdata)->offset = offset;
    (*consdata)->row1 = NULL;
    (*consdata)->row2 = NULL;
    (*consdata)->cliqueadded = FALSE;
-   (*consdata)->nbinvars = 0;
-   (*consdata)->offset = 0;
    (*consdata)->nfixedzeros = 0;
    (*consdata)->nfixedones = 0;
 
@@ -519,22 +523,17 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->binvars, binvars, nbinvars) );
    }
 
-   (*consdata)->nfixedones = 0;
-   (*consdata)->nfixedzeros = 0;
-   (*consdata)->nbinvars = nbinvars;
-   (*consdata)->offset = offset;
-
    /* get transformed variable, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
       if( binvars != NULL )
       {
          SCIP_CALL( SCIPgetTransformedVars(scip, nbinvars, (*consdata)->binvars, (*consdata)->binvars) );
-      
+
          /* catch bound change events of variables */
          SCIP_CALL( catchAllEvents(scip, *consdata, eventhdlr) );
       }
-   
+
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &(*consdata)->intvar) );
    }
 
@@ -566,13 +565,13 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->nbinvars > 0 )
    {
       /* if constraint belongs to transformed problem space, drop bound change events on variables */
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->binvars, (*consdata)->nbinvars);
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->binvars, (*consdata)->sizebinvars);
    }
-   
+
    /* check if the fixed counters a reseted */
    assert((*consdata)->nfixedzeros == 0);
    assert((*consdata)->nfixedones == 0);
-   
+
    /* free constraint data */
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -586,8 +585,8 @@ static
 SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint to be processed */
-   SCIP_VAR*             intvar,             /**< integer variable  */   
-   SCIP_VAR*             binvar,             /**< binary variable is the reason */   
+   SCIP_VAR*             intvar,             /**< integer variable  */
+   SCIP_VAR*             binvar,             /**< binary variable is the reason */
    SCIP_Bool             lbintvar,           /**< lower bound of integer variable is the reason */
    SCIP_Bool             ubintvar            /**< upper bound of integer variable is the reason */
    )
@@ -714,7 +713,7 @@ SCIP_RETCODE processIntegerBoundChg(
 
    /* in case there is only at most one binary variables, the constraints should already be disabled */
    assert(nbinvars > 1);
-   
+
    /* if more than one binary variable is fixed to one or at least nbinvars minus one variable are fixed to zero */
    if( consdata->nfixedones > 0  || consdata->nfixedzeros >= nbinvars-1 )
       return  SCIP_OKAY;
@@ -735,12 +734,12 @@ SCIP_RETCODE processIntegerBoundChg(
       assert(b - offset >= 0);
       assert(b - offset < nbinvars);
       assert(vars[b-offset] != NULL );
-      
-      SCIPdebugMessage("fix variable <%s> to zero due to the lower bound of the integer variable <%s> [%g,%g]\n", 
+
+      SCIPdebugMessage("fix variable <%s> to zero due to the lower bound of the integer variable <%s> [%g,%g]\n",
          SCIPvarGetName(vars[b-offset]), SCIPvarGetName(intvar), SCIPvarGetLbLocal(intvar), SCIPvarGetUbLocal(intvar));
 
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[b-offset], FALSE, cons, -2, &infeasible, &tightened) );
-      
+
       if( infeasible )
       {
          SCIP_CALL( analyzeConflict(scip, cons, intvar, vars[b-offset], TRUE, FALSE) );
@@ -1686,22 +1685,14 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolLinking)
 {  /*lint --e{715}*/
-#if 0
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA* consdata;
    int c;
-
-#if 0
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      
+
       /* release the rows of all constraints */
       if( consdata->row1 != NULL )
       {
@@ -1710,26 +1701,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinking)
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row1) );
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row2) );
       }
-
-#if 0
-      /* release binvars of all constraints */
-      if( consdata->nbinvars  > 0 )
-      {
-         int b;
-         
-         /* drop bound change events of variables */
-         assert(SCIPconsIsTransformed(conss[c]));
-         SCIP_CALL( dropAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
-         
-         SCIP_CALL( unlockRounding(scip, conss[c], consdata->binvars, consdata->nbinvars) );
-         
-         SCIPfreeBlockMemoryArrayNull(scip, &consdata->binvars, consdata->nbinvars);
-      }
-      consdata->nbinvars = 0;
-
-      assert(consdata->nfixedzeros == 0);
-      assert(consdata->nfixedones == 0);
-#endif
    }
 
    return SCIP_OKAY;
@@ -1810,7 +1781,7 @@ SCIP_DECL_CONSTRANS(consTransLinking)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
@@ -2817,7 +2788,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsLinking)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nbinvars + 1 )
+   if( varssize < consdata->nbinvars + 1)
       (*success) = FALSE;
    else
    {

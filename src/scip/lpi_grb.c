@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,13 +39,13 @@
 
 #include "gurobi_c.h"
 #include "scip/lpi.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 
-#define CHECK_ZERO(x) { int _restat_;                                   \
+#define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPerrorMessage("Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(grbenv)); \
+         SCIPmessagePrintWarning((messagehdlr), "Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(grbenv)); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
@@ -136,6 +136,7 @@ struct SCIP_LPi
    int                   iterations;         /**< number of iterations used in the last solving call */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -264,8 +265,8 @@ SCIP_RETCODE getBase(
 
    SCIPdebugMessage("getBase()\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureCstatMem(lpi, ncols) );
@@ -303,14 +304,14 @@ SCIP_RETCODE setBase(
 
    SCIPdebugMessage("setBase()\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
    /* load basis information into Gurobi */
-   CHECK_ZERO( GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, lpi->cstat) );
-   CHECK_ZERO( GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, lpi->cstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
 
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -567,7 +568,7 @@ void lpistateFree(
 
 /** gets all Gurobi parameters used in LPI */
 static
-SCIP_RETCODE getParameterValues(GRBPARAM* grbparam)
+SCIP_RETCODE getParameterValues(SCIP_LPI* lpi, GRBPARAM* grbparam)
 {
    int i;
 
@@ -578,11 +579,11 @@ SCIP_RETCODE getParameterValues(GRBPARAM* grbparam)
 
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-      CHECK_ZERO( GRBgetintparam(grbenv, intparam[i], &(grbparam->intparval[i])) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, intparam[i], &(grbparam->intparval[i])) );
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
    {
-      CHECK_ZERO( GRBgetdblparam(grbenv, dblparam[i], &(grbparam->dblparval[i])) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, dblparam[i], &(grbparam->dblparval[i])) );
    }
 
    return SCIP_OKAY;
@@ -590,13 +591,13 @@ SCIP_RETCODE getParameterValues(GRBPARAM* grbparam)
 
 /** in debug mode, checks validity of Gurobi parameters */
 static
-SCIP_RETCODE checkParameterValues(void)
+SCIP_RETCODE checkParameterValues(SCIP_LPI* lpi)
 {
 #ifndef NDEBUG
    GRBPARAM par;
    int i;
 
-   SCIP_CALL( getParameterValues(&par) );
+   SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
       assert(curparam.intparval[i] == par.intparval[i]);
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -608,7 +609,7 @@ SCIP_RETCODE checkParameterValues(void)
 
 /** sets all Gurobi parameters used in LPI */
 static
-SCIP_RETCODE setParameterValues(const GRBPARAM* grbparam)
+SCIP_RETCODE setParameterValues(SCIP_LPI* lpi, const GRBPARAM* grbparam)
 {
    int i;
 
@@ -624,7 +625,7 @@ SCIP_RETCODE setParameterValues(const GRBPARAM* grbparam)
          SCIPdebugMessage("setting Gurobi int parameter %s from %d to %d\n",
             intparam[i], curparam.intparval[i], grbparam->intparval[i]);
          curparam.intparval[i] = grbparam->intparval[i];
-         CHECK_ZERO( GRBsetintparam(grbenv, intparam[i], curparam.intparval[i]) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, intparam[i], curparam.intparval[i]) );
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -634,11 +635,11 @@ SCIP_RETCODE setParameterValues(const GRBPARAM* grbparam)
          SCIPdebugMessage("setting Gurobi dbl parameter %s from %g to %g\n",
             dblparam[i], curparam.dblparval[i], MAX(grbparam->dblparval[i], dblparammin[i]));
          curparam.dblparval[i] = MAX(grbparam->dblparval[i], dblparammin[i]);
-         CHECK_ZERO( GRBsetdblparam(grbenv, dblparam[i], curparam.dblparval[i]) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(grbenv, dblparam[i], curparam.dblparval[i]) );
       }
    }
 
-   SCIP_CALL( checkParameterValues() );
+   SCIP_CALL( checkParameterValues(lpi) );
 
    return SCIP_OKAY;
 }
@@ -996,6 +997,7 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
@@ -1011,20 +1013,20 @@ SCIP_RETCODE SCIPlpiCreate(
    if( grbenv == NULL )
    {
       /* initialize environment - no log file */
-      CHECK_ZERO( GRBloadenv(&grbenv, NULL) );
+      CHECK_ZERO( messagehdlr, GRBloadenv(&grbenv, NULL) );
 
       /* turn off output */
-      CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+      CHECK_ZERO( messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
 
       /* get default parameter values */
-      SCIP_CALL( getParameterValues(&defparam) );
+      SCIP_CALL( getParameterValues(*lpi, &defparam) );
       copyParameterValues(&curparam, &defparam);
    }
    assert(grbenv != NULL);
 
    /* create empty LP */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   CHECK_ZERO( GRBnewmodel(grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
+   CHECK_ZERO( messagehdlr, GRBnewmodel(grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
 
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
@@ -1039,6 +1041,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->iterations = 0;
    (*lpi)->solisbasic = TRUE;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
+   (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->grbparam), &defparam);
@@ -1050,7 +1053,7 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
 
-   SCIPwarningMessage("The Gurobi LPI is a beta version only - use with care.\n\n");
+   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n\n");
 
    return SCIP_OKAY;
 }
@@ -1067,7 +1070,7 @@ SCIP_RETCODE SCIPlpiFree(
    SCIPdebugMessage("SCIPlpiFree()\n");
 
    /* free model */
-   CHECK_ZERO( GRBfreemodel((*lpi)->grbmodel) );
+   CHECK_ZERO( (*lpi)->messagehdlr, GRBfreemodel((*lpi)->grbmodel) );
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->senarray);
@@ -1149,12 +1152,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    /* delete model */
    assert( lpi->grbmodel != NULL );
-   CHECK_ZERO( GRBfreemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
 
    /* load model - all variables are continuous */
-   CHECK_ZERO( GRBloadmodel(grbenv, &(lpi->grbmodel), NULL, ncols, nrows, objsen, 0.0, (SCIP_Real*)obj,
+   CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(grbenv, &(lpi->grbmodel), NULL, ncols, nrows, objsen, 0.0, (SCIP_Real*)obj,
          lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    /* free temporary memory */
    BMSfreeMemoryArray(&cnt);
@@ -1163,13 +1166,13 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    {
       int temp;
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &temp) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &temp) );
       assert( temp == ncols);
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &temp) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &temp) );
       assert( temp == nrows);
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, &temp) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, &temp) );
       assert( temp == nnonz);
    }
 #endif
@@ -1200,8 +1203,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    invalidateSolution(lpi);
 
    /* add columns - all new variables are continuous */
-   CHECK_ZERO( GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) )
-      CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) )
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1223,7 +1226,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    {
       int temp;
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &temp) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &temp) );
       assert(0 <= firstcol && firstcol <= lastcol && lastcol < temp);
    }
 #endif
@@ -1237,8 +1240,8 @@ SCIP_RETCODE SCIPlpiDelCols(
    for( j = firstcol; j <= lastcol; ++j )
       which[j - firstcol] = j;
 
-   CHECK_ZERO( GRBdelvars(lpi->grbmodel, lastcol-firstcol+1, which) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBdelvars(lpi->grbmodel, lastcol-firstcol+1, which) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    BMSfreeMemoryArray( &which );
 
@@ -1265,7 +1268,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    invalidateSolution(lpi);
 
    /* Gurobi can't delete a range of columns, we have to set up an index array */
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &nvars) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &nvars) );
 
    SCIP_ALLOC( BMSallocMemoryArray(&which, nvars) );;
    num = 0;
@@ -1274,8 +1277,8 @@ SCIP_RETCODE SCIPlpiDelColset(
       if( dstat[j] )
          which[num++] = j;
    }
-   CHECK_ZERO( GRBdelvars(lpi->grbmodel, num, which) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBdelvars(lpi->grbmodel, num, which) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    BMSfreeMemoryArray( &which );
 
@@ -1312,8 +1315,8 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert( rngcount == 0 );
 
    /* add rows to LP */
-   CHECK_ZERO( GRBaddconstrs(lpi->grbmodel, nrows, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, lpi->senarray, lpi->rhsarray, rownames) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBaddconstrs(lpi->grbmodel, nrows, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val, lpi->senarray, lpi->rhsarray, rownames) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1334,7 +1337,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 #ifndef NDEBUG
    {
       int nrows;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
       assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
    }
 #endif
@@ -1348,8 +1351,8 @@ SCIP_RETCODE SCIPlpiDelRows(
    for( i = firstrow; i <= lastrow; ++i )
       which[i - firstrow] = i;
 
-   CHECK_ZERO( GRBdelconstrs(lpi->grbmodel, lastrow-firstrow+1, which) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBdelconstrs(lpi->grbmodel, lastrow-firstrow+1, which) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    BMSfreeMemoryArray( &which );
 
@@ -1377,7 +1380,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
    invalidateSolution(lpi);
 
    /* Gurobi can't delete a range of rows, we have to set up an index array */
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&which, nrows) );;
    num = 0;
    for( i = 0; i < nrows; ++i )
@@ -1385,8 +1388,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
       if( dstat[i] )
          which[num++] = i;
    }
-   CHECK_ZERO( GRBdelconstrs(lpi->grbmodel, num, which) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBdelconstrs(lpi->grbmodel, num, which) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    /* update dstat */
    num = 0;
@@ -1419,9 +1422,9 @@ SCIP_RETCODE SCIPlpiClear(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBfreemodel(lpi->grbmodel) );
-   CHECK_ZERO( GRBnewmodel(grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBnewmodel(grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1450,10 +1453,10 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_LB, ncols, (int*)ind, (SCIP_Real*)lb) );
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_UB, ncols, (int*)ind, (SCIP_Real*)ub) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_LB, ncols, (int*)ind, (SCIP_Real*)lb) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_UB, ncols, (int*)ind, (SCIP_Real*)ub) );
 
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1483,10 +1486,10 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert( rngcount == 0 );
 
    /* change row sides */
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, (int*)ind, lpi->rhsarray) );
-   CHECK_ZERO( GRBsetcharattrlist(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, nrows, (int*)ind, lpi->senarray) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, (int*)ind, lpi->rhsarray) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetcharattrlist(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, nrows, (int*)ind, lpi->senarray) );
 
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1507,8 +1510,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBchgcoeffs(lpi->grbmodel, 1, &row, &col, &newval) );
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBchgcoeffs(lpi->grbmodel, 1, &row, &col, &newval) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1529,9 +1532,9 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    invalidateSolution(lpi);
 
    /* The objective sense of Gurobi and SCIP are equal */
-   CHECK_ZERO( GRBsetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, objsen) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, objsen) );
 
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1550,9 +1553,9 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    SCIPdebugMessage("changing %d objective values in Gurobi\n", ncols);
 
-   CHECK_ZERO( GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_OBJ, ncols, ind, obj) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_OBJ, ncols, ind, obj) );
 
-   CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }
@@ -1580,7 +1583,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
    SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* get the row */
@@ -1639,7 +1642,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
    SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* get the column */
@@ -1703,7 +1706,7 @@ SCIP_RETCODE SCIPlpiGetNRows(
 
    SCIPdebugMessage("getting number of rows\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, nrows) );
 
    return SCIP_OKAY;
 }
@@ -1720,7 +1723,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
 
    SCIPdebugMessage("getting number of columns\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, ncols) );
 
    return SCIP_OKAY;
 }
@@ -1737,7 +1740,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 
    SCIPdebugMessage("getting number of non-zeros\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, nnonz) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, nnonz) );
 
    return SCIP_OKAY;
 }
@@ -1764,7 +1767,7 @@ SCIP_RETCODE SCIPlpiGetCols(
 #ifndef NDEBUG
    {
       int ncols;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
       assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
    }
 #endif
@@ -1775,8 +1778,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lb) );
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ub) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lb) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ub) );
    }
    else
       assert(ub == NULL);
@@ -1788,7 +1791,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) )
+      CHECK_ZERO( lpi->messagehdlr, GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) )
          }
    else
    {
@@ -1822,7 +1825,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 #ifndef NDEBUG
    {
       int nrows;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
       assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
    }
 #endif
@@ -1833,8 +1836,8 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       /* get row sense and rhs */
       SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, firstrow, lastrow-firstrow+1, lpi->rhsarray) );
-      CHECK_ZERO( GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, firstrow, lastrow-firstrow+1, lpi->rhsarray) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
       /* convert sen and rhs into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
@@ -1847,7 +1850,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( GRBgetconstrs(lpi->grbmodel, nnonz, beg, ind, val, firstrow, lastrow-firstrow+1) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetconstrs(lpi->grbmodel, nnonz, beg, ind, val, firstrow, lastrow-firstrow+1) );
    }
    else
    {
@@ -1905,7 +1908,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
-   CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, firstcol, lastcol-firstcol+1, vals) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, firstcol, lastcol-firstcol+1, vals) );
 
    return SCIP_OKAY;
 }
@@ -1925,7 +1928,7 @@ SCIP_RETCODE SCIPlpiGetBounds(
 #ifndef NDEBUG
    {
       int ncols;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
       assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
    }
 #endif
@@ -1934,12 +1937,12 @@ SCIP_RETCODE SCIPlpiGetBounds(
 
    if( lbs != NULL )
    {
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lbs) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lbs) );
    }
 
    if( ubs != NULL )
    {
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ubs) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ubs) );
    }
 
    return SCIP_OKAY;
@@ -1964,8 +1967,8 @@ SCIP_RETCODE SCIPlpiGetSides(
    /* get row sense, rhs, and ranges */
    SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
 
-   CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, firstrow, lastrow-firstrow+1, lpi->rhsarray) );
-   CHECK_ZERO( GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, firstrow, lastrow-firstrow+1, lpi->rhsarray) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
    /* convert sen and rhs into lhs/rhs tuples */
    reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
@@ -1987,7 +1990,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
-   CHECK_ZERO( GRBgetcoeff(lpi->grbmodel, row, col, val) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetcoeff(lpi->grbmodel, row, col, val) );
 
    return SCIP_OKAY;
 }
@@ -2023,8 +2026,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 #ifdef SCIP_DEBUG
    {
       int ncols, nrows;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
       SCIPdebugMessage("calling Gurobi primal simplex: %d cols, %d rows\n", ncols, nrows);
    }
 #endif
@@ -2034,8 +2037,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIPdebugMessage("calling GRBoptimize() - primal\n");
 
    /* set primal simplex */
-   SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_PRIMAL) );
+   SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_PRIMAL) );
 
    retval = GRBoptimize(lpi->grbmodel);
    switch( retval  )
@@ -2049,10 +2052,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    lpi->solisbasic = TRUE;
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
 
    /*
-     CHECK_ZERO( CPXsolninfo(grbenv, lpi->grbmodel, NULL, NULL, &primalfeasible, &dualfeasible) );
+     CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(grbenv, lpi->grbmodel, NULL, NULL, &primalfeasible, &dualfeasible) );
      SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
      lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
    */
@@ -2065,15 +2068,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    {
       int cnt;
       int presolve;
-      CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_PRESOLVE, &presolve) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_PRESOLVE, &presolve) );
       if( presolve != GRB_PRESOLVE_OFF )
       {
          /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
          SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi primal simplex again without presolve\n");
 
          /* switch off preprocessing */
-         CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
-         SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+         SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
          retval = GRBoptimize(lpi->grbmodel);
          switch( retval  )
@@ -2086,13 +2089,13 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
             return SCIP_LPERROR;
          }
 
-         CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
          lpi->iterations += cnt;
-         CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
          SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
-         CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
       }
 
       if( lpi->solstat == GRB_INF_OR_UNBD )
@@ -2123,8 +2126,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 #ifdef SCIP_DEBUG
    {
       int ncols, nrows;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
       SCIPdebugMessage("calling Gurobi dual simplex: %d cols, %d rows\n", ncols, nrows);
    }
 #endif
@@ -2134,9 +2137,9 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIPdebugMessage("calling GRBoptimize() - dual\n");
 
    /* set dual simplex */
-   SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+   SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_DUAL) );
 
    retval = GRBoptimize(lpi->grbmodel);
    switch( retval  )
@@ -2149,11 +2152,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
    lpi->iterations = (int) cnt;
 
    lpi->solisbasic = TRUE;
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
 
    /*
      SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2163,7 +2166,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    if( lpi->solstat == GRB_INF_OR_UNBD )
    {
       int presolve;
-      CHECK_ZERO( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &presolve) );
+      CHECK_ZERO( lpi->messagehdlr, getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &presolve) );
 
       if( presolve != GRB_PRESOLVE_OFF )
       {
@@ -2171,8 +2174,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
          SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi dual simplex again without presolve\n");
 
          /* switch off preprocessing */
-         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
-         SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+         CHECK_ZERO( lpi->messagehdlr, setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+         SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
          retval = GRBoptimize(lpi->grbmodel);
          switch( retval  )
@@ -2185,13 +2188,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
             return SCIP_LPERROR;
          }
 
-         CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
          lpi->iterations += (int) cnt;
-         CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
          SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
-         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
+         CHECK_ZERO( lpi->messagehdlr, setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
       }
 
       if( lpi->solstat == GRB_INF_OR_UNBD )
@@ -2220,8 +2223,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #ifdef SCIP_DEBUG
    {
       int ncols, nrows;
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
       SCIPdebugMessage("calling Gurobi barrier: %d cols, %d rows\n", ncols, nrows);
    }
 #endif
@@ -2231,20 +2234,20 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIPdebugMessage("calling GRBoptimize() - barrier\n");
 
    /* set barrier */
-   SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+   SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
    if( crossover )
    {
       /* turn on crossover to automatic setting (-1) */
-      CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, -1) );
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, -1) );
    }
    else
    {
       /* turn off crossover */
-      CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, 0) );
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_CROSSOVER, 0) );
    }
 
-   CHECK_ZERO( GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_BARRIER) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_METHOD, GRB_METHOD_BARRIER) );
 
    retval = GRBoptimize(lpi->grbmodel);
    switch( retval  )
@@ -2257,11 +2260,11 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
-   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
    lpi->iterations = (int) cnt;
 
    lpi->solisbasic = crossover;
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
 
    /*
      SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
@@ -2271,7 +2274,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    if( lpi->solstat == GRB_INF_OR_UNBD )
    {
       int presolve;
-      CHECK_ZERO( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &presolve) );
+      CHECK_ZERO( lpi->messagehdlr, getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &presolve) );
 
       if( presolve != GRB_PRESOLVE_OFF )
       {
@@ -2279,8 +2282,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
          SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi barrier again without presolve\n");
 
          /* switch off preprocessing */
-         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
-         SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+         CHECK_ZERO( lpi->messagehdlr, setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+         SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
          retval = GRBoptimize(lpi->grbmodel);
          switch( retval  )
@@ -2293,13 +2296,13 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
             return SCIP_LPERROR;
          }
 
-         CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
          lpi->iterations += (int) cnt;
-         CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &lpi->solstat) );
          SCIPdebugMessage(" -> Gurobi returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
-         CHECK_ZERO( setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
+         CHECK_ZERO( lpi->messagehdlr, setIntParam(lpi, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_AUTO) );
       }
 
       if( lpi->solstat == GRB_INF_OR_UNBD )
@@ -2364,7 +2367,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    SCIPdebugMessage("performing strong branching on variable %d (%d iterations)\n", col, itlim);
 
-   SCIP_CALL( setParameterValues(&(lpi->grbparam)) );
+   SCIP_CALL( setParameterValues(lpi, &(lpi->grbparam)) );
 
    error = FALSE;
    *downvalid = FALSE;
@@ -2372,12 +2375,12 @@ SCIP_RETCODE lpiStrongbranch(
    if( iter != NULL )
       *iter = 0;
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
 
    /* save current LP basis and bounds*/
    SCIP_CALL( getBase(lpi) );
-   CHECK_ZERO( GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, &oldlb) );
-   CHECK_ZERO( GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, &oldub) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, &oldlb) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, &oldub) );
 
    /* save old iteration limit and set iteration limit to strong branching limit */
    if( itlim > INT_MAX )
@@ -2392,7 +2395,7 @@ SCIP_RETCODE lpiStrongbranch(
    {
       SCIPdebugMessage("strong branching down (%g) on x%d (%g) with %d iterations\n", newub, col, psol, itlim);
 
-      CHECK_ZERO( GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, newub) );
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, newub) );
 
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
       if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
@@ -2402,7 +2405,7 @@ SCIP_RETCODE lpiStrongbranch(
       }
       else if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
       {
-         CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, down) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, down) );
       }
       else
          error = TRUE;
@@ -2414,12 +2417,12 @@ SCIP_RETCODE lpiStrongbranch(
       }
       SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
 
-      CHECK_ZERO( GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, oldub) );
-      CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, oldub) );
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 #ifdef SCIP_DEBUG
       {
          double b;
-         CHECK_ZERO( GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, &b) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, col, &b) );
          assert( b == oldub );
       }
 #endif
@@ -2428,7 +2431,7 @@ SCIP_RETCODE lpiStrongbranch(
    }
    else
    {
-      CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, down) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, down) );
       *downvalid = TRUE;
    }
 
@@ -2440,7 +2443,7 @@ SCIP_RETCODE lpiStrongbranch(
       {
          SCIPdebugMessage("strong branching  up (%g) on x%d (%g) with %d iterations\n", newlb, col, psol, itlim);
 
-         CHECK_ZERO( GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, newlb) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, newlb) );
 
          SCIP_CALL( SCIPlpiSolveDual(lpi) );
          if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
@@ -2450,7 +2453,7 @@ SCIP_RETCODE lpiStrongbranch(
          }
          else if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
          {
-            CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, up) );
+            CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, up) );
          }
          else
             error = TRUE;
@@ -2462,12 +2465,12 @@ SCIP_RETCODE lpiStrongbranch(
          }
          SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
 
-         CHECK_ZERO( GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, oldlb) );
-         CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, oldlb) );
+         CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 #ifdef SCIP_DEBUG
          {
             double b;
-            CHECK_ZERO( GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, &b) );
+            CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, col, &b) );
             assert( b == oldlb );
          }
 #endif
@@ -2476,14 +2479,14 @@ SCIP_RETCODE lpiStrongbranch(
       }
       else
       {
-         CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, up) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_CUTOFF, up) );
          *upvalid = TRUE;
       }
    }
 
    /* reset iteration limit */
    SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, olditlim) );
-   /* CHECK_ZERO( GRBupdatemodel(lpi->grbmodel) ); */
+   /* CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) ); */
 
    if( error )
    {
@@ -2654,8 +2657,8 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
       if(lpi->solstat != GRB_INF_OR_UNBD && lpi->solstat != GRB_INFEASIBLE)
       {
          /* check whether maximum scaled violation is smaller than feasibility tolerance */
-         CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_SRESIDUAL, &viol) );
-         CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &tol) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_SRESIDUAL, &viol) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &tol) );
          *primalfeasible = (viol <= tol) ? TRUE : FALSE;
          SCIPdebugMessage("primal violation: %g  (tol: %g)\n", viol, tol);
       }
@@ -2668,8 +2671,8 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
       if(lpi->solstat != GRB_UNBOUNDED && lpi->solstat != GRB_INFEASIBLE)
       {
          /* check whether maximum scaled dual violation is smaller than optimality tolerance */
-         CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_SRESIDUAL, &viol) );
-         CHECK_ZERO( GRBgetdblparam(grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &tol) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_SRESIDUAL, &viol) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &tol) );
          *dualfeasible = (viol <= tol) ? TRUE : FALSE;
          SCIPdebugMessage("dual violation: %g  (tol: %g)\n", viol, tol);
       }
@@ -2761,7 +2764,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
 }
@@ -2798,7 +2801,7 @@ SCIP_Bool SCIPlpiHasDualRay(
      assert(lpi->grbmodel != NULL);
      assert(lpi->solstat >= 0);
 
-     CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
+     CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_LPMETHOD, &algo) );
 
      return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_LPMETHOD_DUAL);
    */
@@ -2818,7 +2821,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    SCIPdebugMessage("checking for dual unboundedness\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
    return (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL);
 }
@@ -2852,7 +2855,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   CHECK_ZERO( GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(grbenv, GRB_INT_PAR_METHOD, &algo) );
 
    return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL));
 }
@@ -2964,7 +2967,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
 
    return SCIP_OKAY;
 }
@@ -2989,23 +2992,23 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("getting solution\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
    assert( ncols >= 0 && nrows >= 0 );
 
    if( objval != NULL )
    {
-      CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
    }
 
    if( primsol != NULL )
    {
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_X, 0, ncols, primsol) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_X, 0, ncols, primsol) );
    }
 
    if( dualsol != NULL )
    {
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_PI, 0, nrows, dualsol) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_PI, 0, nrows, dualsol) );
    }
 
    if( activity != NULL )
@@ -3013,12 +3016,12 @@ SCIP_RETCODE SCIPlpiGetSol(
       int i;
 
       /* first get the values of the slack variables */
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_SLACK, 0, nrows, activity) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_SLACK, 0, nrows, activity) );
 
       SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, 0, nrows, lpi->rhsarray) );
-      CHECK_ZERO( GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, 0, nrows, lpi->senarray) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RHS, 0, nrows, lpi->rhsarray) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, 0, nrows, lpi->senarray) );
 
       for( i = 0; i < nrows; ++i )
       {
@@ -3040,7 +3043,7 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    if( redcost != NULL )
    {
-      CHECK_ZERO( GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RC, 0, ncols, redcost) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_RC, 0, ncols, redcost) );
    }
 
    return SCIP_OKAY;
@@ -3114,7 +3117,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   CHECK_ZERO( GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_KAPPA, quality) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_KAPPA, quality) );
 
    return SCIP_OKAY;
 }
@@ -3149,12 +3152,12 @@ SCIP_RETCODE SCIPlpiGetBase(
       int i;
       int nrows;
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
 
       for( i = 0; i < nrows; ++i )
       {
          int stat;
-         CHECK_ZERO( GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, &stat) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, &stat) );
 
          switch( stat )
          {
@@ -3185,12 +3188,12 @@ SCIP_RETCODE SCIPlpiGetBase(
       int j;
       int ncols;
 
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
 
       for( j = 0; j < ncols; ++j )
       {
          int stat;
-         CHECK_ZERO( GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
 
          switch( stat )
          {
@@ -3239,27 +3242,27 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
 
    for( i = 0; i < nrows; ++i )
    {
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_BASIC:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_BASIC) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_BASIC) );
          break;
 
       case SCIP_BASESTAT_LOWER:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_LOWER) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_LOWER) );
          break;
 
       case SCIP_BASESTAT_UPPER:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_UPPER) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_UPPER) );
          break;
 
       case SCIP_BASESTAT_ZERO:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_SUPERBASIC) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_SUPERBASIC) );
          break;
 
       default:
@@ -3273,18 +3276,18 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[j] )
       {
       case SCIP_BASESTAT_BASIC:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_BASIC) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_BASIC) );
          break;
 
       case SCIP_BASESTAT_LOWER:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_LOWER) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_LOWER) );
          break;
 
       case SCIP_BASESTAT_UPPER:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_UPPER) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_UPPER) );
 
       case SCIP_BASESTAT_ZERO:
-         CHECK_ZERO( GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_SUPERBASIC) );
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_SUPERBASIC) );
          break;
 
       default:
@@ -3312,14 +3315,14 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    SCIPdebugMessage("getting basis information\n");
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
 
    cnt = 0;
    for( i = 0; i < nrows; ++i )
    {
       int stat;
-      CHECK_ZERO( GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, &stat) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, &stat) );
 
       if( stat == GRB_BASIC )
          bind[cnt++] = -1 - i;
@@ -3328,7 +3331,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    for( j = 0; j < ncols; ++j )
    {
       int stat;
-      CHECK_ZERO( GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
 
       if( stat == GRB_BASIC )
          bind[cnt++] = j;
@@ -3353,7 +3356,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    SCIPdebugMessage("getting binv-row %d\n", r);
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
 
    /* Gurobi does not have the possibility to access the basis inverse -> setting coef to 0 */
    for( j = 0; j < ncols; ++j )
@@ -3456,8 +3459,8 @@ SCIP_RETCODE SCIPlpiGetState(
       return SCIP_OKAY;
    }
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
    assert(ncols >= 0);
    assert(nrows >= 0);
 
@@ -3499,8 +3502,8 @@ SCIP_RETCODE SCIPlpiSetState(
    if( lpistate == NULL )
       return SCIP_OKAY;
 
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
-   CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
    assert(lpistate->ncols <= ncols);
    assert(lpistate->nrows <= nrows);
 
@@ -3537,7 +3540,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for Gurobi */
-   SCIPwarningMessage("Gurobi interface does not implement SCIPlpiClearState()\n");
+   SCIPmessagePrintWarning(lpi->messagehdlr, "Gurobi interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }
@@ -3779,14 +3782,14 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       return SCIP_PARAMETERUNKNOWN;
       break;
    case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
       if( objsen == 1 )
          SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       else
          return SCIP_PARAMETERUNKNOWN;
       break;
    case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
       if( objsen == 0 )
          SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       else
@@ -3832,12 +3835,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       return SCIP_PARAMETERUNKNOWN;
       break;
    case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
       if( objsen == 1 )
          SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
       if( objsen == 0 )
          SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
@@ -3907,7 +3910,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
-   CHECK_ZERO( GRBread(lpi->grbmodel, fname) );
+   CHECK_ZERO( lpi->messagehdlr, GRBread(lpi->grbmodel, fname) );
 
    return SCIP_OKAY;
 }
@@ -3924,7 +3927,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( GRBwrite(lpi->grbmodel, fname) );
+   CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
 
    return SCIP_OKAY;
 }

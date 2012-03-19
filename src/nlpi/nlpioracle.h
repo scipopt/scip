@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   nlpioracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
  * @author Stefan Vigerske
- * 
+ *
  * Not a full NLPI, but implements a common part of many NLPIs that takes care
  * of the problem storage and function, gradient, and hessian evaluation.
  */
@@ -24,7 +24,9 @@
 #ifndef __SCIP_NLPI_ORACLE_H__
 #define __SCIP_NLPI_ORACLE_H__
 
+#include "scip/type_message.h"
 #include "nlpi/type_nlpi.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +42,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    );
 
 /** frees an NLPIORACLE data structure */
-extern 
+extern
 SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP_NLPIORACLE**     oracle              /**< pointer to NLPIORACLE data structure */
    );
@@ -399,6 +401,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 extern
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
 
@@ -411,6 +414,7 @@ extern
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
 

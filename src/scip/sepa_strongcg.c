@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -492,7 +492,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-               /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
                assert(success);
 #ifdef MAKECUTINTEGRAL
@@ -528,7 +528,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                      SCIPdebugMessage(" -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut));
-                     /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
                      success = FALSE;
                   }
                   else
@@ -538,7 +538,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                     /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                      if( !cutislocal )
                      {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,7 +42,8 @@
 SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    assert(stat != NULL);
@@ -66,7 +67,7 @@ SCIP_RETCODE SCIPstatCreate(
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc) );
+   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc, messagehdlr) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -75,6 +76,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->userinterrupt = FALSE;
    (*stat)->userrestart = FALSE;
    (*stat)->inrestart = FALSE;
+   (*stat)->collectvarhistory = TRUE;
    (*stat)->subscipdepth = 0;
 
    SCIPstatReset(*stat);
@@ -112,6 +114,26 @@ SCIP_RETCODE SCIPstatFree(
    BMSfreeMemory(stat);
 
    return SCIP_OKAY;
+}
+
+/** diables the collection of any statistic for a variable */
+void SCIPstatDisableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = FALSE;
+}
+
+/** enables the collection of statistics for a variable */
+void SCIPstatEnableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = TRUE;
 }
 
 /** marks statistics to be able to reset them when solving process is freed */
@@ -317,6 +339,7 @@ void SCIPstatEnforceLPUpdates(
 void SCIPstatUpdateMemsaveMode(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_MEM*             mem                 /**< block memory pools */
    )
 {
@@ -331,8 +354,8 @@ void SCIPstatUpdateMemsaveMode(
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
@@ -340,8 +363,8 @@ void SCIPstatUpdateMemsaveMode(
       else if( stat->memsavemode && memused < 0.5 * set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to standard mode */
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n", 
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;

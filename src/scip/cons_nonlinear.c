@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,6 +16,11 @@
 /**@file   cons_nonlinear.c
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ */
+
+/** @todo check whether the constraint handler correctly distinguishes between constraints added to SCIP and those that
+ *        were only created; if the latter are automatically added to the expressiongraph, they might be enforced although not
+ *        valid
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1739,7 +1744,7 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata->exprgraph != NULL);
 
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
-   linvarssize = SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode);
+   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linvarssize) );
 
@@ -2019,8 +2024,8 @@ SCIP_RETCODE checkCurvature(
 
          if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
          {
-            SCIPwarningMessage("indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
-            SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], NULL) ) );
+            SCIPwarningMessage(scip, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
+            SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], SCIPgetMessagehdlr(scip), NULL) ) );
             SCIPdebugPrintf("\n");
          }
       }
@@ -2079,6 +2084,9 @@ SCIP_RETCODE reformReplaceNode(
          SCIP_CALL( SCIPexprgraphReleaseNode(exprgraph, &consdata->exprgraphnode) );
          consdata->exprgraphnode = replacement;
          SCIPexprgraphCaptureNode(replacement);
+
+         /* since we change the node, also the constraint changes, so ensure that it is presolved again */
+         consdata->ispresolved = FALSE;
       }
    }
    *node = NULL;
@@ -2576,7 +2584,7 @@ SCIP_RETCODE reformulate(
          if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
          {
             SCIPdebugMessage("skip reformulating node %p(%d,%d) = ", (void*)node, SCIPexprgraphGetNodeDepth(node), SCIPexprgraphGetNodePosition(node));
-            SCIPdebug( SCIPexprgraphPrintNode(node, NULL) );
+            SCIPdebug( SCIPexprgraphPrintNode(node, SCIPgetMessagehdlr(scip), NULL) );
             SCIPdebugPrintf(", curv = %s\n", SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(node)));
             ++i;
             continue;
@@ -2591,7 +2599,7 @@ SCIP_RETCODE reformulate(
          /* take action */
          assert(SCIPexprgraphGetNodeCurvature(node) == SCIP_EXPRCURV_UNKNOWN);
          SCIPdebugMessage("think about reformulating %s node %p(%d,%d) = ", SCIPexpropGetName(SCIPexprgraphGetNodeOperator(node)), (void*)node, SCIPexprgraphGetNodeDepth(node), SCIPexprgraphGetNodePosition(node));
-         SCIPdebug( SCIPexprgraphPrintNode(node, NULL) );
+         SCIPdebug( SCIPexprgraphPrintNode(node, SCIPgetMessagehdlr(scip), NULL) );
          SCIPdebugPrintf("\n");
 
          children  = SCIPexprgraphGetNodeChildren(node);
@@ -4325,7 +4333,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* size of LP is exponential in number of variables of tree, so do only for small trees */
    if( nvars > 10 )
    {
-      SCIPwarningMessage("concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+      SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
       return SCIP_OKAY;
    }
 
@@ -4433,7 +4441,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
 
-   SCIP_CALL( SCIPlpiCreate(&lpi, "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
@@ -4451,7 +4459,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    lpret = SCIPlpiSolveDual(lpi);
    if( lpret != SCIP_OKAY )
    {
-      SCIPwarningMessage("solving auxiliary LP for underestimator of concave function returned %d\n", lpret);
+      SCIPwarningMessage(scip, "solving auxiliary LP for underestimator of concave function returned %d\n", lpret);
       goto TERMINATE;
    }
 
@@ -4471,7 +4479,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
     * if numerics is very bad (e.g., st_e32), then even this can happen */
    if( (!doupper && SCIPisFeasGT(scip, lpobj, funcval)) || (doupper && SCIPisFeasGT(scip, funcval, lpobj)) )
    {
-      SCIPwarningMessage("computed cut does not underestimate concave function in refpoint\n");
+      SCIPwarningMessage(scip, "computed cut does not underestimate concave function in refpoint\n");
       goto TERMINATE;
    }
    assert( doupper || SCIPisFeasLE(scip, lpobj, funcval) );
@@ -5012,7 +5020,9 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then cuts that separate the LP solution are added to the sepastore too
+ * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
+ * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
+ * if separatedlpsol is NULL, then cut is added to cutpool only
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -5021,12 +5031,13 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
-   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found, or NULL if not of interest */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_Bool addedtolp;
    SCIP_ROW* row;
    int c;
 
@@ -5064,6 +5075,8 @@ SCIP_RETCODE addLinearizationCuts(
       if( row == NULL )
          continue;
 
+      addedtolp = FALSE;
+
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
@@ -5076,11 +5089,12 @@ SCIP_RETCODE addLinearizationCuts(
          if( -feasibility / MAX(1.0, norm) >= minefficacy )
          {
             *separatedlpsol = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            addedtolp = TRUE;
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE) );
          }
       }
 
-      if( !SCIProwIsLocal(row) )
+      if( !SCIProwIsLocal(row) && !addedtolp )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
       }
@@ -6351,7 +6365,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    }
 
    /* if undefined expressions in exprgraph, then declare problem as infeasible */
-   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
+   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
 
@@ -6609,7 +6623,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {
@@ -7043,7 +7057,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
          else
          {
             *result = SCIP_FEASIBLE;
-            SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
          }
          return SCIP_OKAY;
       }
@@ -7292,7 +7306,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
-   SCIP_Bool          doreformulations;
    int                c;
 
    assert(scip     != NULL);
@@ -7306,15 +7319,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->exprgraph != NULL);
 
-   /* if other presolvers did not find any changes (except for deleted conss) since last call,
-    * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
-    * otherwise, we wait with these
-    */
-   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) &&
-      nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 && nnewchgbds == 0 &&
-      nnewholes == 0 && /* nnewdelconss == 0 && */ nnewaddconss == 0 && nnewupgdconss == 0 && nnewchgcoefs == 0 && nnewchgsides == 0;
-   SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
-
    havegraphchange = FALSE;
 
    if( !conshdlrdata->isremovedfixings )
@@ -7325,7 +7329,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       havegraphchange = TRUE;
    }
 
-   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
+   SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
 
@@ -7428,34 +7432,46 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
 
-   if( doreformulations && conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
+   if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
-      int naddconssbefore;
-
-      naddconssbefore = conshdlrdata->naddedreformconss;
-      SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
-
-      if( conshdlrdata->naddedreformconss > naddconssbefore )
+      /* if other presolvers did not find enough changes for another presolving round,
+       * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
+       * otherwise, we wait with these
+       */
+      if( SCIPisPresolveFinished(scip) )
       {
-         *result = SCIP_SUCCESS;
-         *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
+         int naddconssbefore;
 
-         /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
-         for( c = 0; c < nconss; ++c )
+         SCIPdebugMessage("reformulating expression graph\n");
+
+         naddconssbefore = conshdlrdata->naddedreformconss;
+         SCIP_CALL( reformulate(scip, conshdlr, conss, nconss, &conshdlrdata->naddedreformconss) );
+
+         if( conshdlrdata->naddedreformconss > naddconssbefore )
          {
-            assert(conss[c] != NULL);  /*lint !e794*/
+            *result = SCIP_SUCCESS;
+            *naddconss += conshdlrdata->naddedreformconss - naddconssbefore;
 
-            consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
-            assert(consdata != NULL);
+            /* if expression graph changed, ensure that we apply all presolving techniques (esp. upgrades) in next round again */
+            for( c = 0; c < nconss; ++c )
+            {
+               assert(conss[c] != NULL);  /*lint !e794*/
 
-            consdata->ispresolved = FALSE;
+               consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
+               assert(consdata != NULL);
+
+               consdata->ispresolved = FALSE;
+            }
          }
       }
-   }
+      else
+      {
+         SCIPdebugMessage("presolving will wait with reformulation\n");
 
-   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-   if( !doreformulations )
-      *result = SCIP_DELAYED;
+         /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
+         *result = SCIP_DELAYED;
+      }
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -7715,7 +7731,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
          {
             if( j > 0 || consdata->nonlincoefs[j] != 1.0 )
                SCIPinfoMessage(scip, file, " %+.20g ", consdata->nonlincoefs[j]);
-            SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[j], file) );
+            SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[j], SCIPgetMessagehdlr(scip), file) );
          }
       }
       else if( consdata->exprgraphnode != NULL )
@@ -7727,7 +7743,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
          assert(conshdlrdata != NULL);
          SCIP_CALL( SCIPexprgraphGetTree(conshdlrdata->exprgraph, consdata->exprgraphnode, &tree) );
 
-         SCIP_CALL( SCIPexprtreePrintWithNames(tree, file) );
+         SCIP_CALL( SCIPexprtreePrintWithNames(tree, SCIPgetMessagehdlr(scip), file) );
 
          SCIP_CALL( SCIPexprtreeFree(&tree) );
       }
@@ -8013,7 +8029,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       if( conshdlrdata->nlconsupgrades[i]->nlconsupgd == nonlinconsupgd && conshdlrdata->nlconsupgrades[i]->nodereform == nodereform)
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname); /*lint !e611*/
+         SCIPwarningMessage(scip, "Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", (void*)nonlinconsupgd, (void*)nodereform, conshdlrname); /*lint !e611*/
 #endif
          return SCIP_OKAY;
       }
@@ -8486,7 +8502,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(cons) )
    {
       /* @todo make available */
-      SCIPwarningMessage("SCIPgetViolationNonlinear is not available for active constraints during presolve.\n");
+      SCIPwarningMessage(scip, "SCIPgetViolationNonlinear is not available for active constraints during presolve.\n");
       *violation = SCIP_INVALID;
       return SCIP_OKAY;
    }

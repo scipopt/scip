@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -230,13 +230,6 @@ int main(int argc, char** argv)
 {
    SCIP* scip = NULL;
 
-   /***********************
-    * Version information *
-    ***********************/
-
-   SCIPprintVersion(NULL);
-   cout << endl;
-
    cout << "Solving the vehicle routing problem using SCIP." << endl;
    cout << "Implemented by Andreas Bley." << endl << endl;
 
@@ -293,6 +286,13 @@ int main(int argc, char** argv)
 
    /* initialize SCIP environment */
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /***********************
+    * Version information *
+    ***********************/
+
+   SCIPprintVersion(scip, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
 
    /* include default plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );

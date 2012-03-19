@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,8 @@
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Marc Pfetsch
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -224,7 +226,7 @@ SCIP_RETCODE readXMLSol(
    
    /* find variable sections */
    tag = "variables";
-   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 2);
+   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
@@ -288,7 +290,7 @@ SCIP_RETCODE readXMLSol(
          nread = sscanf(varvalue, "%lf", &value);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
+            SCIPwarningMessage(scip, "invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
             error = TRUE;
             break;
          }

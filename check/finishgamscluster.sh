@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -14,10 +14,22 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-if test -d $GMSDIR
+if test -z "$GMSDIR"
+then
+  echo "Error: finishgamscluster.sh called with empty GMSDIR variable."
+  exit 0
+fi
+
+if test -d "$GMSDIR"
 then
   rm $GMSDIR/*
   rmdir $GMSDIR
+fi
+
+if test -z "$EVALFILE"
+then
+  echo "Error: finishgamscluster.sh called with empty EVALFILE variable."
+  exit 0
 fi
 
 ./evalcheck_gamscluster.sh -r $EVALFILE

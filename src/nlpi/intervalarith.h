@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,6 +24,7 @@
 #define __SCIP_INTERVALARITH_HPP__
 
 #include "scip/intervalarith.h"
+#include "scip/pub_message.h"
 
 /* In some cases, a user may need the SCIPInterval class to be defined in some namespace.
  * To allow this, the symbol SCIPInterval_NAMESPACE should be defined to the name of that namespace
@@ -248,7 +249,7 @@ SCIPInterval cos(
    )
 {
    /* @todo implement cosinus for intervals */
-   SCIPwarningMessage("Cosinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPerrorMessage("Cosinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -328,7 +329,7 @@ SCIPInterval sin(
    )
 {
    /* @todo implement sinus for intervals */
-   SCIPwarningMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPerrorMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -392,7 +393,7 @@ SCIPInterval function(                                                          
    const SCIPInterval&   x                   /**< operand */                    \
    )                                                                            \
 {                                                                               \
-   SCIPwarningMessage("Error: " #function " not implemented for intervals.\n"); \
+   SCIPerrorMessage("Error: " #function " not implemented for intervals.\n");   \
    return SCIPInterval();                                                       \
 }
 

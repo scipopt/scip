@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -345,6 +345,7 @@ SCIP_RETCODE applyCliqueFixings(
 
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
+
       if( *cutoff )
          break;
 
@@ -390,8 +391,8 @@ SCIP_RETCODE applyCliqueFixings(
    assert(*cutoff || (nbinvars - v == ncliques - c) || (v == nbinvars && (c == ncliques || c == ncliques - 1)));
 
    SCIPdebugMessage("fixed %d of %d variables in probing\n", v, nbinvars);
-   SCIPdebugMessage("worked %d of %d cliques in probing\n", c, ncliques);
-   SCIPdebugMessage("was probing cutoff ? = %u \n", *cutoff);
+   SCIPdebugMessage("applied %d of %d cliques in probing\n", c, ncliques);
+   SCIPdebugMessage("probing was %sfeasible\n", (*cutoff) ? "in" : "");
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("clique heuristic rounded %d solutions and tried %d of them\n", nsolsround, nsolstried);
 #endif
@@ -675,6 +676,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       assert(probingdepthofonefix > 0);
 
       SCIP_CALL( SCIPbacktrackProbing(scip, probingdepthofonefix - 1) );
+
       /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
       SCIP_CALL( SCIPfixVarProbing(scip, onefixvars[nonefixvars - 1], 0.0) );
 
@@ -705,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
+            SCIPwarningMessage(scip, "Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
                retstat);
          }
       }
@@ -904,7 +906,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          retstat = SCIPpresolve(subscip);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
+            SCIPwarningMessage(scip, "Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
          }
       }
 #else
@@ -930,7 +932,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             retstat = SCIPsolve(subscip);
             if( retstat != SCIP_OKAY )
             {
-               SCIPwarningMessage("Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
+               SCIPwarningMessage(scip, "Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
             }
          }
 #else

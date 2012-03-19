@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -330,7 +330,7 @@ void checkSolutionOrig(
    /* check return code manually */
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       SCIPABORT();
    }
 
@@ -1555,7 +1555,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 /** transforms constraint data into data belonging to the transformed problem */
 #define consTransCountsols NULL
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpCountsols NULL
 
 /** separation method of constraint handler for LP solutions */
@@ -1658,7 +1658,7 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
    {
       if( !conshdlrdata->warning )
       {
-         SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+         SCIPwarningMessage(scip, "a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
          conshdlrdata->warning = TRUE;
       }
 
@@ -2469,7 +2469,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    }
    else
    {
-      SCIPdispLongint(file, sols, DISP_SOLS_WIDTH);
+      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, sols, DISP_SOLS_WIDTH);
    }
 
    return SCIP_OKAY;
@@ -2494,7 +2494,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
 #endif
 
-   SCIPdispLongint(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
 
    return SCIP_OKAY;
 }

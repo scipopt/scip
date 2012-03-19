@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,7 +75,7 @@
 #define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
                                          *   to best node's dual bound for separating knapsack cuts */
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
-#define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify knapsacks */
+#define DEFAULT_SIMPLIFYINEQUALITIES TRUE/**< should presolving try to simplify knapsacks */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in solving process */
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for knapsack relaxation */
@@ -731,10 +731,10 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of knapsack constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
@@ -757,7 +757,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %"SCIP_LONGINT_FORMAT"): ", 
          SCIPconsGetName(cons), consdata->capacity);
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
    }
 
@@ -4341,7 +4341,7 @@ SCIP_RETCODE mergeMultiples(
 }
 
 /** in case the knapsack constraint is independent of every else, solve the knapsack problem (exactly) and apply the
- *  fixings (dual reductions) 
+ *  fixings (dual reductions)
  */
 static
 SCIP_RETCODE dualPresolving(
@@ -4362,8 +4362,8 @@ SCIP_RETCODE dualPresolving(
    SCIP_Bool infeasible;
    SCIP_Bool tightened;
    SCIP_Bool applicable;
-   int nsolitems;      
-   int nnonsolitems;      
+   int nsolitems;
+   int nnonsolitems;
    int nvars;
    int v;
 
@@ -4371,17 +4371,17 @@ SCIP_RETCODE dualPresolving(
 
    /* constraints for which the check flag is set to FALSE, did not contribute to the lock numbers; therefore, we cannot
     * use the locks to decide for a dual reduction using this constraint; for example after a restart the cuts which are
-    * added to the problems have the check flag set to FALSE 
+    * added to the problems have the check flag set to FALSE
     */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
    vars = consdata->vars;
-      
+
    SCIP_CALL( SCIPallocBufferArray(scip, &profits, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &items, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solitems, nvars) );
@@ -4390,27 +4390,27 @@ SCIP_RETCODE dualPresolving(
    applicable = TRUE;
 
    /* check if we can apply the dual reduction; this can be done if the knapsack has the only locks on this constraint;
-    * collect object values which are the profits of the knapsack problem 
+    * collect object values which are the profits of the knapsack problem
     */
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       SCIP_Bool negated;
-      
+
       var = vars[v];
       assert(var != NULL);
 
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
-      
-      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 ) 
+
+      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 )
       {
          applicable = FALSE;
          break;
       }
 
       negated = FALSE;
-      
+
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
       assert(SCIPvarIsActive(var));
@@ -4420,11 +4420,11 @@ SCIP_RETCODE dualPresolving(
       else
          profits[v] = -SCIPvarGetObj(var);
 
-      SCIPdebugMessage("variable <%s> -> item size %"SCIP_LONGINT_FORMAT", profit <%g>\n", 
+      SCIPdebugMessage("variable <%s> -> item size %"SCIP_LONGINT_FORMAT", profit <%g>\n",
          SCIPvarGetName(vars[v]), consdata->weights[v], profits[v]);
       items[v] = v;
    }
-   
+
    if( applicable )
    {
       SCIP_Bool success;
@@ -4433,53 +4433,189 @@ SCIP_RETCODE dualPresolving(
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       /* solve knapsack problem exactly */
-      SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity, 
+      SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity,
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
 
-      if( !success )
-         goto TERMINATE;
-      
-      /* apply solution of the knapsack as dual reductions */
-      for( v = 0; v < nsolitems; ++v )
+      if( success )
       {
          SCIP_VAR* var;
-         
-         var = vars[solitems[v]];
-         assert(var != NULL);
-         
-         SCIPdebugMessage("variable <%s> only locked up in knapsack constraints: dual presolve <%s>[%.15g,%.15g] >= 1.0\n",
-            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         SCIP_CALL( SCIPtightenVarLb(scip, var, 1.0, TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-         assert(tightened);
-         (*nfixedvars)++;
-      }
-      
-      for( v = 0; v < nnonsolitems; ++v )
-      {
-         SCIP_VAR* var;
-         
-         var = vars[nonsolitems[v]];
-         assert(var != NULL);
 
-         SCIPdebugMessage("variable <%s> has no down locks: dual presolve <%s>[%.15g,%.15g] <= 0.0\n",
-            SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-         SCIP_CALL( SCIPtightenVarUb(scip, var, 0.0, TRUE, &infeasible, &tightened) );
-         assert(!infeasible);
-         assert(tightened);
-         (*nfixedvars)++;
-      }
+         /* apply solution of the knapsack as dual reductions */
+         for( v = 0; v < nsolitems; ++v )
+         {
+            var = vars[solitems[v]];
+            assert(var != NULL);
 
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      (*ndelconss)++;
-      (*deleted) = TRUE;
+            SCIPdebugMessage("variable <%s> only locked up in knapsack constraints: dual presolve <%s>[%.15g,%.15g] >= 1.0\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            SCIP_CALL( SCIPtightenVarLb(scip, var, 1.0, TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
+            assert(tightened);
+            (*nfixedvars)++;
+         }
+
+         for( v = 0; v < nnonsolitems; ++v )
+         {
+            var = vars[nonsolitems[v]];
+            assert(var != NULL);
+
+            SCIPdebugMessage("variable <%s> has no down locks: dual presolve <%s>[%.15g,%.15g] <= 0.0\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            SCIP_CALL( SCIPtightenVarUb(scip, var, 0.0, TRUE, &infeasible, &tightened) );
+            assert(!infeasible);
+            assert(tightened);
+            (*nfixedvars)++;
+         }
+
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+         (*deleted) = TRUE;
+      }
    }
-   
- TERMINATE:
+
    SCIPfreeBufferArray(scip, &nonsolitems);
    SCIPfreeBufferArray(scip, &solitems);
    SCIPfreeBufferArray(scip, &items);
    SCIPfreeBufferArray(scip, &profits);
+
+   return SCIP_OKAY;
+}
+
+/** check if the knapsack constraint is parallel to objective function; if so update the cutoff bound and avoid that the
+ *  constraint enters the LP by setting the initial and separated flag to FALSE
+ */
+static
+SCIP_RETCODE checkParallelObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Real offset;
+   SCIP_Real scale;
+   SCIP_Real objval;
+   SCIP_Bool applicable;
+   SCIP_Bool negated;
+   int nobjvars;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+   nobjvars = SCIPgetNObjVars(scip);
+
+   /* check if the knapsack constraints has the same number of variables as the objective function and if the initial
+    * and/or separated flag is set to FALSE
+    */
+   if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   applicable = TRUE;
+   offset = 0.0;
+   scale = 1.0;
+
+   for( v = 0; v < nvars && applicable; ++v )
+   {
+      negated = FALSE;
+      var = vars[v];
+      assert(vars != NULL);
+
+      if( SCIPvarIsNegated(var) )
+      {
+         negated = TRUE;
+         var = SCIPvarGetNegatedVar(var);
+         assert(var != NULL);
+      }
+
+      objval = SCIPvarGetObj(var);
+
+      /* if a variable has a zero objective coefficient the knapsack constraint is not parallel to objective function */
+      if( SCIPisZero(scip, objval) )
+         applicable = FALSE;
+      else
+      {
+         SCIP_Real weight;
+
+         weight = (SCIP_Real)consdata->weights[v];
+
+         if( negated )
+         {
+            if( v == 0 )
+            {
+               /* the first variable defines the scale */
+               scale = weight / -objval;
+
+               offset += weight;
+            }
+            else if( SCIPisEQ(scip, -objval * scale, weight) )
+               offset += weight;
+            else
+               applicable = FALSE;
+         }
+         else if( v == 0 )
+         {
+            /* the first variable define the scale */
+            scale = weight / objval;
+         }
+         else if( !SCIPisEQ(scip, objval * scale, weight) )
+            applicable = FALSE;
+      }
+   }
+
+   if( applicable )
+   {
+      /* avoid that the knapsack constraint enters the LP since it is parallel to the objective function */
+      SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
+
+      if( SCIPisPositive(scip, scale) )
+      {
+         SCIP_Real cutoffbound;
+
+         cutoffbound = (consdata->capacity - offset) / scale;
+
+         /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
+          * still excepted
+          */
+         cutoffbound += SCIPcutoffbounddelta(scip);
+
+         SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+            SCIPconsGetName(cons), cutoffbound);
+
+         if( cutoffbound < SCIPgetCutoffbound(scip) )
+         {
+            SCIPdebugMessage("update cutoff bound <%g>\n", cutoffbound);
+
+            SCIP_CALL( SCIPupdateCutoffbound(scip, cutoffbound) );
+         }
+         else
+         {
+            /* in case the cutoff bound is worse then currently known one we avoid additionaly enforcement and
+             * propagation
+             */
+            SCIP_CALL( SCIPsetConsEnforced(scip, cons, FALSE) );
+            SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
+         }
+      }
+      else
+      {
+         SCIP_Real dualbound;
+
+         assert(SCIPisNegative(scip, scale) );
+
+         dualbound = (consdata->capacity - offset) / scale;
+
+         SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a lower bound <%g>\n",
+            SCIPconsGetName(cons), dualbound);
+
+         SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -8237,7 +8373,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
@@ -8623,18 +8759,26 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( cutoff )
             break;
 
-         if( SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
+         if( SCIPconsIsActive(cons) )
          {
-            /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the dual reduction */
-            SCIP_CALL( dualPresolving(scip, cons, nchgbds, ndelconss, &redundant) );
-            if( redundant )
-               continue;
+            if( conshdlrdata->dualpresolving )
+            {
+               /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the
+                * dual reduction
+                */
+               SCIP_CALL( dualPresolving(scip, cons, nchgbds, ndelconss, &redundant) );
+               if( redundant )
+                  continue;
+            }
+
+            /* check if knapsack constraint is parallel to objective function */
+            SCIP_CALL( checkParallelObjective(scip, cons) );
          }
       }
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && !consdata->presolved )
          firstchange = c;
-   } 
+   }
 
    /* preprocess pairs of knapsack constraints */
    if( !cutoff && conshdlrdata->presolusehashing ) 
@@ -8996,7 +9140,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsKnapsack)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nvars )
+   if( varssize < consdata->nvars )
       (*success) = FALSE;
    else
    {
@@ -9291,6 +9435,38 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    assert(consdata != NULL);
 
    return consdata->capacity;
+}
+
+/** changes capacity of the knapsack constraint
+ *
+ *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
+ */
+SCIP_RETCODE SCIPchgCapacityKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Longint          capacity            /**< new capacity of knapsack */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("method can only be called during problem creation stage\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   consdata->capacity = capacity;
+
+   return SCIP_OKAY;
 }
 
 /** gets the number of items in the knapsack constraint */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,8 +30,8 @@
 #include <readline/history.h>
 #endif
 
+#include "scip/scip.h"
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/pub_misc.h"
@@ -155,7 +155,7 @@ SCIP_RETCODE readLine(
 #endif
 
       /* display prompt */
-      SCIPmessagePrintDialog(prompt);
+      printf("%s", prompt);
 
       /* read line from stdin */
 #ifndef NDEBUG
@@ -974,7 +974,7 @@ SCIP_RETCODE SCIPdialogDisplayMenu(
    }
 
    if( dialog->nsubdialogs == 0 )
-      SCIPmessagePrintDialog("<no options available>\n");
+      SCIPdialogMessage(scip, NULL, "<no options available>\n");
 
    return SCIP_OKAY;
 }
@@ -994,11 +994,11 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
    else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
-   SCIPmessagePrintDialog("  %-21s ", name);
+   SCIPdialogMessage(scip, NULL, "  %-21s ", name);
    if( strlen(name) > 21 )
    {
       /* break the line, and start the description in the next line */
-      SCIPmessagePrintDialog("\n                   -->  ");
+      SCIPdialogMessage(scip, NULL, "\n                   -->  ");
    }
 
    /* display the dialog's description */
@@ -1007,8 +1007,8 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
       SCIP_CALL( dialog->dialogdesc(scip, dialog) );
    }
    else
-      SCIPmessagePrintDialog("%s",dialog->desc);
-   SCIPmessagePrintDialog("\n");
+      SCIPdialogMessage(scip, NULL, "%s",dialog->desc);
+   SCIPdialogMessage(scip, NULL, "\n");
 
    return SCIP_OKAY;
 }

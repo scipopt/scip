@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// #define SCIP_DEBUG
-// #define SCIP_WRITEPROB
-// #define SCIP_OUTPUT
+/* #define SCIP_DEBUG */
+/* #define SCIP_WRITEPROB */
+/* #define SCIP_OUTPUT */
 /**@file   sepa_cgmip.c
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
@@ -46,7 +46,7 @@
  *   not as much as in the first version) has been taken to create a valid cut.
  *
  * The computation time of the separation MIP is limited as follows:
- * - There is a node limit (parameter @a nodelimit).
+ * - There is a node limit (parameters @a minnodelimit and @a maxnodelimit).
  * - There is a time limit (parameter @a timelimit).
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
@@ -82,10 +82,11 @@
 #define DEFAULT_MAXROUNDSROOT        50 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXDEPTH             -1 /**< maximal depth at which the separator is applied */
 #define DEFAULT_DECISIONTREE      FALSE /**< Use decision tree to turn separation on/off? */
-#define DEFAULT_TIMELIMIT         500.0 /**< time limit for sub-MIP */
+#define DEFAULT_TIMELIMIT          1e20 /**< time limit for sub-MIP (set to infinity in order to be deterministic) */
 #define DEFAULT_MEMORYLIMIT        1e20 /**< memory limit for sub-MIP */
 #define DEFAULT_CUTCOEFBND       1000.0 /**< bounds on the values of the coefficients in the CG-cut */
-#define DEFAULT_NODELIMIT       10000LL /**< node limit for sub-MIP */
+#define DEFAULT_MINNODELIMIT      500LL /**< minimum number of nodes considered for sub-MIP (-1: unlimited) */
+#define DEFAULT_MAXNODELIMIT     5000LL /**< maximum number of nodes considered for sub-MIP (-1: unlimited) */
 #define DEFAULT_ONLYACTIVEROWS    FALSE /**< Use only active rows to generate cuts? */
 #define DEFAULT_MAXROWAGE            -1 /**< maximal age of rows to consider if onlyactiverows is false */
 #define DEFAULT_ONLYRANKONE       FALSE /**< Separate rank 1 inequalities? */
@@ -144,7 +145,8 @@ struct SCIP_SepaData
    SCIP_Bool             decisiontree;       /**< Use decision tree to turn separation on/off? */
    SCIP_Real             timelimit;          /**< time limit for subscip */
    SCIP_Real             memorylimit;        /**< memory limit for subscip */
-   SCIP_Longint          nodelimit;          /**< node limit for subscip */
+   SCIP_Longint          minnodelimit;       /**< minimum number of nodes considered for sub-MIP (-1: unlimited) */
+   SCIP_Longint          maxnodelimit;       /**< maximum number of nodes considered for sub-MIP (-1: unlimited) */
    SCIP_Real             cutcoefbnd;         /**< bounds on the values of the coefficients in the CG-cut */
    SCIP_Bool             onlyactiverows;     /**< Use only active rows to generate cuts? */
    int                   maxrowage;          /**< maximal age of rows to consider if onlyactiverows is false */
@@ -1664,7 +1666,7 @@ SCIP_RETCODE subscipSetParams(
    assert( subscip != NULL );
 
    /* set objective limit, if no corresponding constraint has been added */
-   if ( ! sepadata->addviolationcons )
+   if ( ! sepadata->addviolationcons && ! sepadata->addviolconshdlr )
    {
       SCIP_CALL( SCIPsetObjlimit(subscip, MINEFFICACY) );
    }
@@ -1740,6 +1742,7 @@ SCIP_RETCODE solveSubscip(
    SCIP_STATUS status;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
+   SCIP_Longint nodelimit;
 
    assert( scip != NULL );
    assert( sepadata != NULL );
@@ -1782,8 +1785,18 @@ SCIP_RETCODE solveSubscip(
       return SCIP_OKAY;
    }
 
-   /* set nodelimit */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", sepadata->nodelimit) );
+   /* set nodelimit for subproblem */
+   if ( sepadata->minnodelimit < 0 || sepadata->maxnodelimit < 0 )
+      nodelimit = SCIP_LONGINT_MAX;
+   else
+   {
+      assert( sepadata->minnodelimit >= 0 && sepadata->maxnodelimit >= 0 );
+      nodelimit = SCIPgetNLPIterations(scip);
+      nodelimit = MAX(sepadata->minnodelimit, nodelimit);
+      nodelimit = MIN(sepadata->maxnodelimit, nodelimit);
+   }
+   assert( nodelimit >= 0 );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
@@ -3452,9 +3465,13 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "memory limit for sub-MIP",
          &sepadata->memorylimit, TRUE, DEFAULT_MEMORYLIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "separating/cgmip/nodelimit",
-         "node limit for sub-MIP (-1: unlimited)",
-         &sepadata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
+         "separating/cgmip/minnodelimit",
+         "minimum number of nodes considered for sub-MIP (-1: unlimited)",
+         &sepadata->minnodelimit, FALSE, DEFAULT_MINNODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "separating/cgmip/maxnodelimit",
+         "maximum number of nodes considered for sub-MIP (-1: unlimited)",
+         &sepadata->maxnodelimit, FALSE, DEFAULT_MAXNODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cgmip/cutcoefbnd",
          "bounds on the values of the coefficients in the CG-cut",

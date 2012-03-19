@@ -37,6 +37,40 @@ interface
 - new method SCIPisUpdateUnreliable() to check whether an iteratively updated value should be recomputed from scratch
   (e.g., for activities; uses new parameter misc/num_recompfac)
 - new method SCIPgetActiveVars() in scip.{h,c}, which returns for a given array of variables the active counterparts
+- added method SCIPgetNObjVars() which returns the number of variables which have a non-zero objective coefficient
+- new method SCIPupdateCutoffbound() which can be used to pass a cutoff bound
+- new method SCIPchgCapacityKnapsack() which can be used to change the capacity of a knapsack constraint
+- new method SCIPconsIsAdded() which returns whether a constraint was already added to a SCIP instance
+- new method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the current
+  presolving round, given no further reductions will be found; can be used to ensure that a presolver is called very late
+- new methods SCIPenableVarHistory() and SCIPdisableVarHistory() which can be used to turn off and on the collection
+  of variables statistics which is used for example for branching
+- allowed to start diving mode even if LP is not flushed, not solved, or not solved to optimality
+- changed the message handler system within SCIP heavily such that it is thread save
+- the follwing methods need additionally the SCIP pointer as parameter to make the output thread save:
+  SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr(), and SCIPwarningMessage()
+- the following methods additionally need a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
+  handler methods (see pub_message.h), SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
+- new method SCIPsetMessagehdlrFree() which frees the current instance message handler and adds the given one
+- new method SCIPsetMessagehdlrLogfile() which can be used to write into a log file
+- new method SCIPsetMessagehdlrQuiet() which can be used to turn the screen output on and off
+- removed method SCIPcreateMesshdlr(), please use SCIPmessagehdlrCreate() (see pub_message.c)
+- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrFree() (see pub_message.c)
+- the error messages are not handled via the message handler anymore; per default the error message a written to stderr
+- the error printing method can be replaced using the method SCIPmessageSetErrorPrinting(); the default error message
+  printing can be recoverd via SCIPmessageSetErrorPrintingDefault(), (see pub_message.h)
+- method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
+- since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
+  changes; see pub_message.h and type_message.h.
+- removed SCIPparamSetBool(), please use SCIPchgBoolParam()
+- removed SCIPparamSetInt(), please use SCIPchgIntParam()
+- removed SCIPparamSetLongint(), please use SCIPchgLongintParam()
+- removed SCIPparamSetReal(), please use SCIPchgRealParam()
+- removed SCIPparamSetChar(), please use SCIPchgCharParam()
+- removed SCIPparamSetString(), please use SCIPchgStringParam()
+- remove SCIPcolPrint() and SCIProwPrint(), please use SCIPprintCol() SCIPprintRow() see scip.h
+- new method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a source
+  string to a destination string or until it hits a stoping character
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -62,16 +96,29 @@ performance improvements:
 - automatically turn off separation in sepa_oddcycle if it was too unsuccessful within the last calls
 - use faster Dijkstra variants in sepa_oddcycle
 - improved pseudo objective propagator
+- streamlined initlp functions in cons_indicator, cons_sos1, cons_sos2 (add rows only if needed)
+- added clique presolving for and-constraints, which checks if two operands or one operand and the resultant are in a
+  clique and then fixes the resultant to 0 and in the former case we can delete the and-constraint too
+- improved probing by ordering the variables differently and applying the one-branch before the zero-branch
+- improved lp-, mps-, opb-reading time
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
+- added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
+- added new presolver gateextraction, which tries to find and-gates/constraints with two operands which are linearized
+  e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
+  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1))
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
+- fixed bug with strong branching with the LP status for conflict analysis
+- fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
+- fixed bug in shiftandpropagate w.r.t. SCIPconstructLP() which can have the side effect that variables are created
+- fixed bug w.r.t. adding a value to the objective offset of the transformed problem
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -91,6 +138,10 @@ parameters:
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+  separating/cgmip/nodelimit.
+- new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
+  only extract set-partitioning and no and-constraints
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -100,6 +151,10 @@ features:
 - it is now possible to add an offset for the original problem instance, all original solutions will be initialized with
   this value and updated, when the offset is changed
 - added clique presolving for xor constraints
+- time for initpre and exitpre methods is now also measured in presolving time
+- digraph structure added to misc.c and pub_misc.h that can be used to handle directed graphs, compute undirected
+  components in the graph, and sort these components (almost) topologically
+- beta-version of a MATLAB interface can be found under interfaces/matlab
 
 SCIP version 2.1.2
 ==================
@@ -116,10 +171,17 @@ fixed bugs:
   process instead of the initpre process, this was to late because you might change the status in presolving which lead
   to an assert()
 - fixed issue if a primal solution leads to a cutoff of the current focus node
+- fix compilation issues with zlib 1.2.6
+- fixed bug in NLP representation of abspower constraints handling (x+a)^2 with nonzero a
+- fixed bug parsing an and-constraint in cip format
+- fixed bug in cons_setppc, did not handle new constraints with inactive variables
+- fixed bug in heur_oneopt.c which forgot to check LP rows if local rows are present
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
   to exponential growth in running time
+- force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
+  optimality for convex NLPs
 
 SCIP version 2.1.1
 ==================
@@ -158,6 +220,7 @@ fixed bugs:
 - gams writer now also substitutes $-sign from variable/equation names
 - fixed bug in SCIPsortedvecDelPos...() templates
 - fixed bug in heur_shiftandpropagate.c concerning the treatment of unbounded variables
+- workaround for trying to add variable bounds with to small coefficients
 
 parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)

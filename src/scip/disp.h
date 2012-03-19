@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,6 +54,7 @@ extern
 SCIP_RETCODE SCIPdispCreate(
    SCIP_DISP**           disp,               /**< pointer to store display column */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of display column */
    const char*           desc,               /**< description of display column */
@@ -120,6 +121,7 @@ SCIP_RETCODE SCIPdispOutput(
 extern
 SCIP_RETCODE SCIPdispPrintLine(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */

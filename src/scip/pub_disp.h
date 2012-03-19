@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -99,6 +99,7 @@ SCIP_Bool SCIPdispIsInitialized(
 /** displays a long integer in decimal form fitting in a given width */
 extern
 void SCIPdispLongint(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    SCIP_Longint          val,                /**< value to display */
    int                   width               /**< width to fit into */
@@ -107,6 +108,7 @@ void SCIPdispLongint(
 /** displays an integer in decimal form fitting in a given width */
 extern
 void SCIPdispInt(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    int                   val,                /**< value to display */
    int                   width               /**< width to fit into */
@@ -115,6 +117,7 @@ void SCIPdispInt(
 /** displays a time value fitting in a given width */
 extern
 void SCIPdispTime(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output stream */
    SCIP_Real             val,                /**< value in seconds to display */
    int                   width               /**< width to fit into */

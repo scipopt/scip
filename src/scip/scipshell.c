@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,72 +26,11 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
+#include "scip/message_default.h"
 
 /*
  * Message Handler
  */
-
-/** message handler data */
-struct SCIP_MessagehdlrData
-{
-   FILE*                 logfile;            /**< log file where to copy messages into */
-   SCIP_Bool             quiet;              /**< should screen messages be suppressed? */
-};
-
-/** prints a message to the given file stream and writes the same message to the log file */
-static
-void logMessage(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file,               /**< file stream to print message into */
-   const char*           msg                 /**< message to print */
-   )
-{
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-
-   if( !messagehdlrdata->quiet || (file != stdout && file != stderr) )
-   {
-      fputs(msg, file);
-      fflush(file);
-   }
-   if( messagehdlrdata->logfile != NULL && (file == stdout || file == stderr) )
-   {
-      fputs(msg, messagehdlrdata->logfile);
-      fflush(messagehdlrdata->logfile);
-   }
-}
-
-/** error message print method of message handler */
-static
-SCIP_DECL_MESSAGEERROR(messageErrorLog)
-{
-   logMessage(messagehdlr, file, msg);
-}
-
-/** warning message print method of message handler */
-static
-SCIP_DECL_MESSAGEWARNING(messageWarningLog)
-{
-   logMessage(messagehdlr, file, msg);
-}
-
-/** dialog message print method of message handler */
-static
-SCIP_DECL_MESSAGEDIALOG(messageDialogLog)
-{
-   logMessage(messagehdlr, file, msg);
-}
-
-/** info message print method of message handler */
-static
-SCIP_DECL_MESSAGEINFO(messageInfoLog)
-{
-   logMessage(messagehdlr, file, msg);
-}
-
-
 
 static
 SCIP_RETCODE readParams(
@@ -120,8 +59,13 @@ SCIP_RETCODE fromCommandLine(
     * Problem Creation *
     ********************/
 
-   SCIPinfoMessage(scip, NULL, "\nread problem <%s>\n", filename);
-   SCIPinfoMessage(scip, NULL, "============\n\n");
+   /* @note The message handler should be only fed line by line such the message has the chance to add string in front
+    *       of each message
+    */
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
+   SCIPinfoMessage(scip, NULL, "============\n");
+   SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
@@ -132,6 +76,7 @@ SCIP_RETCODE fromCommandLine(
    /* solve problem */
    SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
    SCIPinfoMessage(scip, NULL, "=============\n\n");
+
    SCIP_CALL( SCIPsolve(scip) );
 
    SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
@@ -170,7 +115,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    /********************
     * Parse parameters *
     ********************/
-   
+
    quiet = FALSE;
    paramerror = FALSE;
    interactive = FALSE;
@@ -275,89 +220,55 @@ SCIP_RETCODE SCIPprocessShellArguments(
 
    if( !paramerror )
    {
-      SCIP_MESSAGEHDLR* messagehdlr;
-      SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-      SCIP_Bool error;
-
       /***********************************
        * create log file message handler *
        ***********************************/
 
-      messagehdlr = NULL;
-      messagehdlrdata = NULL;
-      error = FALSE;
-      if( logname != NULL || quiet )
+      if( quiet )
       {
-         SCIP_CALL( SCIPallocMemory(scip, &messagehdlrdata) );
-         if( logname != NULL )
-         {
-            messagehdlrdata->logfile = fopen(logname, "a"); /* append to log file */
-            if( messagehdlrdata->logfile == NULL )
-            {
-               SCIPerrorMessage("cannot open log file <%s> for writing\n", logname);
-               error = TRUE;
-            }
-         }
-         else
-            messagehdlrdata->logfile = NULL;
-         messagehdlrdata->quiet = quiet;
-         SCIP_CALL( SCIPcreateMessagehdlr(&messagehdlr, FALSE, 
-               messageErrorLog, messageWarningLog, messageDialogLog, messageInfoLog,
-               messagehdlrdata) );
-         SCIP_CALL( SCIPsetMessagehdlr(messagehdlr) );
+         SCIPsetMessagehdlrQuiet(scip, quiet);
       }
 
-      if( !error )
+      if( logname != NULL )
       {
-         /***********************************
-          * Version and library information *
-          ***********************************/
-         
-         SCIPprintVersion(NULL);
+         SCIPsetMessagehdlrLogfile(scip, logname);
+      }
+
+      /***********************************
+       * Version and library information *
+       ***********************************/
+
+      SCIPprintVersion(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIPprintExternalCodes(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /*****************
+       * Load settings *
+       *****************/
+
+      if( settingsname != NULL )
+      {
+         SCIP_CALL( readParams(scip, settingsname) );
+      }
+      else if( defaultsetname != NULL )
+      {
+         SCIP_CALL( readParams(scip, defaultsetname) );
+      }
+
+      /**************
+       * Start SCIP *
+       **************/
+
+      if( probname != NULL )
+      {
+         SCIP_CALL( fromCommandLine(scip, probname) );
+      }
+      else
+      {
          SCIPinfoMessage(scip, NULL, "\n");
-
-         SCIPprintExternalCodes(scip, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /*****************
-          * Load settings *
-          *****************/
-
-         if( settingsname != NULL )
-         {
-            SCIP_CALL( readParams(scip, settingsname) );
-         }
-         else if( defaultsetname != NULL )
-         {
-            SCIP_CALL( readParams(scip, defaultsetname) );
-         }
-
-         /**************
-          * Start SCIP *
-          **************/
-
-         if( probname != NULL )
-         {
-            SCIP_CALL( fromCommandLine(scip, probname) );
-         }
-         else
-         {
-            SCIPinfoMessage(scip, NULL, "\n");
-            SCIP_CALL( SCIPstartInteraction(scip) );
-         }
-
-         /******************
-          * Close log file *
-          ******************/
-
-         if( messagehdlrdata != NULL )
-         {
-            SCIP_CALL( SCIPsetDefaultMessagehdlr() );
-            SCIP_CALL( SCIPfreeMessagehdlr(&messagehdlr) );
-            if( messagehdlrdata->logfile != NULL )
-               fclose(messagehdlrdata->logfile);
-            SCIPfreeMemory(scip, &messagehdlrdata);
-         }
+         SCIP_CALL( SCIPstartInteraction(scip) );
       }
    }
    else

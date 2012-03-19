@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -654,13 +654,15 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** constraint display method of constraint handler
  *
- *  The constraint handler should store a representation of the constraint into the given text file.
+ *  The constraint handler can store a representation of the constraint into the given text file. Use the method
+ *  SCIPinfoMessage() to push a string into the file stream.
+
  *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conshdlr        : the constraint handler itself
- *  - cons            : the constraint that should be displayed
- *  - file            : the text file to store the information into
+ * @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
+ *       SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
+ *
+ *  input: - scip : SCIP main data structure - conshdlr : the constraint handler itself - cons : the constraint that
+ *  should be displayed - file : the text file to store the information into
  *
  */
 #define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, FILE* file)
@@ -670,14 +672,14 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  The constraint handler can provide a copy method which copies a constraint from one SCIP data structure into a other
  *  SCIP data structure. If a copy of a constraint is created the constraint has to be captured (The capture is usually
  *  already done due to the creation of the constraint).
- * 
+ *
  *  If the copy process was a one to one the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
  *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a valid TRUE for all
  *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
  *  reductions made in the copied SCIP instance can be transfer to the original SCIP instance. If the valid pointer is
  *  set to TRUE and it was not one to one copy, it might happen that optimal solutions are cut off.
  *
- *  To get a copy of a variable in the target SCIP you should use the function SCIPgetVarCopy(). 
+ *  To get a copy of a variable in the target SCIP you should use the function SCIPgetVarCopy().
  *
  *  input:
  *  - scip            : target SCIP data structure
@@ -713,14 +715,18 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint parsing method of constraint handler
  *
  *  The constraint handler can provide a callback to parse the output created by the display method
- *  (SCIP_DECL_CONSDISABLE) and to create a constraint out of it.
+ *  (\ref SCIP_DECL_CONSPRINT) and to create a constraint out of it.
+ *
+ *  @note For parsing there are several methods which are handy. Have a look at: SCIPparseVarName(),
+ *        SCIPparseVarsList(), SCIPparseVarsLinearsum(), SCIPparseVarsPolynomial(), SCIPstrToRealValue(), and
+ *        SCIPstrCopySection().
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - cons            : pointer to store the created constraint
  *  - name            : name of the constraint
- *  - str             : string to parse 
+ *  - str             : string to parse
  *  - initial         : should the LP relaxation of constraint be in the initial LP?
  *  - separate        : should the constraint be separated during LP processing?
  *  - enforce         : should the constraint be enforced during node processing?
@@ -733,7 +739,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
  *                      if it may be moved to a more global node?
  *  output:
- *  - success         : pointer to store whether the parsing was successful or not 
+ *  - success         : pointer to store whether the parsing was successful or not
  */
 #define SCIP_DECL_CONSPARSE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, \
       const char* name, const char* str, \

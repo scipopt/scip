@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 /** read comand line arguments */
 static
 SCIP_Bool readArguments(
+   SCIP*                 scip,               /**< SCIP pointer */
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    const char**          filename,           /**< file name from arguments */
@@ -74,13 +75,13 @@ SCIP_Bool readArguments(
       {
          if ( *settingsname != NULL )
          {
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          if ( i == argc-1 )
          {
-            SCIPmessagePrintInfo("Error: No setting file name supplied.\n");
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "Error: No setting file name supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          ++i;
@@ -92,8 +93,8 @@ SCIP_Bool readArguments(
       {
          if ( i == argc-1 )
          {
-            SCIPmessagePrintInfo("No time limit supplied.\n");
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "No time limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          ++i;
@@ -105,8 +106,8 @@ SCIP_Bool readArguments(
       {
          if ( i == argc-1 )
          {
-            SCIPmessagePrintInfo("No memory limit supplied.\n");
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "No memory limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          ++i;
@@ -118,8 +119,8 @@ SCIP_Bool readArguments(
       {
          if ( i == argc-1 )
          {
-            SCIPmessagePrintInfo("No node limit supplied.\n");
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "No node limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          ++i;
@@ -131,8 +132,8 @@ SCIP_Bool readArguments(
       {
          if ( i == argc-1 )
          {
-            SCIPmessagePrintInfo("No display frequency supplied.\n");
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "No display frequency supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          ++i;
@@ -144,7 +145,7 @@ SCIP_Bool readArguments(
          /* if filename is already specified */
          if ( *filename != NULL )
          {
-            SCIPmessagePrintInfo("%s\n", usage);
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
             return FALSE;
          }
          *filename = argv[i];
@@ -153,8 +154,8 @@ SCIP_Bool readArguments(
 
    if ( *filename == NULL )
    {
-      SCIPmessagePrintInfo("No filename supplied.\n");
-      SCIPmessagePrintInfo("%s\n", usage);
+      SCIPinfoMessage(scip, NULL, "No filename supplied.\n");
+      SCIPinfoMessage(scip, NULL, "%s\n", usage);
       return FALSE;
    }
 
@@ -175,79 +176,92 @@ int main(
    SCIP_Real memlimit;
    SCIP_Longint nodelimit;
    int dispfreq;
-
-   /* parse command line arguments */
-   if ( ! readArguments(argc, argv, &filename, &settingsname, &timelimit, &memlimit, &nodelimit, &dispfreq) )
-      exit(1);
-   assert( filename != NULL );
-
-   /* output version information */
-   printf("Solving the linear ordering problem using SCIP.\n\n");
-
-   SCIPprintVersion(NULL);
-   printf("\n");
+   int errorcode;
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include default SCIP plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* include linear ordering constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
-
-   /* set time, node, and memory limit */
-   if ( ! SCIPisInfinity(scip, timelimit) )
+   /* parse command line arguments */
+   if( readArguments(scip, argc, argv, &filename, &settingsname, &timelimit, &memlimit, &nodelimit, &dispfreq) )
    {
-      SCIPinfoMessage(scip, NULL, "parameter <limits/time> set to %g\n", timelimit);
-      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
-   }
-   if ( ! SCIPisInfinity(scip, memlimit) )
-      SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", memlimit) );
-   if ( nodelimit < SCIP_LONGINT_MAX )
-      SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", nodelimit) );
-   if ( dispfreq >= 0 )
-      SCIP_CALL( SCIPsetIntParam(scip, "display/freq", dispfreq) );
+      assert( filename != NULL );
 
-   /* check for parameters */
-   if ( settingsname != NULL )
-   {
-      if ( SCIPfileExists(settingsname) )
-      {
-	 printf("reading parameter file <%s> ...\n\n", settingsname);
-	 SCIP_CALL( SCIPreadParams(scip, settingsname) );
-      }
-      else
-      {
-	 SCIPerrorMessage("parameter file <%s> not found - using default parameters.\n", settingsname);
-      }
-   }
+      errorcode = 0;
 
-   /* read problem data */
-   SCIP_CALL( LOPcreateProb(scip, argv[1]) );
-
-   /* generate linear ordering model */
-   SCIP_CALL( LOPgenerateModel(scip) );
-
-   /* print model */
-   if ( LOPgetNElements(scip) <= 10 )
-   {
-      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+      /* output version information */
+      SCIPinfoMessage(scip, NULL, "Solving the linear ordering problem using SCIP.\n");
       SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIPprintVersion(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* include default SCIP plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+      /* include linear ordering constraint handler */
+      SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
+
+      /* set time, node, and memory limit */
+      if ( ! SCIPisInfinity(scip, timelimit) )
+      {
+         SCIPinfoMessage(scip, NULL, "parameter <limits/time> set to %g\n", timelimit);
+         SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
+      }
+      if ( ! SCIPisInfinity(scip, memlimit) )
+      {
+         SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", memlimit) );
+      }
+      if ( nodelimit < SCIP_LONGINT_MAX )
+      {
+         SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", nodelimit) );
+      }
+      if ( dispfreq >= 0 )
+      {
+         SCIP_CALL( SCIPsetIntParam(scip, "display/freq", dispfreq) );
+      }
+
+      /* check for parameters */
+      if ( settingsname != NULL )
+      {
+         if ( SCIPfileExists(settingsname) )
+         {
+            SCIPinfoMessage(scip, NULL, "reading parameter file <%s> ...\n\n", settingsname);
+            SCIP_CALL( SCIPreadParams(scip, settingsname) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "parameter file <%s> not found - using default parameters.\n", settingsname);
+         }
+      }
+
+      /* read problem data */
+      SCIP_CALL( LOPcreateProb(scip, argv[1]) );
+
+      /* generate linear ordering model */
+      SCIP_CALL( LOPgenerateModel(scip) );
+
+      /* print model */
+      if ( LOPgetNElements(scip) <= 10 )
+      {
+         SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+         SCIPinfoMessage(scip, NULL, "\n");
+      }
+
+      /* solve the model */
+      SCIP_CALL( SCIPsolve(scip) );
+
+      /* print statistics */
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+
+      /* SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );*/
+      SCIP_CALL( LOPevalSolution(scip) );
    }
-
-   /* solve the model */
-   SCIP_CALL( SCIPsolve(scip) );
-
-   /* print statistics */
-   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
-
-   /* SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );*/
-   SCIP_CALL( LOPevalSolution(scip) );
+   else
+      errorcode = 1;
 
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
 
-   return 0;
+   return errorcode;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -145,7 +145,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
       nread = sscanf(buffer, format, name);
       if( nread == 0 )
       {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
          return SCIP_READERROR;
       }
 
@@ -164,7 +164,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
       nread = sscanf(buffer, "%d %d %d\n", &capacity, &nitems, &bestsolvalue);
       if( nread < 2 )
       {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
          return SCIP_READERROR;
       }
 
@@ -191,7 +191,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
       nread = sscanf(buffer, "%d\n", &weight);
       if( nread == 0 )
       {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
          error = TRUE;
          break;
       }
@@ -207,7 +207,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
    if( nweights < nitems )
    {
-      SCIPwarningMessage("set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
+      SCIPwarningMessage(scip, "set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
       nitems = nweights;
    }
    

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -56,6 +56,7 @@ struct Scip
    SCIP_SET*             set;                /**< global SCIP settings */
    SCIP_INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
    SCIP_DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler for output handling, or NULL */
    SCIP_CLOCK*           totaltime;          /**< total SCIP running time */
 
    /* PROBLEM */

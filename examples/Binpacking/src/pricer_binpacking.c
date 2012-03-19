@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -578,7 +578,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 
       if( !feasible )
       {
-         SCIPwarningMessage("solution in pricing problem (capacity <%d>) is infeasible\n", capacity); 
+         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%d>) is infeasible\n", capacity);
          continue;
       }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1154,6 +1154,7 @@ void polynomialdataApplyChildmap(
 static
 SCIP_RETCODE polynomialdataExpandMonomialFactor(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data where to expand a monomial */
    int                   monomialpos,        /**< position of monomial which factor to expand */
    int                   factorpos,          /**< position of factor in monomial to expand */
@@ -1189,7 +1190,7 @@ SCIP_RETCODE polynomialdataExpandMonomialFactor(
       if( !EPSISINT(monomial->exponents[factorpos], 0.0) && factorpolynomial->constant < 0.0 )  /*lint !e835*/
       {
          /* if polynomial is a negative constant and our exponent is not integer, then cannot do expansion */
-         SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", factorpolynomial->constant, monomial->exponents[factorpos]);
+         SCIPmessagePrintWarning(messagehdlr, "got negative constant %g to the power of a noninteger exponent %g\n", factorpolynomial->constant, monomial->exponents[factorpos]);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -2039,7 +2040,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
    assert(argvals != NULL);
 
    /* @todo implement SCIPintervalSin */
-   SCIPwarningMessage("exprevalSinInt gives only trivial bounds so far\n");
+   SCIPerrorMessage("exprevalSinInt gives only trivial bounds so far\n");
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
@@ -2068,7 +2069,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
    assert(argvals != NULL);
 
    /* @todo implement SCIPintervalCos */
-   SCIPwarningMessage("exprevalCosInt gives only trivial bounds so far\n");
+   SCIPerrorMessage("exprevalCosInt gives only trivial bounds so far\n");
    SCIPintervalSetBounds(result, -1.0, 1.0);
 
    return SCIP_OKAY;
@@ -4308,6 +4309,7 @@ SCIP_RETCODE exprsimplifyRemovePolynomialUnusedChildren(
 static
 SCIP_RETCODE exprsimplifyFlattenPolynomials(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             eps,                /**< threshold, under which values are treat as 0 */
    int                   maxexpansionexponent/**< maximal exponent for which we still expand non-monomial polynomials */
@@ -4319,7 +4321,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
 
    for( i = 0; i < expr->nchildren; ++i )
    {
-      SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr->children[i], eps, maxexpansionexponent) );
+      SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, messagehdlr, expr->children[i], eps, maxexpansionexponent) );
    }
 
    switch( SCIPexprGetOperator(expr) )
@@ -4432,7 +4434,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
       assert(polynomialdata != NULL);
 
       SCIPdebugMessage("expand factors in expression ");
-      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
       SCIPdebugPrintf("\n");
 
       childmap = NULL;
@@ -4486,7 +4488,8 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
                if( !EPSISINT(monomial->exponents[factorpos], 0.0) && SCIPexprGetOpReal(expr->children[i]) < 0.0 )  /*lint !e835*/
                {
                   /* if constant is negative and our exponent is not integer, then cannot do expansion */
-                  SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
+                  SCIPmessagePrintWarning(messagehdlr, "got negative constant %g to the power of a noninteger exponent %g\n",
+                     SCIPexprGetOpReal(expr->children[i]), monomial->exponents[factorpos]);
                   success = FALSE;
                }
                else
@@ -4565,7 +4568,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
                   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL) ); SCIPdebugPrintf("\n");
                   SCIPdebug( SCIPexprPrint(expr->children[i], NULL, NULL, NULL) ); SCIPdebugPrintf("\n"); */
 
-               SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, maxexpansionexponent, &success) );
+               SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, messagehdlr, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)expr->children[i]->data.data, childmap, maxexpansionexponent, &success) );
 
                if( !success )
                {
@@ -4613,7 +4616,7 @@ SCIP_RETCODE exprsimplifyFlattenPolynomials(
       }
 
       SCIPdebugMessage("-> ");
-      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
       SCIPdebugPrintf("\n");
 
       break;
@@ -6424,6 +6427,7 @@ SCIP_Bool SCIPexprAreEqual(
  */
 SCIP_RETCODE SCIPexprSimplify(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
@@ -6438,19 +6442,19 @@ SCIP_RETCODE SCIPexprSimplify(
    assert(eps >= 0.0);
 
    SCIPdebugMessage("simplify expression: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    SCIP_CALL( exprsimplifyConvertToPolynomials(blkmem, expr) );
 
    SCIPdebugMessage("converted to polynomials: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
-   SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, expr, eps, maxexpansionexponent) );
+   SCIP_CALL( exprsimplifyFlattenPolynomials(blkmem, messagehdlr, expr, eps, maxexpansionexponent) );
 
    SCIPdebugMessage("polynomials flattened: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    if( nlinvars != NULL )
@@ -6459,14 +6463,14 @@ SCIP_RETCODE SCIPexprSimplify(
       SCIP_CALL( exprsimplifySeparateLinearFromPolynomial(blkmem, expr, eps, nvars, nlinvars, linidxs, lincoefs) );
 
       SCIPdebugMessage("separated linear part: ");
-      SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+      SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
       SCIPdebugPrintf("\n");
    }
 
    SCIP_CALL( exprsimplifyUnconvertPolynomials(blkmem, expr) );
 
    SCIPdebugMessage("converted back from polynomials: ");
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
+   SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
@@ -6700,6 +6704,7 @@ void SCIPexprReindexParams(
 /** prints an expression */
 void SCIPexprPrint(
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames,         /**< names of parameters, or NULL for default names */
@@ -6718,11 +6723,11 @@ void SCIPexprPrint(
       if( varnames != NULL )
       {
          assert(varnames[expr->data.intval] != NULL);
-         SCIPmessageFPrintInfo(file, "%s", varnames[expr->data.intval]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s", varnames[expr->data.intval]);
       }
       else
       {
-         SCIPmessageFPrintInfo(file, "var%d", expr->data.intval);
+         SCIPmessageFPrintInfo(messagehdlr, file, "var%d", expr->data.intval);
       }
       break;
 
@@ -6730,68 +6735,68 @@ void SCIPexprPrint(
       if( paramnames != NULL )
       {
          assert(paramnames[expr->data.intval] != NULL);
-         SCIPmessageFPrintInfo(file, "%s", paramnames[expr->data.intval]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s", paramnames[expr->data.intval]);
       }
       else
       {
-         SCIPmessageFPrintInfo(file, "param%d", expr->data.intval );
+         SCIPmessageFPrintInfo(messagehdlr, file, "param%d", expr->data.intval );
       }
       if( paramvals != NULL )
       {
-         SCIPmessageFPrintInfo(file, "[%g]", paramvals[expr->data.intval] );
+         SCIPmessageFPrintInfo(messagehdlr, file, "[%g]", paramvals[expr->data.intval] );
       }
       break;
 
    case SCIP_EXPR_CONST:
       if (expr->data.dbl < 0.0 )
-         SCIPmessageFPrintInfo(file, "(%lf)", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "(%lf)", expr->data.dbl );
       else
-         SCIPmessageFPrintInfo(file, "%lf", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "%lf", expr->data.dbl );
       break;
 
    case SCIP_EXPR_PLUS:
-      SCIPmessageFPrintInfo(file, "(");
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, " + ");
-      SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, " + ");
+      SCIPexprPrint(expr->children[1], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
 
    case SCIP_EXPR_MINUS:
-      SCIPmessageFPrintInfo(file, "(");
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, " - ");
-      SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, " - ");
+      SCIPexprPrint(expr->children[1], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
 
    case SCIP_EXPR_MUL:
-      SCIPmessageFPrintInfo(file, "(");
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, " * ");
-      SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, " * ");
+      SCIPexprPrint(expr->children[1], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
 
    case SCIP_EXPR_DIV:
-      SCIPmessageFPrintInfo(file, "(");
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, " / ");
-      SCIPexprPrint(expr->children[1], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, " / ");
+      SCIPexprPrint(expr->children[1], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
 
    case SCIP_EXPR_REALPOWER:
    case SCIP_EXPR_SIGNPOWER:
-      SCIPmessageFPrintInfo(file, "%s(", exprOpTable[expr->op].name);
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ", %g)", expr->data.dbl);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s(", exprOpTable[expr->op].name);
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ", %g)", expr->data.dbl);
       break;
 
    case SCIP_EXPR_INTPOWER:
-      SCIPmessageFPrintInfo(file, "power(");
-      SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
-      SCIPmessageFPrintInfo(file, ", %d)", expr->data.intval);
+      SCIPmessageFPrintInfo(messagehdlr, file, "power(");
+      SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
+      SCIPmessageFPrintInfo(messagehdlr, file, ", %d)", expr->data.intval);
       break;
 
    case SCIP_EXPR_SQUARE:
@@ -6810,18 +6815,18 @@ void SCIPexprPrint(
    {
       int i;
 
-      SCIPmessageFPrintInfo(file, "%s(", exprOpTable[expr->op].name);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s(", exprOpTable[expr->op].name);
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
+         SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          if( i + 1 < expr->nchildren )
          {
-            SCIPmessageFPrintInfo(file, ", ");
+            SCIPmessageFPrintInfo(messagehdlr, file, ", ");
          }
       }
 
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
    }
 
@@ -6831,26 +6836,26 @@ void SCIPexprPrint(
       switch( expr->nchildren )
       {
       case 0:
-         SCIPmessageFPrintInfo(file, expr->op == SCIP_EXPR_SUM ? "0" : "1");
+         SCIPmessageFPrintInfo(messagehdlr, file, expr->op == SCIP_EXPR_SUM ? "0" : "1");
          break;
       case 1:
-         SCIPexprPrint(expr->children[0], file, varnames, paramnames, paramvals);
+         SCIPexprPrint(expr->children[0], messagehdlr, file, varnames, paramnames, paramvals);
          break;
       default:
       {
          int i;
          const char* opstr = expr->op == SCIP_EXPR_SUM ? " + " : " * ";
 
-         SCIPmessageFPrintInfo(file, "(");
+         SCIPmessageFPrintInfo(messagehdlr, file, "(");
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( i > 0 )
             {
-               SCIPmessageFPrintInfo(file, opstr);
+               SCIPmessageFPrintInfo(messagehdlr, file, opstr);
             }
-            SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
+            SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
-         SCIPmessageFPrintInfo(file, ")");
+         SCIPmessageFPrintInfo(messagehdlr, file, ")");
       }
       }
       break;
@@ -6865,24 +6870,24 @@ void SCIPexprPrint(
 
       if( expr->nchildren == 0 )
       {
-         SCIPmessageFPrintInfo(file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
          break;
       }
 
-      SCIPmessageFPrintInfo(file, "(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( constant != 0.0 )
       {
-         SCIPmessageFPrintInfo(file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
       }
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPmessageFPrintInfo(file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
-         SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+         SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
       }
 
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
    }
 
@@ -6894,36 +6899,36 @@ void SCIPexprPrint(
       quadraticdata = (SCIP_EXPRDATA_QUADRATIC*)expr->data.data;
       assert(quadraticdata != NULL);
 
-      SCIPmessageFPrintInfo(file, "(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->lincoefs[i]);
-            SCIPexprPrint(expr->children[i], file, varnames, paramnames, paramvals);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->lincoefs[i]);
+            SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
-         SCIPmessageFPrintInfo(file, " %+.20g ", quadraticdata->quadelems[i].coef);
-         SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], file, varnames, paramnames, paramvals);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->quadelems[i].coef);
+         SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], messagehdlr, file, varnames, paramnames, paramvals);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
          {
-            SCIPmessageFPrintInfo(file, "^2");
+            SCIPmessageFPrintInfo(messagehdlr, file, "^2");
          }
          else
          {
-            SCIPmessageFPrintInfo(file, " * ");
-            SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx2], file, varnames, paramnames, paramvals);
+            SCIPmessageFPrintInfo(messagehdlr, file, " * ");
+            SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx2], messagehdlr, file, varnames, paramnames, paramvals);
          }
       }
 
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
    }
 
@@ -6934,38 +6939,38 @@ void SCIPexprPrint(
       int i;
       int j;
 
-      SCIPmessageFPrintInfo(file, "(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       polynomialdata = (SCIP_EXPRDATA_POLYNOMIAL*)expr->data.data;
       assert(polynomialdata != NULL);
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(file, "%.20g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
-         SCIPmessageFPrintInfo(file, " %+.20g", monomialdata->coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
-            SCIPmessageFPrintInfo(file, " * ");
+            SCIPmessageFPrintInfo(messagehdlr, file, " * ");
 
-            SCIPexprPrint(expr->children[monomialdata->childidxs[j]], file, varnames, paramnames, paramvals);
+            SCIPexprPrint(expr->children[monomialdata->childidxs[j]], messagehdlr, file, varnames, paramnames, paramvals);
             if( monomialdata->exponents[j] < 0.0 )
             {
-               SCIPmessageFPrintInfo(file, "^(%.20g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.20g)", monomialdata->exponents[j]);
             }
             else if( monomialdata->exponents[j] != 1.0 )
             {
-               SCIPmessageFPrintInfo(file, "^%.20g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%.20g", monomialdata->exponents[j]);
             }
          }
       }
 
-      SCIPmessageFPrintInfo(file, ")");
+      SCIPmessageFPrintInfo(messagehdlr, file, ")");
       break;
    }
 
@@ -7258,6 +7263,7 @@ void SCIPexprtreeGetVarsUsage(
  */
 SCIP_RETCODE SCIPexprtreeSimplify(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    int*                  nlinvars,           /**< buffer to store number of linear variables in linear part, or NULL if linear part should not be separated */
@@ -7284,7 +7290,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
-   SCIP_CALL( SCIPexprSimplify(tree->blkmem, tree->root, eps*eps, maxexpansionexponent, tree->nvars, nlinvars, linidxs, lincoefs) );
+   SCIP_CALL( SCIPexprSimplify(tree->blkmem, messagehdlr, tree->root, eps*eps, maxexpansionexponent, tree->nvars, nlinvars, linidxs, lincoefs) );
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_after) );
@@ -7422,6 +7428,7 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
 /** prints an expression tree */
 void SCIPexprtreePrint(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file for printing, or NULL for stdout */
    const char**          varnames,           /**< names of variables, or NULL for default names */
    const char**          paramnames          /**< names of parameters, or NULL for default names */
@@ -7429,7 +7436,7 @@ void SCIPexprtreePrint(
 {
    assert(tree != NULL);
 
-   SCIPexprPrint(tree->root, file, varnames, paramnames, tree->params);
+   SCIPexprPrint(tree->root, messagehdlr, file, varnames, paramnames, tree->params);
 }
 
 /**@} */
@@ -8112,6 +8119,7 @@ SCIP_RETCODE exprgraphCreateNode(
 static
 void exprgraphPrintNodeExpression(
    SCIP_EXPRGRAPHNODE*   node,               /**< node of expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file to print to, or NULL for stdout */
    const char**          varnames,           /**< variable names, or NULL for generic names */
    SCIP_Bool             printchildrenbounds /**< whether to print bounds of children */
@@ -8126,77 +8134,77 @@ void exprgraphPrintNodeExpression(
    case SCIP_EXPR_VARIDX:
       if( varnames != NULL )
       {
-         SCIPmessageFPrintInfo(file, "%s", (const char*)varnames[node->data.intval]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s", (const char*)varnames[node->data.intval]);
       }
       else
-         SCIPmessageFPrintInfo(file, "x%d", node->data.intval);
+         SCIPmessageFPrintInfo(messagehdlr, file, "x%d", node->data.intval);
       break;
 
    case SCIP_EXPR_CONST:
-      SCIPmessageFPrintInfo(file, "%g", node->data.dbl);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%g", node->data.dbl);
       break;
 
    case SCIP_EXPR_PARAM:
-      SCIPmessageFPrintInfo(file, "param%d", node->data.intval);
+      SCIPmessageFPrintInfo(messagehdlr, file, "param%d", node->data.intval);
       break;
 
    case SCIP_EXPR_PLUS:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "+");
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "+");
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
       break;
 
    case SCIP_EXPR_MINUS:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "-");
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "-");
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
       break;
 
    case SCIP_EXPR_MUL:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "*");
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "*");
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
       break;
 
    case SCIP_EXPR_DIV:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "/");
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "/");
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
       break;
 
    case SCIP_EXPR_SQUARE:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "^2");
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "^2");
       break;
 
    case SCIP_EXPR_REALPOWER:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "^%g", node->data.dbl);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "^%g", node->data.dbl);
       break;
 
    case SCIP_EXPR_SIGNPOWER:
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "sign(c0)|c0[%10g,%10g]|^%g",
+         SCIPmessageFPrintInfo(messagehdlr, file, "sign(c0)|c0[%10g,%10g]|^%g",
             node->children[0]->bounds.inf, node->children[0]->bounds.sup, node->data.dbl);
       else
-         SCIPmessageFPrintInfo(file, "sign(c0)|c0|^%g", node->data.dbl);
+         SCIPmessageFPrintInfo(messagehdlr, file, "sign(c0)|c0|^%g", node->data.dbl);
       break;
 
    case SCIP_EXPR_INTPOWER:
-      SCIPmessageFPrintInfo(file, "c0");
+      SCIPmessageFPrintInfo(messagehdlr, file, "c0");
       if( printchildrenbounds )
-         SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
-      SCIPmessageFPrintInfo(file, "^%d", node->data.intval);
+         SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+      SCIPmessageFPrintInfo(messagehdlr, file, "^%d", node->data.intval);
       break;
 
    case SCIP_EXPR_SQRT:
@@ -8211,13 +8219,13 @@ void exprgraphPrintNodeExpression(
    case SCIP_EXPR_MAX:
    case SCIP_EXPR_ABS:
    case SCIP_EXPR_SIGN:
-      SCIPmessageFPrintInfo(file, "%s", (const char*)SCIPexpropGetName(node->op));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s", (const char*)SCIPexpropGetName(node->op));
       if( printchildrenbounds )
       {
-         SCIPmessageFPrintInfo(file, "(c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, "(c0[%10g,%10g]", node->children[0]->bounds.inf, node->children[0]->bounds.sup);
          if( node->nchildren == 2 )
-            SCIPmessageFPrintInfo(file, ",c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
-         SCIPmessageFPrintInfo(file, ")");
+            SCIPmessageFPrintInfo(messagehdlr, file, ",c1[%10g,%10g]", node->children[1]->bounds.inf, node->children[1]->bounds.sup);
+         SCIPmessageFPrintInfo(messagehdlr, file, ")");
       }
       break;
 
@@ -8226,11 +8234,11 @@ void exprgraphPrintNodeExpression(
          for( i = 0; i < node->nchildren; ++i )
          {
             if( i > 0 )
-               SCIPmessageFPrintInfo(file, "+");
-            SCIPmessageFPrintInfo(file, "c%d[%10g,%10g]", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup);
+               SCIPmessageFPrintInfo(messagehdlr, file, "+");
+            SCIPmessageFPrintInfo(messagehdlr, file, "c%d[%10g,%10g]", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup);
          }
       else
-         SCIPmessageFPrintInfo(file, "+");
+         SCIPmessageFPrintInfo(messagehdlr, file, "+");
       break;
 
    case SCIP_EXPR_PRODUCT:
@@ -8238,11 +8246,11 @@ void exprgraphPrintNodeExpression(
          for( i = 0; i < node->nchildren; ++i )
          {
             if( i > 0 )
-               SCIPmessageFPrintInfo(file, "*");
-            SCIPmessageFPrintInfo(file, "c%d[%10g,%10g]", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup);
+               SCIPmessageFPrintInfo(messagehdlr, file, "*");
+            SCIPmessageFPrintInfo(messagehdlr, file, "c%d[%10g,%10g]", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup);
          }
       else
-         SCIPmessageFPrintInfo(file, "*");
+         SCIPmessageFPrintInfo(messagehdlr, file, "*");
       break;
 
    case SCIP_EXPR_LINEAR:
@@ -8252,19 +8260,19 @@ void exprgraphPrintNodeExpression(
       constant = ((SCIP_Real*)node->data.data)[node->nchildren];
 
       if( constant != 0.0 || node->nchildren == 0 )
-         SCIPmessageFPrintInfo(file, "%g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", constant);
 
       for( i = 0; i < node->nchildren; ++i )
       {
          if( ((SCIP_Real*)node->data.data)[i] == 1.0 )
-            SCIPmessageFPrintInfo(file, "+");
+            SCIPmessageFPrintInfo(messagehdlr, file, "+");
          else if( ((SCIP_Real*)node->data.data)[i] == -1.0 )
-            SCIPmessageFPrintInfo(file, "-");
+            SCIPmessageFPrintInfo(messagehdlr, file, "-");
          else
-            SCIPmessageFPrintInfo(file, "%+g*", ((SCIP_Real*)node->data.data)[i]);
-         SCIPmessageFPrintInfo(file, "c%d", i);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%+g*", ((SCIP_Real*)node->data.data)[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c%d", i);
          if( printchildrenbounds )
-            SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[i]->bounds.inf, node->children[i]->bounds.sup);
+            SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[i]->bounds.inf, node->children[i]->bounds.sup);
       }
 
       break;
@@ -8278,36 +8286,36 @@ void exprgraphPrintNodeExpression(
       assert(quadraticdata != NULL);
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(file, "%g", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < node->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(file, "%+g*c%d", quadraticdata->lincoefs[i], i);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%+g*c%d", quadraticdata->lincoefs[i], i);
             if( printchildrenbounds )
-               SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[i]->bounds.inf, node->children[i]->bounds.sup);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[i]->bounds.inf, node->children[i]->bounds.sup);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
          if( quadraticdata->quadelems[i].coef == 1.0 )
-            SCIPmessageFPrintInfo(file, "+");
+            SCIPmessageFPrintInfo(messagehdlr, file, "+");
          else if( quadraticdata->quadelems[i].coef == -1.0 )
-            SCIPmessageFPrintInfo(file, "-");
+            SCIPmessageFPrintInfo(messagehdlr, file, "-");
          else
-            SCIPmessageFPrintInfo(file, "%+g*", quadraticdata->quadelems[i].coef);
-         SCIPmessageFPrintInfo(file, "c%d", quadraticdata->quadelems[i].idx1);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%+g*", quadraticdata->quadelems[i].coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, "c%d", quadraticdata->quadelems[i].idx1);
          if( printchildrenbounds )
-            SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[quadraticdata->quadelems[i].idx1]->bounds.inf, node->children[quadraticdata->quadelems[i].idx1]->bounds.sup);
+            SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[quadraticdata->quadelems[i].idx1]->bounds.inf, node->children[quadraticdata->quadelems[i].idx1]->bounds.sup);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
-            SCIPmessageFPrintInfo(file, "^2");
+            SCIPmessageFPrintInfo(messagehdlr, file, "^2");
          else
          {
-            SCIPmessageFPrintInfo(file, "*c%d", quadraticdata->quadelems[i].idx2);
+            SCIPmessageFPrintInfo(messagehdlr, file, "*c%d", quadraticdata->quadelems[i].idx2);
             if( printchildrenbounds )
-               SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[quadraticdata->quadelems[i].idx2]->bounds.inf, node->children[quadraticdata->quadelems[i].idx2]->bounds.sup);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[quadraticdata->quadelems[i].idx2]->bounds.inf, node->children[quadraticdata->quadelems[i].idx2]->bounds.sup);
          }
       }
 
@@ -8325,28 +8333,28 @@ void exprgraphPrintNodeExpression(
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(file, "%g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
          if( monomialdata->coef == 1.0 )
-            SCIPmessageFPrintInfo(file, "+");
+            SCIPmessageFPrintInfo(messagehdlr, file, "+");
          else if( monomialdata->coef == -1.0 )
-            SCIPmessageFPrintInfo(file, "-");
+            SCIPmessageFPrintInfo(messagehdlr, file, "-");
          else
-            SCIPmessageFPrintInfo(file, "%+g", monomialdata->coef);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%+g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
-            SCIPmessageFPrintInfo(file, "c%d", monomialdata->childidxs[j]);
+            SCIPmessageFPrintInfo(messagehdlr, file, "c%d", monomialdata->childidxs[j]);
             if( printchildrenbounds )
-               SCIPmessageFPrintInfo(file, "[%10g,%10g]", node->children[monomialdata->childidxs[j]]->bounds.inf, node->children[monomialdata->childidxs[j]]->bounds.sup);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[%10g,%10g]", node->children[monomialdata->childidxs[j]]->bounds.inf, node->children[monomialdata->childidxs[j]]->bounds.sup);
             if( monomialdata->exponents[j] < 0.0 )
-               SCIPmessageFPrintInfo(file, "^(%g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%g)", monomialdata->exponents[j]);
             else if( monomialdata->exponents[j] != 1.0 )
-               SCIPmessageFPrintInfo(file, "^%g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%g", monomialdata->exponents[j]);
          }
       }
 
@@ -8355,7 +8363,7 @@ void exprgraphPrintNodeExpression(
 
    case SCIP_EXPR_LAST:
    default:
-      SCIPmessageFPrintInfo(file, SCIPexpropGetName(node->op));
+      SCIPmessageFPrintInfo(messagehdlr, file, SCIPexpropGetName(node->op));
       break;
    }
 }
@@ -8365,6 +8373,7 @@ static
 void exprgraphPrintNodeDot(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< node of expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file to print to, or NULL for stdout */
    const char**          varnames            /**< variable names, or NULL for generic names */
    )
@@ -8377,28 +8386,28 @@ void exprgraphPrintNodeDot(
    assert(file != NULL);
 
    color = (SCIP_Real)node->op / (SCIP_Real)SCIP_EXPR_LAST;
-   SCIPmessageFPrintInfo(file, "n%d_%d [fillcolor=\"%g,%g,%g\", label=\"", node->depth, node->pos, color, color, color);
+   SCIPmessageFPrintInfo(messagehdlr, file, "n%d_%d [fillcolor=\"%g,%g,%g\", label=\"", node->depth, node->pos, color, color, color);
 
-   exprgraphPrintNodeExpression(node, file, varnames, FALSE);
+   exprgraphPrintNodeExpression(node, messagehdlr, file, varnames, FALSE);
 
-   SCIPmessageFPrintInfo(file, "\\n[%g,%g]", node->bounds.inf, node->bounds.sup);
+   SCIPmessageFPrintInfo(messagehdlr, file, "\\n[%g,%g]", node->bounds.inf, node->bounds.sup);
    if( node->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED )
-      SCIPmessageFPrintInfo(file, "!");
+      SCIPmessageFPrintInfo(messagehdlr, file, "!");
    if( node->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDTIGHTENED )
-      SCIPmessageFPrintInfo(file, "*");
+      SCIPmessageFPrintInfo(messagehdlr, file, "*");
    if( node->boundstatus & SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT )
-      SCIPmessageFPrintInfo(file, "+");
+      SCIPmessageFPrintInfo(messagehdlr, file, "+");
 
-   SCIPmessageFPrintInfo(file, "\"");
+   SCIPmessageFPrintInfo(messagehdlr, file, "\"");
 
    if( !node->enabled )
-      SCIPmessageFPrintInfo(file, ", style=dotted");
+      SCIPmessageFPrintInfo(messagehdlr, file, ", style=dotted");
 
-   SCIPmessageFPrintInfo(file, "]\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "]\n");
 
    /* add edges from node to children */
    for( i = 0; i < node->nchildren; ++i )
-      SCIPmessageFPrintInfo(file, "n%d_%d -> n%d_%d [label=\"c%d\"]\n", node->depth, node->pos, node->children[i]->depth, node->children[i]->pos, i);
+      SCIPmessageFPrintInfo(messagehdlr, file, "n%d_%d -> n%d_%d [label=\"c%d\"]\n", node->depth, node->pos, node->children[i]->depth, node->children[i]->pos, i);
 }
 
 /** evaluate node of expression graph w.r.t. values stored in children */
@@ -8592,9 +8601,10 @@ void exprgraphNodePropagateBounds(
    /* we will do something, so reset boundstatus to "tightened-by-parent, but not recently" */
    node->boundstatus = SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENT;
 
-   SCIPdebugMessage("propagating node %p (%d,%d) op %s: [%10g,%10g] = ", (void*)node, node->depth, node->pos, SCIPexpropGetName(node->op), node->bounds.inf, node->bounds.sup);
-   SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
-   SCIPdebugPrintf("\n");
+   /* SCIPdebugMessage("propagating node %p (%d,%d) op %s: [%10g,%10g] = ", (void*)node, node->depth, node->pos, SCIPexpropGetName(node->op), node->bounds.inf, node->bounds.sup);
+    * SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, TRUE) );
+    * SCIPdebugPrintf("\n");
+    */
 
    /* @todo add callback to exprOpTable for this */
 
@@ -9552,7 +9562,7 @@ void exprgraphNodePropagateBounds(
          SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
 
          /* SCIPdebugMessage("-> node %p (%d,%d): [%10g,%10g] = ", (void*)node, node->depth, node->pos, node->bounds.inf, node->bounds.sup);
-            SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
+            SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, TRUE) );
             SCIPdebugPrintf("\n"); */
       }
 
@@ -9699,6 +9709,7 @@ static
 SCIP_RETCODE exprgraphNodeSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange          /**< flag to set if the node has been changed */
@@ -9736,7 +9747,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
       assert(node->value != SCIP_INVALID);  /*lint !e777*/
 
       SCIPdebugMessage("turn node %p (%d,%d) into constant %g\n", (void*)node, node->depth, node->pos, node->value);
-      SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
+      SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, TRUE) );
       SCIPdebugPrintf("\n");
 
       /* free expression data */
@@ -9786,7 +9797,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
    polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
 
    SCIPdebugMessage("expand factors in expression node ");
-   SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
+   SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
    SCIPdebugPrintf("\n");
 
    childmap = NULL;
@@ -9809,9 +9820,9 @@ SCIP_RETCODE exprgraphNodeSimplify(
          continue;
 
       SCIPdebugMessage("expand child %d in expression node ", i);
-      SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
+      SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
       SCIPdebugPrintf("\n\tchild = ");
-      SCIPdebug( exprgraphPrintNodeExpression(node->children[i], NULL, NULL, FALSE) );
+      SCIPdebug( exprgraphPrintNodeExpression(node->children[i], messagehdlr, NULL, NULL, FALSE) );
       SCIPdebugPrintf("\n");
 
       removechild = TRUE; /* we intend to release children[i] */
@@ -9840,7 +9851,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
             if( !EPSISINT(monomial->exponents[factorpos], 0.0) && node->children[i]->data.dbl < 0.0 )  /*lint !e835*/
             {
                /* if constant is negative and our exponent is not integer, then cannot do expansion */
-               SCIPwarningMessage("got negative constant %g to the power of a noninteger exponent %g\n", node->children[i]->data.dbl, monomial->exponents[factorpos]);
+               SCIPmessagePrintWarning(messagehdlr, "got negative constant %g to the power of a noninteger exponent %g\n", node->children[i]->data.dbl, monomial->exponents[factorpos]);
                removechild = FALSE;
             }
             else
@@ -9890,9 +9901,9 @@ SCIP_RETCODE exprgraphNodeSimplify(
          continue;
 
       SCIPdebugMessage("expand child %d in expression node ", i);
-      SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
+      SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
       SCIPdebugPrintf("\n\tchild = ");
-      SCIPdebug( exprgraphPrintNodeExpression(node->children[i], NULL, NULL, FALSE) );
+      SCIPdebug( exprgraphPrintNodeExpression(node->children[i], messagehdlr, NULL, NULL, FALSE) );
       SCIPdebugPrintf("\n");
 
       removechild = TRUE; /* we intend to release children[i] */
@@ -9927,7 +9938,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
 
          SCIPdebugMessage("attempt expanding child %d at monomial %d factor %d\n", i, j, factorpos);
 
-         SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, maxexpansionexponent, &success) );
+         SCIP_CALL( polynomialdataExpandMonomialFactor(blkmem, messagehdlr, polynomialdata, j, factorpos, (SCIP_EXPRDATA_POLYNOMIAL*)node->children[i]->data.data, childmap, maxexpansionexponent, &success) );
 
          if( !success )
          {
@@ -10009,7 +10020,7 @@ SCIP_RETCODE exprgraphNodeSimplify(
    node->simplified = TRUE;
 
    SCIPdebugMessage("-> %p = ", (void*)node);
-   SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, FALSE) );
+   SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
    SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
@@ -10963,9 +10974,10 @@ SCIP_RETCODE exprgraphAddExpr(
          (*exprnode)->enabled = TRUE;
          *exprnodeisnew = FALSE;
 
-         SCIPdebugMessage("reused node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
-         SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
-         SCIPdebugPrintf("\n");
+         /* SCIPdebugMessage("reused node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
+          * SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
+          * SCIPdebugPrintf("\n");
+          */
 
          BMSfreeBlockMemoryArray(exprgraph->blkmem, &childnodes, expr->nchildren);
          return SCIP_OKAY;
@@ -10990,9 +11002,10 @@ SCIP_RETCODE exprgraphAddExpr(
 
    BMSfreeBlockMemoryArray(exprgraph->blkmem, &childnodes, expr->nchildren);
 
-   SCIPdebugMessage("created new node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
-   SCIPdebug( SCIPexprPrint(expr, NULL, NULL, NULL, NULL) );
-   SCIPdebugPrintf("\n");
+   /* SCIPdebugMessage("created new node %p (%d,%d) for expr ", (void*)*exprnode, (*exprnode)->depth, (*exprnode)->pos);
+    * SCIPdebug( SCIPexprPrint(expr, messagehdlr, NULL, NULL, NULL, NULL) );
+    * SCIPdebugPrintf("\n");
+    */
 
    return SCIP_OKAY;
 }
@@ -12647,12 +12660,13 @@ SCIP_Bool SCIPexprgraphHasNodeNonlinearAncestor(
 /** prints an expression graph node */
 void SCIPexprgraphPrintNode(
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for stdout */
    )
 {
    assert(node != NULL);
 
-   exprgraphPrintNodeExpression(node, file, NULL, FALSE);
+   exprgraphPrintNodeExpression(node, messagehdlr, file, NULL, FALSE);
 }
 
 /** tightens the bounds in a node of the graph
@@ -12822,9 +12836,10 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
    {
       SCIP_CALL( exprOpTable[node->op].curv(infinity, node->data, node->nchildren, childbounds, childcurv, &node->curv) );
 
-      SCIPdebugMessage("curvature %s for %s = ", SCIPexprcurvGetName(node->curv), SCIPexpropGetName(node->op));
-      SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
-      SCIPdebugPrintf("\n");
+      /* SCIPdebugMessage("curvature %s for %s = ", SCIPexprcurvGetName(node->curv), SCIPexpropGetName(node->op));
+       * SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
+       * SCIPdebugPrintf("\n");
+       */
    }
 
    /* free memory, if allocated before */
@@ -13579,6 +13594,7 @@ SCIP_EXPRGRAPHNODE** SCIPexprgraphGetVarNodes(
 /** prints an expression graph in dot format */
 SCIP_RETCODE SCIPexprgraphPrintDot(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file to print to, or NULL for stdout */
    const char**          varnames            /**< variable names, or NULL for generic names */
    )
@@ -13591,8 +13607,8 @@ SCIP_RETCODE SCIPexprgraphPrintDot(
    if( file == NULL )
       file = stdout;
 
-   SCIPmessageFPrintInfo(file, "strict digraph exprgraph {\n");
-   SCIPmessageFPrintInfo(file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "strict digraph exprgraph {\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
 
    for( d = 0; d < exprgraph->depth; ++d )
    {
@@ -13601,25 +13617,25 @@ SCIP_RETCODE SCIPexprgraphPrintDot(
 
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
       {
-         exprgraphPrintNodeDot(exprgraph, exprgraph->nodes[d][i], file, varnames);
+         exprgraphPrintNodeDot(exprgraph, exprgraph->nodes[d][i], messagehdlr, file, varnames);
       }
    }
 
    /* tell dot that all nodes of depth 0 have the same rank */
-   SCIPmessageFPrintInfo(file, "{rank=same;");
+   SCIPmessageFPrintInfo(messagehdlr, file, "{rank=same;");
    for( i = 0; i < exprgraph->nnodes[0]; ++i )
-      SCIPmessageFPrintInfo(file, " n0_%d", i);
-   SCIPmessageFPrintInfo(file, "}\n");
+      SCIPmessageFPrintInfo(messagehdlr, file, " n0_%d", i);
+   SCIPmessageFPrintInfo(messagehdlr, file, "}\n");
 
    /* tell dot that all nodes without parent have the same rank */
-   SCIPmessageFPrintInfo(file, "{rank=same;");
+   SCIPmessageFPrintInfo(messagehdlr, file, "{rank=same;");
    for( d = 0; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
          if( exprgraph->nodes[d][i]->nparents == 0 )
-            SCIPmessageFPrintInfo(file, " n%d_%d", d, i);
-   SCIPmessageFPrintInfo(file, "}\n");
+            SCIPmessageFPrintInfo(messagehdlr, file, " n%d_%d", d, i);
+   SCIPmessageFPrintInfo(messagehdlr, file, "}\n");
 
-   SCIPmessageFPrintInfo(file, "}\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "}\n");
 
    return SCIP_OKAY;
 }
@@ -13873,7 +13889,7 @@ SCIP_RETCODE SCIPexprgraphCheckCurvature(
 
          if( SCIPintervalIsEmpty(node->bounds) )
          {
-            SCIPwarningMessage("SCIPexprgraphCheckCurvature gets domain error while propagating variables bounds, ignoring...\n");
+            SCIPerrorMessage("SCIPexprgraphCheckCurvature gets domain error while propagating variables bounds, ignoring...\n");
             return SCIP_OKAY;
          }
       }
@@ -13886,6 +13902,7 @@ SCIP_RETCODE SCIPexprgraphCheckCurvature(
  */
 SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             eps,                /**< threshold, under which positive values are treat as 0 */
    int                   maxexpansionexponent,/**< maximal exponent for which we still expand non-monomial polynomials */
    SCIP_Bool*            havechange,         /**< buffer to indicate whether the graph has been modified */
@@ -13975,7 +13992,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             allsimplified = FALSE;  /* looks like we found a node that has not been simplified */
 
             /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
-            SCIP_CALL( exprgraphNodeSimplify(exprgraph, node, eps*eps, maxexpansionexponent, &havechangenode) );
+            SCIP_CALL( exprgraphNodeSimplify(exprgraph, node, messagehdlr, eps*eps, maxexpansionexponent, &havechangenode) );
             assert(node->simplified == TRUE);
             *havechange |= havechangenode;
          }

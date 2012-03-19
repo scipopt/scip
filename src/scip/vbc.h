@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,7 +37,8 @@ extern "C" {
 /** creates VBCTool data structure */
 extern
 SCIP_RETCODE SCIPvbcCreate(
-   SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
+   SCIP_VBC**            vbc,                /**< pointer to store the VBC information */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** frees VBC Tool data structure */
@@ -51,14 +52,16 @@ extern
 SCIP_RETCODE SCIPvbcInit(
    SCIP_VBC*             vbc,                /**< VBC information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** closes the VBC output file */
 extern
 void SCIPvbcExit(
    SCIP_VBC*             vbc,                /**< VBC information */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** creates a new node entry in the VBC output file */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,11 +23,10 @@
 #include <stdio.h>
 
 #include "scip/retcode.h"
-#include "scip/message.h"
 
-
-/** prints error message for return code */
+/** prints error message for return code via message handler */
 void SCIPretcodePrint(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to write error message */
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    )
@@ -35,61 +34,128 @@ void SCIPretcodePrint(
    switch( retcode )
    {
    case SCIP_OKAY:
-      SCIPmessageFPrintInfo(file, "normal termination");
+      SCIPmessageFPrintInfo(messagehdlr, file, "normal termination");
       break;
    case SCIP_ERROR:
-      SCIPmessageFPrintInfo(file, "unspecified error");
+      SCIPmessageFPrintInfo(messagehdlr, file, "unspecified error");
       break;
    case SCIP_NOMEMORY:
-      SCIPmessageFPrintInfo(file, "insufficient memory error");
+      SCIPmessageFPrintInfo(messagehdlr, file, "insufficient memory error");
       break;
    case SCIP_READERROR:
-      SCIPmessageFPrintInfo(file, "read error");
+      SCIPmessageFPrintInfo(messagehdlr, file, "read error");
       break;
    case SCIP_WRITEERROR:
-      SCIPmessageFPrintInfo(file, "write error");
+      SCIPmessageFPrintInfo(messagehdlr, file, "write error");
       break;
    case SCIP_NOFILE:
-      SCIPmessageFPrintInfo(file, "file not found error");
+      SCIPmessageFPrintInfo(messagehdlr, file, "file not found error");
       break;
    case SCIP_FILECREATEERROR:
-      SCIPmessageFPrintInfo(file, "cannot create file");
+      SCIPmessageFPrintInfo(messagehdlr, file, "cannot create file");
       break;
    case SCIP_LPERROR:
-      SCIPmessageFPrintInfo(file, "error in LP solver");
+      SCIPmessageFPrintInfo(messagehdlr, file, "error in LP solver");
       break;
    case SCIP_NOPROBLEM:
-      SCIPmessageFPrintInfo(file, "no problem exists");
+      SCIPmessageFPrintInfo(messagehdlr, file, "no problem exists");
       break;
    case SCIP_INVALIDCALL:
-      SCIPmessageFPrintInfo(file, "method cannot be called at this time in solution process");
+      SCIPmessageFPrintInfo(messagehdlr, file, "method cannot be called at this time in solution process");
       break;
    case SCIP_INVALIDDATA:
-      SCIPmessageFPrintInfo(file, "method cannot be called with this type of data");
+      SCIPmessageFPrintInfo(messagehdlr, file, "method cannot be called with this type of data");
       break;
    case SCIP_INVALIDRESULT:
-      SCIPmessageFPrintInfo(file, "method returned an invalid result code");
+      SCIPmessageFPrintInfo(messagehdlr, file, "method returned an invalid result code");
       break;
    case SCIP_PLUGINNOTFOUND:
-      SCIPmessageFPrintInfo(file, "a required plugin was not found");
+      SCIPmessageFPrintInfo(messagehdlr, file, "a required plugin was not found");
       break;
    case SCIP_PARAMETERUNKNOWN:
-      SCIPmessageFPrintInfo(file, "the parameter with the given name was not found");
+      SCIPmessageFPrintInfo(messagehdlr, file, "the parameter with the given name was not found");
       break;
    case SCIP_PARAMETERWRONGTYPE:
-      SCIPmessageFPrintInfo(file, "the parameter is not of the expected type");
+      SCIPmessageFPrintInfo(messagehdlr, file, "the parameter is not of the expected type");
       break;
    case SCIP_PARAMETERWRONGVAL:
-      SCIPmessageFPrintInfo(file, "the value is invalid for the given parameter");
+      SCIPmessageFPrintInfo(messagehdlr, file, "the value is invalid for the given parameter");
       break;
    case SCIP_KEYALREADYEXISTING:
-      SCIPmessageFPrintInfo(file, "the given key is already existing in table");
+      SCIPmessageFPrintInfo(messagehdlr, file, "the given key is already existing in table");
       break;
    case SCIP_MAXDEPTHLEVEL:
-      SCIPmessageFPrintInfo(file, "maximal branching depth level exceeded");
+      SCIPmessageFPrintInfo(messagehdlr, file, "maximal branching depth level exceeded");
       break;
    default:
-      SCIPmessageFPrintInfo(file, "unknown error code");
+      SCIPmessageFPrintInfo(messagehdlr, file, "unknown error code");
+      break;
+   }
+}
+
+/** prints error message for return code via error message */
+void SCIPretcodePrintError(
+   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
+   )
+{
+   switch( retcode )
+   {
+   case SCIP_OKAY:
+      SCIPmessagePrintError("normal termination");
+      break;
+   case SCIP_ERROR:
+      SCIPmessagePrintError("unspecified error");
+      break;
+   case SCIP_NOMEMORY:
+      SCIPmessagePrintError("insufficient memory error");
+      break;
+   case SCIP_READERROR:
+      SCIPmessagePrintError("read error");
+      break;
+   case SCIP_WRITEERROR:
+      SCIPmessagePrintError("write error");
+      break;
+   case SCIP_NOFILE:
+      SCIPmessagePrintError("file not found error");
+      break;
+   case SCIP_FILECREATEERROR:
+      SCIPmessagePrintError("cannot create file");
+      break;
+   case SCIP_LPERROR:
+      SCIPmessagePrintError("error in LP solver");
+      break;
+   case SCIP_NOPROBLEM:
+      SCIPmessagePrintError("no problem exists");
+      break;
+   case SCIP_INVALIDCALL:
+      SCIPmessagePrintError("method cannot be called at this time in solution process");
+      break;
+   case SCIP_INVALIDDATA:
+      SCIPmessagePrintError("method cannot be called with this type of data");
+      break;
+   case SCIP_INVALIDRESULT:
+      SCIPmessagePrintError("method returned an invalid result code");
+      break;
+   case SCIP_PLUGINNOTFOUND:
+      SCIPmessagePrintError("a required plugin was not found");
+      break;
+   case SCIP_PARAMETERUNKNOWN:
+      SCIPmessagePrintError("the parameter with the given name was not found");
+      break;
+   case SCIP_PARAMETERWRONGTYPE:
+      SCIPmessagePrintError("the parameter is not of the expected type");
+      break;
+   case SCIP_PARAMETERWRONGVAL:
+      SCIPmessagePrintError("the value is invalid for the given parameter");
+      break;
+   case SCIP_KEYALREADYEXISTING:
+      SCIPmessagePrintError("the given key is already existing in table");
+      break;
+   case SCIP_MAXDEPTHLEVEL:
+      SCIPmessagePrintError("maximal branching depth level exceeded");
+      break;
+   default:
+      SCIPmessagePrintError("unknown error code");
       break;
    }
 }

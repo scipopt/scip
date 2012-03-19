@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -951,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       retstat = SCIPsolveDiveLP(scip, -1, &lperror);
       if( retstat != SCIP_OKAY )
       {
-         SCIPwarningMessage("Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
+         SCIPwarningMessage(scip, "Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
       }
 #else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );

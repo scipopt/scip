@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -99,7 +99,7 @@
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
-#define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
+#define DEFAULT_SIMPLIFYINEQUALITIES TRUE/**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
@@ -517,7 +517,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
       if( conshdlrdata->linconsupgrades[i]->linconsupgd == linconsupgd )
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler %s.\n", linconsupgd, conshdlrname);
+         SCIPwarningMessage(scip, "Try to add already known upgrade message %p for constraint handler %s.\n", linconsupgd, conshdlrname);
 #endif
          return TRUE;
       }
@@ -1374,7 +1374,7 @@ void consdataUpdateActivities(
             SCIPdebugMessage("%s%s activity of linear constraint unreliable after update: %16.9g\n", (global ? "global " : ""),
                (pseudo ? "pseudo" : ((boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) ? "min" : "max")), (*activity));
 
-            /* recompute the activity that was just changed and is not reliable anymore */
+            /* mark the activity that was just changed and is not reliable anymore to be invalid */
             if( global )
             {
                if( (boundtype == SCIP_BOUNDTYPE_LOWER) == (val > 0.0) )
@@ -3285,15 +3285,17 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if we are in transformed problem, update minimum and maximum activities */
-   if( SCIPconsIsTransformed(cons) )
-      consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
-
    /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
     */
    if( consdata->nvars <= 1 )
       consdataInvalidateActivities(consdata);
+   else
+   {
+      /* if we are in transformed problem, update minimum and maximum activities */
+      if( SCIPconsIsTransformed(cons) )
+         consdataUpdateDelCoef(scip, consdata, var, val, TRUE);
+   }
 
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
@@ -3408,7 +3410,7 @@ SCIP_RETCODE scaleCons(
 
       if( SCIPisZero(scip, newval) )
       {
-         SCIPwarningMessage("coefficient %.15g of variable <%s> in linear constraint <%s> scaled to zero (scalar: %.15g)\n",
+         SCIPwarningMessage(scip, "coefficient %.15g of variable <%s> in linear constraint <%s> scaled to zero (scalar: %.15g)\n",
             consdata->vals[i], SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons), scalar);
          SCIP_CALL( delCoefPos(scip, cons, i) );
       }
@@ -4822,7 +4824,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
    }
 
@@ -6158,7 +6160,274 @@ SCIP_RETCODE convertLongEquality(
    return SCIP_OKAY;
 }
 
-/* converts special equalities */
+/** checks if the given variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+static
+SCIP_Bool checkEqualObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real*            scale,              /**< pointer to store the scaling factor between the constraint and the
+					      *   objective function
+					      */
+   SCIP_Real*            offset              /**< pointer to store the offset of the objective function resulting by
+					      *   this constraint
+					      */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Real objval;
+   SCIP_Bool negated;
+   int nvars;
+   int v;
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+   assert(vars != NULL);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      negated = FALSE;
+      var = vars[v];
+      assert(vars != NULL);
+
+      if( SCIPvarIsNegated(var) )
+      {
+         negated = TRUE;
+         var = SCIPvarGetNegatedVar(var);
+         assert(var != NULL);
+      }
+
+      objval = SCIPvarGetObj(var);
+
+      /* if a variable has a zero objective coefficient the linear constraint is not a subset of the objective
+       * function
+       */
+      if( SCIPisZero(scip, objval) )
+         return FALSE;
+      else
+      {
+         SCIP_Real val;
+
+         val = consdata->vals[v];
+
+         if( negated )
+         {
+            if( v == 0 )
+            {
+               /* the first variable defines the scale */
+               (*scale) = val / -objval;
+
+               (*offset) += val;
+            }
+            else if( SCIPisEQ(scip, -objval * (*scale), val) )
+               (*offset) += val;
+            else
+               return FALSE;
+         }
+         else if( v == 0 )
+         {
+            /* the first variable define the scale */
+            (*scale) = val / objval;
+         }
+         else if( !SCIPisEQ(scip, objval * (*scale), val) )
+            return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+/** check if the linear equality constraint is equal to a subset of the objective function; if so we can remove the
+ *  objective coefficient and add an objective offset
+ */
+static
+SCIP_RETCODE checkPartialObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear equation constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real offset;
+   SCIP_Real scale;
+   SCIP_Bool applicable;
+   int nobjvars;
+   int nvars;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(SCIPisEQ(scip, consdata->lhs, consdata->rhs));
+
+   nvars = consdata->nvars;
+   nobjvars = SCIPgetNObjVars(scip);
+
+   /* check if the linear equality constraints does not have more variables than the objective function */
+   if( nvars > nobjvars || nvars == 0 )
+      return SCIP_OKAY;
+
+   offset = consdata->rhs;
+   scale = 1.0;
+
+   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   applicable = checkEqualObjective(scip, consdata, &scale, &offset);
+
+   if( applicable )
+   {
+      SCIP_VAR** vars;
+
+      vars = consdata->vars;
+      assert(vars != NULL);
+
+      offset /= scale;
+
+      SCIPdebugMessage("linear equality constraint <%s> == %g (offset %g) is a subset of the objective function\n",
+         SCIPconsGetName(cons), consdata->rhs, offset);
+
+      /* set all objective coefficient to zero */
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, vars[v], 0.0) );
+      }
+
+      /* add an objective offset */
+      SCIP_CALL( SCIPaddObjoffset(scip, offset) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates the cutoff if the given primal bound  (which is implied by the given constraint) is better */
+static
+SCIP_RETCODE updateCutoffbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real             primalbound         /**< feasible primal bound */
+   )
+{
+   SCIP_Real cutoffbound;
+
+   SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+      SCIPconsGetName(cons), primalbound);
+
+   /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are still
+    * excepted
+    */
+   cutoffbound = primalbound + SCIPcutoffbounddelta(scip);
+
+   if( cutoffbound < SCIPgetCutoffbound(scip) )
+   {
+      SCIPdebugMessage("update cutoff bound <%g>\n", cutoffbound);
+
+      SCIP_CALL( SCIPupdateCutoffbound(scip, cutoffbound) );
+   }
+   else
+   {
+      /* in case the cutoff bound is worse then currently known one we avoid additionaly enforcement and
+       * propagation
+       */
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons, FALSE) );
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons, FALSE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check if the linear constraint is parallel to objective function; if so update the cutoff bound and avoid that the
+ *  constraint enters the LP by setting the initial and separated flag to FALSE
+ */
+static
+SCIP_RETCODE checkParallelObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real offset;
+   SCIP_Real scale;
+   SCIP_Bool applicable;
+   int nobjvars;
+   int nvars;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* ignore equalities since these are covert by the method checkPartialObjective() */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      return SCIP_OKAY;
+
+   nvars = consdata->nvars;
+   nobjvars = SCIPgetNObjVars(scip);
+
+   /* check if the linear inequality constraints has the same number of variables as the objective function and if the
+    * initial and/or separated flag is set to FALSE
+    */
+   if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
+      return SCIP_OKAY;
+
+   offset = 0.0;
+   scale = 1.0;
+
+   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   applicable = checkEqualObjective(scip, consdata, &scale, &offset);
+
+   if( applicable )
+   {
+      /* avoid that the linear constraint enters the LP since it is parallel to the objective function */
+      SCIP_CALL( SCIPsetConsInitial(scip, cons, FALSE) );
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons, FALSE) );
+
+      if( SCIPisPositive(scip, scale) )
+      {
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_Real primalbound;
+
+            primalbound = (consdata->rhs - offset) / scale;
+
+            SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
+         }
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_Real dualbound;
+
+            dualbound = (consdata->lhs - offset) / scale;
+
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+               SCIPconsGetName(cons), dualbound);
+
+            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+         }
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_Real dualbound;
+
+            dualbound = (consdata->rhs - offset) / scale;
+
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+               SCIPconsGetName(cons), dualbound);
+
+            SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
+         }
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_Real primalbound;
+
+            primalbound = (consdata->lhs - offset) / scale;
+
+            SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts special equalities */
 static
 SCIP_RETCODE convertEquality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6199,6 +6468,9 @@ SCIP_RETCODE convertEquality(
    }
    else
    {
+      /* check if the equality is part of the objective function */
+      SCIP_CALL( checkPartialObjective(scip, cons) );
+
       /* try to multi-aggregate one of the variables */
       SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars, ndelconss) );
    }
@@ -8771,8 +9043,6 @@ SCIP_RETCODE fullDualPresolve(
 }
 
 
-
-
 /*
  * Callback methods of constraint handler
  */
@@ -9394,7 +9664,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
@@ -9943,6 +10213,12 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
 
+      /* check if an inequality is parallel to the objective function */
+      if( !cutoff && SCIPconsIsActive(cons) )
+      {
+         SCIP_CALL( checkParallelObjective(scip, cons) );
+      }
+
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -10432,7 +10708,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize > consdata->nvars )
+   if( varssize < consdata->nvars )
       (*success) = FALSE;
    else
    {
@@ -11720,7 +11996,7 @@ SCIP_RETCODE SCIPsetUpgradeConsLinear(
       if( consdata->donotupgrade )
       {
          /* @todo: change donotupgrade flag to a counter */
-         SCIPwarningMessage("constraint is already marked not to be upgraded\n");
+         SCIPwarningMessage(scip, "constraint is already marked not to be upgraded\n");
       }
       consdata->donotupgrade = TRUE;
    }

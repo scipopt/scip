@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -19,13 +19,13 @@
 # The queue is passed via $QUEUE (possibly defined in a local makefile in scip/make/local).
 #
 # For each run, we can specify the number of nodes reserved for a run via $PPN. If tests runs
-# with valid time measurements should be executed, this number should be chosen in such a way 
+# with valid time measurements should be executed, this number should be chosen in such a way
 # that a job is run on a single computer, i.e., in general, $PPN should equal the number of cores
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
 # results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
-# This leads to result files 
+# This leads to result files
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
@@ -110,23 +110,62 @@ fi
 # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-#       available 
+#       available
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 
-# in case of qsub queue the memory is measured in kB
+# in case of qsub queue the memory is measured in kB and in case of srun the time needs to be formatted
 if test  "$QUEUETYPE" = "qsub"
 then
     HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
+else
+    MYMINUTES=0
+    MYHOURS=0
+    MYDAYS=0
+    #calculate seconds, minutes, hours and days
+    MYSECONDS=`expr $HARDTIMELIMIT % 60`
+    TMP=`expr $HARDTIMELIMIT / 60`
+    if test "$TMP" != "0"
+    then
+	MYMINUTES=`expr $TMP % 60`
+	TMP=`expr $TMP / 60`
+	if test "$TMP" != "0"
+	then
+	    MYHOURS=`expr $TMP % 24`
+	    MYDAYS=`expr $TMP / 24`
+	fi
+   fi
+    #format seconds to have two characters
+    if test ${MYSECONDS} -lt 10
+    then
+	MYSECONDS=0${MYSECONDS}
+    fi
+    #format minutes to have two characters
+    if test ${MYMINUTES} -lt 10
+    then
+	MYMINUTES=0${MYMINUTES}
+    fi
+    #format hours to have two characters
+    if test ${MYHOURS} -lt 10
+    then
+	MYHOURS=0${MYHOURS}
+    fi
+    #format HARDTIMELIMT
+    if test ${MYDAYS} = "0"
+    then
+	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    else
+	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
+    fi
 fi
 
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
 
-# counter to define file names for a test set uniquely 
-COUNT=1
+# counter to define file names for a test set uniquely
+COUNT=0
 
 for i in `cat testset/$TSTNAME.test` DONE
 do
@@ -135,7 +174,10 @@ do
       break
   fi
 
-  # check if problem instance exists 
+  # increase the index for the inctance tried to solve, even if the filename does not exist
+  COUNT=`expr $COUNT + 1`
+
+  # check if problem instance exists
   if test -f $SCIPPATH/$i
   then
 
@@ -161,13 +203,11 @@ do
 
       echo $BASENAME >> $EVALFILE
 
-      COUNT=`expr $COUNT + 1`
-
-      # in case we want to continue we check if the job was already performed 
+      # in case we want to continue we check if the job was already performed
       if test "$CONTINUE" != "false"
       then
 	  if test -e results/$FILENAME.out
-	  then 
+	  then
 	      echo skipping file $i due to existing output file $FILENAME.out
 	      continue
 	  fi
@@ -192,7 +232,7 @@ do
       echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
       echo set save $SETFILE                 >> $TMPFILE
       echo read $SCIPPATH/$i                 >> $TMPFILE
-#  echo presolve                         >> $TMPFILE
+#      echo presolve                         >> $TMPFILE
       echo optimize                          >> $TMPFILE
       echo display statistics                >> $TMPFILE
 #            echo display solution                  >> $TMPFILE
@@ -201,7 +241,7 @@ do
 
       # additional environment variables needed by runcluster.sh
       export SOLVERPATH=$SCIPPATH
-      export BINNAME=$BINNAME
+      export EXECNAME=$SCIPPATH/../$BINNAME
       export BASENAME=$FILENAME
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
@@ -209,10 +249,10 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT}${EXCLUSIVE} --output=/dev/null runcluster.sh
+	  sbatch --job-name=SCIP$SHORTFILENAME --mem=$HARDMEMLIMIT -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null runcluster.sh
       else
           # -V to copy all environment variables
-	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh 
+	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

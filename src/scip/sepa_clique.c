@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1159,7 +1159,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
 
          SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-         /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
          SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );

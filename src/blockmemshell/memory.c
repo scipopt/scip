@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -27,6 +27,7 @@
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #endif
 
 #include "blockmemshell/memory.h"
@@ -38,15 +39,15 @@
 #ifdef SCIPdebugMessage
 #define debugMessage SCIPdebugMessage
 #define errorMessage SCIPerrorMessage
-#define warningMessage SCIPwarningMessage
 #else
 #define debugMessage while( FALSE ) printf
 #define errorMessage printf
-#define warningMessage printf
 #define printErrorHeader(f,l) printf("[%s:%d] ERROR: ", f, l)
 #define printError printf
-#define printInfo printf
 #endif
+
+#define warningMessage printf
+#define printInfo printf
 
 /* define some macros (if not already defined) */
 #ifndef FALSE

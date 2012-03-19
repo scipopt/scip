@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -103,8 +103,8 @@ SCIP_RETCODE readBounds(
       {
          if( !unknownvariablemessage )
          {
-            SCIPwarningMessage("unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
-            SCIPwarningMessage("  (further unknown variables are ignored)\n");
+            SCIPwarningMessage(scip, "unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
+            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
          continue;

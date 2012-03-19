@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,23 +39,23 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent     */
-#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.666          /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NUSEDSOLS     3              /* number of solutions that will be taken into account                 */
-#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait      */
-#define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                 */ 
-#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?     */ 
-#define DEFAULT_USELPROWS     FALSE          /* should subproblem be created out of the rows in the LP rows, 
-                                              * otherwise, the copy constructors of the constraints handlers are used 
-					      */
+#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINIMPROVE    0.01           /* factor by which Crossover should at least improve the incumbent       */
+#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINFIXINGRATE 0.666          /* minimum percentage of integer variables that have to be fixed         */
+#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes            */
+#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
+#define DEFAULT_NUSEDSOLS     3              /* number of solutions that will be taken into account                   */
+#define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
+#define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                   */
+#define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
+#define DEFAULT_USELPROWS    FALSE           /* should subproblem be created out of the rows in the LP rows,
+                                              * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE           /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                              * cutpool of the original scip be copied to constraints of the subscip */
-
-#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic       */
+                                              * cutpool of the original scip be copied to constraints of the subscip
+                                              */
+#define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
+#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
 
 
 /*
@@ -92,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
+   SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -228,6 +229,24 @@ SCIP_RETCODE createSolTuple(
    return SCIP_OKAY;
 }
 
+/* checks whether the new solution was found at the same node by the same heuristic as an already selected one */
+static
+SCIP_Bool solHasNewSource(
+   SCIP_SOL**            sols,               /**< feasible SCIP solutions */
+   int*                  selection,          /**< pool of solutions crossover uses */
+   int                   selectionsize,      /**< size of solution pool */
+   int                   newsol              /**< candidate solution */
+)
+{
+   int i;
+
+   for( i = 0; i < selectionsize; i++)
+      if( SCIPsolGetHeur(sols[selection[i]]) == SCIPsolGetHeur(sols[newsol])
+         && SCIPsolGetNodenum(sols[selection[i]]) == SCIPsolGetNodenum(sols[newsol]) )
+         return FALSE;
+
+   return TRUE;
+}
 
 /** randomly selects the solutions crossover will use from the pool of all solutions found so far */
 static
@@ -245,32 +264,48 @@ SCIP_RETCODE selectSolsRandomized(
    int nusedsols;        /* number of solutions which will be chosen */
 
    SOLTUPLE* elem;
+   SCIP_SOL** sols;
 
    /* initialization */
    nusedsols = heurdata->nusedsols;
    lastsol = SCIPgetNSols(scip);
+   sols = SCIPgetSols(scip);
    assert(nusedsols < lastsol);
 
    i = 0;
    *success = FALSE;
 
-   /* perform at maximum 100 restarts and stop as soon as a new set of solutions is found */
-   while( !*success && i < 100 )
+   /* perform at maximum 10 restarts and stop as soon as a new set of solutions is found */
+   while( !*success && i < 10 )
    {
-      for( j = 0; j < nusedsols; j++ )
+      SCIP_Bool validtuple;
+
+      validtuple = TRUE;
+      for( j = 0; j < nusedsols && validtuple; j++ )
       {
-         selection[j] = SCIPgetRandomInt(nusedsols-j-1, lastsol-1, &heurdata->randseed);
-         lastsol = selection[j];
+         int k;
+         k = SCIPgetRandomInt(nusedsols-j-1, lastsol-1, &heurdata->randseed);
+
+         /* ensure that the solution does not have a similar source as the others */
+         while( k >= nusedsols-j-1 && !solHasNewSource(sols, selection, j, k) )
+            k--;
+
+         validtuple = (k >= nusedsols-j-1);
+         selection[j] = k;
+         lastsol = k;
       }
 
-      /* creates an object ready to be inserted into the hashtable */
-      SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
-
-      /* check whether the randomized set is already in the hashtable, if not, insert it */
-      if( !SCIPhashtableExists(heurdata->hashtable, elem) )
+      if( validtuple )
       {
-         SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
-         *success = TRUE;
+         /* creates an object ready to be inserted into the hashtable */
+         SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
+
+         /* check whether the randomized set is already in the hashtable, if not, insert it */
+         if( !SCIPhashtableExists(heurdata->hashtable, elem) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
+            *success = TRUE;
+         }
       }
       i++;
    }
@@ -443,28 +478,40 @@ SCIP_RETCODE setupSubproblem(
    if( !heurdata->randomization || nsols == nusedsols || heurdata->prevlastsol != sols[nusedsols-1] )
    {
       SOLTUPLE* elem;
+      SCIP_HEUR* solheur;
+      SCIP_Longint solnodenum;
+      SCIP_Bool allsame;
 
       for( i = 0; i < nusedsols; i++ )
          selection[i] = i;
       SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
 
-      /* check, whether solution tuple has already been tried */
-      if( SCIPhashtableExists(heurdata->hashtable, elem) )
-      {
-         *success = FALSE;
+      solheur = SCIPsolGetHeur(sols[0]);
+      solnodenum = SCIPsolGetNodenum(sols[0]);
+      allsame = TRUE;
 
-         /* if solution tuple has already been tried, randomization is allowed and enough solutions are at hand, try
-          * to randomize another tuple. E.g., this can happen if the last crossover solution was among the best ones */
-         if( heurdata->randomization && nsols > nusedsols )
-         {
-            SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
-         }
-      }
-      else
+      /* check, whether all solutions have been found by the same heuristic at the same node; in this case we do not run
+       * crossover, since it would probably just optimize over the same space as the other heuristic
+       */
+      for( i = 1; i < nusedsols; i++ )
+         if( SCIPsolGetHeur(sols[i]) != solheur || SCIPsolGetNodenum(sols[i]) != solnodenum )
+            allsame = FALSE;
+
+      *success = !allsame && !SCIPhashtableExists(heurdata->hashtable, elem);
+
+      /* check, whether solution tuple has already been tried */
+      if( !SCIPhashtableExists(heurdata->hashtable, elem) )
       {
-         *success = TRUE;
          SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
       }
+
+      /* if solution tuple has already been tried, randomization is allowed and enough solutions are at hand, try
+       * to randomize another tuple. E.g., this can happen if the last crossover solution was among the best ones */
+      if( !(*success) && heurdata->randomization && nsols > nusedsols )
+      {
+         SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
+      }
+
    }
    /* otherwise randomize the set of solutions */
    else
@@ -896,6 +943,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
+   /* permute the subproblem to increase diversification */
+   if( heurdata->permute )
+   {
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int) SCIPheurGetNCalls(heur), TRUE, TRUE, TRUE, TRUE, TRUE) );
+   }
+
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
    retcode = SCIPsolve(subscip);
@@ -908,7 +961,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage("Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
@@ -1053,6 +1106,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/permute",
+         "should the subproblem be permuted to increase diversification?",
+         &heurdata->permute, TRUE, DEFAULT_PERMUTE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

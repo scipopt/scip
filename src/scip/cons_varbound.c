@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -285,7 +285,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( catchEvents(scip, *consdata) );
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );  /*lint !e506*/
    (*consdata)->vars[0] = (*consdata)->var;
    (*consdata)->vars[1] = (*consdata)->vbdvar;
 
@@ -370,7 +370,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
    }
 
@@ -2665,9 +2665,9 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
          vbdind = 1;
       else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
-         vbdind = 0;
-      else
          vbdind = 1;
+      else
+         vbdind = 0;
 
       var = vars[1-vbdind];
       vbdvar = vars[vbdind];
@@ -2819,7 +2819,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/
@@ -3093,8 +3093,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
             
             *nchgbds += nlocalchgbds;
 
-            /* if lhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if lhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef >= 0.0 )
                {
@@ -3139,8 +3141,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
             *nchgbds += nlocalchgbds;
 
-            /* if rhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if rhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef > 0.0 )
                {

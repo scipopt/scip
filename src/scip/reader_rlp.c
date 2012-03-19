@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,16 +75,16 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
    }
    else
    {
-      SCIPwarningMessage("RLP format is LP format with generic variable and constraint names\n");
+      SCIPwarningMessage(scip, "RLP format is LP format with generic variable and constraint names\n");
       
       if( transformed )
       {
-         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
       }
       *result = SCIP_SUCCESS;

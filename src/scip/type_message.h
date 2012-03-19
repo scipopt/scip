@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,8 @@
  *
  *  - \ref scip::ObjMessagehdlr "C++ wrapper class"
  */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_MESSAGE_H__
 #define __SCIP_TYPE_MESSAGE_H__
@@ -48,16 +50,18 @@ typedef enum SCIP_VerbLevel SCIP_VERBLEVEL;
 typedef struct SCIP_Messagehdlr SCIP_MESSAGEHDLR;  /**< message handler */
 typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler data */
 
-/** error message print method of message handler
+/** error message print method
  *
  *  This method is invoked, if SCIP wants to display an error message to the screen or a file
  *
+ *  @note That this is independed of the message handler
+ *
  *  input:
- *  - messagehdlr     : the message handler itself
- *  - file            : file stream to print into
  *  - msg             : string to output into the file
+ *  - msglength       : length of message
+ *  - data            : data pointer
  */
-#define SCIP_DECL_MESSAGEERROR(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_ERRORPRINTING(x) void x (const char* msg, int msglength, void* data)
 
 /** warning message print method of message handler
  *
@@ -91,6 +95,15 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler d
  *  - msg             : string to output into the file
  */
 #define SCIP_DECL_MESSAGEINFO(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+
+/** destructor of message handler to free message handler data
+ *
+ *  This method is invoked, if SCIP wants to display an information message to the screen or a file
+ *
+ *  input:
+ *  - messagehdlr     : the message handler itself
+ */
+#define SCIP_DECL_MESSAGEHDLRFREE(x) SCIP_RETCODE x (SCIP_MESSAGEHDLR* messagehdlr)
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,6 +64,17 @@ struct SCIP_ConflictSet
    int                   conflictdepth;      /**< depth in the tree where the conflict set yields a conflict */
    int                   repropdepth;        /**< depth at which the conflict set triggers a deduction */
    SCIP_Bool             repropagate;        /**< should the conflict constraint trigger a repropagation? */
+};
+
+/** set of LP bound change */
+struct SCIP_LPBdChgs
+{
+   int*                 bdchginds;           /**< array of column indices */
+   SCIP_Real*           bdchglbs;            /**< array of lower bounds */
+   SCIP_Real*           bdchgubs;            /**< array of upper bounds */
+   int*                 bdchgcolinds;        /**< array of ???????????? */
+   SCIP_Bool*           usedcols;            /**< array to mark if a column is used */
+   int                  nbdchgs;             /**< number of stored LP bound changes */
 };
 
 /** conflict analysis data structure */

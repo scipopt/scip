@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -260,6 +260,9 @@ SCIP_RETCODE createSubSCIP(
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable keeping solutions from one subscip solve for next solve (with usually different fixings) */
+   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "limits/maxorigsol", 0) );
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
@@ -1294,7 +1297,7 @@ SCIP_RETCODE forbidFixation(
    if( nsubbinvars == 0 && nsubintvars == 0 )
    {
       /* If we did not fix any discrete variables but found the "sub"CIP infeasible, then also the CIP is infeasible. */
-      SCIPwarningMessage("heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
+      SCIPwarningMessage(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
       return SCIP_OKAY;
    }
 
@@ -2197,6 +2200,9 @@ SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
    SCIP_CALL( addLinearConstraintsToNlp(scip,
          addcombconss && !heurdata->comblinearconsadded,
          addcontconss && !heurdata->contlinearconsadded) );
+
+   heurdata->comblinearconsadded |= addcombconss;
+   heurdata->contlinearconsadded |= addcontconss;
 
    return SCIP_OKAY;
 }

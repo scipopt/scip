@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,6 +18,11 @@
  * @author Martin Ballerstein
  * @author Dennis Michaels
  * @author Stefan Vigerske
+ */
+
+/** @todo check whether the constraint handler correctly distinguishes between constraints added to SCIP and those that
+ *        were only created; if the latter are automatically added to the expressiongraph, they might be enforced although not
+ *        valid
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,6 +75,9 @@
 
 #define QUADCONSUPGD_PRIORITY      5000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   10000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+
+/* activate the following define to get output on number of bivariate constraints for each convexity-type during INITSOL */
+/* #define TYPESTATISTICS */
 
 /*
  * Data structures
@@ -1755,7 +1763,7 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    assert(!SCIPisEQ(scip,yub,yval));
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    t = (yub - yval) / (yub - ylb);
@@ -1968,7 +1976,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
    SCIPdebugMessage("%s[%g,%g] = %g  %s[%g,%g] = %g\n", SCIPvarGetName(x), xlb, xub, xval, SCIPvarGetName(y), ylb, yub, yval);
 
@@ -2316,7 +2324,7 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    /* check in which triangle the point (xval,yval) lies */
@@ -2645,7 +2653,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    if( SCIPisEQ(scip, xlb, xub) )
@@ -2798,7 +2806,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
       SCIPdebugMessage("f(x,yub) = ");
-      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
       SCIPdebugPrintf("\n");
 
       /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
@@ -2959,7 +2967,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
       SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, vred) );
 
       SCIPdebugMessage("vred(s;x0,y0,ylb,yub) = ");
-      SCIPdebug( SCIPexprtreePrint(vred, NULL, NULL, paramnames) );
+      SCIPdebug( SCIPexprtreePrint(vred, SCIPgetMessagehdlr(scip), NULL, NULL, paramnames) );
       SCIPdebugPrintf("\n");
 
       /* compute bounds on s */
@@ -3310,7 +3318,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorAtBoundary(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -3523,7 +3531,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
    }
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    SCIPdebugMessage("xval=%g in [%g,%g], yval=%g in [%g,%g]\n", xval, xlb, xub, yval, ylb, yub);
@@ -3695,7 +3703,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
    *success = FALSE;
 
    SCIPdebugMessage("f(%s, %s) = ", SCIPvarGetName(x), SCIPvarGetName(y));
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
    xval = xyref[0];
@@ -5673,7 +5681,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
    int                nconvextypeslhs[(int)SCIP_BIVAR_UNKNOWN+1];
    int                nconvextypesrhs[(int)SCIP_BIVAR_UNKNOWN+1];
 #endif
@@ -5684,7 +5692,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
    BMSclearMemoryArray(nconvextypeslhs, (int)SCIP_BIVAR_UNKNOWN+1);
    BMSclearMemoryArray(nconvextypesrhs, (int)SCIP_BIVAR_UNKNOWN+1);
 #endif
@@ -5745,7 +5753,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       /* initialize data for cut generation */
       SCIP_CALL( initSepaData(scip, conshdlrdata->exprinterpreter, conss[c]) );  /*lint !e613*/
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
       if( !SCIPisInfinity(scip, -consdata->lhs) )
          ++nconvextypeslhs[consdata->convextype];
       if( !SCIPisInfinity(scip,  consdata->rhs) )
@@ -5763,10 +5771,26 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
 
-#ifdef SCIP_DEBUG
+#ifdef TYPESTATISTICS
       for( c = 0; c <= (int)SCIP_BIVAR_UNKNOWN; ++c )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type %d\n", nconvextypeslhs[c], nconvextypesrhs[c], c);
+         const char* typename;
+         switch( c )
+         {
+         case SCIP_BIVAR_ALLCONVEX:
+            typename = "allconvex";
+            break;
+         case SCIP_BIVAR_1CONVEX_INDEFINITE:
+            typename = "1-convex";
+            break;
+         case SCIP_BIVAR_CONVEX_CONCAVE:
+            typename = "convex-concave";
+            break;
+         case SCIP_BIVAR_UNKNOWN:
+            typename = "unknown";
+            break;
+         }
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type [%s]\n", nconvextypeslhs[c], nconvextypesrhs[c], typename);
       }
 #endif
 
@@ -5899,7 +5923,7 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
 #endif
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpBivariate)
@@ -6061,7 +6085,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 
             default:
             {
-               SCIPwarningMessage("initlp for convexity type %d not implemented\n", consdata->convextype);
+               SCIPwarningMessage(scip, "initlp for convexity type %d not implemented\n", consdata->convextype);
             }
             }  /*lint !e788*/
 
@@ -6324,7 +6348,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
          else
          {
             *result = SCIP_FEASIBLE;
-            SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
          }
          return SCIP_OKAY;
       }
@@ -6855,7 +6879,7 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
       SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
 
    /* print coefficients and variables */
-   SCIP_CALL( SCIPexprtreePrintWithNames(consdata->f, file) );
+   SCIP_CALL( SCIPexprtreePrintWithNames(consdata->f, SCIPgetMessagehdlr(scip), file) );
 
    if( consdata->z != NULL )
    {

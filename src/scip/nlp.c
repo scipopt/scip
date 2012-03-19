@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,18 +33,18 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/nlp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/event.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/pub_expr.h"
 #include "nlpi/struct_expr.h"
@@ -171,6 +171,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
 /** prints an expression tree using variable names from variables array */
 SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file for printing, or NULL for stdout */
    )
 {
@@ -181,7 +182,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
 
    if( tree->nvars == 0 )
    {
-      SCIPexprtreePrint(tree, file, NULL, NULL);
+      SCIPexprtreePrint(tree, messagehdlr, file, NULL, NULL);
       return SCIP_OKAY;
    }
 
@@ -191,7 +192,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
    for( i = 0; i < tree->nvars; ++i )
       varnames[i] = SCIPvarGetName((SCIP_VAR*)tree->vars[i]);
 
-   SCIPexprtreePrint(tree, file, varnames, NULL);
+   SCIPexprtreePrint(tree, messagehdlr, file, varnames, NULL);
 
    BMSfreeMemoryArray(&varnames);
 
@@ -1508,7 +1509,6 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       return SCIP_OKAY;
 
    SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
-   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
@@ -1907,7 +1907,6 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    SCIPsetFreeBufferArray(set, &used);
 
    SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
-   SCIPdebug( SCIP_CALL( SCIPnlrowPrint(nlrow, NULL) ) );
 
    return SCIP_OKAY;
 }
@@ -2271,6 +2270,61 @@ SCIP_RETCODE SCIPnlrowFree(
    BMSfreeBlockMemoryArray(blkmem, &(*nlrow)->name, strlen((*nlrow)->name)+1);
 
    BMSfreeBlockMemory(blkmem, nlrow);
+
+   return SCIP_OKAY;
+}
+
+/** output nonlinear row to file stream */
+SCIP_RETCODE SCIPnlrowPrint(
+   SCIP_NLROW*           nlrow,              /**< NLP row */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   assert(nlrow != NULL);
+
+   /* print row name */
+   if( nlrow->name != NULL && nlrow->name[0] != '\0' )
+   {
+      SCIPmessageFPrintInfo(messagehdlr, file, "%s: ", nlrow->name);
+   }
+
+   /* print left hand side */
+   SCIPmessageFPrintInfo(messagehdlr, file, "%.15g <= ", nlrow->lhs);
+
+   /* print constant */
+   SCIPmessageFPrintInfo(messagehdlr, file, "%.15g ", nlrow->constant);
+
+   /* print linear coefficients */
+   for( i = 0; i < nlrow->nlinvars; ++i )
+   {
+      assert(nlrow->linvars[i] != NULL);
+      assert(SCIPvarGetName(nlrow->linvars[i]) != NULL);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", nlrow->lincoefs[i], SCIPvarGetName(nlrow->linvars[i]));
+   }
+
+   /* print quadratic elements */
+   for( i = 0; i < nlrow->nquadelems; ++i )
+   {
+      assert(SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]) != NULL);
+      assert(SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]) != NULL);
+      if( nlrow->quadelems[i].idx1 == nlrow->quadelems[i].idx2 )
+         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15gsqr(<%s>) ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]));
+      else
+         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s><%s> ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]), SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]));
+   }
+
+   /* print non-quadratic part */
+   if( nlrow->exprtree != NULL )
+   {
+      SCIPmessageFPrintInfo(messagehdlr, file, " + ");
+      SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->exprtree, messagehdlr, file) );
+   }
+
+   /* print right hand side */
+   SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g\n", nlrow->rhs);
 
    return SCIP_OKAY;
 }
@@ -3166,60 +3220,6 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
    return SCIP_OKAY;
 }
 
-/** output nonlinear row to file stream */
-SCIP_RETCODE SCIPnlrowPrint(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   int i;
-
-   assert(nlrow != NULL);
-
-   /* print row name */
-   if( nlrow->name != NULL && nlrow->name[0] != '\0' )
-   {
-      SCIPmessageFPrintInfo(file, "%s: ", nlrow->name);
-   }
-
-   /* print left hand side */
-   SCIPmessageFPrintInfo(file, "%.15g <= ", nlrow->lhs);
-
-   /* print constant */
-   SCIPmessageFPrintInfo(file, "%.15g ", nlrow->constant);
-
-   /* print linear coefficients */
-   for( i = 0; i < nlrow->nlinvars; ++i )
-   {
-      assert(nlrow->linvars[i] != NULL);
-      assert(SCIPvarGetName(nlrow->linvars[i]) != NULL);
-      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", nlrow->lincoefs[i], SCIPvarGetName(nlrow->linvars[i]));
-   }
-
-   /* print quadratic elements */
-   for( i = 0; i < nlrow->nquadelems; ++i )
-   {
-      assert(SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]) != NULL);
-      assert(SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]) != NULL);
-      if( nlrow->quadelems[i].idx1 == nlrow->quadelems[i].idx2 )
-         SCIPmessageFPrintInfo(file, "%+.15gsqr(<%s>) ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]));
-      else
-         SCIPmessageFPrintInfo(file, "%+.15g<%s><%s> ", nlrow->quadelems[i].coef, SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx1]), SCIPvarGetName(nlrow->quadvars[nlrow->quadelems[i].idx2]));
-   }
-
-   /* print non-quadratic part */
-   if( nlrow->exprtree != NULL )
-   {
-      SCIPmessageFPrintInfo(file, " + ");
-      SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->exprtree, file) );
-   }
-
-   /* print right hand side */
-   SCIPmessageFPrintInfo(file, "<= %.15g\n", nlrow->rhs);
-
-   return SCIP_OKAY;
-}
-
 /** gets constant */
 SCIP_Real SCIPnlrowGetConstant(
    SCIP_NLROW*           nlrow               /**< NLP row */
@@ -3626,7 +3626,9 @@ SCIP_RETCODE nlpDelNlRowPos(
 static
 SCIP_RETCODE nlpUpdateVarBounds(
    SCIP_NLP*             nlp,                /**< NLP data */
-   SCIP_VAR*             var                 /**< variable which bounds have changed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable which bounds have changed */
+   SCIP_Bool             tightened           /**< whether the bound change was a bound tightening */
    )
 {
    int pos;
@@ -3657,6 +3659,24 @@ SCIP_RETCODE nlpUpdateVarBounds(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    SCIP_CALL( SCIPnlpiChgVarBounds(nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
+
+   /* if we have a feasible NLP solution and it satisfies the new bounds, then it is still feasible
+    * if the NLP was globally or locally infeasible and we tightened a bound, then it stays that way
+    * if the NLP was unbounded and we tightened a bound, then this may not be the case anymore
+    */
+   if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+      if( !tightened ||
+         ((SCIPsetIsInfinity(set, -lb) || SCIPsetIsFeasLE(set, lb, SCIPvarGetNLPSol(var))) &&
+          (SCIPsetIsInfinity(set,  ub) || SCIPsetIsFeasGE(set, ub, SCIPvarGetNLPSol(var)))) )
+         nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+      else
+         nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+   }
+   else if( !tightened || nlp->solstat == SCIP_NLPSOLSTAT_UNBOUNDED )
+   {
+      nlp->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+   }
 
    return SCIP_OKAY;
 }
@@ -3709,6 +3729,10 @@ SCIP_RETCODE nlpUpdateObjCoef(
    pos = nlp->varmap_nlp2nlpi[pos];
    objidx = -1;
    SCIP_CALL( SCIPnlpiChgLinearCoefs(nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
+
+   /* if we had a solution and it was locally (or globally) optimal, then now we can only be sure that it is still feasible */
+   if( nlp->solstat < SCIP_NLPSOLSTAT_FEASIBLE )
+      nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -4602,12 +4626,15 @@ SCIP_RETCODE nlpFlushObjective(
 }
 
 /** solves the NLP, assuming it has been flushed already
- * is used also to solve diving NLP */
+ *
+ *  is used also to solve diving NLP
+ */
 static
 SCIP_RETCODE nlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -4620,7 +4647,7 @@ SCIP_RETCODE nlpSolve(
 
    if( nlp->solver == NULL )
    {
-      SCIPwarningMessage("Attempted to solve NLP, but no solver available.\n");
+      SCIPmessagePrintWarning(messagehdlr, "Attempted to solve NLP, but no solver available.\n");
 
       nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
@@ -4928,7 +4955,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
       SCIPdebugMessage( "-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
-      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, var) );
+      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )
    {
@@ -5472,6 +5499,7 @@ SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -5488,7 +5516,7 @@ SCIP_RETCODE SCIPnlpSolve(
 
    SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
 
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, stat) );
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat) );
 
    return SCIP_OKAY;
 }
@@ -5610,7 +5638,9 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
 }
 
 /** set initial guess (approximate primal solution) for next solve
- * array initguess must be NULL or have length at least SCIPnlpGetNVars */
+ *
+ *  array initguess must be NULL or have length at least SCIPnlpGetNVars()
+ */
 SCIP_RETCODE SCIPnlpSetInitialGuess(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -5647,6 +5677,7 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
 SCIP_RETCODE SCIPnlpWrite(
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname               /**< file name */
    )
 {
@@ -5667,22 +5698,22 @@ SCIP_RETCODE SCIPnlpWrite(
    else
       file = stdout;
 
-   SCIPmessageFPrintInfo(file, "STATISTICS\n");
-   SCIPmessageFPrintInfo(file, "  NLP name: %s\n", nlp->name);
-   SCIPmessageFPrintInfo(file, "  Variables: %d\n", nlp->nvars);
-   SCIPmessageFPrintInfo(file, "  Rows: %d\n", nlp->nnlrows);
+   SCIPmessageFPrintInfo(messagehdlr, file, "STATISTICS\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "  NLP name: %s\n", nlp->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables: %d\n", nlp->nvars);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Rows: %d\n", nlp->nnlrows);
 
-   SCIPmessageFPrintInfo(file, "VARIABLES\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "VARIABLES\n");
    for( i = 0; i < nlp->nvars; ++i )
    {
-      SCIPvarPrint(nlp->vars[i], set, file);
+      SCIPvarPrint(nlp->vars[i], set, messagehdlr, file);
    }
 
-   SCIPmessageFPrintInfo(file, "NONLINEAR ROWS\n");
+   SCIPmessageFPrintInfo(messagehdlr, file, "NONLINEAR ROWS\n");
    for( i = 0; i < nlp->nnlrows; ++i )
    {
-      SCIPmessageFPrintInfo(file, "  ");
-      SCIP_CALL( SCIPnlrowPrint(nlp->nlrows[i], file) );
+      SCIPmessageFPrintInfo(messagehdlr, file, "  ");
+      SCIP_CALL( SCIPnlrowPrint(nlp->nlrows[i], messagehdlr, file) );
    }
 
    if( fname != NULL )
@@ -6223,10 +6254,11 @@ SCIP_RETCODE SCIPnlpSolveDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, stat) );
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,7 @@ SCIP_RETCODE runShell(
    /**********************************
     * Process command line arguments *
     **********************************/
-   
+
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
 
@@ -67,7 +67,7 @@ SCIP_RETCODE runShell(
 
    /* check block memory */
    BMScheckEmptyMemory();
-   
+
    return SCIP_OKAY;
 }
 
@@ -80,12 +80,12 @@ int main(
   SCIP_RETCODE retcode;
 
   retcode = runShell(argc, argv, "scip.set");
-  
+
   if( retcode != SCIP_OKAY )
   {
-     SCIPprintError(retcode, stderr);
+     SCIPprintError(retcode);
      return -1;
   }
-  
+
   return 0;
 }

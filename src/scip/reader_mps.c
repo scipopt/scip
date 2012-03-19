@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -322,7 +322,7 @@ void mpsinputSetProbname(
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
 
-   (void)strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->probname, probname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective name in the mps input structure to given objective name */
@@ -336,7 +336,7 @@ void mpsinputSetObjname(
    assert(objname != NULL);
    assert(strlen(objname) < sizeof(mpsi->objname));
 
-   (void)strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->objname, objname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
 /** set the objective sense in the mps input structure to given objective sense */
@@ -439,10 +439,10 @@ SCIP_Bool mpsinputReadLine(
       mpsi->f0 = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
 
-      /* Read until we have a not comment line. */
+      /* Read until we have not a comment line. */
       do
       {
-         BMSclearMemoryArray(mpsi->buf, MPS_MAX_LINELEN);
+         mpsi->buf[MPS_MAX_LINELEN-1] = '\0';
          if( NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp) )
             return FALSE;
          mpsi->lineno++;
@@ -506,10 +506,10 @@ SCIP_Bool mpsinputReadLine(
                || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
                || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
-            /* len < 13 is handle ROW lines with embedded spaces
+            /* len < 14 is handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 13 )
+            if( number || len < 14 )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
@@ -623,6 +623,7 @@ void mpsinputInsertName(
 /** Process NAME section. */
 static
 SCIP_RETCODE readName(
+   SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
@@ -636,7 +637,7 @@ SCIP_RETCODE readName(
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   
+
    /* Sometimes the name is omitted. */
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
@@ -669,6 +670,7 @@ SCIP_RETCODE readName(
 /** Process OBJSEN section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjsen(
+   SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
@@ -720,6 +722,7 @@ SCIP_RETCODE readObjsen(
 /** Process OBJNAME section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjname(
+   SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
@@ -896,7 +899,7 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-         (void)strncpy(colname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
@@ -1005,7 +1008,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if( *rhsname == '\0' )
-         (void)strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1128,7 +1131,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if( *rngname == '\0' )
-         (void)strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1299,7 +1302,7 @@ SCIP_RETCODE readBounds(
          break;
 
       if( *bndname == '\0' )
-         (void)strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
@@ -1579,7 +1582,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-            (void)strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+	    (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */
@@ -1656,7 +1659,7 @@ SCIP_RETCODE readSOS(
             (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
             (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
          {
-            SCIPwarningMessage("ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
+            SCIPwarningMessage(scip, "ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
                mpsinputField3(mpsi), mpsinputField4(mpsi), mpsinputField5(mpsi));
          }
       }
@@ -1792,7 +1795,7 @@ SCIP_RETCODE readQMatrix(
             if( (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
                (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
             {
-               SCIPwarningMessage("ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
+               SCIPwarningMessage(scip, "ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
             }
          }
       }
@@ -1846,7 +1849,7 @@ SCIP_RETCODE readQMatrix(
    }
    else
    {
-      SCIPwarningMessage("%s section has no entries.\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
+      SCIPwarningMessage(scip, "%s section has no entries.\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    }
    
    SCIPfreeBufferArray(scip, &quadvars1);
@@ -1985,7 +1988,7 @@ SCIP_RETCODE readQCMatrix(
             if( (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
                (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
             {
-               SCIPwarningMessage("ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
+               SCIPwarningMessage(scip, "ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
             }
          }
       }
@@ -2013,7 +2016,7 @@ SCIP_RETCODE readQCMatrix(
    }
    else
    {
-      SCIPwarningMessage("QCMATRIX section has no entries.\n");
+      SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
    }
    
    SCIPfreeBufferArray(scip, &quadvars1);
@@ -2281,17 +2284,17 @@ SCIP_RETCODE readMps(
 
    SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
 
-   SCIP_CALL( readName(mpsi) );
+   SCIP_CALL( readName(scip, mpsi) );
 
    SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if( mpsinputSection(mpsi) == MPS_OBJSEN )
    {
-      SCIP_CALL( readObjsen(mpsi) );
+      SCIP_CALL( readObjsen(scip, mpsi) );
    }
    if( mpsinputSection(mpsi) == MPS_OBJNAME )
    {
-      SCIP_CALL( readObjname(mpsi) );
+      SCIP_CALL( readObjname(scip, mpsi) );
    }
    while( mpsinputSection(mpsi) == MPS_ROWS
       || mpsinputSection(mpsi) == MPS_USERCUTS
@@ -2795,7 +2798,7 @@ SCIP_RETCODE checkVarnames(
    
    if( faulty > 0 )
    {
-      SCIPwarningMessage("there are %d variable names which have to be cut down to %d characters; LP might be corrupted\n", 
+      SCIPwarningMessage(scip, "there are %d variable names which have to be cut down to %d characters; LP might be corrupted\n", 
          faulty, MPS_MAX_NAMELEN - 1);
    }
    return SCIP_OKAY;
@@ -2847,7 +2850,7 @@ SCIP_RETCODE checkConsnames(
 
       if( l == 0 )
       {
-         SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
+         SCIPwarningMessage(scip, "At least one name of a constraint is empty, so file will be written with generic names.\n");
 
          --i;  /*lint !e445*/
          for( ; i >= 0; --i)  /*lint !e445*/
@@ -2871,7 +2874,7 @@ SCIP_RETCODE checkConsnames(
 
    if( faulty > 0 )
    {
-      SCIPwarningMessage("there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
+      SCIPwarningMessage(scip, "there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
          faulty, MPS_MAX_NAMELEN - 1);
    }
    
@@ -3421,12 +3424,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* call writing with generic names */
       if( transformed )
       {
-         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "mps", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "mps", TRUE) );
       }
       *result = SCIP_SUCCESS;
@@ -3804,7 +3807,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* unknown constraint type; mark this with SCIPinfinity(scip) */
          rhss[c] = SCIPinfinity(scip); 
          
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
       }
    }
 

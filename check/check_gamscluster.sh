@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -17,7 +17,6 @@ TSTNAME=$1
 GAMSBIN=$2
 SOLVER=${3^^}
 SETNAME=$4
-BINNAME=gams.$5
 TIMELIMIT=$6
 NODELIMIT=$7
 GAPLIMIT=${8:-0}
@@ -30,6 +29,15 @@ PPN=${14}
 CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
+
+# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
+SETCUTOFF=0
+
+# set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
+PASSSTARTSOL=0
+
+# set this to true to keep solutions in .gdx files
+KEEPSOLS=0
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
@@ -53,23 +61,31 @@ then
     exit
 fi
 
+# if we run locally, use hostname as "queue"-name
 if test "$QUEUETYPE" = "local"
 then
     QUEUE=$HOSTNAME
 fi
 
-# set this to true to keep solutions in .gdx files
-KEEPSOLS=false
-
+# check if gams system is available
 if ! which $GAMSBIN > /dev/null 2>&1
 then
   echo "No GAMS system available: $GAMSBIN does not work. Abort."
   exit 1
 fi
+BINNAME=`echo $GAMSBIN | sed -e 's/[^A-Za-z0-9_.]/_/g'`
 
+# check if gams solver has been specified
 if test -z "$SOLVER"
 then
   echo "GAMSSOLVER not specified. Abort."
+  exit 1
+fi
+
+# check if testset file is available
+if test ! -r testset/$TSTNAME.test
+then
+  echo "Testset file testset/$TSTNAME.test not available. Abort."
   exit 1
 fi
 
@@ -84,12 +100,16 @@ then
     mkdir locks
 fi
 
-EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.eval
-SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.set
-SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sch
-GMSDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.gms
-OPTDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.opt
-SOLDIR=results/check.$TSTNAME.$BINNAME.$SOLVER.$SETNAME.sol
+EVALFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.eval
+SETFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.set
+SCHFILE=results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sch
+GMSDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.gms
+OPTDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.opt
+SOLDIR=`pwd`/results/check.$TSTNAME.$BINNAME.$SOLVER.$QUEUE.$SETNAME.sol
+
+# additional environment variables needed by finishgamscluster.sh at the end (or when trap is setup)
+export GMSDIR=$GMSDIR
+export EVALFILE=$EVALFILE
 
 echo > $EVALFILE
 
@@ -123,7 +143,7 @@ then
 fi
 
 # create directory for solutions, if KEEPSOLS is true
-if test "$KEEPSOLS" = "true"
+if test "$KEEPSOLS" = 1
 then
   mkdir -p $SOLDIR
   GAMSOPTS="$GAMSOPTS gdxcompress=1"
@@ -191,6 +211,7 @@ then
 fi
 
 # if run locally, run schulz to make sure solvers do not run forever
+# also setup what happens on exit
 if test $QUEUETYPE = local ; then
   # signal 2 (sigint, ^C) when 5 seconds above timelimit
   # signal 1 (sighup) when at hard timelimit
@@ -200,8 +221,21 @@ if test $QUEUETYPE = local ; then
   (( sleepsec = TIMELIMIT > 600 ? 60 : (TIMELIMIT > 30 ? TIMELIMIT / 10 - 2 : 1) ))
   ./schulz.sh "^$solverexe" "`expr $TIMELIMIT + 5`:$HARDTIMELIMIT:`expr $HARDTIMELIMIT + 60`" "2:1:9" $sleepsec > $SCHFILE 2>&1 &
   schulzpid=$!
-  # kill schulz on exit, or if we are interrupted
-  trap "kill $schulzpid" EXIT SIGHUP SIGINT SIGTERM
+
+  # kill schulz on exit and call finishgamscluster script
+  trap "echo 'Finishing up.'; kill $schulzpid; ./finishgamscluster.sh" EXIT
+fi
+
+# if cutoff should be passed, check for solu file
+if test $SETCUTOFF = 1 ; then
+  if test -e testset/$TSTNAME.solu ; then
+    SOLUFILE=testset/$TSTNAME.solu
+  elif test -e testset/all.solu ; then
+    SOLUFILE=testset/all.solu
+  else
+    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+    SETCUTOFF=0
+  fi
 fi
 
 # counter to define file names for a test set uniquely 
@@ -254,7 +288,7 @@ do
     COUNT=`expr $COUNT + 1`
 
     GMSFILE=`basename $i`
-    INPUTDIR=`dirname $i`
+    INPUTDIR=`pwd`/`dirname $i`
     case $GMSFILE in
       *.gms )
         ;;
@@ -298,9 +332,14 @@ do
       continue
     fi
 
-    if test $KEEPSOLS = "true"
+    if test $KEEPSOLS = 1
     then
       GDXFILE="gdx=$SOLDIR/${GMSFILE/%gms/gdx}"
+    fi
+
+    if test $SETCUTOFF = 1
+    then
+      export CUTOFF=`grep ${GMSFILE/%.gms/} $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
     fi
 
     # additional environment variables needed by rungamscluster.sh
@@ -314,10 +353,12 @@ do
     export SOLVER=$SOLVER
     export GDXFILE=$GDXFILE
     export CLIENTTMPDIR=$CLIENTTMPDIR
+    export PASSSTARTSOL=$PASSSTARTSOL
 
     case $QUEUETYPE in
-      srun ) 
-        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $QUEUE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
+      srun )
+        # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
+        sbatchret=`sbatch --job-name=GAMS$SHORTFILENAME -p $QUEUE ${EXCLUSIVE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;
@@ -335,19 +376,13 @@ do
   fi
 done
 
-# additional environment variables needed by finishgamscluster.sh
-export GMSDIR=$GMSDIR
-export EVALFILE=$EVALFILE
-
+# add job that calls finishgamscluster.sh for slurm runs
+# for local runs, finishgamscluster.sh is called via the trap above, so it's also called if we interrupt with a Ctrl+C or similar
+#TODO call finishgamscluster also in qsub runs
 case $QUEUETYPE in
   srun )
     sbatch --job-name=GAMSFINISH -p $QUEUE --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
     echo
     squeue -p $QUEUE
     ;;
-  local )
-    echo "Finishing up."
-    ./finishgamscluster.sh
-    ;;
 esac
-#TODO call finishgamscluster also in qsub runs

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2360,11 +2360,11 @@ SCIP_RETCODE createAndAddLinearCons(
                {
                   if( nvars == 2 )
                   {
-                     SCIPwarningMessage("Does not expect this, because this constraint should be a set packing constraint.\n");
+                     SCIPwarningMessage(scip, "Does not expect this, because this constraint should be a set packing constraint.\n");
                   }
                   else
                   {
-                     SCIPwarningMessage("Does not expect this, because this constraint should be a logicor constraint.\n");
+                     SCIPwarningMessage(scip, "Does not expect this, because this constraint should be a logicor constraint.\n");
                   }
                }
                SCIPdebugMessage("linear pseudoboolean constraint will be a set covering constraint\n");
@@ -7227,11 +7227,11 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
             if( SCIPisInfinity(scip, maxact) )
             {
-               SCIPwarningMessage("maxactivity = %g exceed infinity value.\n", maxact);
+               SCIPwarningMessage(scip, "maxactivity = %g exceed infinity value.\n", maxact);
             }
             if( SCIPisInfinity(scip, -minact) )
             {
-               SCIPwarningMessage("minactivity = %g exceed -infinity value.\n", minact);
+               SCIPwarningMessage(scip, "minactivity = %g exceed -infinity value.\n", minact);
             }
 
             /* @todo check whether it's better to set the initial flag to false */         
@@ -7560,7 +7560,7 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #if 0
 static
 SCIP_DECL_CONSINITLP(consInitlpPseudoboolean)
@@ -8408,7 +8408,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
       {
          if( tmpdata != NULL && tmpdata->cons != NULL )
          {
-            SCIPwarningMessage("Another and-constraint with the same vaiables but different and-resultant is added to the global and-constraint hashtable of pseudoboolean constraint handler.\n");
+            SCIPwarningMessage(scip, "Another and-constraint with the same vaiables but different and-resultant is added to the global and-constraint hashtable of pseudoboolean constraint handler.\n");
          }
 
          /* resize data for all and-constraints if necessary */

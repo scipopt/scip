@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,8 +26,8 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/intervalarith.h"
+#include "scip/pub_message.h"
 
 #ifdef ROUNDING_FE
 #define ROUNDING
@@ -188,7 +188,7 @@ void SCIPintervalSetRoundingMode(
    SCIP_ROUNDMODE   roundmode           /**< rounding mode to activate */
    )
 {  /*lint --e{715}*/
-   SCIPwarningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
+   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
 }
 
 /** gets current rounding mode of floating point operations */
@@ -258,7 +258,7 @@ SCIP_Real negate(
    SCIP_Real             x                   /**< number that should be negated */
    )
 {
-   SCIPwarningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
+   SCIPerrorMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
    return -x;
 }
 

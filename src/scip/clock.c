@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,7 @@
 #include <time.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/clock.h"
@@ -133,7 +133,7 @@ void clockSetType(
       else
       {
          SCIP_Real sec;
-         
+
          sec = SCIPclockGetTime(clck);
          clck->clocktype = newtype;
          SCIPclockSetTime(clck, sec);

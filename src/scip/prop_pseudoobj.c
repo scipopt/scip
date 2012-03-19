@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -378,7 +378,7 @@ static
 SCIP_RETCODE objimplicsDelPos(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJIMPLICS*      objimplics,         /**< objective implication data structure */
-   int                   pos
+   int                   pos                 /**< position */
    )
 {
    assert(0 <= pos);
@@ -693,9 +693,12 @@ SCIP_Real collectMinactImplicVar(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - bestbound(x)) * objval(x) - sum_{x\in I(1)} bestbound(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{bestbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{bestbound}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - bestbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{bestbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  */
 static
 SCIP_RETCODE collectMinactImplicVars(
@@ -788,9 +791,12 @@ SCIP_RETCODE collectMinactImplicVars(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - bestbound(x)) * objval(x) - sum_{x\in I(1)} bestbound(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{bestbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{bestbound}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - bestbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{bestbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  *
  *  This can be done w.r.t. global variable bounds (local == FALSE), w.r.t. local variable bounds (local == TRUE &&
  *  bdchgidx == NULL), and w.r.t. given time stamp (local == TRUE && bdchgidx != NULL)
@@ -938,9 +944,12 @@ SCIP_RETCODE getMinactObjchg(
  *  fixing the implication variable to zero (I(0)) or one (I(1)), respectively. The objective change provided by the
  *  implications are:
  *
- *  sum_{x\in I(1)} (1 - worstbound(x)) * objval(x) - sum_{x\in I(1)} worst(x) * objval(x)
+ *  \f[
+ *  \displaystyle
+ *  sum_{x\in I(1)} (1 - \mbox{worstbound}(x)) \cdot \mbox{objval}(x) - sum_{x\in I(1)} \mbox{worst}(x) \cdot \mbox{objval}(x)
  *  =
- *  sum_{x\in I(0) \cup I(1)} (impledbound(x) - worstbound(x)) * objval(x)
+ *  sum_{x\in I(0) \cup I(1)} (\mbox{impliedbound}(x) - \mbox{worstbound}(x)) \cdot \mbox{objval}(x)
+ *  \f]
  */
 static
 SCIP_Real getMaxactImplicObjchg(
@@ -2312,7 +2321,7 @@ SCIP_RETCODE propagateCutoffbound(
 
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2359,7 +2368,6 @@ SCIP_RETCODE propagateCutoffbound(
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
 
          (*result) = SCIP_CUTOFF;
-
          return SCIP_OKAY;
       }
 
@@ -2392,7 +2400,7 @@ SCIP_RETCODE propagateCutoffbound(
          /* analyze the conflict */
          SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
       }
-      *result = SCIP_CUTOFF;
+      (*result) = SCIP_CUTOFF;
 
       return SCIP_OKAY;
    }
@@ -2508,7 +2516,8 @@ void calcMaxObjPseudoactivity(
    /* calculate current max pseudo activity and largest contribution */
    propdata->maxpseudoobjact = 0.0;
    propdata->maxpseudoobjactinf = 0;
-   for( v = 0; v < nvars; v++ )
+
+   for( v = 0; v < nvars; ++v )
    {
       objval = SCIPvarGetObj(vars[v]);
       if( SCIPisPositive(scip, objval) )
@@ -2649,6 +2658,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
+   assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
    /* get contribution of variable by fixing it to its lower bound w.r.t. maximum activity of the objective function */
    lbobjchg = getMaxactObjchg(var, SCIP_BOUNDTYPE_LOWER, useimplics);
@@ -2733,7 +2743,7 @@ SCIP_RETCODE propagateLowerbound(
 
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
    cutoff = FALSE;
    nchgbds = 0;
 
@@ -2817,6 +2827,10 @@ SCIP_RETCODE propagateLowerbound(
                break;
             }
 
+            /* update maximum pseudo activity since the previous global bound change might invalidated the maximum
+             * pseudo activity
+             */
+            maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
             nchgbds++;
          }
 
@@ -2837,7 +2851,13 @@ SCIP_RETCODE propagateLowerbound(
             SCIP_CALL( propagateLowerboundBinvar(scip, var, lowerbound, maxpseudoobjact, propdata->propuseimplics, &cutoff, &tightened) );
 
             if( tightened )
+            {
+               /* update maximum pseudo activity since the previous global bound change might invalidated the maximum
+                * pseudo activity
+                */
+               maxpseudoobjact = getMaxObjPseudoactivity(scip, propdata);
                nchgbds++;
+            }
          }
 
 #ifndef NDEBUG
@@ -3013,7 +3033,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
@@ -3029,7 +3049,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
    if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
-      *result = SCIP_CUTOFF;
+      (*result) = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 
@@ -3039,7 +3059,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       SCIP_Real objval;
       SCIP_Bool tightened;
 
-      *result = SCIP_DIDNOTFIND;
+      (*result) = SCIP_DIDNOTFIND;
       oldnchgbds = *nchgbds;
 
       /* get the problem variables */
@@ -3064,7 +3084,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 
       /* evaluate if bound change was detected */
       if( *nchgbds > oldnchgbds )
-         *result = SCIP_SUCCESS;
+         (*result) = SCIP_SUCCESS;
 
       /* store the old values */
       propdata->cutoffbound = cutoffbound;
@@ -3084,7 +3104,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   (*result) = SCIP_DIDNOTRUN;
 
    /* do nothing if active pricer are present and force flag is not TRUE */
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
@@ -3107,7 +3127,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    /* propagate c*x <= cutoff */
    SCIP_CALL( propagateCutoffbound(scip, prop, result) );
 
-   if( *result != SCIP_CUTOFF && (propdata->nmaxactvars > 0 || propdata->nobjintvars > 0) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( (*result) != SCIP_CUTOFF && (propdata->nmaxactvars > 0 || propdata->nobjintvars > 0) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       SCIP_RESULT dualresult;
 
@@ -3115,7 +3135,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       SCIP_CALL( propagateLowerbound(scip, prop, &dualresult) );
 
       if( dualresult == SCIP_REDUCEDDOM || dualresult == SCIP_CUTOFF )
-         *result = dualresult;
+         (*result) = dualresult;
    }
 
    return SCIP_OKAY;
@@ -3144,7 +3164,7 @@ SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
    /* resolve the propagation of the inference variable w.r.t. required minactivity */
    SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, infervar, inferinfo, boundtype, bdchgidx) );
 
-   *result = SCIP_SUCCESS;
+   (*result) = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

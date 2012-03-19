@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2149,7 +2149,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpXor)
 {  /*lint --e{715}*/
@@ -2710,7 +2710,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsXor)
 
    if( consdata->intvar == NULL )
    {
-      if( varssize < consdata->nvars  )
+      if( varssize < consdata->nvars )
          (*success) = FALSE;
       else
       {

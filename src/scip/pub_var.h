@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -305,6 +305,12 @@ SCIP_Bool SCIPvarsHaveCommonClique(
 /** get name of variable */
 extern
 const char* SCIPvarGetName(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of times, the variable is currently captured */
+extern
+int SCIPvarGetNUses(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -822,6 +828,7 @@ int SCIPvarGetNBdchgInfosUb(
  */
 
 #define SCIPvarGetName(var)             (var)->name
+#define SCIPvarGetNUses(var)            (var)->nuses
 #define SCIPvarGetData(var)             (var)->vardata
 #define SCIPvarSetData(var,vdata)       (var)->vardata = (vdata)
 #define SCIPvarSetDelorigData(var,func) (var)->vardelorig = (func)

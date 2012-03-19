@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -223,6 +223,7 @@ SCIP_Bool isValueChar(
  */
 static
 SCIP_Bool getNextLine(
+   SCIP*                 scip,               /**< SCIP data structure */
    PIPINPUT*             pipinput            /**< PIP reading data */
    )
 {
@@ -280,6 +281,7 @@ void swapPointers(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
+   SCIP*                 scip,               /**< SCIP data structure */
    PIPINPUT*             pipinput            /**< PIP reading data */
    )
 {
@@ -306,7 +308,7 @@ SCIP_Bool getNextToken(
    {
       if( buf[pipinput->linepos] == '\0' )
       {
-         if( !getNextLine(pipinput) )
+         if( !getNextLine(scip, pipinput) )
          {
             pipinput->section = PIP_END;
             SCIPdebugMessage("(line %d) end of file\n", pipinput->linenumber);
@@ -415,6 +417,7 @@ void swapTokenBuffer(
 /** checks whether the current token is a section identifier, and if yes, switches to the corresponding section */
 static
 SCIP_Bool isNewSection(
+   SCIP*                 scip,               /**< SCIP data structure */
    PIPINPUT*             pipinput            /**< PIP reading data */
    )
 {
@@ -427,7 +430,7 @@ SCIP_Bool isNewSection(
 
    /* look at next token: if this is a ':', the first token is a name and no section keyword */
    iscolon = FALSE;
-   if( getNextToken(pipinput) )
+   if( getNextToken(scip, pipinput) )
    {
       iscolon = (strcmp(pipinput->token, ":") == 0);
       pushToken(pipinput);
@@ -464,7 +467,7 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'TO' */
       swapTokenBuffer(pipinput);
-      if( getNextToken(pipinput) )
+      if( getNextToken(scip, pipinput) )
       {
          if( strcasecmp(pipinput->token, "TO") == 0 )
          {
@@ -482,7 +485,7 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'THAT' */
       swapTokenBuffer(pipinput);
-      if( getNextToken(pipinput) )
+      if( getNextToken(scip, pipinput) )
       {
          if( strcasecmp(pipinput->token, "THAT") == 0 )
          {
@@ -690,10 +693,10 @@ SCIP_RETCODE readStart(
    do
    {
       /* get token */
-      if( !getNextToken(pipinput) )
+      if( !getNextToken(scip, pipinput) )
          return SCIP_OKAY;
    }
-   while( !isNewSection(pipinput) );
+   while( !isNewSection(scip, pipinput) );
 
    return SCIP_OKAY;
 }
@@ -878,10 +881,10 @@ SCIP_RETCODE readPolynomial(
    *newsection = FALSE;
 
    /* read the first token, which may be the name of the line */
-   if( getNextToken(pipinput) )
+   if( getNextToken(scip, pipinput) )
    {
       /* check if we reached a new section */
-      if( isNewSection(pipinput) )
+      if( isNewSection(scip, pipinput) )
       {
          *newsection = TRUE;
          return SCIP_OKAY;
@@ -891,7 +894,7 @@ SCIP_RETCODE readPolynomial(
       swapTokenBuffer(pipinput);
 
       /* get the next token and check, whether it is a colon */
-      if( getNextToken(pipinput) )
+      if( getNextToken(scip, pipinput) )
       {
          if( strcmp(pipinput->token, ":") == 0 )
          {
@@ -938,7 +941,7 @@ SCIP_RETCODE readPolynomial(
    nvars = 0;
    nfactors = 0;
    monomialdegree = 0;
-   while( getNextToken(pipinput) )
+   while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
       int varidx;
@@ -949,7 +952,7 @@ SCIP_RETCODE readPolynomial(
 
       issign = FALSE;   /* fix compiler warning */
       issense = FALSE;  /* fix lint warning */
-      if( (isnewsection = isNewSection(pipinput)) ||  /*lint !e820*/ 
+      if( (isnewsection = isNewSection(scip, pipinput)) ||  /*lint !e820*/ 
          (issense = isSense(pipinput, NULL))      ||  /*lint !e820*/
          (nfactors > 0 && (issign = isSign(pipinput, &nextcoefsign))) )  /*lint !e820*/
       {
@@ -1030,7 +1033,7 @@ SCIP_RETCODE readPolynomial(
       /* check if we are at an exponent for the last variable */
       if( strcmp(pipinput->token, "^") == 0 )
       {
-         if( !getNextToken(pipinput) || !isValue(scip, pipinput, &exponent) )
+         if( !getNextToken(scip, pipinput) || !isValue(scip, pipinput, &exponent) )
          {
             syntaxError(scip, pipinput, "expected exponent value after '^'");
             goto TERMINATE_READPOLYNOMIAL;
@@ -1109,7 +1112,7 @@ SCIP_RETCODE readPolynomial(
    SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvars, vars) );
 
    SCIPdebugMessage("read polynomial of degree %d: ", *degree);
-   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, SCIPgetMessagehdlr(scip), NULL) ) );
    SCIPdebugPrintf("\n");
 
  TERMINATE_READPOLYNOMIAL:
@@ -1497,7 +1500,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if ( !getNextToken(pipinput) || !isSense(pipinput, &sense) )
+   if ( !getNextToken(scip, pipinput) || !isSense(pipinput, &sense) )
    {
       syntaxError(scip, pipinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
@@ -1505,14 +1508,14 @@ SCIP_RETCODE readConstraints(
 
    /* read the right hand side */
    sidesign = +1;
-   if ( !getNextToken(pipinput) )
+   if ( !getNextToken(scip, pipinput) )
    {
       syntaxError(scip, pipinput, "missing right hand side");
       goto TERMINATE;
    }
    if ( isSign(pipinput, &sidesign) )
    {
-      if( !getNextToken(pipinput) )
+      if( !getNextToken(scip, pipinput) )
       {
          syntaxError(scip, pipinput, "missing value of right hand side");
          goto TERMINATE;
@@ -1644,7 +1647,7 @@ SCIP_RETCODE readBounds(
 {
    assert(pipinput != NULL);
 
-   while( getNextToken(pipinput) )
+   while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
       SCIP_Real value;
@@ -1655,7 +1658,7 @@ SCIP_RETCODE readBounds(
       PIPSENSE leftsense;
 
       /* check if we reached a new section */
-      if( isNewSection(pipinput) )
+      if( isNewSection(scip, pipinput) )
          return SCIP_OKAY;
 
       /* default bounds are [0,+inf] */
@@ -1666,7 +1669,7 @@ SCIP_RETCODE readBounds(
       /* check if the first token is a sign */
       sign = +1;
       hassign = isSign(pipinput, &sign);
-      if( hassign && !getNextToken(pipinput) )
+      if( hassign && !getNextToken(scip, pipinput) )
       {
          syntaxError(scip, pipinput, "expected value");
          return SCIP_OKAY;
@@ -1676,7 +1679,7 @@ SCIP_RETCODE readBounds(
       if( isValue(scip, pipinput, &value) )
       {
          /* first token is a value: the second token must be a sense */
-         if( !getNextToken(pipinput) || !isSense(pipinput, &leftsense) )
+         if( !getNextToken(scip, pipinput) || !isSense(pipinput, &leftsense) )
          {
             syntaxError(scip, pipinput, "expected bound sense '<=', '=', or '>='");
             return SCIP_OKAY;
@@ -1710,7 +1713,7 @@ SCIP_RETCODE readBounds(
          pushToken(pipinput);
 
       /* the next token must be a variable name */
-      if( !getNextToken(pipinput) )
+      if( !getNextToken(scip, pipinput) )
       {
          syntaxError(scip, pipinput, "expected variable name");
          return SCIP_OKAY;
@@ -1718,7 +1721,7 @@ SCIP_RETCODE readBounds(
       SCIP_CALL( getVariable(scip, pipinput->token, &var, NULL) );
 
       /* the next token might be another sense, or the word "free" */
-      if( getNextToken(pipinput) )
+      if( getNextToken(scip, pipinput) )
       {
          PIPSENSE rightsense;
 
@@ -1729,7 +1732,7 @@ SCIP_RETCODE readBounds(
                || (leftsense == PIP_SENSE_LE && rightsense == PIP_SENSE_LE)
                || (leftsense == PIP_SENSE_GE && rightsense == PIP_SENSE_GE) )
             {
-               if( !getNextToken(pipinput) )
+               if( !getNextToken(scip, pipinput) )
                {
                   syntaxError(scip, pipinput, "expected value or sign");
                   return SCIP_OKAY;
@@ -1738,7 +1741,7 @@ SCIP_RETCODE readBounds(
                /* check if the next token is a sign */
                sign = +1;
                hassign = isSign(pipinput, &sign);
-               if( hassign && !getNextToken(pipinput) )
+               if( hassign && !getNextToken(scip, pipinput) )
                {
                   syntaxError(scip, pipinput, "expected value");
                   return SCIP_OKAY;
@@ -1815,14 +1818,14 @@ SCIP_RETCODE readGenerals(
 {
    assert(pipinput != NULL);
 
-   while( getNextToken(pipinput) )
+   while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
       /* check if we reached a new section */
-      if( isNewSection(pipinput) )
+      if( isNewSection(scip, pipinput) )
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
@@ -1850,14 +1853,14 @@ SCIP_RETCODE readBinaries(
 {
    assert(pipinput != NULL);
 
-   while( getNextToken(pipinput) )
+   while( getNextToken(scip, pipinput) )
    {
       SCIP_VAR* var;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
       /* check if we reached a new section */
-      if( isNewSection(pipinput) )
+      if( isNewSection(scip, pipinput) )
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
@@ -2882,7 +2885,7 @@ void checkVarnames(
    {
       if( strlen(SCIPvarGetName(vars[v])) > PIP_MAX_NAMELEN )  /*lint !e613*/
       {
-         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
             PIP_MAX_NAMELEN - 1);
          return;
       }
@@ -2928,14 +2931,14 @@ void checkConsnames(
          if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN)
             || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4) )
          {
-            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
                PIP_MAX_NAMELEN  - 1);
             return;
          }
       }
       else if( strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
             PIP_MAX_NAMELEN  - 1);
          return;
       }
@@ -3196,7 +3199,7 @@ SCIP_RETCODE SCIPwritePip(
             {
                if( SCIPexprGetIntPowerExponent(expr) < 0 )
                {
-                  SCIPwarningMessage("negative exponent %d in intpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), e, SCIPconsGetName(cons));
+                  SCIPwarningMessage(scip, "negative exponent %d in intpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                }
 
@@ -3207,7 +3210,7 @@ SCIP_RETCODE SCIPwritePip(
             {
                if( SCIPexprGetRealPowerExponent(expr) < 0.0 )
                {
-                  SCIPwarningMessage("negative exponent %g in realpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), e, SCIPconsGetName(cons));
+                  SCIPwarningMessage(scip, "negative exponent %g in realpower in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                }
 
@@ -3227,7 +3230,7 @@ SCIP_RETCODE SCIPwritePip(
                   {
                      if( SCIPexprGetMonomialExponents(monomial)[f] < 0.0 )
                      {
-                        SCIPwarningMessage("negative exponent %g in polynomial in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], e, SCIPconsGetName(cons));
+                        SCIPwarningMessage(scip, "negative exponent %g in polynomial in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], e, SCIPconsGetName(cons));
                         ispolynomial = FALSE;
                         break;
                      }
@@ -3238,7 +3241,7 @@ SCIP_RETCODE SCIPwritePip(
             }
 
             default:
-               SCIPwarningMessage("expression operand <%s> in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), e, SCIPconsGetName(cons));
+               SCIPwarningMessage(scip, "expression operand <%s> in %dth expression tree of constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), e, SCIPconsGetName(cons));
                ispolynomial = FALSE;
                break;
             } /*lint !e788*/
@@ -3248,7 +3251,7 @@ SCIP_RETCODE SCIPwritePip(
             {
                if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
                {
-                  SCIPwarningMessage("%dth expression tree of constraint <%s> is not simplified, cannot write in pip format\n", e, SCIPconsGetName(cons));
+                  SCIPwarningMessage(scip, "%dth expression tree of constraint <%s> is not simplified, cannot write in pip format\n", e, SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                   break;
                }
@@ -3288,7 +3291,7 @@ SCIP_RETCODE SCIPwritePip(
          /* see if we formulate signpower(x+offset,exponent) as usual polynomial */
          if( !SCIPisZero(scip, xoffset) )
          {
-            SCIPwarningMessage("nonzero offset for nonlinear variable in constraint <%s>, cannot write in pip format\n", SCIPconsGetName(cons));
+            SCIPwarningMessage(scip, "nonzero offset for nonlinear variable in constraint <%s>, cannot write in pip format\n", SCIPconsGetName(cons));
          }
          if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 1) )
          {
@@ -3311,7 +3314,7 @@ SCIP_RETCODE SCIPwritePip(
          }
          else
          {
-            SCIPwarningMessage("cannot formulate signpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
+            SCIPwarningMessage(scip, "cannot formulate signpower(<%s>, %g) in constraint <%s> as polynomial, cannot write in pip format\n", SCIPvarGetName(x), exponent, SCIPconsGetName(cons));
          }
 
          if( expr != NULL )
@@ -3369,7 +3372,7 @@ SCIP_RETCODE SCIPwritePip(
          {
             if( SCIPexprGetIntPowerExponent(expr) < 0 )
             {
-               SCIPwarningMessage("negative exponent %d in intpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), SCIPconsGetName(cons));
+               SCIPwarningMessage(scip, "negative exponent %d in intpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetIntPowerExponent(expr), SCIPconsGetName(cons));
                ispolynomial = FALSE;
             }
 
@@ -3380,7 +3383,7 @@ SCIP_RETCODE SCIPwritePip(
          {
             if( SCIPexprGetRealPowerExponent(expr) < 0.0 )
             {
-               SCIPwarningMessage("negative exponent %g in realpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), SCIPconsGetName(cons));
+               SCIPwarningMessage(scip, "negative exponent %g in realpower of constraint <%s> cannot be written in pip format\n", SCIPexprGetRealPowerExponent(expr), SCIPconsGetName(cons));
                ispolynomial = FALSE;
             }
 
@@ -3400,7 +3403,7 @@ SCIP_RETCODE SCIPwritePip(
                {
                   if( SCIPexprGetMonomialExponents(monomial)[f] < 0.0 )
                   {
-                     SCIPwarningMessage("negative exponent %g in polynomial of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], SCIPconsGetName(cons));
+                     SCIPwarningMessage(scip, "negative exponent %g in polynomial of constraint <%s> cannot be written in pip format\n", SCIPexprGetMonomialExponents(monomial)[f], SCIPconsGetName(cons));
                      ispolynomial = FALSE;
                      break;
                   }
@@ -3411,7 +3414,7 @@ SCIP_RETCODE SCIPwritePip(
          }
 
          default:
-            SCIPwarningMessage("expression operand <%s> in constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), SCIPconsGetName(cons));
+            SCIPwarningMessage(scip, "expression operand <%s> in constraint <%s> cannot be written in pip format\n", SCIPexpropGetName(SCIPexprGetOperator(expr)), SCIPconsGetName(cons));
             ispolynomial = FALSE;
             break;
          } /*lint !e788*/
@@ -3423,7 +3426,7 @@ SCIP_RETCODE SCIPwritePip(
             {
                if( SCIPexprGetOperator(SCIPexprGetChildren(expr)[v]) != SCIP_EXPR_VARIDX )
                {
-                  SCIPwarningMessage("expression tree of constraint <%s> is not simplified, cannot write in pip format\n", SCIPconsGetName(cons));
+                  SCIPwarningMessage(scip, "expression tree of constraint <%s> is not simplified, cannot write in pip format\n", SCIPconsGetName(cons));
                   ispolynomial = FALSE;
                   break;
                }
@@ -3482,7 +3485,7 @@ SCIP_RETCODE SCIPwritePip(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }

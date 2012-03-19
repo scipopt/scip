@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,16 +25,16 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
 #include "scip/debug.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/struct_scip.h"
 
 #ifdef SCIP_DEBUG_SOLUTION
@@ -271,7 +271,7 @@ SCIP_RETCODE getSolutionValue(
 
    if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
    {
-      SCIPwarningMessage("invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
+      SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
@@ -549,7 +549,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
    {
       printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%d)\n",
          SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
-      SCIProwPrint(row, NULL);
+      SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
       printf("\n\n");
@@ -1175,12 +1175,12 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
       if( k == r && !SCIPisFeasEQ(scip, vecval, 1.0) )
       {
          /* we expected a 1.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(scip), "checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
       }
       else if( k != r && !SCIPisFeasZero(scip, vecval) )
       {
          /* we expected a 0.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(scip), "checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
       }
    }
 

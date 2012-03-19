@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -271,7 +271,7 @@ SCIP_DECL_CONSTRANS(consTransXyz)
 #endif
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #if 0
 static
 SCIP_DECL_CONSINITLP(consInitlpXyz)
@@ -582,7 +582,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
-         consPrintXyz, consCopyXyz, consParseXyz, consGetVarsDataXyz,
+         consPrintXyz, consCopyXyz, consParseXyz,
          consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

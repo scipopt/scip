@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -749,9 +749,9 @@ SCIP_RETCODE checkParam(
       /* check stage */
       if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPwarningMessage("Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
+         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
          /* reset parameter (NULL = do not recursively call paramchd function) */
-         SCIP_CALL( SCIPparamSetBool(param, NULL, oldvalue, FALSE) );
+         SCIP_CALL( SCIPchgBoolParam(scip, param, oldvalue) );
          *newvalue = oldvalue;
       }
    }
@@ -832,7 +832,7 @@ SCIP_RETCODE checkIIS(
    nconss = SCIPconshdlrGetNConss(conshdlr);
 
    /* create LP */
-   SCIP_CALL( SCIPlpiCreate(&lp, "checkLP", SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lp, SCIPgetMessagehdlr(scip), "checkLP", SCIP_OBJSEN_MINIMIZE) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
@@ -1151,7 +1151,7 @@ SCIP_RETCODE initAlternativeLP(
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNVars(scip))) );
 
    /* create alternative LP */
-   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, "altlp", SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altlp, SCIPgetMessagehdlr(scip), "altlp", SCIP_OBJSEN_MINIMIZE) );
 
    /* add first row */
    lhs = -1.0;
@@ -2482,7 +2482,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, FALSE) );
-      SCIPwarningMessage("Numerical problems, retrying ...\n");
+      SCIPwarningMessage(scip, "Numerical problems, retrying ...\n");
 
       /* re-solve LP */
       if ( primal )
@@ -2540,7 +2540,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) &&
         ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && !primal )
    {
-      SCIPwarningMessage("The dual simplex produced a primal ray. Retrying with primal ...\n");
+      SCIPwarningMessage(scip, "The dual simplex produced a primal ray. Retrying with primal ...\n");
       /* the following settings might be changed: */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
@@ -2571,11 +2571,11 @@ SCIP_RETCODE checkAltLPInfeasible(
          /* We have a status different from unbounded or optimal. This should not be the case ... */
          if (primal)
          {
-            SCIPwarningMessage("Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage(scip, "Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          else
          {
-            SCIPwarningMessage("Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
+            SCIPwarningMessage(scip, "Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
          }
          /* SCIP_CALL( SCIPlpiWriteLP(lp, "debug.lp") ); */
          *error = TRUE;
@@ -4100,6 +4100,29 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 #endif
          }
       }
+
+      /* add nlrow representation to NLP, if NLP had been constructed
+       * note, that we did not tell SCIP in exitpre that we have something to add to the NLP, thus indicators are only available in the NLP for MINLPs, but not for MIPs with indicators
+       */
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
+      {
+         SCIP_NLROW* nlrow;
+         SCIP_VAR* quadvars[2];
+         SCIP_QUADELEM quadelem;
+
+         /* create nonlinear row binary variable * slack variable = 0 */
+         quadvars[0] = consdata->binvar;
+         quadvars[1] = consdata->slackvar;
+         quadelem.idx1 = 0;
+         quadelem.idx2 = 1;
+         quadelem.coef = 1.0;
+
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1, &quadelem, NULL, 0.0, 0.0) );
+
+         /* add row to NLP and forget about it */
+         SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+         SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+      }
    }
 
    SCIPdebugMessage("Initialized %d indicator constraints.\n", nconss);
@@ -4263,7 +4286,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->slackhash);
+      SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
 #endif
 
       if ( conshdlrdata->altlp != NULL )
@@ -4274,13 +4297,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->varhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->varhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->slackhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->lbhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->lbhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->ubhash);
+         SCIPhashmapPrintStatistics(conshdlrdata->ubhash, SCIPgetMessagehdlr(scip));
 #endif
 
          SCIPhashmapFree(&conshdlrdata->varhash);
@@ -4766,7 +4789,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreIndicator)
 }
 
 
-/** LP initialization method of constraint handler
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  *  For an indicator constraint with binary variable \f$y\f$ and slack variable \f$s\f$ the coupling
  *  inequality \f$s \le M (1-y)\f$ (equivalently: \f$s + M y \le M\f$) is inserted, where \f$M\f$ is
@@ -4785,74 +4808,80 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* SCIPdebugMessage("Checking for initial rows for indicator constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) ); */
+   /* check whether coupling constraints should be added */
+   if ( ! conshdlrdata->addcoupling )
+      return SCIP_OKAY;
+
+   /* check whether coupling constraints have been added already */
+   if ( conshdlrdata->addcouplingcons && conshdlrdata->addedcouplingcons )
+      return SCIP_OKAY;
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Real ub;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      /* add coupling if required */
-      if ( conshdlrdata->addcoupling && consdata->linconsactive )
+      /* do not add inequalities if there are no linear constraints (no slack variable available) */
+      if ( ! consdata->linconsactive )
+         continue;
+
+      SCIPdebugMessage("Adding initial rows for indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
+
+      /* get upper bound for slack variable in linear constraint */
+      ub = SCIPvarGetUbGlobal(consdata->slackvar);
+      assert( ! SCIPisNegative(scip, ub) );
+
+      /* insert corresponding row if helpful and coefficient is not too large */
+      if ( ub <= conshdlrdata->maxcouplingvalue )
       {
-         SCIP_Real ub;
-
-         /* get upper bound for slack variable in linear constraint */
-         ub = SCIPvarGetUbGlobal(consdata->slackvar);
-         assert( ! SCIPisNegative(scip, ub) );
-
-         /* insert corresponding row if helpful and coefficient is not too large */
-         if ( ub <= conshdlrdata->maxcouplingvalue )
-         {
-            char name[50];
+         char name[50];
 
 #ifndef NDEBUG
-            (void) SCIPsnprintf(name, 50, "couple%d", c);
+         (void) SCIPsnprintf(name, 50, "couple%d", c);
 #else
-            name[0] = '\0';
+         name[0] = '\0';
 #endif
 
-            /* add variable upper bound if required */
-            if ( conshdlrdata->addcouplingcons )
-            {
-               if ( ! conshdlrdata->addedcouplingcons )
-               {
-                  SCIP_CONS* cons;
+         /* add variable upper bound if required */
+         if ( conshdlrdata->addcouplingcons )
+         {
+            SCIP_CONS* cons;
 
-                  SCIPdebugMessage("Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+            assert( ! conshdlrdata->addedcouplingcons );
 
-                  SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, consdata->slackvar, consdata->binvar, ub, -SCIPinfinity(scip), ub,
-                        TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+            SCIPdebugMessage("Insert coupling varbound constraint for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 
-                  SCIP_CALL( SCIPaddCons(scip, cons) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-               }
-            }
-            else
-            {
-               SCIP_ROW* row;
+            SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, consdata->slackvar, consdata->binvar, ub, -SCIPinfinity(scip), ub,
+                  TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-               SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         }
+         else
+         {
+            SCIP_ROW* row;
 
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-               SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+            SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 #ifdef SCIP_OUTPUT
-               SCIProwPrint(row, NULL);
+            SCIProwPrint(row, NULL);
 #endif
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row));
-            }
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            
+            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
    }
@@ -5237,7 +5266,9 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       /* if the slack variable fixed to a positive value was the reason */
       assert( infervar != consdata->slackvar );
-      assert( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
+      /* Use a weaker comparison to SCIPvarGetLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
+       * because SCIPvarGetLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
+      assert( SCIPisPositive(scip, SCIPvarGetLbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }
    else

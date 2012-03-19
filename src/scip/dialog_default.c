@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -495,7 +495,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
-      SCIPmessagePrintInfo("check best solution\n");
+      SCIPinfoMessage(scip, NULL, "check best solution\n");
       SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
 
       if( feasible )
@@ -1407,7 +1407,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          /* copy filename */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
          extension = NULL;
-         
+
+         SCIPinfoMessage(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
+         SCIPinfoMessage(scip, NULL, "============\n");
+         SCIPinfoMessage(scip, NULL, "\n");
+
          do
          {
             retcode = SCIPreadProb(scip, tmpfilename, extension);
@@ -1416,9 +1421,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                if( extension == NULL )
                   SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", tmpfilename);
                else
-                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n", 
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n",
                      tmpfilename, extension);
-               
+
                SCIP_CALL( SCIPfreeProb(scip) );
                break;
             }
@@ -1431,10 +1436,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 
                   SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
                   displayReaders(scip, TRUE, FALSE);
-               
-                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+
+                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
                         "select a suitable reader by extension (or return): ", &extension, &endoffile) );
-               
+
                   if( extension[0] == '\0' )
                      break;
                }
@@ -1450,9 +1455,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                SCIP_CALL( retcode );
                break;
             }
-         }           
+         }
          while( extension != NULL );
-             
+
          /* free buffer array */
          SCIPfreeBufferArray(scip, &tmpfilename);
       }
@@ -1628,10 +1633,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( !error )
       {
-         SCIP_CALL( SCIPparamSetBool(param, scip, boolval, FALSE) );
+         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
-      
+
       break;
 
    case SCIP_PARAMTYPE_INT:
@@ -1653,7 +1658,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetInt(param, scip, intval, FALSE);
+      retcode = SCIPchgIntParam(scip, param, intval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1679,7 +1684,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetLongint(param, scip, longintval, FALSE);
+      retcode = SCIPchgLongintParam(scip, param, longintval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1705,7 +1710,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetReal(param, scip, realval, FALSE);
+      retcode = SCIPchgRealParam(scip, param, realval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1730,7 +1735,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
-      retcode = SCIPparamSetChar(param, scip, charval, FALSE);
+      retcode = SCIPchgCharParam(scip, param, charval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );
@@ -1750,7 +1755,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      retcode = SCIPparamSetString(param, scip, valuestr, FALSE);
+      retcode = SCIPchgStringParam(scip, param, valuestr);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
          SCIP_CALL( retcode );

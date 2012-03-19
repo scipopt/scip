@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2011 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -963,7 +963,7 @@ void procPcdata(
 
    while ( (c != EOF) && (c != '<') )
    {
-      if ( len >= size - 1 ) /* leave space for terminating '\0' */
+      if ( len + 1 >= size ) /* leave space for terminating '\0' */
       {
          size += DATA_EXT_SIZE;
 
@@ -1072,8 +1072,13 @@ XML_NODE* xmlProcess(
    XML_ATTR* attr;
    int       result = FALSE;
    char*     myfilename;
+   size_t    filenamelen;
 
-   ALLOC_FALSE( BMSduplicateMemoryArray(&myfilename, filename, strlen(filename) + 5) );
+   /* allocate space and copy filename (possibly modified below) in two steps in order to satisfy valgrind */
+   assert( filename != NULL );
+   filenamelen = strlen(filename);
+   ALLOC_FALSE( BMSallocMemoryArray(&myfilename, filenamelen + 5) );
+   BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
 #ifdef WITH_ZLIB
    if ( access(filename, R_OK) != 0 )
@@ -1268,11 +1273,12 @@ void xmlFreeNode(
    if ( node == NULL )
       return;
 
-   n = node->firstchild;
+   /* free data from back to front (because free is faster this way) */
+   n = node->lastchild;
    while ( n != NULL )
    {
       XML_NODE* m;
-      m = n->nextsibl;
+      m = n->prevsibl;
       xmlFreeNode(n);
       n = m;
    }
@@ -1354,7 +1360,7 @@ const char* xmlGetAttrval(
 
 #if 0
    if (a == NULL)
-      infoMessage("Error: Attribut %s in TAG <%s> not found\n",
+      infoMessage("Error: Attribute %s in TAG <%s> not found\n",
          name, node->name);
 #endif
 
