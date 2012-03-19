@@ -163,6 +163,7 @@ struct SCIP_ConshdlrData
    SCIP_Longint          nexactinfeaslp;     /**< number of times, exact verification for infeasible LPs was called */
    SCIP_Longint          nexactunsollp;      /**< number of times, exact LP solver is called for unsolved LP */
    SCIP_Longint          nwrongexactfeaslp;  /**< number of times, claimed integral LP solution was fractional */
+   SCIP_Longint          nwronginfeasexactfeaslp; /**< number of times, claimed integral LP solution was infeasible and even the LP was infeasible */
    SCIP_Longint          nwrongexactinfeaslp;/**< number of times, claimed infeasible LP was feasible */
    SCIP_CLOCK*           exactfeaslptime;    /**< time needed for exact integrality verification for feasible LPs */
    SCIP_CLOCK*           exactinfeaslptime;  /**< time needed for exact verification for infeasible LPs */
@@ -852,6 +853,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nexactinfeaslp = 0;
    (*conshdlrdata)->nexactunsollp = 0;
    (*conshdlrdata)->nwrongexactfeaslp = 0;
+   (*conshdlrdata)->nwronginfeasexactfeaslp = 0;
    (*conshdlrdata)->nwrongexactinfeaslp = 0;
    (*conshdlrdata)->exactfeaslptime = NULL;
    (*conshdlrdata)->exactinfeaslptime = NULL;
@@ -8030,8 +8032,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CALL( evaluateLPEX(scip, conss[0], conshdlrdata, consdata, result) );
 
    /* update number of wrong integral LP claims */
-    if( *result == SCIP_BRANCHED && ( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 ) )
-         conshdlrdata->nwrongexactfeaslp++;
+   if( *result == SCIP_BRANCHED && ( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 ) )
+      conshdlrdata->nwrongexactfeaslp++;
+   
+   /* update number of wrong integral LP claims, where even the LP was infeasible */
+   if( *result == SCIP_CUTOFF && SCIPlpiexIsPrimalInfeasible(conshdlrdata->lpiex) 
+      && ( dualboundmethod != 'e' || SCIPgetNLPBranchCands(scip) == 0 ) )
+      conshdlrdata->nwronginfeasexactfeaslp++;
 
    return SCIP_OKAY;
 }
@@ -10366,6 +10373,30 @@ SCIP_Longint SCIPgetNWrongExactfeaslp(
    assert(conshdlrdata != NULL);
 
    return conshdlrdata->nwrongexactfeaslp;
+}
+
+/** gets number of times, claimed integral LP solution was infeasible and even the LP was infeasible */
+SCIP_Longint SCIPgetNWronginfeasExactfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      SCIPABORT();
+      return 0;
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nwronginfeasexactfeaslp;
 }
 
 /** gets number of times, claimed infeasible LP was feasible */

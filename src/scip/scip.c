@@ -16350,19 +16350,20 @@ void printExactLPStatistics(
    assert(scip->stat != NULL);
    assert(scip->stat->nfailprovedfeaslp <= scip->stat->nprovedfeaslp);
 
-   SCIPmessageFPrintInfo(file, "Exact LP           :       Time      Calls     Wrongs\n");
+   SCIPmessageFPrintInfo(file, "Exact LP           :       Time      Calls     Wrongs    Infeass\n");
 
-   SCIPmessageFPrintInfo(file, "  after feas LP    : %10.2f %10d %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(file, "  after feas LP    : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
       SCIPgetExactfeaslpTime(scip),
       SCIPgetNExactfeaslp(scip),
-      SCIPgetNWrongExactfeaslp(scip));
+      SCIPgetNWrongExactfeaslp(scip),
+      SCIPgetNWronginfeasExactfeaslp(scip));
 
-   SCIPmessageFPrintInfo(file, "  after infeas LP  : %10.2f %10d %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(file, "  after infeas LP  : %10.2f %10d %10"SCIP_LONGINT_FORMAT"          -\n",
       SCIPgetExactinfeaslpTime(scip),
       SCIPgetNExactinfeaslp(scip),
       SCIPgetNWrongExactinfeaslp(scip));
 
-   SCIPmessageFPrintInfo(file, "  after unsolved LP: %10.2f %10d          -\n",
+   SCIPmessageFPrintInfo(file, "  after unsolved LP: %10.2f %10d          -          -\n",
       SCIPgetExactunsollpTime(scip),
       SCIPgetNExactunsollp(scip));
 }

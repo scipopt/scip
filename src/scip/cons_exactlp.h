@@ -463,6 +463,12 @@ SCIP_Longint SCIPgetNWrongExactfeaslp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of times, claimed integral LP solution was infeasible and even the LP was infeasible */
+extern
+SCIP_Longint SCIPgetNWronginfeasExactfeaslp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets number of times, claimed infeasible LP was feasible */
 extern
 SCIP_Longint SCIPgetNWrongExactinfeaslp(
