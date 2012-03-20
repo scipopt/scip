@@ -5576,6 +5576,12 @@ SCIP_RETCODE SCIPendDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** changes cutoffbound in current dive */
+SCIP_RETCODE SCIPchgCutoffboundDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newcutoffbound      /**< new cutoffbound */
+   );
+
 /** changes linear objective coefficient of a variable in diving NLP */
 extern
 SCIP_RETCODE SCIPchgVarObjDiveNLP(

@@ -7200,7 +7200,6 @@ SCIP_RETCODE presolve(
       SCIP_Bool unbd;
       SCIP_Bool infeas;
 
-
       SCIP_CALL( exitPresolve(scip, &unbd, &infeas, *unbounded, *infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
       if( infeas && !(*infeasible) )
@@ -17282,6 +17281,27 @@ SCIP_RETCODE SCIPendDive(
       SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
             scip->lp, scip->primal->cutoffbound) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** changes cutoffbound in current dive */
+SCIP_RETCODE SCIPchgCutoffboundDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newcutoffbound      /**< new cutoffbound */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgCutoffboundDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, newcutoffbound) );
 
    return SCIP_OKAY;
 }

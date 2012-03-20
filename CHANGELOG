@@ -69,6 +69,7 @@ interface
 - remove SCIPcolPrint() and SCIProwPrint(), please use SCIPprintCol() SCIPprintRow() see scip.h
 - new method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a source
   string to a destination string or until it hits a stoping character
+- new method SCIPchgCutoffboundDive() to change the cutoffbound in diving mode
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
