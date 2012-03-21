@@ -177,7 +177,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
-#define SCIP_DEFAULT_LP_ROWREPSWITCH      1e+20 /**< simplex algorithm shall use row representation of the basis
+#define SCIP_DEFAULT_LP_ROWREPSWITCH       -1.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
@@ -1112,8 +1112,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "lp/rowrepswitch",
-         "simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value",
-         &(*set)->lp_rowrepswitch, TRUE, SCIP_DEFAULT_LP_ROWREPSWITCH, 0.0, SCIP_REAL_MAX,
+         "simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value (-1.0 to disable row representation)",
+         &(*set)->lp_rowrepswitch, TRUE, SCIP_DEFAULT_LP_ROWREPSWITCH, -1.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/threads",

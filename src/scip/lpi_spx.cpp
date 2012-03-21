@@ -2508,11 +2508,17 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
       factor 1.1 for switching back to column representation */
-   rowrep = lpi->spx->rep() == SPxSolver::ROW;
-   if( !rowrep )
-      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   if( lpi->rowrepswitch >= 0 )
+   {
+      rowrep = lpi->spx->rep() == SPxSolver::ROW;
+
+      if( !rowrep )
+         rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+      else
+         rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+   }
    else
-      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+      rowrep = FALSE;
 
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
@@ -2546,11 +2552,17 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
       factor 1.1 for switching back to column representation */
-   rowrep = lpi->spx->rep() == SPxSolver::ROW;
-   if( !rowrep )
-      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   if( lpi->rowrepswitch >= 0 )
+   {
+      rowrep = lpi->spx->rep() == SPxSolver::ROW;
+
+      if( !rowrep )
+         rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+      else
+         rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+   }
    else
-      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+      rowrep = FALSE;
 
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
@@ -4313,7 +4325,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert(dval >= 0.0);
+      assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
       break;
    default:
