@@ -8646,8 +8646,8 @@ void SCIPprintReal(
 #define SCIPfreeMemoryNull(scip,ptr)            BMSfreeMemoryNull(ptr)
 #define SCIPfreeMemoryArray(scip,ptr)           BMSfreeMemoryArray(ptr)
 #define SCIPfreeMemoryArrayNull(scip,ptr)       BMSfreeMemoryArrayNull(ptr)
-#define SCIPfreeMemorySize(scip,ptr)            freeMemorySize(ptr)
-#define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull(ptr)
+#define SCIPfreeMemorySize(scip,ptr)            BMSfreeMemorySize(ptr)
+#define SCIPfreeMemorySizeNull(scip,ptr)        BMSfreeMemorySizeNull(ptr)
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )

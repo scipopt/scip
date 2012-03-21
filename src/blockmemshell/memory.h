@@ -99,6 +99,9 @@ extern "C" {
 #define BMSfreeMemoryArray(ptr)               { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) BMSfreeMemoryArray( (ptr) ); }
+#define BMSfreeMemorySize(ptr)                { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
+                                                  *(ptr) = NULL; }
+#define BMSfreeMemorySizeNull(ptr)            { if( *(ptr) != NULL ) BMSfreeMemorySize( (ptr) ); }
 
 #ifndef NDEBUG
 #define BMSgetPointerSize(ptr)                BMSgetPointerSize_call(ptr)
