@@ -753,6 +753,10 @@ public:
 
       if( simplifier != NULL )
       {
+         int verbosity;
+         /* store and set verbosity */
+         verbosity = Param::verbose();
+         Param::setVerbose(getLpInfo() ? 3 : 0);
          SCIPdebugMessage("simplifying LP\n");
          result = simplifier->simplify(*this, epsilon(), delta());
          SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
@@ -770,6 +774,8 @@ public:
 
             goto SOLVEAGAIN;
          }
+         /* reset verbosity */
+         Param::setVerbose(verbosity);
       }
 
       /* solve */
