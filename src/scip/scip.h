@@ -6939,6 +6939,15 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** outputs non-zero variables of solution representing a ray in original problem space to file stream */
+extern
+SCIP_RETCODE SCIPprintRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution representing ray */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
 /** gets number of feasible primal solutions stored in the solution storage in case the problem is transformed; in case
  *  if the problem stage is SCIP_STAGE_PROBLEM, it returns the number solution in the original solution candidate
  *  storage

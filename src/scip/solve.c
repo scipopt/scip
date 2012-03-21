@@ -1152,6 +1152,8 @@ SCIP_RETCODE updatePrimalRay(
          SCIP_CALL( SCIPsolSetVal(primal->primalray, set, stat, tree, vars[i], ray[i]) );
       }
 
+      SCIPdebug( SCIP_CALL( SCIPprintRay(set->scip, primal->primalray, NULL, FALSE) ) );
+
       /* free memory for buffering the ray values */
       SCIPsetFreeBufferArray(set, &ray);
    }
