@@ -6239,7 +6239,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return SCIP_OKAY; /*lint !e527*/
    }  /*lint !e788*/
 
    return SCIP_OKAY;

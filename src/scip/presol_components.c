@@ -328,7 +328,7 @@ SCIP_RETCODE copyAndSolveComponent(
          {
             assert( SCIPhashmapExists(varmap, vars[i]) );
 
-            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(varmap, vars[i])),
+            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])),
                   &infeasible, &fixed) );
             assert(!infeasible);
             assert(fixed);
