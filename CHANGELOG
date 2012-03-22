@@ -93,6 +93,7 @@ performance improvements:
 - improved probing by ordering the variables differently and applying the one-branch before the zero-branch
 - improved lp-, mps-, opb-reading time
 - improved time used for adding implications
+- improved tcliquegraphAddImplicsVars() in sepa_clique.c to faster add possible variables
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

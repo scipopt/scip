@@ -351,11 +351,15 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
    for( xi = 0; xi < nvars-2 && !SCIPisStopped(scip); ++xi ) /* at least two variables must be left over for y and z */
    {
       SCIP_VAR* x;
-      int xindex;
       int xvalue;
+#ifndef NDEBUG
+      int xindex;
+#endif
 
       x = vars[xi];
+#ifndef NDEBUG
       xindex = SCIPvarGetIndex(x);
+#endif
       assert(SCIPvarGetType(x) == SCIP_VARTYPE_BINARY);
 
       for( xvalue = 0; xvalue < 2; xvalue++ )
@@ -371,15 +375,28 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
          ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
 
-         /* ignore implicants with yindex <= xindex */
-         for( i = 0; i < xnbinimpls-1 && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
-         {}
+	 assert(xnbinimpls >= 0);
+	 if( xnbinimpls > 0 )
+	 {
+#ifndef NDEBUG
+	    SCIP_Bool found;
+
+	    /* search for the position in the sorted array (via binary search) */
+	    found = SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
+	    assert(!found); /* no implication to itself */
+	    assert(i >= 0 && i <= xnbinimpls);
+#else
+	    /* search for the position in the sorted array (via binary search) */
+	    (void) SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
+#endif
+	 }
+	 else
+	    i = 0;
 
          /* loop over all y > x */
          for( ; i < xnbinimpls-1 && !SCIPisStopped(scip); ++i ) /* at least one variable must be left over for z */
          {
             SCIP_VAR* y;
-            int yindex;
             int yvalue;
             int yi;
             SCIP_VAR** yimplvars;
@@ -387,10 +404,15 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             int ynbinimpls;
             int xk;
             int yk;
+#ifndef NDEBUG
+            int yindex;
+#endif
 
             y = ximplvars[i];
             yi = SCIPvarGetProbindex(y);
+#ifndef NDEBUG
             yindex = SCIPvarGetIndex(y);
+#endif
             assert(yi < nvars);
 
             /* consider only implications with active implvar y */
@@ -412,9 +434,24 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
 
             /* we simultaneously scan both implication arrays for candidates z with x < y < z */
             xk = i+1;
-            for( yk = 0; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) <= yindex; ++yk )
-            {}
-                    
+
+	    assert(ynbinimpls >= 0);
+	    if( ynbinimpls > 0 )
+	    {
+#ifndef NDEBUG
+	       SCIP_Bool found;
+
+	       /* search for the position in the sorted array (via binary search) */
+	       found = SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
+	       assert(!found); /* no implication to itself */
+	       assert(yk >= 0 && yk <= ynbinimpls);
+#else
+	       (void) SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
+#endif
+	    }
+	    else
+	       yk = 0;
+
             while( xk < xnbinimpls && yk < ynbinimpls )
             {
                int zindex;
@@ -424,6 +461,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
 
                /* scan the implications of x */
                zindex = SCIPvarGetIndex(yimplvars[yk]);
+
                for(; xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex; ++xk ) 
                {}
 
@@ -432,6 +470,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
 
                /* scan the implications of y */
                zindex = SCIPvarGetIndex(ximplvars[xk]);
+
                for(; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex; ++yk )
                {}
 
