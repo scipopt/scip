@@ -2278,9 +2278,6 @@ SCIP_RETCODE applyFixings(
       lhs = consdata->lhs;
       rhs = consdata->rhs;
 
-      assert(var == consdata->var);
-      assert(vbdvar == consdata->vbdvar);
-
       /* create upgraded linear constraint */
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons), 0, NULL, NULL, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
@@ -2288,8 +2285,57 @@ SCIP_RETCODE applyFixings(
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->var, 1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
+      /* if var was fixed, then the case that vbdvar was multi-aggregated, was not yet resolved */
+      if( var != consdata->var )
+      {
+	 assert(SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR);
+	 assert(SCIPisZero(scip, varscalar)); /* this means that var was fixed */
+
+	 /* add offset that results of the fixed variable */
+	 if( SCIPisZero(scip, varconstant) != 0 )
+	 {
+	    if( !SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - varconstant) );
+	    }
+	    if( !SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - varconstant) );
+	    }
+	 }
+      }
+      else
+      {
+	 assert(var == consdata->var);
+
+	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->var, 1.0) );
+      }
+
+      /* if vbdvar was fixed, then the case that var was multi-aggregated, was not yet resolved */
+      if( vbdvar != consdata->vbdvar )
+      {
+	 assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+	 assert(SCIPisZero(scip, vbdvarscalar)); /* this means that var was fixed */
+
+	 /* add offset that results of the fixed variable */
+	 if( SCIPisZero(scip, vbdvarconstant) != 0 )
+	 {
+	    if( !SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - vbdvarconstant) );
+	    }
+	    if( !SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - vbdvarconstant) );
+	    }
+	 }
+      }
+      else
+      {
+	 assert(vbdvar == consdata->vbdvar);
+
+	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
+      }
 
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
