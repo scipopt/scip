@@ -72,6 +72,8 @@ interface
 - new method SCIPchgCutoffboundDive() to change the cutoffbound in diving mode
 - added forgotten implementation of SCIPfreeMemorySize(), SCIPfreeMemorySizeNull() in scip.h and BMSfreeMemorySize(),
   BMSfreeMemorySizeNull() in memory.h
+- new methods BMSmoveMemory(), BMSmoveMemoryArray(), BMSmoveMemorySize() and corresponding  BMSmoveMemory_call() in
+  memory.{h,c} too move memory elements
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -90,6 +92,7 @@ performance improvements:
   clique and then fixes the resultant to 0 and in the former case we can delete the and-constraint too
 - improved probing by ordering the variables differently and applying the one-branch before the zero-branch
 - improved lp-, mps-, opb-reading time
+- improved time used for adding implications
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

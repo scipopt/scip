@@ -82,9 +82,15 @@ extern "C" {
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
 #define BMSclearMemorySize(ptr, size)         BMSclearMemory_call( (void*)(ptr), (size_t)(size) )
+
 #define BMScopyMemory(ptr, source)            BMScopyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
 #define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
 #define BMScopyMemorySize(ptr, source, size)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+
+#define BMSmoveMemory(ptr, source)            BMSmoveMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
+#define BMSmoveMemoryArray(ptr, source, num)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (num) * sizeof(*(ptr)) )
+#define BMSmoveMemorySize(ptr, source, size)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemoryArray(ptr, source, num) \
@@ -151,6 +157,16 @@ void BMSclearMemory_call(
 /** copies the contents of one memory element into another memory element */
 extern
 void BMScopyMemory_call(
+   void*                 ptr,                /**< pointer to target memory element */
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size                /**< size of memory element to copy */
+   );
+
+/** moves the contents of one memory element into another memory element, should be used if both elements overlap,
+ *  otherwise BMScopyMemory is faster
+ */
+extern
+void BMSmoveMemory_call(
    void*                 ptr,                /**< pointer to target memory element */
    const void*           source,             /**< pointer to source memory element */
    size_t                size                /**< size of memory element to copy */

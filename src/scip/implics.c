@@ -732,7 +732,9 @@ SCIP_RETCODE SCIPimplicsAdd(
    int posupper;
    int posadd;
    SCIP_Bool found;
+#ifndef NDEBUG
    int k;
+#endif
 
    assert(implics != NULL);
    assert(*implics == NULL || (*implics)->nbinimpls[varfixing] <= (*implics)->nimpls[varfixing]);
@@ -812,16 +814,23 @@ SCIP_RETCODE SCIPimplicsAdd(
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
-      
-         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-         {
-            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-         }
-         assert(posadd == k);
+
+	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
+	 {
+	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+
+#ifndef NDEBUG
+	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+	    {
+	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+	    }
+#endif
+	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+	 }
+
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
@@ -878,16 +887,23 @@ SCIP_RETCODE SCIPimplicsAdd(
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
-      
-         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-         {
-            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-         }
-         assert(posadd == k);
+
+	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
+	 {
+	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+
+#ifndef NDEBUG
+	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+	    {
+	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+	    }
+#endif
+	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+	 }
+
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
@@ -1796,9 +1812,15 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
          if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
          {
-            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                   clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
                   (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+         }
+	 else if( SCIPvarGetType(clique->vars[1]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[1], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  clique->values[1], clique->vars[0], clique->values[0] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+                  (SCIP_Real)(!clique->values[0]), FALSE, infeasible, NULL) );
          }
          else
          {
