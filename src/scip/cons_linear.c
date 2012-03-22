@@ -2984,15 +2984,19 @@ SCIP_RETCODE chgLhs(
       }
    }
 
+   if( !SCIPisInfinity(scip, -lhs) && SCIPisGT(scip, lhs, consdata->lhs) )
+   {
+      consdata->boundstightened = FALSE;
+      consdata->propagated = FALSE;
+      consdata->presolved = FALSE;
+      consdata->cliquesadded = FALSE;
+   }
+
    /* new left hand side */
    consdata->lhs = lhs;
-   consdata->propagated = FALSE;
-   consdata->boundstightened = FALSE;
-   consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->cliquesadded = FALSE;
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -3094,15 +3098,19 @@ SCIP_RETCODE chgRhs(
       }
    }
 
+   if( !SCIPisInfinity(scip, rhs) && SCIPisLT(scip, rhs, consdata->rhs) )
+   {
+      consdata->boundstightened = FALSE;
+      consdata->propagated = FALSE;
+      consdata->presolved = FALSE;
+      consdata->cliquesadded = FALSE;
+   }
+
    /* set new right hand side */
    consdata->rhs = rhs;
-   consdata->propagated = FALSE;
-   consdata->boundstightened = FALSE;
-   consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->cliquesadded = FALSE;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -4958,6 +4966,7 @@ SCIP_RETCODE propagateCons(
          int oldnchgbds;
 
          oldnchgbds = *nchgbds;
+
          SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
 
          if( *nchgbds > oldnchgbds )
