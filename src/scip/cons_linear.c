@@ -2989,12 +2989,12 @@ SCIP_RETCODE chgLhs(
    {
       consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
+      consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
    }
 
    /* set new left hand side and update constraint data */
    consdata->lhs = lhs;
-   consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -3104,12 +3104,12 @@ SCIP_RETCODE chgRhs(
    {
       consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
+      consdata->presolved = FALSE;
       consdata->cliquesadded = FALSE;
    }
 
    /* set new right hand side and update constraint data */
    consdata->rhs = rhs;
-   consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
