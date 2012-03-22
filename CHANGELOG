@@ -71,6 +71,11 @@ interface
 - remove SCIPcolPrint() and SCIProwPrint(), please use SCIPprintCol() SCIPprintRow() see scip.h
 - new method SCIPmemccpy() in pub_misc.h and misc.c which copies either a specified number of charcters of a source
   string to a destination string or until it hits a stoping character
+- new method SCIPchgCutoffboundDive() to change the cutoffbound in diving mode
+- added forgotten implementation of SCIPfreeMemorySize(), SCIPfreeMemorySizeNull() in scip.h and BMSfreeMemorySize(),
+  BMSfreeMemorySizeNull() in memory.h
+- new methods BMSmoveMemory(), BMSmoveMemoryArray(), BMSmoveMemorySize() and corresponding  BMSmoveMemory_call() in
+  memory.{h,c} too move memory elements
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -101,6 +106,8 @@ performance improvements:
   clique and then fixes the resultant to 0 and in the former case we can delete the and-constraint too
 - improved probing by ordering the variables differently and applying the one-branch before the zero-branch
 - improved lp-, mps-, opb-reading time
+- improved time used for adding implications
+- improved tcliquegraphAddImplicsVars() in sepa_clique.c to faster add possible variables
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

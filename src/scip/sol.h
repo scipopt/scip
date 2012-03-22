@@ -386,6 +386,20 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** outputs non-zero elements of solution representing a ray to file stream */
+extern
+SCIP_RETCODE SCIPsolPrintRay(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+
 
 #ifndef NDEBUG
 

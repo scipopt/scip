@@ -14889,7 +14889,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
             && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);
 
-      rayobjval += ray[c] * lpicols[c]->obj;
+      if( !SCIPsetIsZero(set, ray[c]) )
+         rayobjval += ray[c] * lpicols[c]->obj;
    }
 
    /* if the finite point is already infeasible, we do not have to add the ray */
@@ -14906,7 +14907,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
     *
     * @todo How to check for negative objective value here?
     */
-   else if( rayobjval >= 0 )
+   else if( !SCIPsetIsNegative(set, rayobjval) )
    {
       if( rayfeasible != NULL )
       {
@@ -14938,7 +14939,10 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    /* calculate the unbounded point: x' = x + rayscale * ray */
    for( c = 0; c < nlpicols; ++c )
    {
-      lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
+      if( SCIPsetIsZero(set, ray[c]) )
+         lpicols[c]->primsol = primsol[c];
+      else
+         lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
    }

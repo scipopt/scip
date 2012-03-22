@@ -7214,7 +7214,6 @@ SCIP_RETCODE presolve(
       SCIP_Bool unbd;
       SCIP_Bool infeas;
 
-
       SCIP_CALL( exitPresolve(scip, &unbd, &infeas, *unbounded, *infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
       if( infeas && !(*infeasible) )
@@ -17347,6 +17346,27 @@ SCIP_RETCODE SCIPendDive(
    return SCIP_OKAY;
 }
 
+/** changes cutoffbound in current dive */
+SCIP_RETCODE SCIPchgCutoffboundDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newcutoffbound      /**< new cutoffbound */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgCutoffboundDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, newcutoffbound) );
+
+   return SCIP_OKAY;
+}
+
 /** changes variable's objective value in current dive */
 SCIP_RETCODE SCIPchgVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19263,6 +19283,24 @@ SCIP_RETCODE SCIPprintTransSol(
       /* free temporary solution */
       SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->primal) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** outputs non-zero variables of solution representing a ray in original problem space to file stream */
+SCIP_RETCODE SCIPprintRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution representing ray */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPprintRay", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPsolPrintRay(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
 
    return SCIP_OKAY;
 }

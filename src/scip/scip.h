@@ -5583,6 +5583,12 @@ SCIP_RETCODE SCIPendDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** changes cutoffbound in current dive */
+SCIP_RETCODE SCIPchgCutoffboundDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newcutoffbound      /**< new cutoffbound */
+   );
+
 /** changes linear objective coefficient of a variable in diving NLP */
 extern
 SCIP_RETCODE SCIPchgVarObjDiveNLP(
@@ -6936,6 +6942,15 @@ extern
 SCIP_RETCODE SCIPprintTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+/** outputs non-zero variables of solution representing a ray in original problem space to file stream */
+extern
+SCIP_RETCODE SCIPprintRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution representing ray */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
@@ -8638,8 +8653,8 @@ void SCIPprintReal(
 #define SCIPfreeMemoryNull(scip,ptr)            BMSfreeMemoryNull(ptr)
 #define SCIPfreeMemoryArray(scip,ptr)           BMSfreeMemoryArray(ptr)
 #define SCIPfreeMemoryArrayNull(scip,ptr)       BMSfreeMemoryArrayNull(ptr)
-#define SCIPfreeMemorySize(scip,ptr)            freeMemorySize(ptr)
-#define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull(ptr)
+#define SCIPfreeMemorySize(scip,ptr)            BMSfreeMemorySize(ptr)
+#define SCIPfreeMemorySizeNull(scip,ptr)        BMSfreeMemorySizeNull(ptr)
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )

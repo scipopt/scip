@@ -393,6 +393,23 @@ void BMScopyMemory_call(
    }
 }
 
+/** moves the contents of one memory element into another memory element, should be used if both elements overlap,
+ *  otherwise BMScopyMemory is faster
+ */
+void BMSmoveMemory_call(
+   void*                 ptr,                /**< pointer to target memory element */
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size                /**< size of memory element to copy */
+   )
+{
+   if( size > 0 )
+   {
+      assert(ptr != NULL);
+      assert(source != NULL);
+      memmove(ptr, source, size);
+   }
+}
+
 /** allocates memory and copies the contents of the given memory element into the new memory element */
 void* BMSduplicateMemory_call(
    const void*           source,             /**< pointer to source memory element */

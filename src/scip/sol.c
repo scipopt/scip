@@ -1061,7 +1061,7 @@ SCIP_Real SCIPsolGetRayVal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var));
+      return SCIPsolGetRayVal(sol, set, stat, SCIPvarGetTransVar(var));
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -1075,7 +1075,7 @@ SCIP_Real SCIPsolGetRayVal(
       return 0.0; /* constants are ignored for computing the ray direction */
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
+      solval = SCIPsolGetRayVal(sol, set, stat, SCIPvarGetAggrVar(var));
       assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return SCIPvarGetAggrScalar(var) * solval; /* constants are ignored for computing the ray direction */
@@ -1087,7 +1087,7 @@ SCIP_Real SCIPsolGetRayVal(
       solvalsum = 0.0; /* constants are ignored for computing the ray direction */
       for( i = 0; i < nvars; ++i )
       {
-         solval = SCIPsolGetVal(sol, set, stat, vars[i]);
+         solval = SCIPsolGetRayVal(sol, set, stat, vars[i]);
          assert(solval != SCIP_UNKNOWN ); /*lint !e777*/
          assert(!SCIPsetIsInfinity(set, REALABS(solval)));
          solvalsum += scalars[i] * solval;
@@ -1095,7 +1095,7 @@ SCIP_Real SCIPsolGetRayVal(
       return solvalsum;
 
    case SCIP_VARSTATUS_NEGATED:
-      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
+      solval = SCIPsolGetRayVal(sol, set, stat, SCIPvarGetNegationVar(var));
       assert(solval != SCIP_UNKNOWN); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(solval)));
       return -solval; /* constants are ignored for computing the ray direction */
@@ -1558,6 +1558,115 @@ SCIP_RETCODE SCIPsolPrint(
             continue;
 
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
+         if( printzeros || !SCIPsetIsZero(set, solval) )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+            else if( SCIPsetIsInfinity(set, solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+            else if( SCIPsetIsInfinity(set, -solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** outputs non-zero elements of solution representing a ray to file stream */
+SCIP_RETCODE SCIPsolPrintRay(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_Real solval;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
+
+   /* display variables of problem data */
+   for( v = 0; v < prob->nfixedvars; ++v )
+   {
+      assert(prob->fixedvars[v] != NULL);
+      solval = SCIPsolGetRayVal(sol, set, stat, prob->fixedvars[v]);
+      if( printzeros || !SCIPsetIsZero(set, solval) )
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+         else if( SCIPsetIsInfinity(set, solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+         else if( SCIPsetIsInfinity(set, -solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+         else
+            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+      }
+   }
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      assert(prob->vars[v] != NULL);
+      solval = SCIPsolGetRayVal(sol, set, stat, prob->vars[v]);
+      if( printzeros || !SCIPsetIsZero(set, solval) )
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+         else if( SCIPsetIsInfinity(set, solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+         else if( SCIPsetIsInfinity(set, -solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+         else
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+      }
+   }
+
+   /* display additional priced variables (if given problem data is original problem) */
+   if( !prob->transformed && sol->solorigin != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      assert(transprob != NULL);
+      for( v = 0; v < transprob->nfixedvars; ++v )
+      {
+         assert(transprob->fixedvars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
+            continue;
+
+         solval = SCIPsolGetRayVal(sol, set, stat, transprob->fixedvars[v]);
+         if( printzeros || !SCIPsetIsZero(set, solval) )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+            else if( SCIPsetIsInfinity(set, solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+            else if( SCIPsetIsInfinity(set, -solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+         }
+      }
+      for( v = 0; v < transprob->nvars; ++v )
+      {
+         assert(transprob->vars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
+         solval = SCIPsolGetRayVal(sol, set, stat, transprob->vars[v]);
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));

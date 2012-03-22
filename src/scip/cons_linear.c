@@ -2985,7 +2985,7 @@ SCIP_RETCODE chgLhs(
    }
 
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( SCIPisLT(scip, consdata->lhs, lhs) )
+   if( !SCIPisInfinity(scip, -lhs) && SCIPisGT(scip, lhs, consdata->lhs) )
    {
       consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
@@ -3100,7 +3100,7 @@ SCIP_RETCODE chgRhs(
    }
 
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( SCIPisGT(scip, consdata->rhs, rhs) )
+   if( !SCIPisInfinity(scip, rhs) && SCIPisLT(scip, rhs, consdata->rhs) )
    {
       consdata->propagated = FALSE;
       consdata->boundstightened = FALSE;
@@ -4968,6 +4968,7 @@ SCIP_RETCODE propagateCons(
          int oldnchgbds;
 
          oldnchgbds = *nchgbds;
+
          SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
 
          if( *nchgbds > oldnchgbds )
