@@ -291,6 +291,57 @@ void conshdlrdataFree(
    SCIPfreeMemory(scip, conshdlrdata);
 }
 
+/** initializes constraint handler data for pseudo boolean constraint handler */
+static
+SCIP_RETCODE conshdlrdataInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->allnonlinterms = NULL;
+   conshdlrdata->nallnonlinterms = 0;
+   conshdlrdata->sallnonlinterms = 10;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms ) );
+
+   /* create a hash table for nonlinear terms */
+   conshdlrdata->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
+   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->hashtable), SCIPblkmem(scip), conshdlrdata->hashtablesize,
+         hashGetKeyNonLinearTerms, hashKeyEqNonLinearTerms, hashKeyValNonLinearTerms, (void*) scip) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes constraint handler data for pseudo boolean constraint handler if necessary */
+static
+void conshdlrdataExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->hashtable != NULL )
+   {
+      /* free hash table */
+      SCIPhashtableFree(&(conshdlrdata->hashtable));
+      conshdlrdata->hashtablesize = 0;
+   }
+
+   if( conshdlrdata->allnonlinterms == NULL )
+   {
+      SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms );
+
+      conshdlrdata->allnonlinterms = NULL;
+      conshdlrdata->nallnonlinterms = 0;
+      conshdlrdata->sallnonlinterms = 0;
+   }
+}
+
 /** creates a non-linear term data object */
 static
 SCIP_RETCODE createTerms(
@@ -2403,20 +2454,16 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* free constraint handler data */
+   /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    conshdlrdata->allnonlinterms = NULL;
    conshdlrdata->nallnonlinterms = 0;
-   conshdlrdata->sallnonlinterms = 10;
+   conshdlrdata->sallnonlinterms = 0;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms ) );
-
-   /* create a hash table for nonlinear terms */
-   conshdlrdata->hashtablesize = SCIPcalcHashtableSize(HASHSIZE_PSEUDOBOOLEANNONLINEARTERMS);
-   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->hashtable), SCIPblkmem(scip), conshdlrdata->hashtablesize,
-         hashGetKeyNonLinearTerms, hashKeyEqNonLinearTerms, hashKeyValNonLinearTerms, (void*) scip) );
+   conshdlrdata->hashtable = NULL;
+   conshdlrdata->hashtablesize = 0;
 
    return SCIP_OKAY;
 }
@@ -2431,19 +2478,12 @@ SCIP_DECL_CONSEXIT(consExitPseudoboolean)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* free constraint handler data */
+   /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* free hash table */
-   SCIPhashtableFree(&(conshdlrdata->hashtable));
-   conshdlrdata->hashtablesize = 0;
-
-   SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms );
-
-   conshdlrdata->allnonlinterms = NULL;
-   conshdlrdata->nallnonlinterms = 0;
-   conshdlrdata->sallnonlinterms = 0;
+   /* free constraint handler data */
+   conshdlrdataExit(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -2463,7 +2503,13 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    if( conshdlrdata->decompose )
    {
       int c;
-      
+
+      /* initializes constraint handler data for pseudo boolean constraint handler, if we have constraints */
+      if( nconss > 0 )
+      {
+	 SCIP_CALL( conshdlrdataInit(scip, conshdlrdata) );
+      }
+
       for( c = 0; c < nconss; ++c )
       {
          SCIP_CONS* cons;
