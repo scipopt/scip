@@ -1505,9 +1505,9 @@ SCIP_RETCODE mergeMultiples(
             }
 #endif
             SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
-            assert(fixed);
             assert(!infeasible);
-            ++(*nfixedvars);
+            if( fixed )
+	       ++(*nfixedvars);
  
             SCIP_CALL( SCIPdelCons(scip, cons) );
             break;
@@ -1577,7 +1577,7 @@ SCIP_RETCODE propagateCons(
    }
 
    /* check if resultant variables is globally fixed to zero */
-   if( !SCIPconsIsModifiable(cons) && SCIPvarGetUbGlobal(resvar) < 0.5 )
+   if( !SCIPinProbing(scip) && !SCIPconsIsModifiable(cons) && SCIPvarGetUbGlobal(resvar) < 0.5 )
    {
       SCIP_CALL( consdataLinearize(scip, cons, cutoff, nfixedvars, nupgdconss) );
 
