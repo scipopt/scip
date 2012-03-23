@@ -7087,7 +7087,7 @@ SCIP_DECL_CONSEXIT(consExitPseudoboolean)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
 
-   /* free constraint handler data */
+   /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 

@@ -183,6 +183,8 @@ fixed bugs:
 - fixed bug parsing an and-constraint in cip format
 - fixed bug in cons_setppc, did not handle new constraints with inactive variables
 - fixed bug in heur_oneopt.c which forgot to check LP rows if local rows are present
+- fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
+  segmentation fault
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

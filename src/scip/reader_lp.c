@@ -273,7 +273,12 @@ SCIP_Bool getNextLine(
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
 
    if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file) == NULL )
+   {
+      /* clear the line, this is really necessary here! */
+      BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
+
       return FALSE;
+   }
 
    lpinput->linenumber++;
 
