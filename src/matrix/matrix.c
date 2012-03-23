@@ -773,7 +773,7 @@ SCIP_RETCODE initMatrix(
       }
    }
 
-   assert(nnonzsTmp == matrix->nnonzs);
+   assert(nnonzstmp == matrix->nnonzs);
 
    /* calculate row activity bounds */
    SCIP_CALL( calcActivityBounds(scip,matrix) );
