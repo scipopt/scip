@@ -112,6 +112,8 @@ fixed bugs:
 - fixed bug in scip.c adding a constraint in SCIPgetConsCopy() to the constraint hashmap
 - fixed bug in shiftandpropagate w.r.t. SCIPconstructLP() which can have the side effect that variables are created
 - fixed bug w.r.t. adding a value to the objective offset of the transformed problem
+- fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
+  segmentation fault
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines

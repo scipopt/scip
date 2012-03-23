@@ -869,6 +869,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real greedysolvalue;
    SCIP_Bool eqweights;
    SCIP_Bool isoptimal;
+   const size_t maxsize_t = (size_t)(-1);
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1125,20 +1126,22 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    intcap = (int)capacity;
    assert(intcap >= 0);
+   assert(nmyitems > 0);
+   assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
 
-   /* this condition is only to check if the size of memory which will be allocated is still positive (so no error occurs), 
-    * which will be necessary after this if condition
-    */ 
-   if( (intcap) < 0 || (nmyitems) * (intcap) < (intcap) || (nmyitems) * (intcap) < (nmyitems) || (nmyitems) * (intcap) * ((int) sizeof(*optvalues)) < (nmyitems) * (intcap) )
+   /* this condition checks if we will try to allocate a correct number of bytes and do not have an overflow, while
+    * computing the size for the allocation
+    */
+   if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) )
    {
-      SCIPdebugMessage("Too much memory will be consumed.\n");
+      printf/*SCIPdebugMessage*/("Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues)));
 
       *success = FALSE;
       goto TERMINATE;
    }
 
    /* allocate temporary memory and check for memory exceeding */ 
-   retcode = SCIPallocBufferArray(scip, &optvalues, (nmyitems)*(intcap));
+   retcode = SCIPallocBufferArray(scip, &optvalues, nmyitems * intcap);
    if( retcode == SCIP_NOMEMORY )
    {
       SCIPdebugMessage("Did not get enough memory.\n");
