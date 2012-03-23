@@ -1134,7 +1134,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     */
    if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) )
    {
-      printf/*SCIPdebugMessage*/("Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues)));
+      SCIPdebugMessage("Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues)));
 
       *success = FALSE;
       goto TERMINATE;
