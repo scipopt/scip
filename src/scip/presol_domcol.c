@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "matrix/matrix.h" /* TODO: ... */
+#include "matrix/matrix.h" /* TODO: maybe it is better to put the matrix inside this plugin ? */
 
 #include "presol_domcol.h"
 
@@ -676,13 +676,13 @@ SCIP_RETCODE findDominancePairs(
             continue;
 
          /* get the data for both columns */
-         vals1 = colGetVals(matrix, col1);
-         rows1 = colGetRows(matrix, col1);
-         nrows1 = colGetNRows(matrix, col1);
+         vals1 = matrix->colmatval + matrix->colmatbeg[col1];
+         rows1 = matrix->colmatind + matrix->colmatbeg[col1];
+         nrows1 = matrix->colmatcnt[col1];
          r1 = 0;
-         vals2 = colGetVals(matrix, col2);
-         rows2 = colGetRows(matrix, col2);
-         nrows2 = colGetNRows(matrix, col2);
+         vals2 = matrix->colmatval + matrix->colmatbeg[col2];
+         rows2 = matrix->colmatind + matrix->colmatbeg[col2];
+         nrows2 = matrix->colmatcnt[col2];
          r2 = 0;
 
          /* do we have a obj constant? */
@@ -713,15 +713,15 @@ SCIP_RETCODE findDominancePairs(
             if( r1 < nrows1 && (r2 == nrows2 || rows1[r1] < rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-                  !SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+               if( !SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* no dominance relation for equations or ranged rows */
                   col2domcol1 = FALSE;
                   col1domcol2 = FALSE;
                }
-               else if( SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-                  !SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+               else if( SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* <= relation, smaller coefficients dominate larger ones */
                   if( vals1[r1] < 0.0 )
@@ -729,8 +729,8 @@ SCIP_RETCODE findDominancePairs(
                   else if( vals1[r1] > 0.0 )
                      col1domcol2 = FALSE;
                }
-               else if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-                  SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+               else if( !SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > 0.0 )
@@ -757,15 +757,15 @@ SCIP_RETCODE findDominancePairs(
             else if( r2 < nrows2 && (r1 == nrows1 || rows1[r1] > rows2[r2]) )
             {
                /* dominance depends on the type of relation */
-               if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows2[r2])) &&
-                  !SCIPisInfinity(scip, rowGetRhs(matrix,rows2[r2])) )
+               if( !SCIPisInfinity(scip,-matrix->lhs[rows2[r2]]) &&
+                  !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
                {
                   /* no dominance relation for equations or ranged rows */
                   col2domcol1 = FALSE;
                   col1domcol2 = FALSE;
                }
-               else if( SCIPisInfinity(scip,-rowGetLhs(matrix,rows2[r2])) &&
-                  !SCIPisInfinity(scip, rowGetRhs(matrix,rows2[r2])) )
+               else if( SCIPisInfinity(scip,-matrix->lhs[rows2[r2]]) &&
+                  !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
                {
                   /* <= relation, smaller coefficients dominate larger ones */
                   if( vals2[r2] > 0.0 )
@@ -773,8 +773,8 @@ SCIP_RETCODE findDominancePairs(
                   else if( vals2[r2] < 0.0 )
                      col1domcol2 = FALSE;
                }
-               else if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows2[r2])) &&
-                  SCIPisInfinity(scip, rowGetRhs(matrix,rows2[r2])) )
+               else if( !SCIPisInfinity(scip,-matrix->lhs[rows2[r2]]) &&
+                  SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals2[r2] < 0.0 )
@@ -803,8 +803,8 @@ SCIP_RETCODE findDominancePairs(
                assert(rows1[r1] == rows2[r2]);
 
                /* dominance depends on the type of inequality */
-               if( !SCIPisInfinity(scip, -rowGetLhs(matrix,rows1[r1])) &&
-                  !SCIPisInfinity(scip,  rowGetRhs(matrix,rows1[r1])) )
+               if( !SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* no dominance relation if coefficients differ for equations or ranged rows */
                   if( vals1[r1] != vals2[r2] )
@@ -813,8 +813,8 @@ SCIP_RETCODE findDominancePairs(
                      col1domcol2 = FALSE;
                   }
                }
-               else if(  SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-                  !SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+               else if(  SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  !SCIPisInfinity(scip,matrix->rhs[rows1[r1]]) )
                {
                   /* <= relation, smaller coefficients dominate larger ones */
                   if( vals1[r1] < vals2[r2] )
@@ -822,8 +822,8 @@ SCIP_RETCODE findDominancePairs(
                   else if( vals1[r1] > vals2[r2] )
                      col1domcol2 = FALSE;
                }
-               else if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-                  SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+               else if( !SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+                  SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* >= relation, larger coefficients dominate smaller ones */
                   if( vals1[r1] > vals2[r2] )
@@ -864,8 +864,8 @@ SCIP_RETCODE findDominancePairs(
          /* no dominance relation for left equations or ranged rows */
          while( r1 < nrows1 )
          {
-            if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows1[r1])) &&
-               !SCIPisInfinity(scip, rowGetRhs(matrix,rows1[r1])) )
+            if( !SCIPisInfinity(scip,-matrix->lhs[rows1[r1]]) &&
+               !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
@@ -875,8 +875,8 @@ SCIP_RETCODE findDominancePairs(
          }
          while( r2 < nrows2 )
          {
-            if( !SCIPisInfinity(scip,-rowGetLhs(matrix,rows2[r2])) &&
-               !SCIPisInfinity(scip, rowGetRhs(matrix,rows2[r2])) )
+            if( !SCIPisInfinity(scip,-matrix->lhs[rows2[r2]]) &&
+               !SCIPisInfinity(scip, matrix->rhs[rows2[r2]]) )
             {
                col2domcol1 = FALSE;
                col1domcol2 = FALSE;
