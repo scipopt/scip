@@ -30,115 +30,53 @@
 extern "C" {
 #endif
 
-/** problem data */
+/** constraint matrix data structure in column and row major format */
 struct ConstraintMatrix
 {
-   /* column data */
-   SCIP_Real*            colmatval;
-   int*                  colmatind;
-   int*                  colmatbeg;
-   int*                  colmatcnt;
-   int                   ncols;
-   SCIP_Real*            lb;
-   SCIP_Real*            ub;
+   SCIP_Real*            colmatval;          /**< coefficients in column major format */
+   int*                  colmatind;          /**< row indexes in column major format */
+   int*                  colmatbeg;          /**< column storage offset */
+   int*                  colmatcnt;          /**< number of row entries per column */
+   int                   ncols;              /**< complete number of columns */
+   SCIP_Real*            lb;                 /**< lower bound per variable */
+   SCIP_Real*            ub;                 /**< upper bound per variable */
 
-   SCIP_VAR**            vars;
+   SCIP_VAR**            vars;               /**< variables pointer */
 
-   /* row data */
-   SCIP_Real*            rowmatval;
-   int*                  rowmatind;
-   int*                  rowmatbeg;
-   int*                  rowmatcnt;
-   int                   nrows;
-   SCIP_Real*            lhs;
-   SCIP_Real*            rhs;
+   SCIP_Real*            rowmatval;          /**< coefficients in row major format */
+   int*                  rowmatind;          /**< column indexed in row major format */
+   int*                  rowmatbeg;          /**< row storage offset */
+   int*                  rowmatcnt;          /**< number of column entries per row */
+   int                   nrows;              /**< complete number of rows */
+   SCIP_Real*            lhs;                /**< left hand side per row */
+   SCIP_Real*            rhs;                /**< right hand side per row */
 
-   SCIP_CONS**           conss;
+   SCIP_CONS**           conss;              /**< constraints pointer */
 
-   /* sparsity counter */
-   int                   nnonzs;
+   int                   nnonzs;             /**< sparsity counter */
 
-   /* data for row bound analysis */
-   SCIP_Real*            minactivity;
-   SCIP_Real*            maxactivity;
-   int*                  minactivityneginf;
-   int*                  minactivityposinf;
-   int*                  maxactivityneginf;
-   int*                  maxactivityposinf;
+   SCIP_Real*            minactivity;        /**< min activity per row */
+   SCIP_Real*            maxactivity;        /**< max activity per row */
+   int*                  minactivityneginf;  /**< min activity negative infinity counter */
+   int*                  minactivityposinf;  /**< min activity positive infinity counter */
+   int*                  maxactivityneginf;  /**< max activity negative infinity counter */
+   int*                  maxactivityposinf;  /**< max activity positive infinity counter */
 };
 typedef struct ConstraintMatrix CONSTRAINTMATRIX;
 
 /** initialize matrix from scip */
 SCIP_RETCODE initMatrix(
-   SCIP*                 scip,       /**< current scip instance */
-   CONSTRAINTMATRIX*     matrix,     /**< constraint matrix object to be initialized */
-   SCIP_Bool*            initialized /**< was the initialization successful? */
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+   SCIP_Bool*            initialized         /**< was the initialization successful? */
    );
 
 /** frees the constraint matrix */
 void freeMatrix(
-   SCIP*                 scip,   /**< current SCIP instance */
-   CONSTRAINTMATRIX**    matrix  /**< constraint matrix object */
+   SCIP*                 scip,               /**< current SCIP instance */
+   CONSTRAINTMATRIX**    matrix              /**< constraint matrix */
    );
 
-int getNCols(
-   CONSTRAINTMATRIX*     matrix
-   );
-
-int getNRows(
-   CONSTRAINTMATRIX*     matrix
-   );
-
-SCIP_Real rowGetLhs(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   );
-
-SCIP_Real rowGetRhs(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   );
-
-SCIP_Real getRowMinActivity(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   );
-
-SCIP_Real getRowMaxActivity(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   );
-
-SCIP_Real* colGetVals(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   );
-
-int* colGetRows(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   );
-
-int colGetNRows(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   );
-
-/** write matrix in column major format into a file */
-SCIP_RETCODE writeMatrixColumns(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   const char*           filename,
-   int*                  nentries
-   );
-
-/** write matrix in row major format into a file */
-SCIP_RETCODE writeMatrixRows(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   const char*           filename,
-   int*                  nentries
-   );
 
 #ifdef __cplusplus
 }

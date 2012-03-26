@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG*/
 
 /**@file    matrix.c
  * @ingroup
@@ -38,11 +37,11 @@
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
 SCIP_RETCODE getActiveVariables(
-   SCIP*                 scip,         /**< SCIP data structure */
-   SCIP_VAR***           vars,         /**< vars array to get active variables for */
-   SCIP_Real**           scalars,      /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
-   int*                  nvars,        /**< pointer to number of variables and values in vars and vals array */
-   SCIP_Real*            constant      /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Real*            constant            /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
    )
 {
    int requiredsize;
@@ -70,16 +69,16 @@ SCIP_RETCODE getActiveVariables(
    return SCIP_OKAY;
 }
 
-/** add one row to matrix */
+/** add one row to the constraint matrix */
 static
 SCIP_RETCODE addRow(
-   CONSTRAINTMATRIX*     matrix,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   int                   nvars,
-   SCIP_Real             lhs,
-   SCIP_Real             rhs,
-   int                   considx
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this row */
+   SCIP_Real*            vals,               /**< coefficients of this row */
+   int                   nvars,              /**< number of variables of this row */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   int                   considx             /**< row index */
    )
 {
    int j;
@@ -99,7 +98,7 @@ SCIP_RETCODE addRow(
       probindex = SCIPvarGetProbindex(vars[j]);
       assert(matrix->vars[probindex] == vars[j]);
 
-      assert(0 <= probindex && probindex < matrix->ncols); /* -1 means not assigned to a problem */
+      assert(0 <= probindex && probindex < matrix->ncols);
       matrix->rowmatind[matrix->nnonzs] = probindex;
       matrix->nnonzs = matrix->nnonzs + 1;
    }
@@ -109,11 +108,11 @@ SCIP_RETCODE addRow(
    return SCIP_OKAY;
 }
 
-/** add one row to matrix */
+/** add empty row to matrix */
 static
 SCIP_RETCODE addEmptyRow(
-   CONSTRAINTMATRIX*     matrix,
-   int                   considx
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+   int                   considx             /**< row/constraint index */
    )
 {
    matrix->lhs[considx] = 0;
@@ -128,15 +127,14 @@ SCIP_RETCODE addEmptyRow(
 /** add one constraint to matrix */
 static
 SCIP_RETCODE addConstraint(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   int                   nvars,
-   SCIP_Real             lhs,
-   SCIP_Real             rhs,
-   SCIP_Bool             transformed,
-   int                   considx
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this constraint */
+   SCIP_Real*            vals,               /**< variable coefficients of this constraint */
+   int                   nvars,              /**< number of variables */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   int                   considx             /**< constraint index */
    )
 {
    int v;
@@ -210,11 +208,11 @@ SCIP_RETCODE addConstraint(
 /** get number of active variables from given variables */
 static
 SCIP_RETCODE getNumberActiveVars(
-   SCIP*                 scip,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   int                   nvars,
-   int*                  nactvars
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real*            vals,               /**< variable coefficients */
+   int                   nvars,              /**< number of variables */
+   int*                  nactvars            /**< number of active variables */
    )
 {
    int v;
@@ -269,8 +267,8 @@ SCIP_RETCODE getNumberActiveVars(
 /** transform row major format into column major format */
 static
 SCIP_RETCODE setColumnMajorFormat(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix              /**< constraint matrix */
    )
 {
    int colidx;
@@ -339,8 +337,8 @@ SCIP_RETCODE setColumnMajorFormat(
 /** calculate min/max activity per row */
 static
 SCIP_RETCODE calcActivityBounds(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix              /**< constraint matrix */
    )
 {
    SCIP_Real val;
@@ -372,8 +370,11 @@ SCIP_RETCODE calcActivityBounds(
 
       for(; (rowpnt < rowend) && (!mininfinite || !maxinfinite); rowpnt++, valpnt++)
       {
-         col = *rowpnt; /* column index */
-         val = *valpnt; /* variable coefficient */
+         /* get column index */
+         col = *rowpnt;
+
+         /* get variable coefficient */
+         val = *valpnt;
 
          if( matrix->ncols <= col)
          {
@@ -434,98 +435,11 @@ SCIP_RETCODE calcActivityBounds(
    return SCIP_OKAY;
 }
 
-
-int getNCols(
-   CONSTRAINTMATRIX*     matrix
-   )
-{
-   assert(matrix != NULL);
-   return matrix->ncols;
-}
-
-int getNRows(
-   CONSTRAINTMATRIX*     matrix
-   )
-{
-   assert(matrix != NULL);
-   return matrix->nrows;
-}
-
-SCIP_Real rowGetLhs(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   )
-{
-   assert(matrix != NULL);
-   assert(row < matrix->nrows);
-   return matrix->lhs[row];
-}
-
-SCIP_Real rowGetRhs(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   )
-{
-   assert(matrix != NULL);
-   assert(row < matrix->nrows);
-   return matrix->rhs[row];
-}
-
-SCIP_Real getRowMinActivity(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   )
-{
-   assert(matrix != NULL);
-   assert(row < matrix->nrows);
-   return matrix->minactivity[row];
-}
-
-SCIP_Real getRowMaxActivity(
-   CONSTRAINTMATRIX*     matrix,
-   int                   row
-   )
-{
-   assert(matrix != NULL);
-   assert(row < matrix->nrows);
-   return matrix->maxactivity[row];
-}
-
-SCIP_Real* colGetVals(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   )
-{
-   assert(matrix != NULL);
-   assert(col < matrix->ncols);
-   return matrix->colmatval + matrix->colmatbeg[col];
-}
-
-int* colGetRows(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   )
-{
-   assert(matrix != NULL);
-   assert(col < matrix->ncols);
-   return matrix->colmatind + matrix->colmatbeg[col];
-}
-
-int colGetNRows(
-   CONSTRAINTMATRIX*     matrix,
-   int                   col
-   )
-{
-   assert(matrix != NULL);
-   assert(col < matrix->ncols);
-   return matrix->colmatcnt[col];
-}
-
 /** initialize matrix */
 SCIP_RETCODE initMatrix(
-   SCIP*                 scip,       /**< current scip instance */
-   CONSTRAINTMATRIX*     matrix,     /**< constraint matrix object to be initialized */
-   SCIP_Bool*            initialized /**< was the initialization successful? */
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */
+   SCIP_Bool*            initialized         /**< was the initialization successful? */
    )
 {
    int v;
@@ -535,15 +449,13 @@ SCIP_RETCODE initMatrix(
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
-   int nnonzsTmp;
-   SCIP_Bool transformed;
+   int nnonzstmp;
    int conscounter;
    SCIP_CONSHDLR** conshdlrs;
    int nconshdlrs;
    int nconss;
 
-   nnonzsTmp = 0;
-   transformed = TRUE;
+   nnonzstmp = 0;
    conscounter = 0;
 
    assert(scip != NULL);
@@ -636,7 +548,7 @@ SCIP_RETCODE initMatrix(
          nactvars = 0;
          SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
          assert(nactvars >= 0);
-         nnonzsTmp += nactvars;
+         nnonzstmp += nactvars;
          conscounter++;
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -647,7 +559,7 @@ SCIP_RETCODE initMatrix(
          nactvars = 0;
          SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
          assert(nactvars >= 0);
-         nnonzsTmp += nactvars;
+         nnonzstmp += nactvars;
          conscounter++;
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -658,7 +570,7 @@ SCIP_RETCODE initMatrix(
          nactvars = 0;
          SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
          assert(nactvars >= 0);
-         nnonzsTmp += nactvars;
+         nnonzstmp += nactvars;
          conscounter++;
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -678,7 +590,7 @@ SCIP_RETCODE initMatrix(
          nactvars = 0;
          SCIP_CALL( getNumberActiveVars(scip,cvars,consvals,ncvars,&nactvars) );
          assert(nactvars >= 0);
-         nnonzsTmp += nactvars;
+         nnonzstmp += nactvars;
          conscounter++;
 
          SCIPfreeBufferArray(scip, &consvals);
@@ -701,7 +613,7 @@ SCIP_RETCODE initMatrix(
          nactvars = 0;
          SCIP_CALL( getNumberActiveVars(scip,consvars,consvals,ncvars,&nactvars) );
          assert(nactvars >= 0);
-         nnonzsTmp += nactvars;
+         nnonzstmp += nactvars;
 
          SCIPfreeBufferArray(scip, &consvals);
          SCIPfreeBufferArray(scip, &consvars);
@@ -709,15 +621,15 @@ SCIP_RETCODE initMatrix(
       }
    }
 
-   /* do nothing if we have unsupported constraint types */
-   if( matrix->nrows > conscounter || nnonzsTmp == 0 || matrix->nrows == 0 || matrix->ncols == 0 )
+   /* do nothing if we have unsupported constraint types or no entries */
+   if( matrix->nrows > conscounter || nnonzstmp == 0 || matrix->nrows == 0 || matrix->ncols == 0 )
    {
       SCIPfreeBufferArray(scip, &matrix->conss);
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatval, nnonzsTmp) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatind, nnonzsTmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatval, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatind, nnonzstmp) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatbeg, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatcnt, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lb, matrix->ncols) );
@@ -732,8 +644,8 @@ SCIP_RETCODE initMatrix(
       matrix->ub[v] = SCIPvarGetUbGlobal(var);
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatval, nnonzsTmp) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatind, nnonzsTmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatval, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatind, nnonzstmp) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatbeg, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatcnt, matrix->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, matrix->nrows) );
@@ -767,7 +679,6 @@ SCIP_RETCODE initMatrix(
                SCIPgetNVarsLinear(scip, cons),
                SCIPgetLhsLinear(scip, cons),
                SCIPgetRhsLinear(scip, cons),
-               transformed,
                c) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -800,7 +711,6 @@ SCIP_RETCODE initMatrix(
                SCIPgetNVarsSetppc(scip, cons),
                lhs,
                rhs,
-               transformed,
                c) );
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -812,7 +722,6 @@ SCIP_RETCODE initMatrix(
                SCIPgetNVarsLogicor(scip, cons),
                1.0,
                SCIPinfinity(scip),
-               transformed,
                c) );
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -832,7 +741,6 @@ SCIP_RETCODE initMatrix(
                SCIPgetNVarsKnapsack(scip, cons),
                -SCIPinfinity(scip),
                (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons),
-               transformed,
                c) );
 
          SCIPfreeBufferArray(scip, &consvals);
@@ -858,7 +766,6 @@ SCIP_RETCODE initMatrix(
                2,
                SCIPgetLhsVarbound(scip, cons),
                SCIPgetRhsVarbound(scip, cons),
-               transformed,
                c) );
 
          SCIPfreeBufferArray(scip, &consvals);
@@ -866,9 +773,12 @@ SCIP_RETCODE initMatrix(
       }
    }
 
-   assert(nnonzsTmp == matrix->nnonzs);
+   assert(nnonzstmp == matrix->nnonzs);
 
+   /* calculate row activity bounds */
    SCIP_CALL( calcActivityBounds(scip,matrix) );
+
+   /* transform row major format into column major format */
    SCIP_CALL( setColumnMajorFormat(scip,matrix) );
 
    *initialized = TRUE;
@@ -879,8 +789,8 @@ SCIP_RETCODE initMatrix(
 
 /** frees the constraint matrix */
 void freeMatrix(
-   SCIP*                 scip,   /**< current SCIP instance */
-   CONSTRAINTMATRIX**    matrix  /**< constraint matrix object */
+   SCIP*                 scip,               /**< current SCIP instance */
+   CONSTRAINTMATRIX**    matrix              /**< constraint matrix object */
    )
 {
    assert(scip != NULL);
@@ -934,155 +844,5 @@ void freeMatrix(
 
    SCIPfreeBufferArrayNull(scip, &((*matrix)->vars));
 
-   /* free matrix */
    SCIPfreeBuffer(scip, matrix);
-}
-
-#if 0
-/** debug function: write matrix in column major format into a file */
-static
-SCIP_RETCODE dump_sparse_matrix_per_col(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   GRAPH*                graph,
-   const char*           filename
-   )
-{
-   int i=0;
-   int nnonzs=0;
-   int offset=1; /* matlab offset */
-   int* colpnt=NULL;
-   int* colend=NULL;
-   SCIP_Real* valpnt=NULL;
-   FILE* fd=NULL;
-   SCIP_VAR** vars;
-
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(filename != NULL);
-
-   vars = matrix->vars;
-
-   fd = fopen(filename,"w");
-   if(fd==NULL)
-      return SCIP_ERROR;
-
-   for(i=0; i<matrix->ncols; i++)
-   {
-      assert(SCIPvarGetProbindex(vars[i])==i);
-
-      colpnt = matrix->colmatind + matrix->colmatbeg[i];
-      colend = colpnt + matrix->colmatcnt[i];
-      valpnt = matrix->colmatval + matrix->colmatbeg[i];
-      for(; colpnt <colend; colpnt++, valpnt++ )
-      {
-	 fprintf(fd,"%d\t%d\t%f\t%d\n",
-            *colpnt+offset,          /* row idx */
-            i+offset,                /* col idx */
-            (SCIP_Real)(*valpnt),    /* value */
-            graph->marks[i]);        /* coco number */
-	 nnonzs++;
-      }
-   }
-
-   fclose(fd);
-
-   return nnonzs;
-}
-#endif
-
-/** write matrix in column major format into a file */
-SCIP_RETCODE writeMatrixColumns(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   const char*           filename,
-   int*                  nentries
-   )
-{
-   int i;
-   int offset;
-   int* colpnt;
-   int* colend;
-   SCIP_Real* valpnt;
-   FILE* fd;
-
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(filename != NULL);
-   assert(nentries != NULL);
-
-   *nentries = 0;
-   offset = 1;    /* matlab offset */
-
-   fd = fopen(filename,"w");
-   if(fd==NULL)
-      return SCIP_ERROR;
-
-   for(i=0; i<matrix->ncols; i++)
-   {
-      colpnt = matrix->colmatind + matrix->colmatbeg[i];
-      colend = colpnt + matrix->colmatcnt[i];
-      valpnt = matrix->colmatval + matrix->colmatbeg[i];
-
-      for(; colpnt <colend; colpnt++, valpnt++ )
-      {
-	 fprintf(fd,"%d\t%d\t%f\n",
-            *colpnt+offset,          /* row idx */
-            i+offset,                /* col idx */
-            (SCIP_Real)(*valpnt));   /* value */
-	 (*nentries)++;
-      }
-   }
-
-   fclose(fd);
-
-   return SCIP_OKAY;
-}
-
-/** write matrix in row major format into a file */
-SCIP_RETCODE writeMatrixRows(
-   SCIP*                 scip,
-   CONSTRAINTMATRIX*     matrix,
-   const char*           filename,
-   int*                  nentries
-   )
-{
-   int i;
-   int offset;
-   int* rowpnt;
-   int* rowend;
-   SCIP_Real* valpnt;
-   FILE* fd;
-
-   assert(scip != NULL);
-   assert(matrix != NULL);
-   assert(filename != NULL);
-   assert(nentries != NULL);
-
-   *nentries = 0;
-   offset = 1;   /* matlab offset */
-
-   fd = fopen(filename,"w");
-   if(fd==NULL)
-      return SCIP_ERROR;
-
-   for(i=0; i<matrix->nrows; i++)
-   {
-      rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
-      rowend = rowpnt + matrix->rowmatcnt[i];
-      valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
-
-      for(; rowpnt < rowend; rowpnt++,valpnt++)
-      {
-	 fprintf(fd,"%d\t%d\t%f\n",
-            i+offset,                /* row idx */
-            *rowpnt+offset,          /* col idx */
-            (SCIP_Real)(*valpnt));   /* value */
-         (*nentries)++;
-      }
-   }
-
-   fclose(fd);
-
-   return SCIP_OKAY;
 }
