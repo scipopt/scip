@@ -5199,8 +5199,10 @@ void SCIPvarSetProbindex(
    varSetProbindex(var, probindex);
 }
 
-/** gives the variable a new name; ATTENTION: to old pointer is over written that might
- *  result in a memory leakage */
+/** gives the variable a new name
+ *
+ *  @note the old pointer is overwritten, which might result in a memory leakage
+ */
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
    const char*          name                /**< new name of variable */
@@ -9629,7 +9631,7 @@ SCIP_RETCODE SCIPvarAddClique(
    return SCIP_OKAY;
 }
 
-/** deletes the variable from the list of cliques the binary variable is member of, but does not change the clique
+/** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
 SCIP_RETCODE SCIPvarDelCliqueFromList(
