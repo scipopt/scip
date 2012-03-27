@@ -166,6 +166,8 @@ fixed bugs:
 - fixed bug in heur_oneopt.c which forgot to check LP rows if local rows are present
 - fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
   segmentation fault
+- fixed bug in solve.c, applied bounding for the initial lp was only done if root-lp-solution was valid but another
+  solution could also have been added
 - fixed bug in cons_xor.c which did not copy the artificial integer variable (used for the lp relaxation)
 
 performance improvements:
@@ -212,8 +214,6 @@ fixed bugs:
 - fixed bug in SCIPsortedvecDelPos...() templates
 - fixed bug in heur_shiftandpropagate.c concerning the treatment of unbounded variables
 - workaround for trying to add variable bounds with to small coefficients
-- fixed bug in solve.c, applied bounding for the initial lp was only done if root-lp-solution was valid but another
-  solution could also have been added
 
 parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
