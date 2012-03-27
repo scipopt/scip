@@ -94,7 +94,20 @@
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.<br>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
-          to solve MIPs, MINLPs, or PBO problems in *.mps, *.lp, *.rlp, *.zpl, *.opb, *.wbo, *.pip and other file formats</li>
+          to solve MIPs, MINLPs, or PBO problems. They can read</li>
+      <p class="a">
+        <ol>
+	  <li>CIP - file format (own constraint based file format)</li>
+	  <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html>CNF - file format</a></li>
+	  <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
+          <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
+          <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
+          <li><a href="http://www.cril.univ-artois.fr/PB12/format.pdf">OPB/WBO - file formats</a></li>
+          <li><a href="http://polip.zib.de/pipformat.php">PIP - file format</a></li>
+	  <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
+          <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
+        </ol>
+      </p>
       <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
       <li>You can use SCIP in any combination of the three purposes above.</li>

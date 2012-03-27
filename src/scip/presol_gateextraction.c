@@ -198,7 +198,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
 static
 SCIP_RETCODE presoldataInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOLDATA*      presoldata          /* data object of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< data object of presolver */
    )
 {
    assert(scip != NULL);

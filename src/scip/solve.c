@@ -1225,6 +1225,15 @@ SCIP_RETCODE solveNodeInitialLP(
       
       /* update pseudo cost values for integer variables (always) and for continuous variables (if not delayed) */
       SCIP_CALL( updatePseudocost(set, stat, prob, tree, lp, TRUE, !set->branch_delaypscost) );
+
+      /* update lower bound of current node w.r.t. initial lp */
+      assert(!(*cutoff));
+      if( (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
+	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+	 && SCIPprobAllColsInLP(prob, set, lp) && SCIPlpIsRelax(lp) )
+      {
+	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, prob, lp) );
+      }
    }
 
    return SCIP_OKAY;
@@ -2461,20 +2470,19 @@ SCIP_RETCODE solveNodeLP(
 #else
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, checklprows, &stored) );
-#endif    
-         /* if the solution was accepted, the root node can be cut off by bounding */
-         if( stored && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
-         {
-            SCIPdebugMessage("root node initial LP feasible --> cut off root node, stop solution process\n");
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(SCIPtreeGetFocusNode(tree), set, stat, transprob, lp) );
-            SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, conflict, cutoff) );
-            assert(*cutoff);
-         }
+#endif
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
             *unbounded = TRUE;
       }
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+   /* check for infeasible node by bounding */
+   SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, conflict, cutoff) );
+#ifdef SCIP_DEBUG
+   if( *cutoff )
+      SCIPdebugMessage("solution cuts off root node, stop solution process\n");
+#endif
 
    if( !(*cutoff) && !(*lperror) )
    {
