@@ -20,6 +20,8 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
+ * TODO: do not solve the last component, if all components before were solved (perhaps sort them by size)
+ * TODO: call the presolver again, if the problem was reduced enough after the last call of the presolver
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
