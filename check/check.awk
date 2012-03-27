@@ -601,8 +601,6 @@ BEGIN {
 
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
-      if( timelimit > 0.0 )
-         tottime = min(tottime, timelimit);
 
       if( aborted || timetobest < 0.0 ) {
          timetofirst = tottime;
