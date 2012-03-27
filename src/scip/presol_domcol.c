@@ -32,9 +32,9 @@
 
 #define PRESOL_NAME            "domcol"
 #define PRESOL_DESC            "dominated column presolver"
-#define PRESOL_PRIORITY         -5000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY               20     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
 /*
  * Data structures
