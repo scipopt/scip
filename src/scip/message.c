@@ -163,7 +163,7 @@ void messagePrintError(
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintWarning(
-   SCIP_MESSAGEHDLR*     messagehdlr,
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           msg,                /**< message to print; NULL to flush the output buffer */
    int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
    )
@@ -214,7 +214,7 @@ void messagePrintWarning(
 /** prints dialog message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintDialog(
-   SCIP_MESSAGEHDLR*     messagehdlr,
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    const char*           msg,                /**< message to print; NULL to flush the output buffer */
    int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
@@ -285,7 +285,7 @@ void messagePrintDialog(
 /** prints info message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintInfo(
-   SCIP_MESSAGEHDLR*     messagehdlr,
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    const char*           msg,                /**< message to print; NULL to flush the output buffer */
    int                   msglength           /**< message length if bigger than SCIP_MAXSTRLEN, or SCIP_MAXSTRLEN */
@@ -351,7 +351,7 @@ void messagePrintInfo(
 /** if the given file is not NULL a log file is opened */
 static
 void messagehdlrOpenLogfile(
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< pointer to store the message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename            /**< name of log file, or NULL (stdout) */
    )
 {
