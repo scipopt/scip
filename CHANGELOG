@@ -211,6 +211,8 @@ fixed bugs:
 - fixed bug in SCIPsortedvecDelPos...() templates
 - fixed bug in heur_shiftandpropagate.c concerning the treatment of unbounded variables
 - workaround for trying to add variable bounds with to small coefficients
+- fixed bug in solve.c, applied bounding for the initial lp was only done if root-lp-solution was valid but another
+  solution could also have been added
 
 parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
