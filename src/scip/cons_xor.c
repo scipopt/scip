@@ -87,6 +87,7 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    SCIP_Bool             rhs;                /**< right hand side of the constraint */
+   unsigned int          deleteintvar:1;     /**< should artificial variable be deleted */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          changed:1;          /**< was constraint changed since last pair preprocessing round? */
@@ -281,7 +282,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to store the constraint data */
    SCIP_Bool             rhs,                /**< right hand side of the constraint */
    int                   nvars,              /**< number of variables in the xor operation */
-   SCIP_VAR**            vars                /**< variables in xor operation */
+   SCIP_VAR**            vars,               /**< variables in xor operation */
+   SCIP_VAR*             intvar              /**< artificial integer variable for linear relaxation */
    )
 {
    int r;
@@ -295,7 +297,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
 
    (*consdata)->rhs = rhs;
-   (*consdata)->intvar = NULL;
+   (*consdata)->intvar = intvar;
    for( r = 0; r < NROWS; ++r )
       (*consdata)->rows[r] = NULL;
    (*consdata)->nvars = nvars;
@@ -304,6 +306,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
+   (*consdata)->deleteintvar = (intvar == NULL);
    (*consdata)->propagated = FALSE;
    (*consdata)->sorted = FALSE;
    (*consdata)->changed = TRUE;
@@ -312,6 +315,17 @@ SCIP_RETCODE consdataCreate(
    if( SCIPisTransformed(scip) )
    {
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+
+      if( (*consdata)->intvar != NULL )
+      {
+	 SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->intvar, &((*consdata)->intvar)) );
+      }
+   }
+
+   if( (*consdata)->intvar != NULL )
+   {
+      /* capture artificial variable */
+      SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->intvar) );
    }
 
    return SCIP_OKAY;
@@ -370,7 +384,7 @@ SCIP_RETCODE consdataFree(
       /* if internal variable is not defined anymore by any checked constraint, delete it from the problem;
        * otherwise, it could be fixed to a wrong value in dual presolving
        */
-      if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) )
+      if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) && (*consdata)->deleteintvar )
       {
          SCIP_Bool deleted;
 
@@ -1770,7 +1784,65 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs with a given artificial integer variable for the
+ *  linear relaxation
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+static
+SCIP_RETCODE createConsXorIntvar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_Bool             rhs,                /**< right hand side of the constraint */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with operator variables of constraint */
+   SCIP_VAR*             intvar,             /**< artificial integer variable for linear relaxation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
+   /* find the xor constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("xor constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars, intvar) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1878,7 +1950,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
    assert(sourcedata->vars != NULL);
 
    /* create target constraint data */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->rhs, sourcedata->nvars, sourcedata->vars) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->rhs, sourcedata->nvars, sourcedata->vars, sourcedata->intvar) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -2318,8 +2390,11 @@ SCIP_DECL_CONSPRINT(consPrintXor)
 static
 SCIP_DECL_CONSCOPY(consCopyXor)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** targetvars;
+   SCIP_VAR* intvar;
+   SCIP_VAR* targetintvar;
    const char* consname;
    int nvars;
    int v;
@@ -2330,10 +2405,15 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
    (*valid) = TRUE;
 
+   sourceconsdata = SCIPconsGetData(sourcecons);
+   assert(sourceconsdata != NULL);
+
    /* get variables and coefficients of the source constraint */
-   sourcevars = SCIPgetVarsXor(sourcescip, sourcecons);
-   nvars = SCIPgetNVarsXor(sourcescip, sourcecons);
-   
+   sourcevars = sourceconsdata->vars;
+   nvars = sourceconsdata->nvars;
+   intvar = sourceconsdata->intvar;
+   targetintvar = NULL;
+
    if( name != NULL )
       consname = name;
    else
@@ -2341,8 +2421,19 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
    if( nvars == 0 )
    {
-      SCIP_CALL( SCIPcreateConsXor(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), 0, NULL,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      if( intvar != NULL )
+      {
+	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
+	 assert(!(*valid) || targetintvar != NULL);
+      }
+
+      if( *valid )
+      {
+	 SCIP_CALL( createConsXorIntvar(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), 0, NULL,
+	       targetintvar,
+	       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
       return SCIP_OKAY;
    }
 
@@ -2356,11 +2447,19 @@ SCIP_DECL_CONSCOPY(consCopyXor)
       assert(!(*valid) || targetvars[v] != NULL);
    }
 
+   /* map artificial relaxation variable of the source constraint to variable of the target SCIP */
+   if( *valid && intvar != NULL )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || targetintvar != NULL);
+   }
+
    /* only create the target constraints, if all variables could be copied */
    if( *valid )
    {
-      SCIP_CALL( SCIPcreateConsXor(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), nvars, targetvars,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      SCIP_CALL( createConsXorIntvar(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), nvars, targetvars,
+	    targetintvar,
+	    initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    /* free buffer array */
@@ -2613,7 +2712,7 @@ SCIP_RETCODE SCIPcreateConsXor(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars) );
+   SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars, NULL) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
