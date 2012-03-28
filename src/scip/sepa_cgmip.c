@@ -2355,6 +2355,11 @@ SCIP_RETCODE createCGCutDirect(
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+   cutrhs = 0.0;
+   localrowsused = FALSE;
+   localboundsused = FALSE;
+   success = TRUE;
+
    /* compute coefficients */
    SCIP_CALL( computeCut(scip, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &success) );
    cutislocal = localrowsused || localboundsused;
