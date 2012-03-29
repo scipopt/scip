@@ -19,8 +19,9 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
- * TODO: do not solve component if number of variables equals the total number of (unfixed) variables
  * TODO: if no integer variables are present, set a node limit of 1 to avoid spending to much time in continuous nonlinear problems
+ * TODO: sort components by size?
+ * TODO: call the presolver again, if the problem was reduced enough after the last call of the presolver
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -579,12 +580,16 @@ SCIP_RETCODE splitProblem(
          {
             assert(ncompconss > 0);
 
-            /* build subscip for one component and try to solve it */
-            SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars, ncompvars,
-                  nsolvedprobs, ndeletedvars, ndeletedconss, result) );
+            /* we do not want to solve the component, if it is the last unsolved one */
+            if( ncompvars < SCIPgetNVars(scip) )
+            {
+               /* build subscip for one component and try to solve it */
+               SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars, ncompvars,
+                     nsolvedprobs, ndeletedvars, ndeletedconss, result) );
 
-            if( *result == SCIP_CUTOFF )
-               break;
+               if( *result == SCIP_CUTOFF )
+                  break;
+            }
          }
       }
       else
