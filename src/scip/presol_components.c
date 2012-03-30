@@ -21,7 +21,6 @@
  *
  * TODO: simulation of presolving without solve
  * TODO: sort components by size?
- * TODO: call the presolver again, if the problem was reduced enough after the last call of the presolver
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,6 +40,8 @@
 #define DEFAULT_MAXINTVARS           20      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
+#define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
+                                              *   to allow running again (1.0: do not run again) */
 
 #ifdef WITH_STATISTICS
 static int NCATEGORIES = 4;
@@ -59,6 +60,9 @@ struct SCIP_PresolData
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
    SCIP_Real             intfactor;          /** the weight of an integer variable compared to binary variables */
+   SCIP_Real             reldecrease;        /** percentage by which the number of variables has to be decreased after the last component solving
+                                              *  to allow running again (1.0: do not run again) */
+   int                   lastnvars;          /** number of variables after last run of the presolver */
 #ifdef WITH_STATISTICS
    int*                  compspercat;        /** number of components of the different categories */
    int                   nsinglevars;        /** number of components with a single variable without constraint */
@@ -90,7 +94,7 @@ SCIP_RETCODE initStatistics(
    return SCIP_OKAY;
 }
 
-/** initialize data for statistics */
+/** free data for statistics */
 static
 void freeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -102,6 +106,23 @@ void freeStatistics(
 
    SCIPfreeMemoryArray(scip, &presoldata->compspercat);
 }
+
+/** reset data for statistics */
+static
+void resetStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   assert(scip != NULL);
+   assert(presoldata != NULL);
+
+   BMSclearMemoryArray(presoldata->compspercat, NCATEGORIES);
+
+   presoldata->nsinglevars = 0;
+   presoldata->subsolvetime = 0.0;
+}
+
 
 /** statistics: categorize the component with the given number of binary and integer variables */
 static
@@ -183,6 +204,7 @@ void printStatistics(
 #else
 #define initStatistics(scip, presoldata) SCIP_OKAY
 #define freeStatistics(scip, presoldata) /**/
+#define resetStatistics(scip, presoldata) /**/
 #define updateStatisticsComp(presoldata, nbinvars, nintvars) /**/
 #define updateStatisticsSingleVar(presoldata) /**/
 #define updateStatisticsSubsolvetime(presoldata, subsolvetime) /**/
@@ -673,12 +695,20 @@ SCIP_RETCODE presolComponents(
    if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* only call the component presolver, if presolving would be stopped otherwise */
+   if( !SCIPisPresolveFinished(scip) )
+      return SCIP_OKAY;
+
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
+   nvars = SCIPgetNVars(scip);
+
    /* the presolver should be executed only once */
-   if( presoldata->didsearch )
+   if( nvars == 0 || (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
       return SCIP_OKAY;
+
+   resetStatistics(scip, presoldata);
 
    *result = SCIP_DIDNOTFIND;
    presoldata->didsearch = TRUE;
@@ -703,7 +733,6 @@ SCIP_RETCODE presolComponents(
    }
 
    /* get number of variables and copy variables into a local array */
-   nvars = SCIPgetNVars(scip);
    tmpvars = SCIPgetVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    BMScopyMemoryArray(vars, tmpvars, nvars);
@@ -723,7 +752,7 @@ SCIP_RETCODE presolComponents(
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
 
-         /* create subproblems from independent components and solve them in dependence on their size */
+         /* create subproblems from independent components and solve them in dependence of their size */
          SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
                &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
 
@@ -752,6 +781,8 @@ SCIP_RETCODE presolComponents(
 
    SCIPdebugMessage("### %d components, %d solved, %d deleted constraints, %d deleted variables\n",
       ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+
+   presoldata->lastnvars = SCIPgetNVars(scip);
 
    return SCIP_OKAY;
 }
@@ -794,8 +825,22 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_PRESOLINIT(presolInitComponents)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   presoldata->didsearch = FALSE;
+
+   resetStatistics(scip, presoldata);
+
+   return SCIP_OKAY;
+}
+
 /* define unused callbacks as NULL */
-#define presolInitComponents NULL
 #define presolExitComponents NULL
 #define presolInitpreComponents NULL
 #define presolExitpreComponents NULL
@@ -805,13 +850,8 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
 static
 SCIP_DECL_PRESOLEXEC(presolExecComponents)
 {  /*lint --e{715}*/
-   *result = SCIP_DIDNOTRUN;
 
-   /* only call the component presolver, if presolving would be stopped otherwise */
-   if( SCIPisPresolveFinished(scip) )
-   {
-      SCIP_CALL( presolComponents(scip, presol, nfixedvars, ndelconss, result) );
-   }
+   SCIP_CALL( presolComponents(scip, presol, nfixedvars, ndelconss, result) );
 
    return SCIP_OKAY;
 }
@@ -868,6 +908,11 @@ SCIP_RETCODE SCIPincludePresolComponents(
          "presolving/components/intfactor",
          "the weight of an integer variable compared to binary variables",
          &presoldata->intfactor, FALSE, DEFAULT_INTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/components/reldecrease",
+         "percentage by which the number of variables has to be decreased after the last component solving to allow running again (1.0: do not run again)",
+         &presoldata->reldecrease, FALSE, DEFAULT_RELDECREASE, 0.0, 1.0, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
