@@ -37,9 +37,9 @@
 
 #define PRESOL_NAME            "domcol"
 #define PRESOL_DESC            "dominated column presolver"
-#define PRESOL_PRIORITY         -5000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY         20000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
 
 /*
  * Data structures
@@ -494,6 +494,126 @@ SCIP_RETCODE calcActivityBounds(
    return SCIP_OKAY;
 }
 
+
+
+/** count nonzero entries in matrix */
+static
+SCIP_RETCODE countNonzerosExactly(
+   SCIP*                 scip,               /**< current scip instance */
+   CONSTRAINTMATRIX*     matrix              /**< constraint matrix object to be initialized */
+   )
+{
+   const char* conshdlrname;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS* cons;
+   int nnonzstmp;
+   int c;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+
+   nnonzstmp = 0;
+
+   /* count the number of nonzeros exactly */
+   for( c = 0; c < matrix->nrows; c++ )
+   {
+      SCIP_VAR** cvars;
+      int ncvars;
+      SCIP_Real* cvals;
+      int nactvars;
+
+      cons = matrix->conss[c];
+      assert( cons != NULL );
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert( conshdlr != NULL );
+
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+      assert( SCIPconsIsTransformed(cons) );
+
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         cvars = SCIPgetVarsLinear(scip, cons);
+         ncvars = SCIPgetNVarsLinear(scip ,cons);
+         cvals = SCIPgetValsLinear(scip, cons);
+         nactvars = 0;
+         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
+         assert(nactvars >= 0);
+         nnonzstmp += nactvars;
+      }
+      else if( strcmp(conshdlrname, "setppc") == 0 )
+      {
+         cvars = SCIPgetVarsSetppc(scip, cons);
+         ncvars = SCIPgetNVarsSetppc(scip, cons);
+         cvals = NULL;
+         nactvars = 0;
+         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
+         assert(nactvars >= 0);
+         nnonzstmp += nactvars;
+      }
+      else if( strcmp(conshdlrname, "logicor") == 0 )
+      {
+         cvars = SCIPgetVarsLogicor(scip, cons);
+         ncvars = SCIPgetNVarsLogicor(scip, cons);
+         cvals = NULL;
+         nactvars = 0;
+         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
+         assert(nactvars >= 0);
+         nnonzstmp += nactvars;
+      }
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
+      {
+         SCIP_Longint* weights;
+         SCIP_Real* consvals;
+         int v;
+
+         weights = SCIPgetWeightsKnapsack(scip, cons);
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, SCIPgetNVarsKnapsack(scip, cons)) );
+         for( v = 0; v < SCIPgetNVarsKnapsack(scip, cons); v++ )
+            consvals[v] = weights[v];
+
+         cvars = SCIPgetVarsKnapsack(scip, cons);
+         ncvars = SCIPgetNVarsKnapsack(scip, cons);
+
+         cvals = NULL;
+         nactvars = 0;
+         SCIP_CALL( getNumberActiveVars(scip,cvars,consvals,ncvars,&nactvars) );
+         assert(nactvars >= 0);
+         nnonzstmp += nactvars;
+
+         SCIPfreeBufferArray(scip, &consvals);
+      }
+      else if( strcmp(conshdlrname, "varbound") == 0 )
+      {
+         SCIP_VAR** consvars;
+         SCIP_Real* consvals;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+
+         consvars[0] = SCIPgetVarVarbound(scip, cons);
+         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+
+         consvals[0] = 1.0;
+         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+         ncvars = 2;
+         nactvars = 0;
+         SCIP_CALL( getNumberActiveVars(scip,consvars,consvals,ncvars,&nactvars) );
+         assert(nactvars >= 0);
+         nnonzstmp += nactvars;
+
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /** initialize matrix */
 static
 SCIP_RETCODE initMatrix(
@@ -510,13 +630,11 @@ SCIP_RETCODE initMatrix(
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    int nnonzstmp;
-   int conscounter;
    SCIP_CONSHDLR** conshdlrs;
    int nconshdlrs;
    int nconss;
 
    nnonzstmp = 0;
-   conscounter = 0;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -551,11 +669,11 @@ SCIP_RETCODE initMatrix(
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
       return SCIP_OKAY;
 
-   /* loop over all constraint handlers and collect
-      the number of enforced constraints */
+   /* loop over all constraint handlers and collect the number of enforced constraints */
    nconshdlrs = SCIPgetNConshdlrs(scip);
    conshdlrs = SCIPgetConshdlrs(scip);
    nconss = 0;
+
    for( i = 0; i < nconshdlrs; ++i )
    {
       nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
@@ -572,6 +690,19 @@ SCIP_RETCODE initMatrix(
       conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
       nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
 
+      if( nconshdlrconss > 0 )
+      {
+         conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+         if( (strcmp(conshdlrname, "linear") != 0) && (strcmp(conshdlrname, "setppc") != 0)
+            && (strcmp(conshdlrname, "logicor") != 0) && (strcmp(conshdlrname, "knapsack") != 0)
+            && (strcmp(conshdlrname, "varbound") != 0) )
+         {
+            SCIPdebugMessage("unsupported constraint type <%s>: aborting domcol presolver\n", conshdlrname);
+            break;
+         }
+      }
+
       for( c = 0; c < nconshdlrconss; ++c )
       {
          matrix->conss[nconss] = conshdlrconss[c];
@@ -579,110 +710,26 @@ SCIP_RETCODE initMatrix(
       }
    }
    matrix->nrows = nconss;
-   matrix->ncols = SCIPgetNVars(scip);
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, SCIPgetVars(scip), matrix->ncols) );
-
-   /* count the number of nonzeros exact */
-   for( c = 0; c < matrix->nrows; c++ )
+   /* do nothing if we have unsupported constraint types or no enforced constraints */
+   if( i < nconshdlrs || matrix->nrows == 0 )
    {
-      SCIP_VAR** cvars;
-      int ncvars;
-      SCIP_Real* cvals;
-      int nactvars;
-
-      cons = matrix->conss[c];
-      assert( cons != NULL );
-
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert( conshdlr != NULL );
-
-      conshdlrname = SCIPconshdlrGetName(conshdlr);
-      assert( TRUE == SCIPconsIsTransformed(cons) );
-
-      if( strcmp(conshdlrname, "linear") == 0 )
-      {
-         cvars = SCIPgetVarsLinear(scip, cons);
-         ncvars = SCIPgetNVarsLinear(scip ,cons);
-         cvals = SCIPgetValsLinear(scip, cons);
-         nactvars = 0;
-         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
-         assert(nactvars >= 0);
-         nnonzstmp += nactvars;
-         conscounter++;
-      }
-      else if( strcmp(conshdlrname, "setppc") == 0 )
-      {
-         cvars = SCIPgetVarsSetppc(scip, cons);
-         ncvars = SCIPgetNVarsSetppc(scip, cons);
-         cvals = NULL;
-         nactvars = 0;
-         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
-         assert(nactvars >= 0);
-         nnonzstmp += nactvars;
-         conscounter++;
-      }
-      else if( strcmp(conshdlrname, "logicor") == 0 )
-      {
-         cvars = SCIPgetVarsLogicor(scip, cons);
-         ncvars = SCIPgetNVarsLogicor(scip, cons);
-         cvals = NULL;
-         nactvars = 0;
-         SCIP_CALL( getNumberActiveVars(scip,cvars,cvals,ncvars,&nactvars) );
-         assert(nactvars >= 0);
-         nnonzstmp += nactvars;
-         conscounter++;
-      }
-      else if( strcmp(conshdlrname, "knapsack") == 0 )
-      {
-         SCIP_Longint* weights;
-         SCIP_Real* consvals;
-
-         weights = SCIPgetWeightsKnapsack(scip, cons);
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, SCIPgetNVarsKnapsack(scip, cons)) );
-         for( v = 0; v < SCIPgetNVarsKnapsack(scip, cons); v++ )
-            consvals[v] = weights[v];
-
-         cvars = SCIPgetVarsKnapsack(scip, cons);
-         ncvars = SCIPgetNVarsKnapsack(scip, cons);
-
-         cvals = NULL;
-         nactvars = 0;
-         SCIP_CALL( getNumberActiveVars(scip,cvars,consvals,ncvars,&nactvars) );
-         assert(nactvars >= 0);
-         nnonzstmp += nactvars;
-         conscounter++;
-
-         SCIPfreeBufferArray(scip, &consvals);
-      }
-      else if( strcmp(conshdlrname, "varbound") == 0 )
-      {
-         SCIP_VAR** consvars;
-         SCIP_Real* consvals;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
-
-         consvars[0] = SCIPgetVarVarbound(scip, cons);
-         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
-
-         consvals[0] = 1.0;
-         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
-
-         ncvars = 2;
-         nactvars = 0;
-         SCIP_CALL( getNumberActiveVars(scip,consvars,consvals,ncvars,&nactvars) );
-         assert(nactvars >= 0);
-         nnonzstmp += nactvars;
-
-         SCIPfreeBufferArray(scip, &consvals);
-         SCIPfreeBufferArray(scip, &consvars);
-         conscounter++;
-      }
+      SCIPfreeBufferArray(scip, &matrix->conss);
+      return SCIP_OKAY;
    }
 
-   /* do nothing if we have unsupported constraint types or no entries */
-   if( matrix->nrows > conscounter || nnonzstmp == 0 || matrix->nrows == 0 || matrix->ncols == 0 )
+   matrix->ncols = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, SCIPgetVars(scip), matrix->ncols) );
+
+   /* approximate number of nonzeros */
+   for( i = matrix->ncols - 1; i >= 0; --i )
+   {
+      nnonzstmp += SCIPvarGetNLocksDown(matrix->vars[i]);
+      nnonzstmp += SCIPvarGetNLocksUp(matrix->vars[i]);
+   }
+
+   /* do nothing if we have no entries */
+   if( nnonzstmp == 0 )
    {
       SCIPfreeBufferArray(scip, &matrix->conss);
       return SCIP_OKAY;
@@ -833,7 +880,7 @@ SCIP_RETCODE initMatrix(
       }
    }
 
-   assert(nnonzstmp == matrix->nnonzs);
+   assert(matrix->nnonzs <= nnonzstmp);
 
    /* calculate row activity bounds */
    SCIP_CALL( calcActivityBounds(scip,matrix) );
