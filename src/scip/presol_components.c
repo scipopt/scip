@@ -352,12 +352,37 @@ SCIP_RETCODE copyAndSolveComponent(
          /* TODO: store unbounded ray in original SCIP data structure */
          *result = SCIP_UNBOUNDED;
       }
-      /* TODO: transfer global fixings if problem was not solved to optimality */
       else
       {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         int ntightened;
+
          SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved (status=%d, time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
             compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
             SCIPgetNContVars(subscip), nconss);
+
+         ntightened = 0;
+
+         /* transfer global fixings to the original problem */
+         for( i = 0; i < nvars; ++i )
+         {
+            assert( SCIPhashmapExists(varmap, vars[i]) );
+
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
+                  &infeasible, &tightened) );
+            assert(!infeasible);
+            if( tightened )
+               ntightened++;
+
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal((SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])), FALSE,
+                  &infeasible, &tightened) );
+            assert(!infeasible);
+            if( tightened )
+               ntightened++;
+         }
+
+         SCIPdebugMessage("-> tightened %d bounds of variables due to global bounds in the sub-SCIP for component %d\n", ntightened, compnr);
       }
    }
 
