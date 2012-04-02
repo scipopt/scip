@@ -23,12 +23,13 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
@@ -389,10 +390,10 @@ void* hashtablelistRetrieve(
 #ifndef NDEBUG
       if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
       {
-         SCIPwarningMessage("hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
+         SCIPerrorMessage("WARNING: hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
       }
 #endif
-      
+
       return h->element;
    }
    else
@@ -706,7 +707,8 @@ SCIP_RETCODE SCIPhashtableRemove(
 
 /** prints statistics about hash table usage */
 void SCIPhashtablePrintStatistics(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHTABLELIST* hashtablelist;
@@ -738,12 +740,12 @@ void SCIPhashtablePrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot",
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 
@@ -764,6 +766,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    str = (const char*)key;
    sum = 0;
+
    while( *str != '\0' )
    {
       sum *= 31;
@@ -773,7 +776,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    return sum;
 }
-
 
 
 
@@ -1103,7 +1105,8 @@ SCIP_RETCODE SCIPhashmapRemove(
 
 /** prints statistics about hash map usage */
 void SCIPhashmapPrintStatistics(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHMAPLIST* hashmaplist;
@@ -1135,12 +1138,12 @@ void SCIPhashmapPrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot", 
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot", 
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 /** indicates whether a hash map has no entries */
@@ -3520,6 +3523,7 @@ SCIP_RETCODE SCIPstairmapResize(
 /** output of the given stair map */
 void SCIPstairmapPrint(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -3527,10 +3531,10 @@ void SCIPstairmapPrint(
    
    for( t = 0; t < stairmap->ntimepoints; ++t )
    {
-      SCIPmessageFPrintInfo(file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
+      SCIPmessageFPrintInfo(messagehdlr, file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
    }
    
-   SCIPmessageFPrintInfo(file,"\n");
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n");
 }
 
 /** returns if the given time point exists in the stair map and stores the position of the given time point if it
@@ -3904,6 +3908,8 @@ SCIP_RETCODE SCIPdigraphCreate(
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
+   (*digraph)->ncomponents = 0;
+   (*digraph)->componentstartsize = 0;
 
    return SCIP_OKAY;
 }
@@ -3947,6 +3953,11 @@ void SCIPdigraphFree(
          BMSfreeMemoryArray(&(*digraph)->adjnodes[i]);
       }
    }
+
+   /* free components structure */
+   SCIPdigraphFreeComponents(*digraph);
+   assert((*digraph)->ncomponents == 0);
+   assert((*digraph)->componentstartsize == 0);
 
    /* free directed graph data structure */
    BMSfreeMemoryArray(&(*digraph)->adjnodessize);
@@ -4041,7 +4052,7 @@ SCIP_RETCODE SCIPdigraphAddEdgeSafe(
 }
 
 /** returns the number of edges originating at the given node */
-int SCIPdigraphGetNOutgoingEdges(
+int SCIPdigraphGetNOutEdges(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the number of outgoing edges is returned */
    )
@@ -4056,7 +4067,7 @@ int SCIPdigraphGetNOutgoingEdges(
 }
 
 /** returns the array of edges originating at the given node; this array must not be changed from outside */
-int* SCIPdigraphGetOutgoingEdges(
+int* SCIPdigraphGetOutEdges(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the array of outgoing edges is returned */
    )
@@ -4144,117 +4155,44 @@ void depthFirstSearch(
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note The graph should be the directed representation of an undirected
- *        graph, i.e., for each edge, its reverse should exist.
+ *  @note For each edge, its reverse is added, so the graph does not need
+ *        to be the directed representation of an undirected graph.
  */
-SCIP_RETCODE SCIPdigraphComputeComponents(
+SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< all components with less nodes are ignored */
    int*                  components,         /**< array with as many slots as there are nodes in the directed graph
                                               *   to store for each node the component to which it belongs
-                                              *   (components are numbered 1 to ncomponents) */
-   int*                  ncomponents         /**< pointer to store the number of components */
-   )
-{
-   SCIP_Bool* visited;
-   int* stackadjvisited;
-   int* dfsstack;
-   int* dfsnodes;
-   int ndfsnodes;
-   int v;
-   int i;
-
-   assert(digraph != NULL);
-   assert(components != NULL);
-   assert(ncomponents != NULL);
-   assert(digraph->nnodes > 0);
-
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-
-   *ncomponents = 0;
-#ifndef NDEBUG
-   BMSclearMemoryArray(components, digraph->nnodes);
-#endif
-
-   for( v = 0; v < digraph->nnodes; ++v )
-   {
-      if( visited[v] )
-         continue;
-
-      ndfsnodes = 0;
-      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
-
-      (*ncomponents)++;
-
-      for( i = 0; i < ndfsnodes; ++i )
-      {
-         components[dfsnodes[i]] = *ncomponents;
-      }
-   }
-
-#ifndef NDEBUG
-   for( v = 0; v < digraph->nnodes; ++v )
-      assert(components[v] != 0);
-#endif
-
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&dfsnodes);
-   BMSfreeMemoryArray(&visited);
-
-   return SCIP_OKAY;
-}
-
-/** Computes (undirected) components on the directed graph and sorts
- *  the components (almost) topologically w.r.t. the directed graph.
- *
- *  Note, that in general a topological sort is not unique.
- *  Note, that there might be directed cycles, that are randomly broken,
- *  which is the reason for having only almost topologically sorted arrays.
- */
-SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   minsize,            /**< minimum size a component should have */
-   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
-                                              *   to store the nodes of the components one component after the other,
-                                              *   with the nodes of one component being (almost) topologically sorted */
-   int*                  componentstart,     /**< array to store for each component, where it starts in array components;
-                                              *   at position ncomponents+1, the total number of nodes is stored */
-   int                   componentstartsize, /**< size of componentstart array; if this is smaller than the number of components+1,
-                                              *   only the start indices of the first components are stored and the method should
-                                              *   be called again after enlarging the componentstart array */
-   int*                  ncomponents         /**< pointer to store the number of components */
+                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
+                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
+   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
+                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
    )
 {
    SCIP_Bool* visited;
    int* ndirectedadjnodes;
-   int* comps;
-   int* compstart;
    int* stackadjvisited;
    int* dfsstack;
-   int* dfsnodes;
    int ndfsnodes;
-   int ncomps;
+   int compstart;
+   int v;
    int i;
    int j;
-   int k;
-   int idx;
 
    assert(digraph != NULL);
-   assert(components != NULL);
-   assert(componentstart != NULL);
-   assert(ncomponents != NULL);
    assert(digraph->nnodes > 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&comps, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&compstart, digraph->nnodes + 1) );
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 10;
+
    SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
+
+   digraph->componentstarts[0] = 0;
 
    /* store the number of directed arcs per node */
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
@@ -4264,77 +4202,176 @@ SCIP_RETCODE SCIPdigraphComputeTopoSortedComponents(
    {
       for( j = 0; j < ndirectedadjnodes[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddEdgeSafe(digraph, digraph->adjnodes[i][j], i) );
+         SCIP_CALL( SCIPdigraphAddEdge(digraph, digraph->adjnodes[i][j], i) );
       }
    }
 
-   /* compute components in the undirected graph;
-    * this time, we store the node indices of the components, sorted by the components
-    */
-   ncomps = 0;
-   compstart[ncomps] = 0;
-   for( i = 0; i < digraph->nnodes; ++i )
+   for( v = 0; v < digraph->nnodes; ++v )
    {
-      if( visited[i] )
+      if( visited[v] )
          continue;
 
+      compstart = digraph->componentstarts[digraph->ncomponents];
       ndfsnodes = 0;
-      depthFirstSearch(digraph, i, visited, dfsstack, stackadjvisited, &(comps[compstart[ncomps]]), &ndfsnodes);
+      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited,
+         &digraph->components[compstart], &ndfsnodes);
 
       /* forget about this component if it is too small */
       if( ndfsnodes >= minsize )
       {
-         ncomps++;
-         compstart[ncomps] = compstart[ncomps-1] + ndfsnodes;
+         digraph->ncomponents++;
+
+         /* enlarge componentstartsize array, if needed */
+         if( digraph->ncomponents >= digraph->componentstartsize )
+         {
+            digraph->componentstartsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < digraph->componentstartsize);
+
+            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+         }
+         digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
+
+         /* store component number for contained nodes if array was given */
+         if( components != NULL )
+         {
+            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >=  compstart; --i )
+            {
+               components[digraph->components[i]] = digraph->ncomponents - 1;
+            }
+         }
       }
    }
-   assert(compstart[ncomps] <= digraph->nnodes);
 
    /* restore the number of directed arcs per node */
    BMScopyMemoryArray(digraph->nadjnodes, ndirectedadjnodes, digraph->nnodes);
    BMSclearMemoryArray(visited, digraph->nnodes);
 
-   /* now, sort the components (almost) topologically */
+   /* return number of components, if the pointer was given */
+   if( ncomponents != NULL )
+      (*ncomponents) = digraph->ncomponents;
+
+   BMSfreeMemoryArray(&ndirectedadjnodes);
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
+   BMSfreeMemoryArray(&visited);
+
+   return SCIP_OKAY;
+}
+
+/** Performes an (almost) topological sort on the undirected components of the directed graph.
+ *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+ *
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
+ */
+SCIP_RETCODE SCIPdigraphTopoSortComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   SCIP_Bool* visited;
+   int* comps;
+   int* compstarts;
+   int* stackadjvisited;
+   int* dfsstack;
+   int* dfsnodes;
+   int ndfsnodes;
+   int ncomps;
+   int i;
+   int j;
+   int k;
+   int endidx;
+
+   assert(digraph != NULL);
+
+   ncomps = digraph->ncomponents;
+   comps = digraph->components;
+   compstarts = digraph->componentstarts;
+
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+
+   /* sort the components (almost) topologically */
    for( i = 0; i < ncomps; ++i )
    {
-      idx = compstart[i+1] - 1;
-      for( j = compstart[i]; j < compstart[i+1]; ++j )
+      endidx = compstarts[i+1] - 1;
+      ndfsnodes = 0;
+      for( j = compstarts[i]; j < compstarts[i+1]; ++j )
       {
          if( visited[comps[j]] )
             continue;
 
-         ndfsnodes = 0;
-         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
-
-         /* copy topologically sorted array of nodes reached by the dfs search (subset of the complete component),
-          * nodes are sorted in reverse dfs order, so we reverse their order; if variables of the component are left out,
-          * they will be added before these variables, which gives a valid topological sorting
+         /* perform depth first search, nodes visited in this call are appended to the list dfsnodes in reverse
+          * dfs order, after the nodes already contained;
+          * so at every point in time, the nodes in dfsnode are in reverse (almost) topological order
           */
-         for( k = 0; k < ndfsnodes; ++k )
-         {
-            components[idx - k] = dfsnodes[k];
-         }
-         idx -= ndfsnodes;
+         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
       }
-      assert(idx == compstart[i] - 1);
-   }
+      assert(endidx - ndfsnodes == compstarts[i] - 1);
 
-   /* copy start indices of components and number of components */
-   for( i = 0; i <= ncomps && i < componentstartsize; ++i )
-   {
-      componentstart[i] = compstart[i];
+      /* copy reverse (almost) topologically sorted array of nodes reached by the dfs searches;
+       * reverse their order to get an (almost) topologically sort
+       */
+      for( k = 0; k < ndfsnodes; ++k )
+      {
+         digraph->components[endidx - k] = dfsnodes[k];
+      }
    }
-   *ncomponents = ncomps;
 
    BMSfreeMemoryArray(&stackadjvisited);
    BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&dfsnodes);
    BMSfreeMemoryArray(&visited);
-   BMSfreeMemoryArray(&compstart);
-   BMSfreeMemoryArray(&comps);
-   BMSfreeMemoryArray(&ndirectedadjnodes);
 
    return SCIP_OKAY;
+}
+
+/** returns the number of previously computed undirected components for the given directed graph */
+int SCIPdigraphGetNComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+   assert(digraph->componentstartsize > 0); /* components should have been computed */
+
+   return digraph->ncomponents;
+}
+
+/** Returns the number of previously computed undirected components for the given directed graph.
+ *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
+ */
+void SCIPdigraphGetComponent(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the component to return */
+   int**                 nodes,              /**< pointer to store the nodes in the component */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   )
+{
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+
+   (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
+   (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+}
+
+/** frees the component information for the given directed graph */
+void SCIPdigraphFreeComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+
+   /* free components structure */
+   if( digraph->componentstartsize > 0 )
+   {
+      BMSfreeMemoryArray(&digraph->componentstarts);
+      BMSfreeMemoryArray(&digraph->components);
+   }
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 0;
 }
 
 
@@ -4986,11 +5023,11 @@ SCIP_Longint SCIPcalcBinomCoef(
 
    /* simple case m == 2 */
    if( m == 2 )
-      return (n*(n-1)/2);
+      return (n*(n-1)/2); /*lint !e647*/
 
    /* simple case m == 3 */
    if( m == 3 )
-      return (n*(n-1)*(n-2)/6);
+      return (n*(n-1)*(n-2)/6); /*lint !e647*/
    else
    {
       /* first half of Pascal's triangle numbers(without the symmetric part) backwards from (33,16) over (32,16),
@@ -4998,7 +5035,21 @@ SCIP_Longint SCIPcalcBinomCoef(
        *
        * due to this order we can extract the right binomial coefficient by (16-m)^2+(16-m)+(33-n)
        */
-      static const SCIP_Longint binoms[182] = {1166803110, 601080390, 1037158320, 565722720, 300540195, 155117520, 818809200, 471435600, 265182525, 145422675, 77558760, 40116600, 573166440, 347373600, 206253075, 119759850, 67863915, 37442160, 20058300, 10400600, 354817320, 225792840, 141120525, 86493225, 51895935, 30421755, 17383860, 9657700, 5200300, 2704156, 193536720, 129024480, 84672315, 54627300, 34597290, 21474180, 13037895, 7726160, 4457400, 2496144, 1352078, 705432, 92561040, 64512240, 44352165, 30045015, 20030010, 13123110, 8436285, 5311735, 3268760, 1961256, 1144066, 646646, 352716, 184756, 38567100, 28048800, 20160075, 14307150, 10015005, 6906900, 4686825, 3124550, 2042975, 1307504, 817190, 497420, 293930, 167960, 92378, 48620, 13884156, 10518300, 7888725, 5852925, 4292145, 3108105, 2220075, 1562275, 1081575, 735471, 490314, 319770, 203490, 125970, 75582, 43758, 24310, 12870, 4272048, 3365856, 2629575, 2035800, 1560780, 1184040, 888030, 657800, 480700, 346104, 245157, 170544, 116280, 77520, 50388, 31824, 19448, 11440, 6435, 3432, 1107568, 906192, 736281, 593775, 475020, 376740, 296010, 230230, 177100, 134596, 100947, 74613, 54264, 38760, 27132, 18564, 12376, 8008, 5005, 3003, 1716, 924, 237336, 201376, 169911, 142506, 118755, 98280, 80730, 65780, 53130, 42504, 33649, 26334, 20349, 15504, 11628, 8568, 6188, 4368, 3003, 2002, 1287, 792, 462, 252, 40920, 35960, 31465, 27405, 23751, 20475, 17550, 14950, 12650, 10626, 8855, 7315, 5985, 4845, 3876, 3060, 2380, 1820, 1365, 1001, 715, 495, 330, 210, 126, 70};
+      static const SCIP_Longint binoms[182] = {
+         1166803110, 601080390, 1037158320, 565722720, 300540195, 155117520, 818809200, 471435600, 265182525, 145422675,
+         77558760, 40116600, 573166440, 347373600, 206253075, 119759850, 67863915, 37442160, 20058300, 10400600,
+         354817320, 225792840, 141120525, 86493225, 51895935, 30421755, 17383860, 9657700, 5200300, 2704156, 193536720,
+         129024480, 84672315, 54627300, 34597290, 21474180, 13037895, 7726160, 4457400, 2496144, 1352078, 705432,
+         92561040, 64512240, 44352165, 30045015, 20030010, 13123110, 8436285, 5311735, 3268760, 1961256, 1144066,
+         646646, 352716, 184756, 38567100, 28048800, 20160075, 14307150, 10015005, 6906900, 4686825, 3124550, 2042975,
+         1307504, 817190, 497420, 293930, 167960, 92378, 48620, 13884156, 10518300, 7888725, 5852925, 4292145, 3108105,
+         2220075, 1562275, 1081575, 735471, 490314, 319770, 203490, 125970, 75582, 43758, 24310, 12870, 4272048, 3365856,
+         2629575, 2035800, 1560780, 1184040, 888030, 657800, 480700, 346104, 245157, 170544, 116280, 77520, 50388, 31824,
+         19448, 11440, 6435, 3432, 1107568, 906192, 736281, 593775, 475020, 376740, 296010, 230230, 177100, 134596,
+         100947, 74613, 54264, 38760, 27132, 18564, 12376, 8008, 5005, 3003, 1716, 924, 237336, 201376, 169911, 142506,
+         118755, 98280, 80730, 65780, 53130, 42504, 33649, 26334, 20349, 15504, 11628, 8568, 6188, 4368, 3003, 2002,
+         1287, 792, 462, 252, 40920, 35960, 31465, 27405, 23751, 20475, 17550, 14950, 12650, 10626, 8855, 7315, 5985,
+         4845, 3876, 3060, 2380, 1820, 1365, 1001, 715, 495, 330, 210, 126, 70};
 
       /* m can at most be 16 */
       const int t = 16-m;
@@ -5008,7 +5059,7 @@ SCIP_Longint SCIPcalcBinomCoef(
       /* binoms array hast exactly 182 elements */
       assert(t*(t+1)+(33-n) < 182);
 
-      return binoms[t*(t+1)+(33-n)];
+      return binoms[t*(t+1)+(33-n)]; /*lint !e662 !e661*/
    }
 }
 
@@ -5080,14 +5131,14 @@ SCIP_RETCODE SCIPgetRandomSubset(
    /* abort, if size of subset is too big */
    if( nsubelems > nelems )
    {
-      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);      
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
       return SCIP_INVALIDDATA;
    }
 #ifndef NDEBUG
-   for( i = 0; i < nsubelems; i++ ) 
-      for( j = 0; j < i; j++ ) 
+   for( i = 0; i < nsubelems; i++ )
+      for( j = 0; j < i; j++ )
          assert(set[i] != set[j]);
-#endif   
+#endif
 
    /* draw each element individually */
    i = 0;
@@ -5117,6 +5168,31 @@ SCIP_RETCODE SCIPgetRandomSubset(
 /*
  * Strings
  */
+
+
+/** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
+ *  'cnt' characters have been copied, whichever comes first.
+ *
+ *  @note undefined behaviuor on overlapping arrays
+ */
+int SCIPmemccpy(
+   char*                 dest,               /**< destination pointer to copy to */
+   const char*           src,                /**< source pointer to copy to */
+   char                  stop,               /**< character when found stop copying */
+   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   )
+{
+   if( dest == NULL || src == NULL || cnt == 0 )
+      return -1;
+   else
+   {
+      char* destination = dest;
+
+      while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
+
+      return (destination - dest);
+   }
+}
 
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
@@ -5190,7 +5266,7 @@ int SCIPsnprintf(
 {
    va_list ap;
    int n;
-   
+
    assert(t != NULL);
    assert(len > 0);
 
@@ -5201,7 +5277,9 @@ int SCIPsnprintf(
    {
 #ifndef NDEBUG
       if( n < 0 )
-         SCIPmessagePrintWarning("vsnprintf returned %d\n",n);
+      {
+         SCIPerrorMessage("vsnprintf returned %d\n",n);
+      }
 #endif
       t[len-1] = '\0';
       n = len-1;

@@ -198,7 +198,7 @@ Bool xlp_addcon_term(
       assert(sciplhs == sciprhs);  /*lint !e777*/
       break;
    default:
-      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+      SCIPwarningMessage(scip, "invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
       sciplhs = (SCIP_Real)numb_todbl(lhs);
       sciprhs = (SCIP_Real)numb_todbl(rhs);
       readerdata->readerror = TRUE;
@@ -786,7 +786,7 @@ Var* xlp_addvar(
       vartype = SCIP_VARTYPE_IMPLINT;
       break;
    default:
-      SCIPwarningMessage("invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
+      SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
       vartype = SCIP_VARTYPE_CONTINUOUS;
       readerdata->readerror = TRUE;
       break;
@@ -1359,7 +1359,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       {
          if( chdir(oldpath) != 0 )
          {
-            SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+            SCIPwarningMessage(scip, "error changing back to directory <%s>\n", oldpath);
          }
       }
    }
@@ -1451,7 +1451,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
       ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
-   SCIPwarningMessage("SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",
+   SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",
       ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
 #endif
 #endif

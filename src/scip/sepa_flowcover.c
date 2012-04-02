@@ -2550,6 +2550,8 @@ SCIP_RETCODE separateCuts(
             break;
          }  
        
+	 flowcoverfound = FALSE;
+
          /* get a flow cover (C1, C2) for the constructed 0-1 single node flow set */
          SCIP_CALL( getFlowCover(scip, transvarcoefs, transbinvarsolvals, transvarvubcoefs, ntransvars, transcapacity, 
                &ncovervars, &nnoncovervars, transvarflowcoverstatus, &lambda, &flowcoverfound) );

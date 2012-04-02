@@ -707,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
+            SCIPwarningMessage(scip, "Error while solving LP in clique heuristic; LP solve terminated with code <%d>\n",
                retstat);
          }
       }
@@ -906,7 +906,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          retstat = SCIPpresolve(subscip);
          if( retstat != SCIP_OKAY )
          {
-            SCIPwarningMessage("Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
+            SCIPwarningMessage(scip, "Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
          }
       }
 #else
@@ -932,7 +932,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             retstat = SCIPsolve(subscip);
             if( retstat != SCIP_OKAY )
             {
-               SCIPwarningMessage("Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
+               SCIPwarningMessage(scip, "Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
             }
          }
 #else

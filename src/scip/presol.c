@@ -84,6 +84,7 @@ SCIP_RETCODE SCIPpresolCopyInclude(
 SCIP_RETCODE SCIPpresolCreate(
    SCIP_PRESOL**         presol,             /**< pointer to store presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of presolver */
    const char*           desc,               /**< description of presolver */
@@ -125,24 +126,24 @@ SCIP_RETCODE SCIPpresolCreate(
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of presolver <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*presol)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*presol)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
          paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, FALSE, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/delay", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should presolver be delayed, if other presolvers found reductions?",
          &(*presol)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
-/** frees memory of presolver */   
+/** frees memory of presolver */
 SCIP_RETCODE SCIPpresolFree(
    SCIP_PRESOL**         presol,             /**< pointer to presolver data structure */
    SCIP_SET*             set                 /**< global SCIP settings */

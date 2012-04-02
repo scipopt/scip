@@ -270,6 +270,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -291,6 +292,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           str,                /**< string to parse */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
@@ -531,8 +533,10 @@ void SCIPvarSetProbindex(
    int                   probindex           /**< new problem index of variable */
    );
 
-/** gives the variable a new name; ATTENTION: to old pointer is over written that might
- *  result in a memory leakage */
+/** gives the variable a new name
+ *
+ *  @note the old pointer is overwritten, which might result in a memory leakage
+ */
 extern
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
@@ -981,7 +985,7 @@ SCIP_RETCODE SCIPvarDelClique(
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
    );
 
-/** deletes the variable from the list of cliques the binary variable is member of, but does not change the clique
+/** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
 extern
@@ -1177,6 +1181,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             weight              /**< weight of this update in conflict score */
    );
@@ -1191,6 +1196,7 @@ SCIP_RETCODE SCIPvarScaleVSIDS(
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
    SCIP_Real             length              /**< length of the conflict */
    );
@@ -1309,6 +1315,7 @@ extern
 void SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 

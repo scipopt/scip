@@ -25,7 +25,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
@@ -44,6 +43,7 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/pub_message.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -1489,16 +1489,7 @@ SCIP_RETCODE SCIPnodeAddCons(
       SCIPerrorMessage("try to add a constraint of another scip instance\n");
       return SCIP_INVALIDDATA;
    }
-   /* check if we already added this constraint */
-   if( cons->isadded )
-   {
-      SCIPerrorMessage("try to add a constraint which was already added\n");
-      return SCIP_INVALIDDATA;
-   }
 #endif
-
-   /* mark the constraint added to a SCIP instance */
-   cons->isadded = TRUE;
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
    SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,
@@ -1950,14 +1941,14 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
    /**@todo add adding of local domain holes */
 
    (*added) = FALSE;
-   SCIPwarningMessage("currently domain holes can only be handled globally!\n");
-   
+   SCIPerrorMessage("WARNING: currently domain holes can only be handled globally!\n");
+
    stat->nholechgs--;
-   
+
    /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
    if( tree->probingroot != NULL )
       stat->nprobholechgs--;
-   
+
    return SCIP_OKAY;
 }
 
@@ -3540,6 +3531,7 @@ static
 SCIP_RETCODE focusnodeToFork(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -3579,7 +3571,7 @@ SCIP_RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3599,7 +3591,7 @@ SCIP_RETCODE focusnodeToFork(
     */
    if( lperror || lp->resolvelperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
          stat->nnodes, stat->nlps);
 
@@ -3700,7 +3692,7 @@ SCIP_RETCODE focusnodeToSubroot(
       if( !lp->solved || !lp->flushed )
       {
          SCIPdebugMessage("resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -3720,7 +3712,7 @@ SCIP_RETCODE focusnodeToSubroot(
     */
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
          stat->nnodes, stat->nlps);
 
@@ -3843,6 +3835,7 @@ SCIP_RETCODE SCIPnodeFocus(
                                               *   is freed, if it was cut off due to a cut off subtree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -3994,7 +3987,7 @@ SCIP_RETCODE SCIPnodeFocus(
 #endif
          {
             /* convert old focus node into a fork node */
-            SCIP_CALL( focusnodeToFork(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
+            SCIP_CALL( focusnodeToFork(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
          }
 
          /* check, if the conversion into a subroot or fork was successful */
@@ -4412,6 +4405,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -4436,7 +4430,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    assert(tree->root != NULL);
 
    /* install the temporary root node as focus node */
-   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
+   SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, prob, primal, tree, lp, branchcand, conflict,
          eventfilter, eventqueue, &cutoff) );
    assert(!cutoff);
 
@@ -4448,6 +4442,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -4468,7 +4463,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
 
    /* unfocus the temporary root node */
    node = NULL;
-   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
+   SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, prob, primal, tree, lp, branchcand, conflict,
          eventfilter, eventqueue, &cutoff) );
    assert(!cutoff);
    assert(tree->root == NULL);
@@ -4495,6 +4490,7 @@ SCIP_NODESEL* SCIPtreeGetNodesel(
 SCIP_RETCODE SCIPtreeSetNodesel(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
@@ -4510,7 +4506,7 @@ SCIP_RETCODE SCIPtreeSetNodesel(
       /* issue message */
       if( stat->nnodes > 0 )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
@@ -5818,6 +5814,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -5855,17 +5852,17 @@ SCIP_RETCODE SCIPtreeEndProbing(
       if( tree->probinglpwassolved )
       {
          SCIP_Bool lperror;
-         
+
          /* reset the LP state before probing started */
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, FALSE, FALSE, &lperror) );
          if( lperror )
          {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
@@ -5875,9 +5872,9 @@ SCIP_RETCODE SCIPtreeEndProbing(
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
             && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
          {
-            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "LP was not resolved to a sufficient status after probing\n");
-            lp->resolvelperror = TRUE;      
+            lp->resolvelperror = TRUE;
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {

@@ -1,6 +1,5 @@
 $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
- src/scip/struct_message.h src/scip/pub_message.h \
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
  src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
@@ -21,5 +20,5 @@ $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
- src/nlpi/pub_expr.h src/nlpi/type_exprinterpret.h \
- src/scip/intervalarith.h src/scip/scipshell.h
+ src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/scip/scipshell.h

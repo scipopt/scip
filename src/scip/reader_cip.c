@@ -185,7 +185,7 @@ SCIP_RETCODE getStatistic(
    {
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
-         SCIPwarningMessage("did not find problem name\n");
+         SCIPwarningMessage(scip, "did not find problem name\n");
          return SCIP_OKAY;  /* no error, might work with empty problem name */
       }
       
@@ -243,7 +243,7 @@ SCIP_RETCODE getObjective(
       
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
-         SCIPwarningMessage("did not find objective sense\n");
+         SCIPwarningMessage(scip, "did not find objective sense\n");
          return SCIP_OKAY; /* no error - might work with default */
       }
       
@@ -257,7 +257,7 @@ SCIP_RETCODE getObjective(
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
-         SCIPwarningMessage("unknown objective sense\n");
+         SCIPwarningMessage(scip, "unknown objective sense\n");
          return SCIP_OKAY; /* no error - might work with default */
       }
 
@@ -271,7 +271,7 @@ SCIP_RETCODE getObjective(
 
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
-         SCIPwarningMessage("did not find offset\n");
+         SCIPwarningMessage(scip, "did not find offset\n");
          return SCIP_OKAY;
       }
 
@@ -287,7 +287,7 @@ SCIP_RETCODE getObjective(
 
       if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
       {
-         SCIPwarningMessage("did not find scale\n");
+         SCIPwarningMessage(scip, "did not find scale\n");
          return SCIP_OKAY;
       }
 

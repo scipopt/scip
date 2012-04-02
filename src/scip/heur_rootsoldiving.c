@@ -479,8 +479,8 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             SCIP_CALL( retcode );
          }
 #endif
-         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n", retcode);
-         SCIPwarningMessage("This does not affect the remaining solution procedure --> continue\n");
+         SCIPwarningMessage(scip, "Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(scip, "This does not affect the remaining solution procedure --> continue\n");
       }
 
       if( lperror )

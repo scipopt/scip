@@ -50,10 +50,10 @@
 
 #define CPX_CALL(x)                     do                                                                                  \
                                         {                                                                                   \
-                                           int _cpxstat_;                                                                   \
+                                           int _cpxstat_;               \
                                            if( (_cpxstat_ = (x)) != 0 )                                                     \
                                            {                                                                                \
-                                              SCIPwarningMessage("CPLEX error <%d>; SoPlex result unchecked\n", _cpxstat_); \
+                                              SCIPmessagePrintWarning(m_messagehdlr, "CPLEX error <%d>; SoPlex result unchecked\n", _cpxstat_); \
                                               if( EXIT_AT_CPXERROR )                                                        \
                                               {                                                                             \
                                                  exit(1);                                                                   \
@@ -108,7 +108,7 @@
 #undef ___DEBUG
 #endif
 
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -124,8 +124,9 @@ using namespace soplex;
 
 /** Macro for a single SoPlex call for which exceptions have to be catched - return an LP error. We
  *  make no distinction between different exception types, e.g., between memory allocation and other
- *  exceptions. */
-#define SOPLEX_TRY(x)  do                                               \
+ *  exceptions.
+ */
+#define SOPLEX_TRY(messagehdlr, x)  do                                  \
    {                                                                    \
       try                                                               \
       {                                                                 \
@@ -134,14 +135,18 @@ using namespace soplex;
       catch(SPxException E)                                             \
       {                                                                 \
          std::string s = E.what();                                      \
-         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str()); \
+         SCIPmessagePrintWarning((messagehdlr), "SoPlex threw an exception: %s\n", s.c_str()); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }                                                                    \
    while( FALSE )
 
+#define SOPLEX_TRYLPI(x) SOPLEX_TRY(lpi->messagehdlr, x)
+#define SOPLEX_TRYLPIPTR(x) SOPLEX_TRY((*lpi)->messagehdlr, x)
+
 /* Macro for a single SoPlex call for which exceptions have to be catched - abort if they
- * arise. SCIP_ABORT() is not accessible here.*/
+ * arise. SCIP_ABORT() is not accessible here.
+ */
 #define SOPLEX_TRY_ABORT(x)  do                                         \
    {                                                                    \
       try                                                               \
@@ -194,9 +199,10 @@ class SPxSCIP : public SPxSolver
    CPXENVptr        m_cpxenv;           /**< CPLEX memory environment */
    CPXLPptr         m_cpxlp;            /**< CPLEX lp structure */
 #endif
+   SCIP_MESSAGEHDLR* m_messagehdlr;       /**< messagehdlr handler to printing messages, or NULL */
 
 public:
-   SPxSCIP(const char* probname = NULL)
+   SPxSCIP(SCIP_MESSAGEHDLR* messagehdlr = NULL, const char* probname = NULL)
         : SPxSolver(LEAVE, COLUMN),
           m_probname(0),
           m_fromscratch(false),
@@ -213,7 +219,8 @@ public:
           m_rowstat(NULL),
           m_colstat(NULL),
 	  m_rownames(0),
-	  m_colnames(0)
+	  m_colnames(0),
+          m_messagehdlr(messagehdlr)
    {
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
@@ -512,10 +519,10 @@ public:
 	 std::string s = x.what();
          if( printwarning )
          {
-            SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+            SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
          }
 	 m_stat = SPxSolver::status();
-	 
+
 	 /* since it is not clear if the status in SoPlex are set correctly
 	  * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
@@ -611,7 +618,7 @@ public:
             || (m_stat == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
             || (m_stat == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
          {
-            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+            SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
                m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
             if( EXIT_AT_WRONG_RESULT )
                exit(1);
@@ -624,7 +631,7 @@ public:
                if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
                   || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
                {
-                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
                   if( EXIT_AT_WRONG_RESULT )
@@ -633,7 +640,7 @@ public:
                else if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
                }
@@ -643,7 +650,7 @@ public:
                if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPwarningMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
+                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat));
                }
@@ -651,14 +658,14 @@ public:
             case CPX_STAT_INFEASIBLE:
                break;
             case CPX_STAT_UNBOUNDED:
-               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
                   m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
                break;
             case CPX_STAT_INForUNBD:
             default:
-               SCIPwarningMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
                   m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
                break;
             }  /*lint !e788*/
@@ -669,7 +676,7 @@ public:
             if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
                || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good\n", value(),
+               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good\n", value(),
                   m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
@@ -677,7 +684,7 @@ public:
             else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
                || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal\n", value(),
+               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal\n", value(),
                   m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
@@ -712,8 +719,8 @@ public:
 	 }
 	 catch(SPxException x)
 	 {
-	    std::string s = x.what();      
-	    SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	    std::string s = x.what();
+	    SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 	    m_stat = SPxSolver::status();
 	    assert( m_stat != SPxSolver::OPTIMAL );
 	    return m_stat;
@@ -748,6 +755,10 @@ public:
 
       if( simplifier != NULL )
       {
+         int verbosity;
+         /* store and set verbosity */
+         verbosity = Param::verbose();
+         Param::setVerbose(getLpInfo() ? 3 : 0);
          SCIPdebugMessage("simplifying LP\n");
          result = simplifier->simplify(*this, epsilon(), delta());
          SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
@@ -765,6 +776,8 @@ public:
 
             goto SOLVEAGAIN;
          }
+         /* reset verbosity */
+         Param::setVerbose(verbosity);
       }
 
       /* solve */
@@ -851,7 +864,7 @@ public:
             catch(SPxException x)
             {
                std::string s = x.what();
-               SCIPwarningMessage("SoPlex unsimplification unsuccessful; solving again without LP presolving (SoPlex says %s)\n",
+               SCIPmessagePrintWarning(m_messagehdlr, "SoPlex unsimplification unsuccessful; solving again without LP presolving (SoPlex says %s)\n",
                   s.c_str());
             }
 
@@ -920,16 +933,16 @@ public:
 
       m_rowstat = new SPxSolver::VarStatus[nRows()];
       m_colstat = new SPxSolver::VarStatus[nCols()];
-      
+
       try
       {
          m_stat = getBasis(m_rowstat, m_colstat);
       }
       catch(SPxException x)
       {
-         std::string s = x.what();      
-         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
-         
+         std::string s = x.what();
+         SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+
          /* since it is not clear if the status in SoPlex are set correctly
           * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
@@ -943,17 +956,17 @@ public:
    {
       assert(m_rowstat != NULL);
       assert(m_colstat != NULL);
-      
+
       try
       {
          setBasis(m_rowstat, m_colstat);
       }
       catch(SPxException x)
       {
-         std::string s = x.what();      
-         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+         std::string s = x.what();
+         SCIPmessagePrintWarning(m_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
          m_stat = SPxSolver::status();
-         
+
          /* since it is not clear if the status in SoPlex are set correctly
           * we want to make sure that if an error is thrown the status is
           * not OPTIMAL anymore.
@@ -1137,6 +1150,7 @@ struct SCIP_LPi
    SCIP_Bool                solved;             /**< was the current LP solved? */
    SLUFactor*               factorization;      /**< factorization possibly needed for basis inverse */
    SCIP_Real                rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -1401,6 +1415,7 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
@@ -1409,7 +1424,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   SOPLEX_TRY( (*lpi)->spx = new SPxSCIP(name) );
+   SOPLEX_TRY( messagehdlr, (*lpi)->spx = new SPxSCIP(messagehdlr, name) );
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -1417,6 +1432,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->factorization = 0;
    (*lpi)->rowrepswitch = SCIPlpiInfinity(*lpi);
+   (*lpi)->messagehdlr = messagehdlr;
+
    invalidateSolution(*lpi);
 
    /* set objective sense */
@@ -1511,8 +1528,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
    catch(SPxException x)
    {
-      std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      std::string s = x.what();
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -1578,7 +1595,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
  
@@ -1602,9 +1619,9 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->spx->removeColRange(firstcol, lastcol) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeColRange(firstcol, lastcol) );
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
@@ -1633,9 +1650,9 @@ SCIP_RETCODE SCIPlpiDelColset(
    for( i = 0; i < ncols; ++i )
       dstat[i] *= -1;
 
-   SOPLEX_TRY( lpi->spx->removeCols(dstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeCols(dstat) );
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** adds rows to the LP */
@@ -1691,7 +1708,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -1715,9 +1732,9 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->spx->removeRowRange(firstrow, lastrow) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeRowRange(firstrow, lastrow) );
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** deletes rows from SCIP_LP; the new position of a row must not be greater that its old position */
@@ -1746,9 +1763,9 @@ SCIP_RETCODE SCIPlpiDelRowset(
    for( i = 0; i < nrows; ++i )
       dstat[i] *= -1;
 
-   SOPLEX_TRY( lpi->spx->removeRows(dstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->removeRows(dstat) );
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** clears the whole LP */
@@ -1764,7 +1781,7 @@ SCIP_RETCODE SCIPlpiClear(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
-   SOPLEX_TRY( lpi->spx->clear() );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->clear() );
 
    return SCIP_OKAY;
 }
@@ -1803,7 +1820,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -1844,7 +1861,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -1870,7 +1887,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->spx->changeElement(row, col, newval) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElement(row, col, newval) );
 
    return SCIP_OKAY;
 }
@@ -1890,7 +1907,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->spx->setSense(spxObjsen(objsen)) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setSense(spxObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -1927,7 +1944,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -1989,7 +2006,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -2058,7 +2075,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -2499,11 +2516,17 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
       factor 1.1 for switching back to column representation */
-   rowrep = lpi->spx->rep() == SPxSolver::ROW;
-   if( !rowrep )
-      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   if( lpi->rowrepswitch >= 0 )
+   {
+      rowrep = lpi->spx->rep() == SPxSolver::ROW;
+
+      if( !rowrep )
+         rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+      else
+         rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+   }
    else
-      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+      rowrep = FALSE;
 
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
@@ -2537,11 +2560,17 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    /* first decide if we want to switch the basis representation; in order to avoid oscillatory behaviour, we add the
       factor 1.1 for switching back to column representation */
-   rowrep = lpi->spx->rep() == SPxSolver::ROW;
-   if( !rowrep )
-      rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+   if( lpi->rowrepswitch >= 0 )
+   {
+      rowrep = lpi->spx->rep() == SPxSolver::ROW;
+
+      if( !rowrep )
+         rowrep = lpi->spx->nRows() > lpi->spx->nCols() * (lpi->rowrepswitch);
+      else
+         rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+   }
    else
-      rowrep = lpi->spx->nRows() * 1.1 > lpi->spx->nCols() * (lpi->rowrepswitch);
+      rowrep = FALSE;
 
    /* SoPlex doesn't distinct between the primal and dual simplex; however
     * we can force SoPlex to start with the desired method:
@@ -3273,7 +3302,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -3300,7 +3329,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -3330,7 +3359,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -3591,11 +3620,11 @@ SCIP_RETCODE SCIPlpiSetBase(
          SCIPABORT();
       }
    }
-   SOPLEX_TRY( lpi->spx->setBasis(spxrstat, spxcstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
 
    delete[] spxcstat;
    delete[] spxrstat;
-   
+
    return SCIP_OKAY;
 }
 
@@ -3706,7 +3735,7 @@ SCIP_RETCODE prepareFactorization(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
    return SCIP_OKAY;
@@ -3761,7 +3790,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -3821,7 +3850,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -3927,7 +3956,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_LPERROR;
    }
 
@@ -4050,7 +4079,7 @@ SCIP_RETCODE SCIPlpiClearState(
    catch(SPxException x)
    {
       std::string s = x.what();
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       assert( lpi->spx->getStatus() != SPxSolver::OPTIMAL );
       return SCIP_ERROR;
    }
@@ -4096,7 +4125,7 @@ SCIP_RETCODE SCIPlpiReadState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool success;
-   SOPLEX_TRY( success = lpi->spx->readBasisFile(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFile(fname, 0, 0) );
 
    return success ? SCIP_OKAY : SCIP_ERROR;
 }
@@ -4112,7 +4141,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
    bool res;
-   SOPLEX_TRY( res = lpi->spx->writeBasisFile(fname, 0, 0) );
+   SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
       return SCIP_ERROR;
@@ -4304,7 +4333,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert(dval >= 0.0);
+      assert(dval >= -1.5);
       lpi->rowrepswitch = dval;
       break;
    default:
@@ -4400,7 +4429,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    catch(SPxException x)
    {
       std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_READERROR;
    }
    
@@ -4424,8 +4453,8 @@ SCIP_RETCODE SCIPlpiWriteLP(
    }
    catch(SPxException x)
    {
-      std::string s = x.what();      
-      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      std::string s = x.what();
+      SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       return SCIP_WRITEERROR;
    }
 

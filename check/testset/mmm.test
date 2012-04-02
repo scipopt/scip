@@ -18,8 +18,8 @@ IP/miplib2003/air05.mps.gz
 IP/miplib2003/arki001.mps.gz
 IP/miplib2003/atlanta-ip.mps.gz
 IP/mittelmann/bc1.mps.gz
-IP/mittelmann/bell3a.mps.gz
-IP/mittelmann/bell5.mps.gz
+IP/miplib/bell3a.mps.gz
+IP/miplib/bell5.mps.gz
 IP/mittelmann/bienst1.mps.gz
 IP/mittelmann/bienst2.mps.gz
 IP/mittelmann/binkar10_1.mps.gz
@@ -44,14 +44,14 @@ IP/miplib/flugpl.mps.gz
 IP/miplib3/gen.mps.gz
 IP/miplib2003/gesa2-o.mps.gz
 IP/miplib2003/gesa2.mps.gz
-IP/mittelmann/gesa3.mps.gz
-IP/mittelmann/gesa3_o.mps.gz
+IP/miplib/gesa3.mps.gz
+IP/miplib/gesa3_o.mps.gz
 IP/miplib2003/glass4.mps.gz
 IP/miplib/gt2.mps.gz
 IP/miplib2003/harp2.mps.gz
 IP/mittelmann/irp.mps.gz
 IP/miplib/khb05250.mps.gz
-IP/mittelmann/l152lav.mps.gz
+IP/miplib/l152lav.mps.gz
 IP/miplib2003/liu.mps.gz
 IP/mittelmann/lrn.mps.gz
 IP/miplib/lseu.mps.gz
@@ -149,7 +149,7 @@ IP/miplib2003/seymour.mps.gz
 IP/mittelmann/seymour1.mps.gz
 IP/miplib2003/sp97ar.mps.gz
 IP/miplib/stein27.mps.gz
-IP/mittelmann/stein45.mps.gz
+IP/miplib/stein45.mps.gz
 IP/miplib2003/stp3d.mps.gz
 IP/miplib2003/swath.mps.gz
 IP/mittelmann/swath1.mps.gz

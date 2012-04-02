@@ -75,16 +75,16 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
    }
    else
    {
-      SCIPwarningMessage("RLP format is LP format with generic variable and constraint names\n");
+      SCIPwarningMessage(scip, "RLP format is LP format with generic variable and constraint names\n");
       
       if( transformed )
       {
-         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
       }
       *result = SCIP_SUCCESS;

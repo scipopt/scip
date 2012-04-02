@@ -103,8 +103,8 @@ SCIP_RETCODE readBounds(
       {
          if( !unknownvariablemessage )
          {
-            SCIPwarningMessage("unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
-            SCIPwarningMessage("  (further unknown variables are ignored)\n");
+            SCIPwarningMessage(scip, "unknown variable <%s> in line %d of bounds file <%s>\n", varname, lineno, fname);
+            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
          continue;

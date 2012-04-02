@@ -220,7 +220,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
    {
       if( conshdlrdata->quadconsupgrades[i]->quadconsupgd == quadconsupgd )
       {
-         SCIPwarningMessage("Try to add already known upgrade message for constraint handler <%s>.\n", conshdlrname);
+         SCIPwarningMessage(scip, "Try to add already known upgrade message for constraint handler <%s>.\n", conshdlrname);
          return TRUE;
       }
    }
@@ -4331,7 +4331,7 @@ SCIP_RETCODE checkCurvature(
        */
       if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
       {
-         SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
+         SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
          consdata->isconvex = FALSE;
          consdata->isconcave = FALSE;
       }
@@ -8937,7 +8937,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
    case SCIP_EXPR_PARAM:
    case SCIP_EXPR_LAST:
    default:
-      SCIPwarningMessage("unexpected expression operator %d in nonlinear constraint <%s>\n", SCIPexprgraphGetNodeOperator(node), SCIPconsGetName(cons));
+      SCIPwarningMessage(scip, "unexpected expression operator %d in nonlinear constraint <%s>\n", SCIPexprgraphGetNodeOperator(node), SCIPconsGetName(cons));
       return SCIP_OKAY;
    }
 
@@ -9953,7 +9953,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
          else
          {
             *result = SCIP_FEASIBLE;
-            SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
          }
          return SCIP_OKAY;
       }

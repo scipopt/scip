@@ -116,21 +116,19 @@ SCIP_RETCODE runSCIP(
 {
    SCIP* scip = NULL;
 
-
-   /***********************
-    * Version information *
-    ***********************/
-
-   SCIPprintVersion(NULL);
-   std::cout << std::endl;
-
-
    /*********
     * Setup *
     *********/
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /***********************
+    * Version information *
+    ***********************/
+
+   SCIPprintVersion(scip, NULL);
+   std::cout << std::endl;
 
 
    /* include default SCIP plugins */
@@ -190,7 +188,7 @@ int main(
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       return -1;
    }
 

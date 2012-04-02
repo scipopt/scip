@@ -27,6 +27,7 @@
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #endif
 
 #include "blockmemshell/memory.h"
@@ -38,15 +39,15 @@
 #ifdef SCIPdebugMessage
 #define debugMessage SCIPdebugMessage
 #define errorMessage SCIPerrorMessage
-#define warningMessage SCIPwarningMessage
 #else
 #define debugMessage while( FALSE ) printf
 #define errorMessage printf
-#define warningMessage printf
 #define printErrorHeader(f,l) printf("[%s:%d] ERROR: ", f, l)
 #define printError printf
-#define printInfo printf
 #endif
+
+#define warningMessage printf
+#define printInfo printf
 
 /* define some macros (if not already defined) */
 #ifndef FALSE
@@ -389,6 +390,23 @@ void BMScopyMemory_call(
       assert(ptr != NULL);
       assert(source != NULL);
       memcpy(ptr, source, size);
+   }
+}
+
+/** moves the contents of one memory element into another memory element, should be used if both elements overlap,
+ *  otherwise BMScopyMemory is faster
+ */
+void BMSmoveMemory_call(
+   void*                 ptr,                /**< pointer to target memory element */
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size                /**< size of memory element to copy */
+   )
+{
+   if( size > 0 )
+   {
+      assert(ptr != NULL);
+      assert(source != NULL);
+      memmove(ptr, source, size);
    }
 }
 

@@ -23,7 +23,7 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/buffer.h"

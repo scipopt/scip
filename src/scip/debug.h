@@ -24,10 +24,10 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "neos.sol" */
+/* #define SCIP_DEBUG_SOLUTION "neos.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
-/*#define SCIP_DEBUG_LP_INTERFACE*/
+/* #define SCIP_DEBUG_LP_INTERFACE */
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"

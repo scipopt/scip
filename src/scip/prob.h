@@ -123,7 +123,16 @@ SCIP_RETCODE SCIPprobResetBounds(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+extern
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 
 /*
@@ -238,6 +247,13 @@ extern
 void SCIPprobAddObjoffset(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             addval              /**< value to add to objective offset */
+   );
+
+/** sets the dual bound on objective function */
+extern
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
    );
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
@@ -357,6 +373,13 @@ void SCIPprobUpdateNObjVars(
    SCIP_Real             newobj              /**< new objective value for variable */
    );
 
+/** update the dual bound if its better as the current one */
+extern
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   );
+
 /** returns the external value of the given internal objective value */
 extern
 SCIP_Real SCIPprobExternObjval(
@@ -414,23 +437,16 @@ SCIP_Bool SCIPprobAllColsInLP(
 extern
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** outputs problem statistics */
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** outputs problem to file stream */
-extern
-SCIP_RETCODE SCIPprobPrint(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           comment             /**< string which starts a comment line in requested format (or NULL) */
    );
 
 #ifdef __cplusplus

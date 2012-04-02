@@ -20,6 +20,7 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
+ * TODO: if no integer variables are present, set a node limit of 1 to avoid spending to much time in continuous nonlinear problems
  * TODO: sort components by size?
  */
 
@@ -351,7 +352,7 @@ SCIP_RETCODE copyAndSolveComponent(
          {
             assert( SCIPhashmapExists(varmap, vars[i]) );
 
-            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, SCIPhashmapGetImage(varmap, vars[i])),
+            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])),
                   &infeasible, &fixed) );
             assert(!infeasible);
             assert(fixed);
@@ -491,9 +492,8 @@ SCIP_RETCODE fillDigraph(
             idx2 = SCIPvarGetProbindex(consvars[v]);
             assert(idx2 >= 0);
 
-            /* we add a directed edge in both directions */
+            /* we add only one directed edge, because the other direction is automatically added for component computation */
             SCIP_CALL( SCIPdigraphAddEdge(digraph, idx1, idx2) );
-            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx2, idx1) );
          }
       }
    }
@@ -565,10 +565,8 @@ SCIP_RETCODE splitProblem(
    compvarsstart = 0;
    compconssstart = 0;
 
-   /* loop over all components
-    * start loop from 1 because components are numbered from 1 to n
-    */
-   for( comp = 1; comp <= ncomponents && !SCIPisStopped(scip); comp++ )
+   /* loop over all components */
+   for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
    {
       nbinvars = 0;
       nintvars = 0;
@@ -750,7 +748,7 @@ SCIP_RETCODE presolComponents(
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
          /* compute independent components */
-         SCIP_CALL( SCIPdigraphComputeComponents(digraph, components, &ncomponents) );
+         SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
 
          /* create subproblems from independent components and solve them in dependence of their size */
          SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
@@ -817,31 +815,49 @@ SCIP_DECL_PRESOLFREE(presolFreeComponents)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   freeStatistics(scip, presoldata);
-
    SCIPfreeMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
 }
 
+/** initialization method of presolver (called after problem was transformed) */
 static
 SCIP_DECL_PRESOLINIT(presolInitComponents)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
 
+   /* free presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
+   /* initialize statistics */
+   SCIP_CALL( initStatistics(scip, presoldata) );
+
    presoldata->didsearch = FALSE;
 
-   resetStatistics(scip, presoldata);
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of presolver (called before transformed problem is freed) */
+static
+SCIP_DECL_PRESOLEXIT(presolExitComponents)
+{  /*lint --e{715}*/
+#ifdef WITH_STATISTICS
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   freeStatistics(scip, presoldata);
+#endif
 
    return SCIP_OKAY;
 }
 
 /* define unused callbacks as NULL */
-#define presolExitComponents NULL
 #define presolInitpreComponents NULL
 #define presolExitpreComponents NULL
 
@@ -870,10 +886,6 @@ SCIP_RETCODE SCIPincludePresolComponents(
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
-   presoldata->didsearch = FALSE;
-
-   /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip,

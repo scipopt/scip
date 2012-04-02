@@ -290,7 +290,7 @@ SCIP_RETCODE readXMLSol(
          nread = sscanf(varvalue, "%lf", &value);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
+            SCIPwarningMessage(scip, "invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", varvalue, varname, filename);
             error = TRUE;
             break;
          }

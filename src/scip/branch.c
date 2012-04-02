@@ -1122,8 +1122,9 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
 /** creates a branching rule */
 SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
-   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of branching rule */
    const char*           desc,               /**< description of branching rule */
    int                   priority,           /**< priority of the branching rule */
@@ -1180,24 +1181,24 @@ SCIP_RETCODE SCIPbranchruleCreate(
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of branching rule <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*branchrule)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4,
          paramChgdBranchrulePriority, (SCIP_PARAMDATA*)(*branchrule)) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX,
          NULL, NULL) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
-   SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxbounddist, FALSE, maxbounddist, 0.0, 1.0, 
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*branchrule)->maxbounddist, FALSE, maxbounddist, 0.0, 1.0,
          NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
-/** frees memory of branching rule */   
+/** frees memory of branching rule */
 SCIP_RETCODE SCIPbranchruleFree(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1249,7 +1250,7 @@ SCIP_RETCODE SCIPbranchruleInit(
       branchrule->ndomredsfound = 0;
       branchrule->nchildren = 0;
    }
-   
+
    if( branchrule->branchinit != NULL )
    {
       SCIP_CALL( branchrule->branchinit(set->scip, branchrule) );
@@ -1909,13 +1910,13 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    SCIP_Real branchpoint;
    SCIP_Real lb;
    SCIP_Real ub;
-   
+
    assert(set != NULL);
    assert(var != NULL);
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
-   
+
    /* for a fixed variable, we cannot branch further */
    assert(!SCIPsetIsEQ(set, lb, ub));
 
@@ -2101,7 +2102,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          return branchpoint;
       }
    }
-   
+
    SCIPerrorMessage("you should not be here, this should not happen\n");  /*lint !e527*/
    SCIPABORT();  /*lint --e{527}*/
    return SCIP_INVALID;  /*lint --e{527}*/
@@ -2162,7 +2163,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, 
+      SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons,
             result) );
    }
 
@@ -2259,7 +2260,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      SCIP_CALL( SCIPbranchruleExecExternSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, 
+      SCIP_CALL( SCIPbranchruleExecExternSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons,
             result) );
    }
 
@@ -2324,7 +2325,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
 
       *result = SCIP_BRANCHED;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2344,7 +2345,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    )
 {
    int i;
-   
+
    assert(branchcand != NULL);
    assert(result != NULL);
 

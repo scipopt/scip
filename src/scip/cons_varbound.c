@@ -285,7 +285,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( catchEvents(scip, *consdata) );
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );  /*lint !e506*/
    (*consdata)->vars[0] = (*consdata)->var;
    (*consdata)->vars[1] = (*consdata)->vbdvar;
 
@@ -370,7 +370,7 @@ SCIP_RETCODE addRelaxation(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
-      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
    }
 
@@ -2278,9 +2278,6 @@ SCIP_RETCODE applyFixings(
       lhs = consdata->lhs;
       rhs = consdata->rhs;
 
-      assert(var == consdata->var);
-      assert(vbdvar == consdata->vbdvar);
-
       /* create upgraded linear constraint */
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons), 0, NULL, NULL, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
@@ -2288,8 +2285,57 @@ SCIP_RETCODE applyFixings(
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->var, 1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
+      /* if var was fixed, then the case that vbdvar was multi-aggregated, was not yet resolved */
+      if( var != consdata->var )
+      {
+	 assert(SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_MULTAGGR);
+	 assert(SCIPisZero(scip, varscalar)); /* this means that var was fixed */
+
+	 /* add offset that results of the fixed variable */
+	 if( SCIPisZero(scip, varconstant) != 0 )
+	 {
+	    if( !SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - varconstant) );
+	    }
+	    if( !SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - varconstant) );
+	    }
+	 }
+      }
+      else
+      {
+	 assert(var == consdata->var);
+
+	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->var, 1.0) );
+      }
+
+      /* if vbdvar was fixed, then the case that var was multi-aggregated, was not yet resolved */
+      if( vbdvar != consdata->vbdvar )
+      {
+	 assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+	 assert(SCIPisZero(scip, vbdvarscalar)); /* this means that var was fixed */
+
+	 /* add offset that results of the fixed variable */
+	 if( SCIPisZero(scip, vbdvarconstant) != 0 )
+	 {
+	    if( !SCIPisInfinity(scip, rhs) )
+	    {
+	       SCIP_CALL( SCIPchgRhsLinear(scip, newcons, rhs - vbdvarconstant) );
+	    }
+	    if( !SCIPisInfinity(scip, -lhs) )
+	    {
+	       SCIP_CALL( SCIPchgLhsLinear(scip, newcons, lhs - vbdvarconstant) );
+	    }
+	 }
+      }
+      else
+      {
+	 assert(vbdvar == consdata->vbdvar);
+
+	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
+      }
 
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
@@ -2665,9 +2711,9 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
          vbdind = 1;
       else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
-         vbdind = 0;
-      else
          vbdind = 1;
+      else
+         vbdind = 0;
 
       var = vars[1-vbdind];
       vbdvar = vars[vbdind];
@@ -3093,8 +3139,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
             
             *nchgbds += nlocalchgbds;
 
-            /* if lhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if lhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef >= 0.0 )
                {
@@ -3139,8 +3187,10 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
             *nchgbds += nlocalchgbds;
 
-            /* if rhs is finite, and x is not continuous we can add more variable bounds */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS )
+            /* if rhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
+	     * too small
+	     */
+            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef > 0.0 )
                {

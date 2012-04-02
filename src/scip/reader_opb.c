@@ -164,8 +164,6 @@ struct OpbInput
 
 typedef struct OpbInput OPBINPUT;
 
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+:<>=;[]";
 static const char commentchars[] = "*";
 /*
  * Local methods (for reading)
@@ -211,7 +209,19 @@ SCIP_Bool isDelimChar(
    char                  c                   /**< input character */
    )
 {
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
+   switch (c)
+   {
+   case ' ':
+   case '\f':
+   case '\n':
+   case '\r':
+   case '\t':
+   case '\v':
+   case '\0':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the given character is a single token */
@@ -220,7 +230,21 @@ SCIP_Bool isTokenChar(
    char                  c                   /**< input character */
    )
 {
-   return (strchr(tokenchars, c) != NULL);
+   switch (c)
+   {
+   case '-':
+   case '+':
+   case ':':
+   case '<':
+   case '>':
+   case '=':
+   case '[':
+   case ']':
+   case ';':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the current character is member of a value string */
@@ -270,34 +294,34 @@ SCIP_Bool isValueChar(
  */
 static
 SCIP_Bool getNextLine(
+   SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
    int i;
    char* last;
-  
+
    assert(opbinput != NULL);
 
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !opbinput->endline && opbinput->comment )
-   { 
+   {
       SCIPdebugMessage("Throwing rest of comment away.\n");
-   
+
       do
       {
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
          (void)SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file);
       }
       while( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' );
-         
+
       opbinput->comment = FALSE;
       opbinput->endline = TRUE;
    }
 
    /* clear the line */
-   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
    opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-   
+
    /* set line position */
    if( opbinput->endline )
    {
@@ -306,12 +330,12 @@ SCIP_Bool getNextLine(
    }
    else
       opbinput->linepos += OPB_MAX_LINELEN - 2;
-   
+
    if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
       return FALSE;
-   
+
    opbinput->bufpos = 0;
-      
+
    if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
    {
       /* overwrite the character to search the last blank from this position backwards */
@@ -323,24 +347,25 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates a corrupted input file!", 
+
+         SCIPwarningMessage(scip, "we read %d character from the file; these might indicates a corrupted input file!",
             OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
       }
-      else 
+      else
       {
          SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
          SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
          *last = '\0';
       }
    }
-   else 
+   else
    {
       /* found end of line */
       opbinput->endline = TRUE;
    }
-   
+
    opbinput->linebuf[OPB_MAX_LINELEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
    opbinput->comment = FALSE;
@@ -382,6 +407,7 @@ void swapPointers(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
+   SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput            /**< OPB reading data */
    )
 {
@@ -408,7 +434,7 @@ SCIP_Bool getNextToken(
    {
       if( buf[opbinput->bufpos] == '\0' )
       {
-         if( !getNextLine(opbinput) )
+         if( !getNextLine(scip, opbinput) )
          {
             SCIPdebugMessage("(line %d) end of file\n", opbinput->linenumber);
             return FALSE;
@@ -752,7 +778,7 @@ SCIP_RETCODE getVariableOrTerm(
       (*vars)[*nvars] = var;
       ++(*nvars);
       
-      if( !getNextToken(opbinput) )
+      if( !getNextToken(scip, opbinput) )
          opbinput->haserror = TRUE;
 
       name = opbinput->token;
@@ -827,18 +853,19 @@ SCIP_RETCODE readCoefficients(
    SCIPdebugMessage("read coefficients\n");
 
    /* read the first token, which may be the name of the line */
-   if( getNextToken(opbinput) )
+   if( getNextToken(scip, opbinput) )
    {
       /* remember the token in the token buffer */
       swapTokenBuffer(opbinput);
 
       /* get the next token and check, whether it is a colon */
-      if( getNextToken(opbinput) )
+      if( getNextToken(scip, opbinput) )
       {
          if( strcmp(opbinput->token, ":") == 0 )
          {
             /* the second token was a colon ':' the first token is a constraint name */
-            (void)strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
+	    (void)SCIPmemccpy(name, opbinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
 
@@ -891,7 +918,7 @@ SCIP_RETCODE readCoefficients(
    haveweightend = FALSE;
    ntmpcoefs = 0;
    ntmpvars = 0;
-   while( getNextToken(opbinput) && !hasError(opbinput) )
+   while( getNextToken(scip, opbinput) && !hasError(opbinput) )
    {
       if( isEndLine(opbinput) )
       {
@@ -950,7 +977,7 @@ SCIP_RETCODE readCoefficients(
       {
          if( !opbinput->wbo )
          {
-            SCIPwarningMessage("Found in line %d a soft constraint, without having read a starting top-cost line.\n", opbinput->linenumber);
+            SCIPwarningMessage(scip, "Found in line %d a soft constraint, without having read a starting top-cost line.\n", opbinput->linenumber);
          }
          haveweightstart = TRUE;
 
@@ -1326,7 +1353,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(opbinput) || !isSense(opbinput, &sense) )
+   if( !getNextToken(scip, opbinput) || !isSense(opbinput, &sense) )
    {
       syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
       goto TERMINATE;
@@ -1334,14 +1361,14 @@ SCIP_RETCODE readConstraints(
 
    /* read the right hand side */
    sidesign = +1;
-   if( !getNextToken(opbinput) )
+   if( !getNextToken(scip, opbinput) )
    {
       syntaxError(scip, opbinput, "missing right hand side");
       goto TERMINATE;
    }
    if( isSign(opbinput, &sidesign) )
    {
-      if( !getNextToken(opbinput) )
+      if( !getNextToken(scip, opbinput) )
       {
          syntaxError(scip, opbinput, "missing value of right hand side");
          goto TERMINATE;
@@ -1355,7 +1382,7 @@ SCIP_RETCODE readConstraints(
    sidevalue *= sidesign;
 
    /* check if we reached the line end */
-   if( !getNextToken(opbinput) || !isEndLine(opbinput) )
+   if( !getNextToken(scip, opbinput) || !isEndLine(opbinput) )
    {
       syntaxError(scip, opbinput, "expected endline character ';'");
       goto TERMINATE;
@@ -1480,7 +1507,9 @@ SCIP_RETCODE getMaxAndConsDim(
             nproducts = strstr(opbinput->linebuf, "#product= ");
             if( nproducts != NULL )
             {
+	       const char delimchars[] = " \t";
                char* pos;
+
                nproducts += strlen("#product= ");
 
                pos = strtok(nproducts, delimchars);
@@ -1535,7 +1564,7 @@ SCIP_RETCODE readOPBFile(
 
    assert(scip != NULL);
    assert(opbinput != NULL);
-   
+
    /* open file */
    opbinput->file = SCIPfopen(filename, "r");
    if( opbinput->file == NULL )
@@ -1544,14 +1573,15 @@ SCIP_RETCODE readOPBFile(
       SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
-   
+
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
    SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename) );
 
    /* reading additional information about the number of and constraints in comments to avoid reallocating
-      "opbinput.andconss" */
+    * "opbinput.andconss"
+    */
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
-   
+
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -1868,9 +1898,9 @@ SCIP_RETCODE computeAndConstraintInfos(
                for( a = ncontainedands - 1; a >= 0; --a )
                   if( shouldnotbeinand[a] == pos )
                   {
-                     SCIPwarningMessage("This should not happen here. The and-constraint with resultant variable: ");
+                     SCIPwarningMessage(scip, "This should not happen here. The and-constraint with resultant variable: ");
                      SCIP_CALL( SCIPprintVar(scip, (*resvars)[r], NULL) );
-                     SCIPwarningMessage("possible contains a loop with and-resultant:");
+                     SCIPwarningMessage(scip, "possible contains a loop with and-resultant:");
                      SCIP_CALL( SCIPprintVar(scip, (*resvars)[pos], NULL) );
 
                      /* free memory iff necessary */
@@ -3311,7 +3341,7 @@ SCIP_RETCODE writeOpbConstraints(
                   }
                   else
                   {
-                     SCIPwarningMessage("cannot print linear constraint <%s> of indicator constraint <%s> because it has more than one non-binary variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
+                     SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has more than one non-binary variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
                      SCIPinfoMessage(scip, file, "* ");
                      SCIP_CALL( SCIPprintCons(scip, cons, file) );
                      cont = TRUE;
@@ -3323,7 +3353,7 @@ SCIP_RETCODE writeOpbConstraints(
             /* if we have not found any non-binary variable we do not print the constraint, maybe we should ??? */
             if( nonbinarypos == -1 )
             {
-               SCIPwarningMessage("cannot print linear constraint <%s> of indicator constraint <%s> because it has no slack variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
+               SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has no slack variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
                SCIPinfoMessage(scip, file, "* ");
                SCIP_CALL( SCIPprintCons(scip, cons, file) );
 
@@ -3369,7 +3399,7 @@ SCIP_RETCODE writeOpbConstraints(
          }
          else
          {
-            SCIPwarningMessage("indicator constraint <%s> will not be printed because the indicator variable has no objective value(= weight of this soft constraint)\n", SCIPconsGetName(cons) );
+            SCIPwarningMessage(scip, "indicator constraint <%s> will not be printed because the indicator variable has no objective value(= weight of this soft constraint)\n", SCIPconsGetName(cons) );
             SCIPinfoMessage(scip, file, "* ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
          }
@@ -3382,7 +3412,7 @@ SCIP_RETCODE writeOpbConstraints(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
@@ -3738,7 +3768,7 @@ SCIP_RETCODE SCIPreadOpb(
 
    if( opbinput.nproblemcoeffs > 0 )
    {
-      SCIPwarningMessage("there might be <%d> coefficients or weight out of range!\n", opbinput.nproblemcoeffs); 
+      SCIPwarningMessage(scip, "there might be <%d> coefficients or weight out of range!\n", opbinput.nproblemcoeffs);
    }
 
    /* evaluate the result */
@@ -3779,7 +3809,7 @@ SCIP_RETCODE SCIPwriteOpb(
 {  /*lint --e{715}*/
    if( nvars != nbinvars && ncontvars + nimplvars + nbinvars != nvars && ncontvars + nimplvars != ( (SCIPfindConshdlr(scip, "indicator") != NULL) ? SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) : 0 ) )
    {
-      SCIPwarningMessage("OPB format is only capable for binary problems.\n");
+      SCIPwarningMessage(scip, "OPB format is only capable for binary problems.\n");
       *result = SCIP_DIDNOTRUN;
    }
    else
@@ -3831,18 +3861,18 @@ SCIP_RETCODE SCIPwriteOpb(
             {
                if( sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) == NULL )
                {
-                  SCIPwarningMessage("At least following variable name isn't allowed in opb format.\n");
+                  SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
                   SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
-                  SCIPwarningMessage("OPB format needs generic variable names!\n");
+                  SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
                   
                   if( transformed )
                   {
-                     SCIPwarningMessage("write transformed problem with generic variable names.\n");
+                     SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
                      SCIP_CALL( SCIPprintTransProblem(scip, file, "opb", TRUE) );
                   }
                   else
                   {
-                     SCIPwarningMessage("write original problem with generic variable names.\n");
+                     SCIPwarningMessage(scip, "write original problem with generic variable names.\n");
                      SCIP_CALL( SCIPprintOrigProblem(scip, file, "opb", TRUE) );
                   }
                   printed = TRUE;
@@ -3858,18 +3888,18 @@ SCIP_RETCODE SCIPwriteOpb(
                {
                   if( sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
-                     SCIPwarningMessage("At least following variable name isn't allowed in opb format.\n");
+                     SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
                      SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
-                     SCIPwarningMessage("OPB format needs generic variable names!\n");
+                     SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
                   
                      if( transformed )
                      {
-                        SCIPwarningMessage("write transformed problem with generic variable names.\n");
+                        SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
                         SCIP_CALL( SCIPprintTransProblem(scip, file, "opb", TRUE) );
                      }
                      else
                      {
-                        SCIPwarningMessage("write original problem with generic variable names.\n");
+                        SCIPwarningMessage(scip, "write original problem with generic variable names.\n");
                         SCIP_CALL( SCIPprintOrigProblem(scip, file, "opb", TRUE) );
                      }
                      printed = TRUE;

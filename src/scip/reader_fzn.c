@@ -57,16 +57,16 @@
  */
 
 /** number types */
-enum FznNumberType 
+enum FznNumberType
 {
-   FZN_BOOL, 
-   FZN_INT, 
+   FZN_BOOL,
+   FZN_INT,
    FZN_FLOAT
 };
 typedef enum FznNumberType FZNNUMBERTYPE;
 
 /** Expression type in FlatZinc File */
-enum FznExpType 
+enum FznExpType
 {
    FZN_EXP_NONE,
    FZN_EXP_UNSIGNED,
@@ -98,7 +98,7 @@ struct ConstArray
    FZNCONSTANT**         constants;          /**< array of constants */
    char*                 name;               /**< name of constant array */
    int                   nconstants;         /**< number of constants */
-   FZNNUMBERTYPE         type;               /**< constant type */ 
+   FZNNUMBERTYPE         type;               /**< constant type */
 };
 typedef struct ConstArray CONSTARRAY;
 
@@ -109,7 +109,7 @@ struct VarArray
    char*                 name;               /**< name of the array variable */
    DIMENSIONS*           info;               /**< dimension information */
    int                   nvars;              /**< number of variables */
-   FZNNUMBERTYPE         type;               /**< variable type */ 
+   FZNNUMBERTYPE         type;               /**< variable type */
 };
 typedef struct VarArray VARARRAY;
 
@@ -121,13 +121,13 @@ struct SCIP_ReaderData
    int                   vararrayssize;      /**< size of variable array */
 };
 
-/** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful 
- * 
+/** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - fzninput,       : FZN reading data
  *  - fname,          : functions identifier name
- *  - ftokens,        : function identifier tokens 
+ *  - ftokens,        : function identifier tokens
  *  - nftokens,       : number of function identifier tokes
  *
  *  output
@@ -162,7 +162,7 @@ struct FznInput
    VARARRAY**            vararrays;          /**< variable arrays */
    int                   nvararrays;         /**< number of variables */
    int                   vararrayssize;      /**< size of variable array */
-   
+
    CONSTARRAY**          constarrays;        /**< variable arrays to output */
    int                   nconstarrays;       /**< number of variables */
    int                   constarrayssize;    /**< size of variable array */
@@ -176,12 +176,12 @@ struct FznOutput
    int                   varbufferlen;       /* current length of the above buffer */
    int                   varbufferpos;       /* current filling position in the above buffer */
    char*                 castbuffer;         /* buffer for int2float conversion constraints */
-   int                   castbufferlen;      /* current length of the above buffer */          
+   int                   castbufferlen;      /* current length of the above buffer */
    int                   castbufferpos;      /* current filling position in the above buffer */
    char*                 consbuffer;         /* buffer for all problem constraints */
-   int                   consbufferlen;      /* current length of the above buffer */          
+   int                   consbufferlen;      /* current length of the above buffer */
    int                   consbufferpos;      /* current filling position in the above buffer */
-   int                   ndiscretevars;      /* number of discrete variables in the problem */    
+   int                   ndiscretevars;      /* number of discrete variables in the problem */
    SCIP_Bool*            varhasfloat;        /* array which indicates, whether a discrete variable already has a float representative */
 };
 typedef struct FznOutput FZNOUTPUT;
@@ -236,7 +236,7 @@ void freeStringBufferArray(
    {
       SCIPfreeBufferArray(scip, &array[i]);
    }
-   
+
    SCIPfreeBufferArray(scip, &array);
 }
 
@@ -313,11 +313,11 @@ SCIP_Bool isIdentifier(
    )
 {
    int i;
-   
+
    /* check if the identifier starts with a letter */
    if( strlen(name) == 0 || !isalpha((unsigned char)name[0]) )
       return FALSE;
-   
+
    i = 1;
    while( name[i] )
    {
@@ -325,9 +325,9 @@ SCIP_Bool isIdentifier(
          return FALSE;
       i++;
    }
-   
+
    return TRUE;
-}   
+}
 
 /** returns whether the current character is member of a value string */
 static
@@ -376,6 +376,7 @@ SCIP_Bool isValueChar(
 /** compares two token if they are equal */
 static
 SCIP_Bool equalTokens(
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           token1,             /**< first token */
    const char*           token2              /**< second token */
    )
@@ -385,7 +386,7 @@ SCIP_Bool equalTokens(
 
    if( strlen(token1) != strlen(token2) )
       return FALSE;
-   
+
    return !strncmp(token1, token2, strlen(token2) );
 }
 
@@ -394,17 +395,18 @@ SCIP_Bool equalTokens(
  */
 static
 SCIP_Bool getNextLine(
+   SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
    int i;
    char* last;
-  
+
    assert(fzninput != NULL);
 
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !fzninput->endline && fzninput->comment )
-   { 
+   {
       SCIPdebugMessage("Throwing rest of comment away.\n");
 
       do
@@ -413,7 +415,7 @@ SCIP_Bool getNextLine(
          (void)SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file);
       }
       while( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' );
-         
+
       fzninput->comment = FALSE;
       fzninput->endline = TRUE;
    }
@@ -421,7 +423,7 @@ SCIP_Bool getNextLine(
    /* clear the line */
    BMSclearMemoryArray(fzninput->linebuf, FZN_BUFFERLEN);
    fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-   
+
    /* set line position */
    if( fzninput->endline )
    {
@@ -433,21 +435,21 @@ SCIP_Bool getNextLine(
 
    if( SCIPfgets(fzninput->linebuf, sizeof(fzninput->linebuf), fzninput->file) == NULL )
       return FALSE;
-   
+
    fzninput->bufpos = 0;
-      
+
    if( fzninput->linebuf[FZN_BUFFERLEN-2] != '\0' )
    {
       /* overwrite the character to search the last blank from this position backwards */
       fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
-      
+
       /* buffer is full; erase last token since it might be incomplete */
       fzninput->endline = FALSE;
       last = strrchr(fzninput->linebuf, ' ');
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d characters from the file; this might indicate a corrupted input file!\n", 
+         SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!\n",
             FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
@@ -459,12 +461,12 @@ SCIP_Bool getNextLine(
          *last = '\0';
       }
    }
-   else 
+   else
    {
       /* found end of line */
       fzninput->endline = TRUE;
    }
-   
+
    fzninput->linebuf[FZN_BUFFERLEN-1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
    fzninput->comment = FALSE;
 
@@ -482,7 +484,7 @@ SCIP_Bool getNextLine(
          break;
       }
    }
-   
+
    return TRUE;
 }
 
@@ -490,6 +492,7 @@ SCIP_Bool getNextLine(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
+   SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
@@ -502,12 +505,12 @@ SCIP_Bool getNextToken(
    assert(fzninput->bufpos < FZN_BUFFERLEN);
 
    /* if the current line got marked as comment get the next line */
-   if( fzninput->comment && !getNextLine(fzninput) )
+   if( fzninput->comment && !getNextLine(scip, fzninput) )
    {
       SCIPdebugMessage("(line %d) end of file\n", fzninput->linenumber);
       return FALSE;
    }
-   
+
    /* check the token stack */
    if( fzninput->npushedtokens > 0 )
    {
@@ -523,7 +526,7 @@ SCIP_Bool getNextToken(
    {
       if( buf[fzninput->bufpos] == '\0' )
       {
-         if( !getNextLine(fzninput) )
+         if( !getNextLine(scip, fzninput) )
          {
             SCIPdebugMessage("(line %d) end of file\n", fzninput->linenumber);
             return FALSE;
@@ -566,7 +569,7 @@ SCIP_Bool getNextToken(
          assert(fzninput->bufpos < FZN_BUFFERLEN);
       }
       while( isValueChar(buf[fzninput->bufpos], buf[fzninput->bufpos+1], FALSE, &hasdot, &exptype) );
-      
+
       fzninput->hasdot = hasdot;
    }
    else
@@ -583,20 +586,20 @@ SCIP_Bool getNextToken(
 
          /* check for annotations */
          if(tokenlen == 1 && fzninput->token[0] == ':' && buf[fzninput->bufpos] == ':')
-         {      
+         {
             fzninput->token[tokenlen] = buf[fzninput->bufpos];
             tokenlen++;
             fzninput->bufpos++;
             fzninput->linepos++;
             break;
          }
-            
+
          if( tokenlen == 1 && isTokenChar(fzninput->token[0]) )
             break;
       }
       while( !isDelimChar(buf[fzninput->bufpos]) && !isTokenChar(buf[fzninput->bufpos]) );
    }
-   
+
    assert(tokenlen < FZN_BUFFERLEN);
    fzninput->token[tokenlen] = '\0';
 
@@ -625,7 +628,7 @@ SCIP_Bool isEndStatement(
    )
 {
    assert(fzninput != NULL);
-   
+
    return isChar(fzninput->token, ';');
 }
 
@@ -638,7 +641,7 @@ SCIP_Bool isValue(
 {
    double val;
    char* endptr;
-   
+
    assert(value != NULL);
 
    val = strtod(token, &endptr);
@@ -647,7 +650,7 @@ SCIP_Bool isValue(
       *value = val;
       return TRUE;
    }
-   
+
    return FALSE;
 }
 
@@ -694,7 +697,7 @@ SCIP_RETCODE readerdataCreate(
    (*readerdata)->vararrays = NULL;
    (*readerdata)->nvararrays = 0;
    (*readerdata)->vararrayssize = 0;
-   
+
    return SCIP_OKAY;
 }
 
@@ -707,10 +710,10 @@ SCIP_RETCODE ensureVararrySize(
 {
    int nvararrays;
    int vararrayssize;
-   
+
    nvararrays = readerdata->nvararrays;
    vararrayssize = readerdata->vararrayssize;
-   
+
    if( vararrayssize == nvararrays )
    {
       if( vararrayssize == 0 )
@@ -726,10 +729,10 @@ SCIP_RETCODE ensureVararrySize(
    }
 
    readerdata->vararrayssize = vararrayssize;
-   
+
    return SCIP_OKAY;
 }
-   
+
 /** ensure the size if the variable array */
 static
 SCIP_RETCODE ensureVararrySizeFznInput(
@@ -739,10 +742,10 @@ SCIP_RETCODE ensureVararrySizeFznInput(
 {
    int nvararrays;
    int vararrayssize;
-   
+
    nvararrays = fzninput->nvararrays;
    vararrayssize = fzninput->vararrayssize;
-   
+
    if( vararrayssize == nvararrays )
    {
       if( vararrayssize == 0 )
@@ -758,7 +761,7 @@ SCIP_RETCODE ensureVararrySizeFznInput(
    }
 
    fzninput->vararrayssize = vararrayssize;
-   
+
    return SCIP_OKAY;
 }
 
@@ -771,10 +774,10 @@ SCIP_RETCODE ensureConstarrySizeFznInput(
 {
    int nconstarrays;
    int constarrayssize;
-   
+
    nconstarrays = fzninput->nconstarrays;
    constarrayssize = fzninput->constarrayssize;
-   
+
    if( constarrayssize == nconstarrays )
    {
       if( constarrayssize == 0 )
@@ -790,7 +793,7 @@ SCIP_RETCODE ensureConstarrySizeFznInput(
    }
 
    fzninput->constarrayssize = constarrayssize;
-   
+
    return SCIP_OKAY;
 }
 
@@ -808,7 +811,7 @@ void printValue(
    case FZN_BOOL:
       if( value < 0.5 )
          SCIPinfoMessage(scip, file, "false");
-      else         
+      else
          SCIPinfoMessage(scip, file, "true");
       break;
    case FZN_INT:
@@ -856,7 +859,7 @@ SCIP_RETCODE copyDimensions(
    }
    else
       *target = NULL;
-   
+
    return SCIP_OKAY;
 }
 
@@ -867,14 +870,14 @@ SCIP_RETCODE createVararray(
    VARARRAY**            vararray,           /**< pointer to variable array */
    const char*           name,               /**< name of the variable array */
    SCIP_VAR**            vars,               /**< array of variables */
-   int                   nvars,              /**< number of variables */  
+   int                   nvars,              /**< number of variables */
    FZNNUMBERTYPE         type,               /**< variable type */
    DIMENSIONS*           info                /**< dimension information for output */
    )
 {
    /* allocate memory for the new vararray struct */
    SCIP_CALL( SCIPallocMemory(scip, vararray) );
-   
+
    /* copy variable pointers */
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*vararray)->vars, vars, nvars) );
 
@@ -910,12 +913,12 @@ void freeVararray(
    SCIP*                 scip,               /**< SCIP data structure */
    VARARRAY**            vararray            /**< pointer to variable array */
    )
-{ 
+{
    freeDimensions(scip, &(*vararray)->info);
- 
+
    SCIPfreeMemoryArray(scip, &(*vararray)->name);
    SCIPfreeMemoryArray(scip, &(*vararray)->vars);
-   
+
    SCIPfreeMemory(scip, vararray);
 }
 
@@ -929,13 +932,13 @@ VARARRAY* findVararray(
 {
    VARARRAY* vararray;
    int c;
-   
+
    /* search in constants array list for a constants array with the given name */
    for( c = 0; c < fzninput->nvararrays; ++c )
    {
       vararray = fzninput->vararrays[c];
-         
-      if( equalTokens(name, vararray->name) )
+
+      if( equalTokens(scip, name, vararray->name) )
          return vararray;
    }
 
@@ -953,24 +956,24 @@ SCIP_RETCODE createConstarray(
    CONSTARRAY**          constarray,         /**< pointer to constant array */
    const char*           name,               /**< name of the variable array */
    FZNCONSTANT**         constants,          /**< array of constants */
-   int                   nconstants,         /**< number of constants */  
+   int                   nconstants,         /**< number of constants */
    FZNNUMBERTYPE         type                /**< constant type */
    )
 {
    SCIPdebugMessage("create constant array <%s>\n", name);
-   
+
    /* allocate memory for the new constarray struct */
    SCIP_CALL( SCIPallocMemory(scip, constarray) );
-   
+
    /* copy constant values */
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->constants, constants, nconstants) );
 
    /* copy constant array name */
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->name, name, strlen(name)+1) );
-   
+
    (*constarray)->nconstants = nconstants;
    (*constarray)->type = type;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1003,13 +1006,13 @@ CONSTARRAY* findConstarray(
 {
    CONSTARRAY* constarray;
    int c;
-   
+
    /* search in constants array list for a constants array with the given name */
    for( c = 0; c < fzninput->nconstarrays; ++c )
    {
       constarray = fzninput->constarrays[c];
-         
-      if( equalTokens(name, constarray->name) )
+
+      if( equalTokens(scip, name, constarray->name) )
          return constarray;
    }
 
@@ -1029,18 +1032,18 @@ SCIP_RETCODE readerdataAddOutputvar(
    const char* name;
    VARARRAY* vararray;
    int nvararrays;
-   
+
    nvararrays = readerdata->nvararrays;
 
    SCIP_CALL( ensureVararrySize(scip, readerdata) );
    assert(nvararrays < readerdata->vararrayssize);
-   
+
    /* get variable name */
    name = SCIPvarGetName(var);
 
    /* allocate memory for the new vararray struct */
    SCIP_CALL( SCIPallocMemory(scip, &vararray) );
-   
+
    /* copy variable pointers */
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->vars, &var, 1) );
 
@@ -1051,14 +1054,14 @@ SCIP_RETCODE readerdataAddOutputvar(
    info->lbs = NULL;
    info->ubs = NULL;
    info->ndims = 0;
-   
+
    vararray->info = info;
    vararray->nvars = 1;
    vararray->type = type;
-   
+
    readerdata->vararrays[nvararrays] = vararray;
    readerdata->nvararrays++;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1069,7 +1072,7 @@ SCIP_RETCODE readerdataAddOutputvararray(
    SCIP_READERDATA*      readerdata,         /**< reader data */
    const char*           name,               /**< name of the variable array */
    SCIP_VAR**            vars,               /**< array of variable to add to the reader data */
-   int                   nvars,              /**< number of variables */  
+   int                   nvars,              /**< number of variables */
    FZNNUMBERTYPE         type,               /**< variable type */
    DIMENSIONS*           info                /**< dimension information for output */
    )
@@ -1081,13 +1084,13 @@ SCIP_RETCODE readerdataAddOutputvararray(
 
    SCIP_CALL( ensureVararrySize(scip, readerdata) );
    assert(nvararrays < readerdata->vararrayssize);
-   
+
    /* create variable array data structure */
    SCIP_CALL( createVararray(scip, &vararray, name, vars, nvars, type, info) );
-   
+
    readerdata->vararrays[nvararrays] = vararray;
    readerdata->nvararrays++;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1098,7 +1101,7 @@ SCIP_RETCODE fzninputAddVararray(
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< name of the variable array */
    SCIP_VAR**            vars,               /**< array of variables */
-   int                   nvars,              /**< number of variables */  
+   int                   nvars,              /**< number of variables */
    FZNNUMBERTYPE         type,               /**< variable type */
    DIMENSIONS*           info                /**< dimension information for output */
    )
@@ -1110,13 +1113,13 @@ SCIP_RETCODE fzninputAddVararray(
 
    SCIP_CALL( ensureVararrySizeFznInput(scip, fzninput) );
    assert(nvararrays < fzninput->vararrayssize);
-   
+
    /* create variable array data structure */
    SCIP_CALL( createVararray(scip, &vararray, name, vars, nvars, type, info) );
-   
+
    fzninput->vararrays[nvararrays] = vararray;
    fzninput->nvararrays++;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1138,13 +1141,13 @@ SCIP_RETCODE fzninputAddConstarray(
 
    SCIP_CALL( ensureConstarrySizeFznInput(scip, fzninput) );
    assert(nconstarrays < fzninput->constarrayssize);
-   
+
    /* create constant array structure */
    SCIP_CALL( createConstarray(scip, &constarray, name, constants, nconstants, type) );
-   
+
    fzninput->constarrays[nconstarrays] = constarray;
    fzninput->nconstarrays++;
-   
+
    return SCIP_OKAY;
 }
 
@@ -1162,12 +1165,12 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms (a_j) */
    SCIP_Real             lhs,                /**< left hand side of quadratic equation (ell) */
    SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
-   )   
+   )
 {
    SCIP_CONS* cons;
 
-   SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, 
-         quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) ); 
+   SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2,
+         quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
@@ -1175,7 +1178,7 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;
-}           
+}
 
 /** creates, adds, and releases a linear constraint */
 static
@@ -1187,12 +1190,12 @@ SCIP_RETCODE createLinearCons(
    SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
-   )   
+   )
 {
    SCIP_CONS* cons;
 
-   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
@@ -1202,7 +1205,7 @@ SCIP_RETCODE createLinearCons(
    return SCIP_OKAY;
 }
 
-/** create a linking between the two given identifiers */ 
+/** create a linking between the two given identifiers */
 static
 SCIP_RETCODE createLinking(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1223,19 +1226,19 @@ SCIP_RETCODE createLinking(
    nvars = 0;
    value1 = 0.0;
    value2 = 0.0;
- 
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
-   
+
    vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name1);
    if( vars[nvars] != NULL )
    {
       vals[nvars] = 1.0;
-      nvars++;      
+      nvars++;
    }
    else if( !isValue(name1, &value1) )
    {
       FZNCONSTANT* constant;
-      
+
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) name1);
       assert(constant != NULL);
 
@@ -1251,23 +1254,23 @@ SCIP_RETCODE createLinking(
    else if( !isValue(name2, &value2) )
    {
       FZNCONSTANT* constant;
-      
+
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) name2);
       assert(constant != NULL);
-      
+
       value2 = constant->value;
    }
- 
+
    if( !SCIPisInfinity(scip, -lhs) )
       lhs += (value2 - value1);
 
    if( !SCIPisInfinity(scip, rhs) )
       rhs += (value2 - value1);
-    
+
    SCIP_CALL( createLinearCons(scip, consname, nvars, vars, vals, lhs, rhs) );
-   
+
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1284,11 +1287,11 @@ void parseArrayIndex(
    assert( isChar(fzninput->token, '[') );
 
    /* parse array index expression */
-   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
+   if( !getNextToken(scip, fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "expecting array index expression");
       return;
-   }   
+   }
 
    if( isIdentifier(fzninput->token) )
    {
@@ -1327,25 +1330,25 @@ void flattenAssignment(
 
    SCIPdebugMessage("parse assignment expression\n");
 
-   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
+   if( !getNextToken(scip, fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "expecting more tokens");
       return;
-   }   
+   }
 
    if( isIdentifier(fzninput->token) )
    {
       char name[FZN_BUFFERLEN];
       int idx;
-      
-      (void) SCIPsnprintf(name, FZN_BUFFERLEN, "%s", fzninput->token); 
 
-      if( !getNextToken(fzninput) )
+      (void) SCIPsnprintf(name, FZN_BUFFERLEN, "%s", fzninput->token);
+
+      if( !getNextToken(scip, fzninput) )
       {
          syntaxError(scip, fzninput, "expecting at least a semicolon to close the statement");
          return;
-      }   
-      
+      }
+
       /* check if it is an array access expression */
       if( isChar(fzninput->token, '[') )
       {
@@ -1354,8 +1357,8 @@ void flattenAssignment(
 
          assert(idx >= 0);
 
-         if( !getNextToken(fzninput) || !isChar(fzninput->token, ']') )
-         {   
+         if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, ']') )
+         {
             syntaxError(scip, fzninput, "expecting token <]>");
             return;
          }
@@ -1378,7 +1381,7 @@ void flattenAssignment(
 /** computes w.r.t. to the given side value and relation the left and right side for a SCIP linear constraint */
 static
 void computeLinearConsSides(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< name of the relation */
    SCIP_Real             sidevalue,          /**< parsed side value */
@@ -1389,28 +1392,28 @@ void computeLinearConsSides(
    SCIPdebugMessage("check relation <%s>\n", name);
 
    /* compute left and right hand side of the linear constraint */
-   if( equalTokens(name, "eq") )
+   if( equalTokens(scip, name, "eq") )
    {
       *lhs = sidevalue;
       *rhs = sidevalue;
    }
-   else if( equalTokens(name, "ge") )
+   else if( equalTokens(scip, name, "ge") )
    {
       *lhs = sidevalue;
       *rhs = SCIPinfinity(scip);
    }
-   else if( equalTokens(name, "le") )
+   else if( equalTokens(scip, name, "le") )
    {
       *lhs = -SCIPinfinity(scip);
       *rhs = sidevalue;
    }
-   else if( equalTokens(name, "gt") )
+   else if( equalTokens(scip, name, "gt") )
    {
       /* greater than only works if there are not continuous variables are involved */
       *lhs = sidevalue + 1.0;
       *rhs = SCIPinfinity(scip);
    }
-   else if( equalTokens(name, "lt") )
+   else if( equalTokens(scip, name, "lt") )
    {
       /* less than only works if there are not continuous variables are involved */
       *lhs = -SCIPinfinity(scip);
@@ -1436,7 +1439,7 @@ SCIP_RETCODE parseList(
    assert(selements > 0);
 
    /* check if the list is not empty */
-   if( getNextToken(fzninput) && !isChar(fzninput->token, ']') )
+   if( getNextToken(scip, fzninput) && !isChar(fzninput->token, ']') )
    {
       /* push back token */
       pushToken(fzninput);
@@ -1449,26 +1452,26 @@ SCIP_RETCODE parseList(
             selements *= 2;
             SCIP_CALL( SCIPreallocBufferArray(scip, elements, selements) );
          }
-         
+
          /* parse and flatten assignment */
          flattenAssignment(scip, fzninput, assignment);
-         
+
          if( hasError(fzninput) )
             break;
-         
+
          /* store assignment */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, (int) strlen(assignment) + 1) ); /*lint !e866*/
-         
+
          (*nelements)++;
       }
-      while( getNextToken(fzninput) && isChar(fzninput->token, ',') );
+      while( getNextToken(scip, fzninput) && isChar(fzninput->token, ',') );
    }
    else
    {
       SCIPdebugMessage("list is empty\n");
    }
 
-   
+
    /* push back ']' which closes the list */
    pushToken(fzninput);
 
@@ -1485,7 +1488,7 @@ void parseRange(
    SCIP_Real*            ub                  /**< pointer to store the upper bound */
    )
 {
-   if( !getNextToken(fzninput) )
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected left side of range");
       return;
@@ -1494,7 +1497,7 @@ void parseRange(
    /* current token should be the lower bound */
    if( !isValue(fzninput->token, lb) )
       syntaxError(scip, fzninput, "expected lower bound value");
-   
+
    /* check if we have a float notation or an integer notation which defines the type of the variable */
    if( fzninput->hasdot )
       *type = FZN_FLOAT;
@@ -1502,23 +1505,23 @@ void parseRange(
       *type = FZN_INT;
 
    /* parse next token which should be <..> */
-   if( !getNextToken(fzninput) || !equalTokens(fzninput->token, "..") )
+   if( !getNextToken(scip, fzninput) || !equalTokens(scip, fzninput->token, "..") )
    {
       syntaxError(scip, fzninput, "expected <..>");
       return;
    }
-   
+
    /* parse upper bound */
-   if( !getNextToken(fzninput) || !isValue(fzninput->token, ub) )
+   if( !getNextToken(scip, fzninput) || !isValue(fzninput->token, ub) )
    {
       syntaxError(scip, fzninput, "expected upper bound value");
       return;
    }
-   
+
    /* check if upper bound notation fits which lower bound notation */
    if( fzninput->hasdot != (*type == FZN_FLOAT) )
    {
-      SCIPwarningMessage("lower bound and upper bound mismatch in value type, assume %s variable type\n", 
+      SCIPwarningMessage(scip, "lower bound and upper bound mismatch in value type, assume %s variable type\n",
          fzninput->hasdot ? "an integer" : "a continuous");
    }
 }
@@ -1539,42 +1542,42 @@ SCIP_RETCODE parseOutputDimensioninfo(
 
    nelements = 0;
    size = 100;
-   
+
    SCIP_CALL( SCIPallocMemory(scip, info) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(*info)->lbs, size) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(*info)->ubs, size) );
-   
+
    /* check for bracket */
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '(') )
    {
       syntaxError(scip, fzninput, "expecting  <(> after <output_array>");
       return SCIP_OKAY;
-   }   
+   }
 
-   while( getNextToken(fzninput) && !isChar(fzninput->token, ']') )
+   while( getNextToken(scip, fzninput) && !isChar(fzninput->token, ']') )
    {
       parseRange(scip, fzninput, &type, &lb, &ub);
       assert(type == FZN_INT);
-      
+
       if( nelements == size )
       {
          size *= 2;
          SCIP_CALL( SCIPreallocMemoryArray(scip, &(*info)->lbs, size) );
          SCIP_CALL( SCIPreallocMemoryArray(scip, &(*info)->ubs, size) );
       }
-      
+
       /* we assume integer bounds */
       (*info)->lbs[nelements] = (int) lb;
       (*info)->ubs[nelements] = (int) ub;
       nelements++;
    }
-   
+
    (*info)->ndims = nelements;
 
    /* check for colon */
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, ')') )
       syntaxError(scip, fzninput, "expecting  <)>");
-   
+
    return SCIP_OKAY;
 }
 
@@ -1588,46 +1591,46 @@ SCIP_RETCODE parseName(
    DIMENSIONS**          info                /**< pointer to store the output dimension information if one */
    )
 {
-   
+
    if( output != NULL )
       (*output) = FALSE;
 
    /* check for colon */
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, ':') )
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, ':') )
    {
       syntaxError(scip, fzninput, "expecting colon <:>");
       return SCIP_OKAY;
-   }   
-   
+   }
+
    /* parse identifier name */
-   if( !getNextToken(fzninput) || !isIdentifier(fzninput->token) )
+   if( !getNextToken(scip, fzninput) || !isIdentifier(fzninput->token) )
    {
       syntaxError(scip, fzninput, "expecting identifier name");
       return SCIP_OKAY;
-   }   
-   
+   }
+
    /* copy identifier name */
    (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, (const char*)fzninput->token);
-   
+
    /* search for an assignment; therefore, skip annotations */
-   do 
+   do
    {
-      if( !getNextToken(fzninput) )
+      if( !getNextToken(scip, fzninput) )
       {
          syntaxError(scip, fzninput, "expected at least a semicolon to close statement");
          return SCIP_OKAY;
       }
 
       /* check if the name has the annotation to be part of the output */
-      if( equalTokens(fzninput->token, "output_var") && output != NULL )
+      if( equalTokens(scip, fzninput->token, "output_var") && output != NULL )
          (*output) = TRUE;
-      else if( equalTokens(fzninput->token, "output_array") && output != NULL)
+      else if( equalTokens(scip, fzninput->token, "output_array") && output != NULL)
       {
          (*output) = TRUE;
          assert(info != NULL);
          SCIP_CALL( parseOutputDimensioninfo(scip, fzninput, info) );
       }
-         
+
       if( isEndStatement(fzninput) )
          break;
    }
@@ -1649,29 +1652,29 @@ void parseType(
    SCIP_Real*            ub                  /**< pointer to store the lower bound */
    )
 {
-   if( !getNextToken(fzninput) || isEndStatement(fzninput) )
+   if( !getNextToken(scip, fzninput) || isEndStatement(fzninput) )
    {
       syntaxError(scip, fzninput, "missing token");
       return;
-   }      
-   
+   }
+
    *lb = -SCIPinfinity(scip);
    *ub = SCIPinfinity(scip);
-   
+
    /* parse variable type or bounds */
-   if( equalTokens(fzninput->token, "bool") )
+   if( equalTokens(scip, fzninput->token, "bool") )
    {
       *type = FZN_BOOL;
       *lb = 0.0;
       *ub = 1.0;
    }
-   else if( equalTokens(fzninput->token, "float") )
+   else if( equalTokens(scip, fzninput->token, "float") )
       *type = FZN_FLOAT;
-   else if( equalTokens(fzninput->token, "int") )
+   else if( equalTokens(scip, fzninput->token, "int") )
       *type = FZN_INT;
-   else if( equalTokens(fzninput->token, "set") || isChar(fzninput->token, '{') )
+   else if( equalTokens(scip, fzninput->token, "set") || isChar(fzninput->token, '{') )
    {
-      SCIPwarningMessage("sets are not supported yet\n");
+      SCIPwarningMessage(scip, "sets are not supported yet\n");
       fzninput->valid = FALSE;
       return;
    }
@@ -1683,7 +1686,7 @@ void parseType(
       pushToken(fzninput);
       parseRange(scip, fzninput, type, lb, ub);
    }
-   
+
    SCIPdebugMessage("range =  [%g,%g]\n", *lb, *ub);
 
    assert(*lb <= *ub);
@@ -1705,10 +1708,10 @@ SCIP_RETCODE applyVariableAssignment(
    SCIP_Real realvalue;
    SCIP_Real fixvalue;
    SCIP_Real vals[] = {1.0,-1.0};
-   
+
    linkVar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) assignment);
    constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
-   
+
    fixvalue = 0.0;
 
    if( linkVar == NULL )
@@ -1731,7 +1734,7 @@ SCIP_RETCODE applyVariableAssignment(
    else
    {
       SCIP_VAR** vars;
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
       vars[0] = var;
       vars[1] = linkVar;
@@ -1751,7 +1754,7 @@ SCIP_RETCODE createConstantAssignment(
    FZNCONSTANT**         constant,           /**< pointer to constant */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< constant name */
-   FZNNUMBERTYPE         type,               /**< number type */     
+   FZNNUMBERTYPE         type,               /**< number type */
    const char*           assignment          /**< assignment to apply */
    )
 {
@@ -1769,7 +1772,7 @@ SCIP_RETCODE createConstantAssignment(
          syntaxError(scip, fzninput, "type error");
          return SCIP_OKAY;
       }
-      
+
       value = (*constant)->value;
    }
    else if( isBoolExp(assignment, &boolvalue) && type == FZN_BOOL )
@@ -1788,11 +1791,11 @@ SCIP_RETCODE createConstantAssignment(
 
    /* get buffer memory for FZNCONSTANT struct */
    SCIP_CALL( SCIPallocBuffer(scip, constant) );
-   
+
    (*constant)->type = type;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &(*constant)->name, name, (int) strlen(name) + 1) );
    (*constant)->value = value;
-   
+
    /* store constant */
    if( fzninput->sconstants == fzninput->nconstants )
    {
@@ -1804,9 +1807,9 @@ SCIP_RETCODE createConstantAssignment(
    assert(fzninput->sconstants > fzninput->nconstants);
    fzninput->constants[fzninput->nconstants] = *constant;
    fzninput->nconstants++;
-   
+
    SCIP_CALL( SCIPhashtableInsert(fzninput->constantHashtable, (void*) (*constant)) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1821,20 +1824,20 @@ void parseArrayType(
    SCIP_Real*            ub                  /**< pointer to store the lower bound */
    )
 {
-   if( !getNextToken(fzninput) || !equalTokens(fzninput->token, "of") )
+   if( !getNextToken(scip, fzninput) || !equalTokens(scip, fzninput->token, "of") )
    {
       syntaxError(scip, fzninput, "expected keyword  <of>");
       return;
    }
-   
-   if( !getNextToken(fzninput) )
+
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected more tokens");
       return;
    }
-   
+
    /* check if it is a variable or constant array */
-   if( equalTokens(fzninput->token, "var") )
+   if( equalTokens(scip, fzninput->token, "var") )
       *isvararray = TRUE;
    else
    {
@@ -1861,9 +1864,9 @@ SCIP_RETCODE parseArrayAssignment(
    assert(fzninput != NULL);
    assert(*nelements >= 0);
    assert(selements >= *nelements);
-   
+
    /* check for opening brackets */
-   if( !getNextToken(fzninput) ||  !isChar(fzninput->token, '[') )
+   if( !getNextToken(scip, fzninput) ||  !isChar(fzninput->token, '[') )
    {
       syntaxError(scip, fzninput, "expected token <[>");
       return SCIP_OKAY;
@@ -1873,9 +1876,9 @@ SCIP_RETCODE parseArrayAssignment(
 
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
+
    /* check for closing brackets */
-   if( !getNextToken(fzninput) ||  !isChar(fzninput->token, ']') )
+   if( !getNextToken(scip, fzninput) ||  !isChar(fzninput->token, ']') )
       syntaxError(scip, fzninput, "expected token <]>");
 
    return SCIP_OKAY;
@@ -1892,8 +1895,8 @@ void parseArrayDimension(
    FZNNUMBERTYPE type;
    SCIP_Real left;
    SCIP_Real right;
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '[') )
+
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '[') )
    {
       syntaxError(scip, fzninput, "expected token <[> for array dimension");
       return;
@@ -1903,17 +1906,17 @@ void parseArrayDimension(
    parseRange(scip, fzninput, &type, &left, &right);
 
    if( fzninput->haserror )
-      return;  
-   
+      return;
+
    if( type != FZN_INT || left != 1.0  || right <= 0.0 )
    {
       syntaxError(scip, fzninput, "invalid array dimension format");
       return;
    }
-   
+
    *nelements = (int) right;
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, ']') )
+
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, ']') )
    {
       syntaxError(scip, fzninput, "expected token <]> for array dimension");
       return;
@@ -1961,20 +1964,20 @@ SCIP_RETCODE createVariable(
 
    SCIPdebugMessage("created variable\n");
    SCIPdebug( SCIP_CALL( SCIPprintVar(scip, varcopy, NULL) ) );
-   
+
    /* variable name should not exist before */
    assert(SCIPhashtableRetrieve(fzninput->varHashtable, varcopy) == NULL);
-   
+
    /* insert variable into the hashmap for later use in the constraint section */
    SCIP_CALL( SCIPhashtableInsert(fzninput->varHashtable, varcopy) );
 
    /* copy variable pointer before releasing the variable to keep the pointer to the variable */
    if( var != NULL )
       *var = varcopy;
-   
+
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &varcopy) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1994,21 +1997,21 @@ SCIP_RETCODE parseVariableArray(
    )
 {
    SCIP_VAR** vars;
-   char varname[FZN_BUFFERLEN]; 
+   char varname[FZN_BUFFERLEN];
    int v;
-   
+
    /* create variables and add them to the problem */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   
+
    for( v = 0; v < nvars; ++v )
    {
       (void) SCIPsnprintf(varname, FZN_BUFFERLEN, "%s[%d]", name, v + 1);
-      
+
       /* create variable */
       SCIP_CALL( createVariable(scip, fzninput, &vars[v], varname, lb, ub, type) );
    }
-   
-   if( !getNextToken(fzninput) )
+
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected semicolon");
    }
@@ -2018,10 +2021,10 @@ SCIP_RETCODE parseVariableArray(
       {
          char** assigns;
          int nassigns;
-         
+
          SCIP_CALL( SCIPallocBufferArray(scip, &assigns, nvars) );
          nassigns = 0;
-         
+
          SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nvars) );
 
          if(!hasError(fzninput) )
@@ -2041,18 +2044,18 @@ SCIP_RETCODE parseVariableArray(
          assert( isEndStatement(fzninput) );
          pushToken(fzninput);
       }
-      
+
       if( info != NULL )
       {
          SCIP_CALL( readerdataAddOutputvararray(scip, readerdata, name, vars, nvars, type, info) );
       }
-      
+
       /* add variable information to fzninput since this array name might be used later in the fzn file */
       SCIP_CALL( fzninputAddVararray(scip, fzninput, name, vars, nvars, type, info) );
    }
-    
+
    SCIPfreeBufferArray(scip, &vars);
-      
+
    return SCIP_OKAY;
 }
 
@@ -2071,19 +2074,19 @@ SCIP_RETCODE parseConstantArray(
    char constantname[FZN_BUFFERLEN];
    int nassigns;
    int c;
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '=') )
+
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '=') )
    {
       syntaxError(scip, fzninput, "expected token <=>");
       return SCIP_OKAY;
    }
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &assigns, nconstants) );
    SCIP_CALL( SCIPallocBufferArray(scip, &constants, nconstants) );
    nassigns = 0;
-   
+
    SCIP_CALL( parseArrayAssignment(scip, fzninput, &assigns, &nassigns, nconstants) );
-   
+
    if( !hasError(fzninput) )
    {
       for( c = 0; c < nconstants; ++c )
@@ -2091,14 +2094,14 @@ SCIP_RETCODE parseConstantArray(
          (void) SCIPsnprintf(constantname, FZN_BUFFERLEN, "%s[%d]", name, c + 1);
          SCIP_CALL( createConstantAssignment(scip, &constants[c], fzninput, constantname, type, assigns[c]) );
       }
-  
+
       /* add variable information to fzninput since this array name might be used later in the fzn file */
       SCIP_CALL( fzninputAddConstarray(scip, fzninput, name, constants, nconstants, type) );
    }
 
    SCIPfreeBufferArray(scip, &constants);
    freeStringBufferArray(scip, assigns, nassigns);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2111,7 +2114,7 @@ SCIP_RETCODE parsePredicate(
 {
    /* mark predicate expression as comment such that it gets skipped */
    fzninput->comment = TRUE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2140,10 +2143,10 @@ SCIP_RETCODE parseArray(
    nelements = -1;
 
    SCIPdebugMessage("parse array expression\n");
-   
+
    /* parse array dimension */
    parseArrayDimension(scip, fzninput, &nelements);
-   assert(hasError(fzninput) || nelements > 0);   
+   assert(hasError(fzninput) || nelements > 0);
 
    if( hasError(fzninput) )
       return SCIP_OKAY;
@@ -2153,23 +2156,23 @@ SCIP_RETCODE parseArray(
 
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
+
    /* parse array name */
    SCIP_CALL( parseName(scip, fzninput, name, &output, &info) );
    assert(!output || info != NULL);
-   
+
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
+
    SCIPdebugMessage("found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g] (output %u)\n",
       isvararray ? "variable" : "constant", name,
       type == FZN_BOOL ? "bool" : type == FZN_INT ? "integer" : "float", nelements, lb, ub, output);
-   
+
    if( isvararray )
       SCIP_CALL( parseVariableArray(scip, readerdata, fzninput, name, nelements, type, lb, ub, info) );
    else
       SCIP_CALL( parseConstantArray(scip, fzninput, name, nelements, type) );
-   
+
    freeDimensions(scip, &info);
 
    return SCIP_OKAY;
@@ -2190,24 +2193,24 @@ SCIP_RETCODE parseVariable(
    SCIP_Bool output;
    char assignment[FZN_BUFFERLEN];
    char name[FZN_BUFFERLEN];
-   
+
    assert(scip != NULL);
    assert(fzninput != NULL);
 
    SCIPdebugMessage("parse variable expression\n");
-   
+
    /* pares variable type and range */
    parseType(scip, fzninput, &type, &lb, &ub);
-   
+
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
+
    /* parse variable name without annotations */
    SCIP_CALL( parseName(scip, fzninput, name, &output, NULL) );
-   
+
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
+
    assert(type == FZN_BOOL || type == FZN_INT || type == FZN_FLOAT);
 
    /* create variable */
@@ -2218,8 +2221,8 @@ SCIP_RETCODE parseVariable(
    {
       SCIP_CALL( readerdataAddOutputvar(scip, readerdata, var, type) );
    }
-   
-   if( !getNextToken(fzninput) )
+
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected semicolon");
       return SCIP_OKAY;
@@ -2256,27 +2259,27 @@ SCIP_RETCODE parseConstant(
    assert(type == FZN_INT || type == FZN_FLOAT || type == FZN_BOOL);
 
    SCIPdebugMessage("parse constant expression\n");
-   
+
    /* parse name of the constant */
    SCIP_CALL( parseName(scip, fzninput, name, NULL, NULL) );
-   
+
    if( hasError(fzninput) )
       return SCIP_OKAY;
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '=') )
+
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '=') )
    {
       syntaxError(scip, fzninput, "expected token <=>");
       return SCIP_OKAY;
    }
-   
+
    /* the assignment has to be an other constant or a suitable value */
    flattenAssignment(scip, fzninput, assignment);
-   
+
    /* applies constant assignment and creates constant */
    SCIP_CALL( createConstantAssignment(scip, &constant, fzninput, name, type, assignment) );
 
    return SCIP_OKAY;
-} 
+}
 
 /** evaluates current token as constant */
 static
@@ -2289,19 +2292,19 @@ void parseValue(
 {
    if( isValue(assignment, value) )
       return;
-   
+
    /* if it is an identifier name, it has to belong to a constant or fixed variable */
    if( isIdentifier(assignment) )
    {
       FZNCONSTANT* constant;
-      
+
       /* identifier has to be one of a constant */
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
-      
+
       if( constant == NULL )
       {
          SCIP_VAR* var;
-         
+
          var = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) assignment);
 
          if( var == NULL )
@@ -2333,22 +2336,22 @@ SCIP_RETCODE parseConstantArrayAssignment(
 {
    int c;
 
-   assert(*nvals <= sizevals); 
+   assert(*nvals <= sizevals);
 
    /* check for next token */
-   if( !getNextToken(fzninput) )
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected constant array");
       return SCIP_OKAY;
    }
-   
+
    /* check if an array is given explicitly */
    if( isChar(fzninput->token, '[') )
    {
       char** elements;
       SCIP_Real value;
       int nelements;
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevals) );
       nelements = 0;
 
@@ -2356,7 +2359,7 @@ SCIP_RETCODE parseConstantArrayAssignment(
 
       /* push back '[' which closes the list */
       pushToken(fzninput);
-         
+
       /* pares array assignment */
       SCIP_CALL( parseArrayAssignment(scip, fzninput, &elements, &nelements, sizevals) );
 
@@ -2364,7 +2367,7 @@ SCIP_RETCODE parseConstantArrayAssignment(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + nelements) );
       }
-      
+
       for( c = 0; c < nelements && !hasError(fzninput); ++c )
       {
          parseValue(scip, fzninput, &value, elements[c]);
@@ -2373,7 +2376,7 @@ SCIP_RETCODE parseConstantArrayAssignment(
          (*vals)[(*nvals)] = value;
          (*nvals)++;
       }
-      
+
       freeStringBufferArray(scip, elements, nelements);
    }
    else
@@ -2381,11 +2384,11 @@ SCIP_RETCODE parseConstantArrayAssignment(
       /* array is not given explicitly; therefore, check constant array data base if the given constant array name was
        * parsed before
        */
-      
+
       CONSTARRAY* constarray;
-      
+
       constarray = findConstarray(scip, fzninput, fzninput->token);
-      
+
       if( constarray != NULL )
       {
          /* ensure variable array size */
@@ -2393,23 +2396,23 @@ SCIP_RETCODE parseConstantArrayAssignment(
          {
             SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + constarray->nconstants) );
          }
-         
-         for( c = 0; c < constarray->nconstants; ++c )  
+
+         for( c = 0; c < constarray->nconstants; ++c )
          {
             (*vals)[(*nvals)] = constarray->constants[c]->value;
             (*nvals)++;
-         } 
+         }
       }
       else
       {
          /* there is no constant array with the given name; therefore check the variable array data base if such an
           * array exist with fixed variables
           */
-         
+
          VARARRAY* vararray;
 
          vararray = findVararray(scip, fzninput, fzninput->token);
-         
+
          if( vararray == NULL )
          {
             syntaxError(scip, fzninput, "unknown constants array name");
@@ -2421,19 +2424,19 @@ SCIP_RETCODE parseConstantArrayAssignment(
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, vals, *nvals + vararray->nvars) );
             }
-            
-            for( c = 0; c < vararray->nvars; ++c )  
+
+            for( c = 0; c < vararray->nvars; ++c )
             {
                SCIP_VAR* var;
 
                var = vararray->vars[c];
                assert(var != NULL);
-               
+
                if( SCIPisEQ(scip, SCIPvarGetLbOriginal(var), SCIPvarGetUbOriginal(var)) )
                {
                   (*vals)[(*nvals)] = SCIPvarGetLbOriginal(var);
                   (*nvals)++;
-               } 
+               }
                else
                {
                   syntaxError(scip, fzninput, "variable array contains unfixed variable");
@@ -2443,7 +2446,7 @@ SCIP_RETCODE parseConstantArrayAssignment(
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2460,19 +2463,19 @@ SCIP_RETCODE parseVariableArrayAssignment(
    int v;
 
    assert(*nvars <= sizevars);
-   
+
    /* check for next token */
-   if( !getNextToken(fzninput) )
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected constant array");
       return SCIP_OKAY;
    }
-   
+
    if( isChar(fzninput->token, '[') )
    {
       char** elements;
       int nelements;
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, sizevars) );
       nelements = 0;
 
@@ -2485,18 +2488,18 @@ SCIP_RETCODE parseVariableArrayAssignment(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, *nvars + nelements) );
       }
-      
+
       for( v = 0; v < nelements; ++v )
       {
          (*vars)[(*nvars)] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, elements[v]);
-      
+
          if( (*vars)[(*nvars)] == NULL )
          {
             /* since the given element does not correspond to a variable name
              * it might be the case that it is a constant which can be seen as
-             * as a fixed variable 
+             * as a fixed variable
              */
-            
+
             FZNCONSTANT* constant;
             SCIP_Real value;
 
@@ -2506,23 +2509,23 @@ SCIP_RETCODE parseVariableArrayAssignment(
             {
                assert(constant->type == FZN_FLOAT);
                value = constant->value;
-            } 
+            }
             else if(!isValue(elements[v], &value) )
             {
                char* tmptoken;
-         
+
                tmptoken = fzninput->token;
                fzninput->token = elements[v];
                syntaxError(scip, fzninput, "expected variable name or constant");
-            
+
                fzninput->token = tmptoken;
                break;
             }
-         
+
             /* create a fixed variable */
             SCIP_CALL( createVariable(scip, fzninput, &(*vars)[*nvars], elements[v], value, value, FZN_FLOAT) );
          }
-      
+
          (*nvars)++;
       }
 
@@ -2531,9 +2534,9 @@ SCIP_RETCODE parseVariableArrayAssignment(
    else
    {
       VARARRAY* vararray;
-      
+
       vararray = findVararray(scip, fzninput, fzninput->token);
-      
+
       if( vararray != NULL )
       {
          assert(vararray != NULL);
@@ -2543,17 +2546,17 @@ SCIP_RETCODE parseVariableArrayAssignment(
          {
             SCIP_CALL( SCIPreallocBufferArray(scip, vars, *nvars + vararray->nvars) );
          }
-        
-         for( v = 0; v < vararray->nvars; ++v )  
+
+         for( v = 0; v < vararray->nvars; ++v )
          {
             (*vars)[(*nvars)] = vararray->vars[v];
             (*nvars)++;
-         } 
+         }
       }
       else
          syntaxError(scip, fzninput, "unknown variable array name");
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2563,18 +2566,18 @@ SCIP_RETCODE parseQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name                /**< name of constraint */
-   )   
+   )
 {
    char** elements;
    int nelements;
-      
+
    SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
    nelements = 0;
-      
+
    /* parse the list of three elements */
    SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
    assert(nelements == 3);
-      
+
    if( !hasError(fzninput) )
    {
       SCIP_VAR** vars;
@@ -2583,15 +2586,15 @@ SCIP_RETCODE parseQuadratic(
       int v;
 
       rhs = 0.0;
-         
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
-    
+
       for( v = 0; v < 3; ++v )
       {
          /* collect variable if constraint identifier is a variable */
          vars[v] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[v]);
-         
+
          /* parse the numeric value otherwise */
          if( vars[v] == NULL )
          {
@@ -2599,7 +2602,7 @@ SCIP_RETCODE parseQuadratic(
             assert(!hasError(fzninput));
          }
          else
-            vals[v] = SCIP_INVALID;                
+            vals[v] = SCIP_INVALID;
       }
 
       /* the first two identifiers are proper variables => the constraints is indeed quadratic */
@@ -2611,15 +2614,15 @@ SCIP_RETCODE parseQuadratic(
          /* we might have an additional linear term or just a constant */
          if( vars[2] != NULL )
          {
-            SCIP_Real linval;     
+            SCIP_Real linval;
             linval = -1.0;
-     
+
             SCIP_CALL( createQuadraticCons(scip, name, 1, &vars[2], &linval, 1, &vars[0], &vars[1], &quadval, rhs, rhs) );
          }
          else
          {
             rhs += vals[2];
-            SCIP_CALL( createQuadraticCons(scip, name, 0, NULL, NULL, 1, &vars[0], &vars[1], &quadval, rhs, rhs));      
+            SCIP_CALL( createQuadraticCons(scip, name, 0, NULL, NULL, 1, &vars[0], &vars[1], &quadval, rhs, rhs));
          }
       }
       else if( vars[0] != NULL || vars[1] != NULL )
@@ -2639,7 +2642,7 @@ SCIP_RETCODE parseQuadratic(
          /* the right hand side might be a variable or a constant */
          if( vars[2] != NULL )
          {
-            SCIPswapPointers((void**)&vars[1], (void**)&vars[2]); 
+            SCIPswapPointers((void**)&vars[1], (void**)&vars[2]);
             vals[1] = -1.0;
             nvars++;
          }
@@ -2648,7 +2651,7 @@ SCIP_RETCODE parseQuadratic(
             assert(vals[2] != SCIP_INVALID); /*lint !e777*/
             rhs += vals[2];
          }
-         
+
          SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
       }
       else
@@ -2657,11 +2660,11 @@ SCIP_RETCODE parseQuadratic(
          assert(vals[0] != SCIP_INVALID && vals[1] != SCIP_INVALID); /*lint !e777*/
 
          rhs = rhs - vals[0]*vals[1];
-       
+
          /* the right hand side might be a variable or a constant */
          if( vars[2] != NULL )
          {
-            SCIP_Real val;     
+            SCIP_Real val;
             val = -1.0;
             SCIP_CALL( createLinearCons(scip, name, 1, &vars[2], &val, rhs, rhs) );
          }
@@ -2669,15 +2672,15 @@ SCIP_RETCODE parseQuadratic(
          {
             assert(vals[2] != SCIP_INVALID); /*lint !e777*/
             rhs += vals[2];
-            SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs) );  
+            SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs) );
          }
       }
-      
+
       /* free buffer arrays */
       SCIPfreeBufferArray(scip, &vals);
       SCIPfreeBufferArray(scip, &vars);
    }
-  
+
    /* free elements array */
    freeStringBufferArray(scip, elements, nelements);
 
@@ -2691,9 +2694,9 @@ SCIP_RETCODE parseAggregation(
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< name of constraint */
    const char*           type                /**< linear constraint type */
-   )   
+   )
 {
-   /* here we take care of the three expression 
+   /* here we take care of the three expression
     *
     * - int_plus(x1,x2,x3)   -> x1 + x2 == x3
     * - int_minus(x1,x2,x3)  -> x1 - x2 == x3
@@ -2701,14 +2704,14 @@ SCIP_RETCODE parseAggregation(
     */
    char** elements;
    int nelements;
-      
+
    SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
    nelements = 0;
-      
+
    /* parse the list of three elements */
    SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
    assert(nelements == 3 || nelements == 2);
-      
+
    if( !hasError(fzninput) )
    {
       SCIP_VAR** vars;
@@ -2719,7 +2722,7 @@ SCIP_RETCODE parseAggregation(
 
       nvars = 0;
       rhs = 0.0;
-         
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
 
@@ -2737,7 +2740,7 @@ SCIP_RETCODE parseAggregation(
          vals[nvars] = 1.0;
          nvars++;
       }
-         
+
       /* parse second element */
       vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[1]);
       if( vars[nvars] == NULL )
@@ -2745,14 +2748,14 @@ SCIP_RETCODE parseAggregation(
          parseValue(scip, fzninput, &value, elements[1]);
          assert(!hasError(fzninput));
 
-         if( equalTokens(type, "minus") )
+         if( equalTokens(scip, type, "minus") )
             rhs += value;
          else
             rhs -= value;
       }
       else
       {
-         if( equalTokens(type, "minus") )
+         if( equalTokens(scip, type, "minus") )
          {
             /* in case of minus the second element get a -1.0 as coefficient */
             vals[nvars] = -1.0;
@@ -2763,7 +2766,7 @@ SCIP_RETCODE parseAggregation(
          nvars++;
       }
 
-      if( !equalTokens(type, "negate") )
+      if( !equalTokens(scip, type, "negate") )
       {
          /* parse third element in case of "minus" or "plus" */
          vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[2]);
@@ -2780,9 +2783,9 @@ SCIP_RETCODE parseAggregation(
             nvars++;
          }
       }
-         
+
       SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
-      
+
       /* free buffer arrays */
       SCIPfreeBufferArray(scip, &vals);
       SCIPfreeBufferArray(scip, &vars);
@@ -2801,7 +2804,7 @@ SCIP_RETCODE parseLinking(
    const char*           name,               /**< name of constraint */
    const char*           type,               /**< linear constraint type */
    SCIP_Real             sidevalue           /**< side value of constraint */
-   )   
+   )
 {
    char** names;
    SCIP_Real lhs;
@@ -2810,24 +2813,24 @@ SCIP_RETCODE parseLinking(
 
    nnames = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &names, 2) );
-   
+
    SCIP_CALL( parseList(scip, fzninput, &names, &nnames, 2) );
    assert(nnames == 2);
-   
+
    if( hasError(fzninput) )
       goto TERMINATE;
-   
+
    /* compute left and right side */
    computeLinearConsSides(scip, fzninput, type, sidevalue, &lhs, &rhs);
-   
+
    if( hasError(fzninput) )
       goto TERMINATE;
 
    SCIP_CALL( createLinking(scip, fzninput, name, names[0], names[1], lhs, rhs) );
-   
+
  TERMINATE:
    freeStringBufferArray(scip, names, nnames);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2837,15 +2840,15 @@ CREATE_CONSTRAINT(createCoercionOpCons)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
-   
+
    /* check if the function identifier name is array operation */
-   if( !equalTokens(fname, "int2float") && !equalTokens(fname, "bool2int") )
+   if( !equalTokens(scip, fname, "int2float") && !equalTokens(scip, fname, "bool2int") )
       return SCIP_OKAY;
-   
+
    SCIP_CALL( parseLinking(scip, fzninput, fname, "eq", 0.0) );
-   
+
    *created = TRUE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2857,12 +2860,12 @@ CREATE_CONSTRAINT(createSetOpCons)
    assert(fzninput != NULL);
 
    /* check if the function identifier name is array operation */
-   if( !equalTokens(ftokens[0], "set") )
+   if( !equalTokens(scip, ftokens[0], "set") )
       return SCIP_OKAY;
-   
+
    fzninput->valid = FALSE;
-   SCIPwarningMessage("set operation are not supported yet\n");
-   
+   SCIPwarningMessage(scip, "set operation are not supported yet\n");
+
    return SCIP_OKAY;
 }
 
@@ -2874,12 +2877,12 @@ CREATE_CONSTRAINT(createArrayOpCons)
    assert(fzninput != NULL);
 
    /* check if the function identifier name is array operation */
-   if( !equalTokens(ftokens[0], "array") )
+   if( !equalTokens(scip, ftokens[0], "array") )
       return SCIP_OKAY;
-   
+
    fzninput->valid = FALSE;
-   SCIPwarningMessage("array operation are not supported yet\n");
-   
+   SCIPwarningMessage(scip, "array operation are not supported yet\n");
+
    return SCIP_OKAY;
 }
 
@@ -2893,22 +2896,22 @@ CREATE_CONSTRAINT(createLogicalOpCons)
    /* check if the function identifier name is array operation */
    if(nftokens < 2)
       return SCIP_OKAY;
-   
-   if(equalTokens(ftokens[0], "bool") && nftokens == 2 )
+
+   if(equalTokens(scip, ftokens[0], "bool") && nftokens == 2 )
    {
       char** elements;
       int nelements;
-      
+
       /* the bool_eq constraint is processed in createComparisonOpCons() */
-      if( equalTokens(ftokens[1], "eq") || equalTokens(ftokens[1], "ge") || equalTokens(ftokens[1], "le")
-         || equalTokens(ftokens[1], "lt") || equalTokens(ftokens[1], "gt") )
+      if( equalTokens(scip, ftokens[1], "eq") || equalTokens(scip, ftokens[1], "ge") || equalTokens(scip, ftokens[1], "le")
+         || equalTokens(scip, ftokens[1], "lt") || equalTokens(scip, ftokens[1], "gt") )
          return SCIP_OKAY;
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
       nelements = 0;
-      
+
       SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
-      
+
       if( !hasError(fzninput) )
       {
          SCIP_CONS* cons;
@@ -2916,7 +2919,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          int v;
          int nvars;
 
-         if( equalTokens(ftokens[1], "ne") || equalTokens(ftokens[1], "not") )
+         if( equalTokens(scip, ftokens[1], "ne") || equalTokens(scip, ftokens[1], "not") )
             nvars = 2;
          else
             nvars = 3;
@@ -2927,69 +2930,69 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          for( v = 0; v < nvars; ++v )
          {
             vars[v] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[v]);
-            
+
             if( vars[v] == NULL )
             {
                syntaxError(scip, fzninput, "unknown variable identifier name");
                goto TERMINATE;
             }
-         }   
+         }
 
 
-         if( equalTokens(ftokens[1], "ne" ) || equalTokens(ftokens[1], "not") )
+         if( equalTokens(scip, ftokens[1], "ne" ) || equalTokens(scip, ftokens[1], "not") )
          {
             SCIP_Real vals[] = {1.0, 1.0};
 
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, 2, vars, vals, 1.0, 1.0, 
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, 2, vars, vals, 1.0, 1.0,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-           
-            *created = TRUE;
-         } 
-         else if( equalTokens(ftokens[1], "or" ) )
-         {
-            SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, vars[2], 2, vars, 
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
-           
+
             *created = TRUE;
          }
-         else if( equalTokens(ftokens[1], "and") )
+         else if( equalTokens(scip, ftokens[1], "or" ) )
          {
-            SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, vars[2], 2, vars, 
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
-            
+            SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, vars[2], 2, vars,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
             *created = TRUE;
          }
-         else if( equalTokens(ftokens[1], "xor") )
+         else if( equalTokens(scip, ftokens[1], "and") )
+         {
+            SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, vars[2], 2, vars,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            *created = TRUE;
+         }
+         else if( equalTokens(scip, ftokens[1], "xor") )
          {
             /* swap resultant to front */
-            SCIPswapPointers((void**)&vars[0], (void**)&vars[2]); 
+            SCIPswapPointers((void**)&vars[0], (void**)&vars[2]);
 
-            SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars, 
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
-            
+            SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
             *created = TRUE;
          }
          else
          {
             fzninput->valid = FALSE;
-            SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
+            SCIPwarningMessage(scip, "logical operation <%s> is not supported yet\n", fname);
             goto TERMINATE;
          }
-         
+
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-         
+
       TERMINATE:
          SCIPfreeBufferArray(scip, &vars);
       }
 
       /* free elements array */
       freeStringBufferArray(scip, elements, nelements);
-      
+
    }
-   else if(equalTokens(ftokens[1], "bool") && nftokens == 3 )
+   else if(equalTokens(scip, ftokens[1], "bool") && nftokens == 3 )
    {
       SCIP_CONS* cons;
       SCIP_VAR** vars;
@@ -2998,45 +3001,45 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       char** elements;
       int nelements;
       int size;
-         
-      if( !equalTokens(ftokens[2], "or" ) && !equalTokens(ftokens[2], "and" ) )
+
+      if( !equalTokens(scip, ftokens[2], "or" ) && !equalTokens(scip, ftokens[2], "and" ) )
       {
          fzninput->valid = FALSE;
-         SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
+         SCIPwarningMessage(scip, "logical operation <%s> is not supported yet\n", fname);
          return SCIP_OKAY;
       }
 
       size = 10;
       nvars = 0;
-         
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, 1) );
-      nelements = 0;     
-         
+      nelements = 0;
+
       SCIPdebugMessage("found and constraint <%s>\n", fname);
-         
+
       /* parse operand variable array */
-      SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
-         
+      SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
+
       /* check error and for the comma between the variable array and side value */
-      if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+      if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
       {
-         if( hasError(fzninput) )            
+         if( hasError(fzninput) )
             syntaxError(scip, fzninput, "unexpected error in fzn input");
          else
             syntaxError(scip, fzninput, "expected token <,>");
-            
+
          goto TERMINATE2;
       }
-         
+
       /* parse resultant variable array */
       SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 1) );
       resvar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
-         
+
       /* check error and for the comma between the variable array and side value */
       if( hasError(fzninput) || resvar == NULL )
       {
-         if( hasError(fzninput) )            
+         if( hasError(fzninput) )
             syntaxError(scip, fzninput, "unexpected error in fzn input");
          else
             syntaxError(scip, fzninput, "unknown variable identifier name");
@@ -3044,19 +3047,19 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       }
 
       /* create the constraint */
-      if( equalTokens(ftokens[2], "or" ) )
+      if( equalTokens(scip, ftokens[2], "or" ) )
       {
-         SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, resvar, nvars, vars, 
+         SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, resvar, nvars, vars,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       }
       else
-      {      
-         assert( equalTokens(ftokens[2], "and") );  
+      {
+         assert( equalTokens(scip, ftokens[2], "and") );
 
-         SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, resvar, nvars, vars, 
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+         SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, resvar, nvars, vars,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       }
-         
+
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       *created = TRUE;
 
@@ -3066,12 +3069,12 @@ CREATE_CONSTRAINT(createLogicalOpCons)
    TERMINATE2:
       /* free elements array */
       freeStringBufferArray(scip, elements, nelements);
-      SCIPfreeBufferArray(scip, &vars); 
+      SCIPfreeBufferArray(scip, &vars);
    }
-   else if( equalTokens(ftokens[1], "bool") )
+   else if( equalTokens(scip, ftokens[1], "bool") )
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
+      SCIPwarningMessage(scip, "logical operation <%s> is not supported yet\n", fname);
       return SCIP_OKAY;
    }
 
@@ -3090,20 +3093,20 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    assert(fzninput != NULL);
 
    /* check if the function name ends of "reif" (reified constraint) which SCIP does not support yet */
-   if( equalTokens(ftokens[nftokens - 1], "reif") )
+   if( equalTokens(scip, ftokens[nftokens - 1], "reif") )
    {
-      SCIPwarningMessage("reified constraints are not supported\n");
+      SCIPwarningMessage(scip, "reified constraints are not supported\n");
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
-   
-   /* the last token can be 
+
+   /* the last token can be
     * 'eq' -- equal
     * 'ne' -- not equal
     * 'lt' -- less than
     * 'gt' -- greater than
-    * 'le' -- less or equal than 
-    * 'ge' -- greater or equal than 
+    * 'le' -- less or equal than
+    * 'ge' -- greater or equal than
     *         => these are comparison constraints
     * 'plus'   -- addition
     * 'minus'  -- subtraction
@@ -3116,31 +3119,31 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       return SCIP_OKAY;
 
    /* check if any sets are involved in the constraint */
-   if( equalTokens(ftokens[0], "set") )
+   if( equalTokens(scip, ftokens[0], "set") )
    {
-      SCIPwarningMessage("constraints using sets are not supported\n");
+      SCIPwarningMessage(scip, "constraints using sets are not supported\n");
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
-   
+
    /* check if the constraint is a 'not equal' one */
-   if( equalTokens(ftokens[nftokens - 1], "ne") )
+   if( equalTokens(scip, ftokens[nftokens - 1], "ne") )
    {
-      SCIPwarningMessage("constraints with 'not equal' relation are not supported\n");
+      SCIPwarningMessage(scip, "constraints with 'not equal' relation are not supported\n");
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
 
    /* check if the constraint contains float variable and coefficients and '<' or '>' relation */
-   if( equalTokens(ftokens[0], "float") && 
-      (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "gt") ) )
+   if( equalTokens(scip, ftokens[0], "float") &&
+      (equalTokens(scip, ftokens[nftokens - 1], "lt") || equalTokens(scip, ftokens[nftokens - 1], "gt") ) )
    {
-      SCIPwarningMessage("constraints with '<' or '>' relation and continuous variables are not supported\n");
+      SCIPwarningMessage(scip, "constraints with '<' or '>' relation and continuous variables are not supported\n");
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
-   
-   if( equalTokens(ftokens[1], "lin") )
+
+   if( equalTokens(scip, ftokens[1], "lin") )
    {
       SCIP_VAR** vars;
       SCIP_Real* vals;
@@ -3150,7 +3153,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       int size;
 
       assert(nftokens == 3);
-      
+
       size = 10;
       nvars = 0;
       nvals = 0;
@@ -3158,66 +3161,66 @@ CREATE_CONSTRAINT(createComparisonOpCons)
 
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
-      
+
       SCIPdebugMessage("found linear constraint <%s>\n", fname);
-      
+
       /* pares coefficients array */
-      SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
+      SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );
 
       /* check error and for the comma between the coefficient and variable array */
-      if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+      if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
       {
-         if( !hasError(fzninput) )            
+         if( !hasError(fzninput) )
             syntaxError(scip, fzninput, "expected token <,>");
-         
+
          goto TERMINATE;
       }
-      
+
       /* pares variable array */
-      SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
-      
+      SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
+
       /* check error and for the comma between the variable array and side value */
-      if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+      if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
       {
-         if( !hasError(fzninput) )            
+         if( !hasError(fzninput) )
             syntaxError(scip, fzninput, "expected token <,>");
-         
+
          goto TERMINATE;
       }
 
       /* pares sidevalue */
       flattenAssignment(scip, fzninput, assignment);
       parseValue(scip, fzninput, &sidevalue, assignment);
-   
+
       if( !hasError(fzninput) )
       {
          assert(sidevalue != SCIP_INVALID); /*lint !e777*/
 
          /* compute left and right side */
          computeLinearConsSides(scip, fzninput, ftokens[2], sidevalue, &lhs, &rhs);
-         
+
          if( hasError(fzninput) )
             goto TERMINATE;
-         
+
          SCIP_CALL( createLinearCons(scip, fname, nvars, vars, vals, lhs, rhs) );
       }
-      
+
    TERMINATE:
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals);
    }
-   else if( equalTokens(ftokens[1], "minus") || equalTokens(ftokens[1], "plus") || equalTokens(ftokens[1], "negate") )
+   else if( equalTokens(scip, ftokens[1], "minus") || equalTokens(scip, ftokens[1], "plus") || equalTokens(scip, ftokens[1], "negate") )
    {
       assert(nftokens == 2);
       SCIP_CALL( parseAggregation(scip, fzninput, fname, ftokens[1]) );
    }
-   else if( equalTokens(ftokens[1], "eq") || equalTokens(ftokens[1], "le") || equalTokens(ftokens[1], "ge") 
-      || equalTokens(ftokens[1], "lt") || equalTokens(ftokens[1], "gt") )
+   else if( equalTokens(scip, ftokens[1], "eq") || equalTokens(scip, ftokens[1], "le") || equalTokens(scip, ftokens[1], "ge")
+      || equalTokens(scip, ftokens[1], "lt") || equalTokens(scip, ftokens[1], "gt") )
    {
       assert(nftokens == 2);
       SCIP_CALL( parseLinking(scip, fzninput, fname, ftokens[1], 0.0) );
    }
-   else if( equalTokens(ftokens[1], "times") )    
+   else if( equalTokens(scip, ftokens[1], "times") )
    {
       assert(nftokens == 2);
       SCIP_CALL( parseQuadratic(scip, fzninput, fname) );
@@ -3247,9 +3250,9 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    assert(fzninput != NULL);
 
    /* check if the function identifier name is array operation */
-   if( !equalTokens(ftokens[0], "all") || !equalTokens(ftokens[1], "different") )
+   if( !equalTokens(scip, ftokens[0], "all") || !equalTokens(scip, ftokens[1], "different") )
       return SCIP_OKAY;
-   
+
    size = 10;
    nvars = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
@@ -3257,13 +3260,13 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    SCIPdebugMessage("parse alldifferent expression\n");
 
    /* pares variable array */
-   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
 
 #ifdef ALLDIFFERENT
    /* create alldifferent constraint */
-   SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
-   
+   SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* add and release the constraint to the problem */
@@ -3272,12 +3275,12 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
 
    *created = TRUE;
 #endif
-   
+
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
-   
+
 /** creates an alldifferent constraint */
 static
 CREATE_CONSTRAINT(createCumulativeOpCons)
@@ -3299,11 +3302,11 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
    assert(scip != NULL);
    assert(fzninput != NULL);
-   
+
    /* check if the function identifier name is array operation */
-   if( !equalTokens(ftokens[0], "cumulative") )
+   if( !equalTokens(scip, ftokens[0], "cumulative") )
       return SCIP_OKAY;
-   
+
    size = 10;
    nvars = 0;
    ndurations = 0;
@@ -3314,31 +3317,31 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 
    /* pares start time variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
-   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
 
    /* check error and for the comma between the variable array and side value */
-   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
    {
-      if( !hasError(fzninput) )            
+      if( !hasError(fzninput) )
          syntaxError(scip, fzninput, "expected token <,>");
-      
+
       goto TERMINATE;
    }
 
    /* pares job duration array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
    SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &ndurations, size) );
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &durations, ndurations) );
    for( i = 0; i < ndurations; ++i )
       durations[i] = (int)vals[i];
-   
+
    /* check error and for the comma between the variable array and side value */
-   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
    {
-      if( !hasError(fzninput) )            
+      if( !hasError(fzninput) )
          syntaxError(scip, fzninput, "expected token <,>");
-      
+
       goto TERMINATE;
    }
 
@@ -3350,11 +3353,11 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
       demands[i] = (int)vals[i];
 
    /* check error and for the comma between the variable array and side value */
-   if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+   if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
    {
-      if( !hasError(fzninput) )            
+      if( !hasError(fzninput) )
          syntaxError(scip, fzninput, "expected token <,>");
-      
+
       goto TERMINATE;
    }
 
@@ -3364,20 +3367,20 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    assert(!hasError(fzninput));
 
    capacity = (int)val;
-   
+
    assert(nvars == ndurations);
    assert(nvars == ndemads);
 
    /* create cumulative constraint */
    SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, fname, nvars, vars, durations, demands, capacity,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
-   
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   
+
    assert(!hasError(fzninput));
    *created = TRUE;
 
@@ -3423,15 +3426,15 @@ SCIP_RETCODE parseConstraint(
    int ntokens;
    int i;
    int c;
-   
+
    assert(scip != NULL);
    assert(fzninput != NULL);
 
    SCIPdebugMessage("parse constraint expression\n");
-   
-   /* get next token already flatten */ 
+
+   /* get next token already flatten */
    flattenAssignment(scip, fzninput, name);
-   
+
    /* check if constraint identifier is a variable */
    var = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name);
 
@@ -3443,24 +3446,24 @@ SCIP_RETCODE parseConstraint(
       SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, 1.0, 1.0) );
       return SCIP_OKAY;
    }
-   
+
    /* check constraint identifier name */
    if( !isIdentifier(name) )
    {
       syntaxError(scip, fzninput, "expected constraint identifier name");
       return SCIP_OKAY;
    }
-   
+
    /* check if we have a opening parenthesis */
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
+   if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '(') )
    {
       syntaxError(scip, fzninput, "expected token <(>");
       return SCIP_OKAY;
    }
-    
+
    /* copy function name */
    (void) SCIPsnprintf(fname, FZN_BUFFERLEN, "%s", name);
-   
+
    /* truncate the function identifier name in separate tokens */
    token = SCIPstrtok(name, "_", &nexttoken);
    ntokens = 0;
@@ -3468,10 +3471,10 @@ SCIP_RETCODE parseConstraint(
    {
       if( ntokens == 4 )
          break;
-      
+
       SCIP_CALL( SCIPduplicateBufferArray(scip, &(tokens[ntokens]), token, (int) strlen(token) + 1) ); /*lint !e866*/
       ntokens++;
-      
+
       token = SCIPstrtok(NULL, "_", &nexttoken);
    }
 
@@ -3481,22 +3484,22 @@ SCIP_RETCODE parseConstraint(
       SCIPdebugPrintf("%s ", tokens[i]);
    }
    SCIPdebugPrintf("\n");
-   
+
    created = FALSE;
-   
+
    /* loop over all methods which can create a constraint */
    for( c = 0; c < nconstypes && !created && !hasError(fzninput); ++c )
    {
       SCIP_CALL( constypes[c](scip, fzninput, fname, tokens, ntokens, &created) );
    }
-   
+
    /* check if a constraint was created */
    if( !hasError(fzninput) && !created )
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage("constraint <%s> is not supported yet\n", fname);
+      SCIPwarningMessage(scip, "constraint <%s> is not supported yet\n", fname);
    }
-   
+
    /* free memory */
    for( i = ntokens - 1; i >= 0 ; --i )
    {
@@ -3504,9 +3507,9 @@ SCIP_RETCODE parseConstraint(
    }
 
    /* check for the closing parenthesis */
-   if( !hasError(fzninput) && ( !getNextToken(fzninput) || !isChar(fzninput->token, ')')) )
+   if( !hasError(fzninput) && ( !getNextToken(scip, fzninput) || !isChar(fzninput->token, ')')) )
       syntaxError(scip, fzninput, "expected token <)>");
-   
+
    return SCIP_OKAY;
 }
 
@@ -3521,46 +3524,46 @@ SCIP_RETCODE parseSolveItem(
    assert(fzninput != NULL);
 
    SCIPdebugMessage("parse solve item expression\n");
-   
-   if( !getNextToken(fzninput) )
+
+   if( !getNextToken(scip, fzninput) )
    {
       syntaxError(scip, fzninput, "expected solving specification");
       return SCIP_OKAY;
    }
 
    /* check for annotations */
-   if( equalTokens(fzninput->token, "::") )
+   if( equalTokens(scip, fzninput->token, "::") )
    {
       /* skip the annotation */
       do
       {
-         if( !getNextToken(fzninput) )
+         if( !getNextToken(scip, fzninput) )
             syntaxError(scip, fzninput, "expected more tokens");
       }
-      while( !equalTokens(fzninput->token, "satisfy") 
-         && !equalTokens(fzninput->token, "minimize") 
-         && !equalTokens(fzninput->token, "maximize") );
+      while( !equalTokens(scip, fzninput->token, "satisfy")
+         && !equalTokens(scip, fzninput->token, "minimize")
+         && !equalTokens(scip, fzninput->token, "maximize") );
    }
-   
-   if( equalTokens(fzninput->token, "satisfy") )
+
+   if( equalTokens(scip, fzninput->token, "satisfy") )
    {
       SCIPdebugMessage("detected a satisfiability problem\n");
    }
-   else 
+   else
    {
       SCIP_VAR* var;
       FZNCONSTANT* constant;
       char name[FZN_BUFFERLEN];
 
-      if( equalTokens(fzninput->token, "minimize") )
+      if( equalTokens(scip, fzninput->token, "minimize") )
       {
-         fzninput->objsense = SCIP_OBJSENSE_MINIMIZE; 
+         fzninput->objsense = SCIP_OBJSENSE_MINIMIZE;
          SCIPdebugMessage("detected a minimization problem\n");
       }
       else
       {
-         assert(equalTokens(fzninput->token, "maximize"));
-         fzninput->objsense = SCIP_OBJSENSE_MAXIMIZE; 
+         assert(equalTokens(scip, fzninput->token, "maximize"));
+         fzninput->objsense = SCIP_OBJSENSE_MAXIMIZE;
          SCIPdebugMessage("detected a maximization problem");
       }
 
@@ -3580,7 +3583,7 @@ SCIP_RETCODE parseSolveItem(
       {
          SCIPdebugMessage("optimizing a constant is equal to a satisfiability problem!\n");
       }
-      else if( equalTokens(name, "int_float_lin") )
+      else if( equalTokens(scip, name, "int_float_lin") )
       {
          SCIP_VAR** vars;
          SCIP_Real* vals;
@@ -3595,72 +3598,72 @@ SCIP_RETCODE parseSolveItem(
 
          SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
-         
+
          SCIPdebugMessage("found linear objective\n");
-         
-         if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
+
+         if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '(') )
          {
             syntaxError(scip, fzninput, "expected token <(>");
             goto TERMINATE;
          }
-         
+
          /* pares coefficients array for integer variables */
-         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
-      
+         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );
+
          /* check error and for the comma between the coefficient and variable array */
-         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+         if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
          {
-            if( !hasError(fzninput) )            
+            if( !hasError(fzninput) )
                syntaxError(scip, fzninput, "expected token <,>");
-            
+
             goto TERMINATE;
          }
-         
+
          /* pares coefficients array for continuous variables */
-         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, MAX(size, nvals)) );  
-         
+         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, MAX(size, nvals)) );
+
          /* check error and for the comma between the coefficient and variable array */
-         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+         if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
          {
-            if( !hasError(fzninput) )            
+            if( !hasError(fzninput) )
                syntaxError(scip, fzninput, "expected token <,>");
-            
+
             goto TERMINATE;
          }
 
          /* pares integer variable array */
-         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );
 
          /* check error and for the comma between the variable array and side value */
-         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+         if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ',') )
          {
-            if( !hasError(fzninput) )            
+            if( !hasError(fzninput) )
                syntaxError(scip, fzninput, "expected token <,>");
-            
+
             goto TERMINATE;
          }
 
          assert(nvars <= nvals);
-         
+
          /* pares continuous variable array */
-         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, MAX(size, nvars)) );  
+         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, MAX(size, nvars)) );
 
          /* check error and for the ')' */
-         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
+         if( hasError(fzninput) || !getNextToken(scip, fzninput) || !isChar(fzninput->token, ')') )
          {
-            if( !hasError(fzninput) )            
+            if( !hasError(fzninput) )
                syntaxError(scip, fzninput, "expected token <)>");
-            
+
             goto TERMINATE;
          }
-         
+
          assert( nvars == nvals );
-         
+
          for( v = 0; v < nvars; ++v )
          {
             SCIP_CALL(SCIPchgVarObj(scip, vars[v], vals[v]) );
          }
-         
+
       TERMINATE:
          SCIPfreeBufferArray(scip, &vars);
          SCIPfreeBufferArray(scip, &vals);
@@ -3670,7 +3673,7 @@ SCIP_RETCODE parseSolveItem(
          syntaxError(scip, fzninput, "unknown identifier expression for a objective function");
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3698,7 +3701,7 @@ SCIP_RETCODE readFZNFile(
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   
+
    /* create two auxiliary variable for true and false values */
    SCIP_CALL( createVariable(scip, fzninput, NULL, "true", 1.0, 1.0, FZN_BOOL) );
    SCIP_CALL( createVariable(scip, fzninput, NULL, "false", 0.0, 0.0, FZN_BOOL) );
@@ -3707,117 +3710,117 @@ SCIP_RETCODE readFZNFile(
    while( !SCIPfeof( fzninput->file ) && !hasError(fzninput) )
    {
       /* read the first token (keyword) of a new statement */
-      if( getNextToken(fzninput) )
-      {  
-         if( equalTokens(fzninput->token, "predicate") )
+      if( getNextToken(scip, fzninput) )
+      {
+         if( equalTokens(scip, fzninput->token, "predicate") )
          {
             /* parse array expression containing constants or variables */
             SCIP_CALL( parsePredicate(scip, fzninput) );
          }
-         else if( equalTokens(fzninput->token, "array") )
+         else if( equalTokens(scip, fzninput->token, "array") )
          {
             /* parse array expression containing constants or variables */
             SCIP_CALL( parseArray(scip, readerdata, fzninput) );
          }
-         else if( equalTokens(fzninput->token, "constraint") )
+         else if( equalTokens(scip, fzninput->token, "constraint") )
          {
             /* parse a constraint */
             SCIP_CALL( parseConstraint(scip, fzninput) );
          }
-         else if( equalTokens(fzninput->token, "int") )
+         else if( equalTokens(scip, fzninput->token, "int") )
          {
             /* parse an integer constant */
             SCIP_CALL( parseConstant(scip, fzninput, FZN_INT) );
          }
-         else if( equalTokens(fzninput->token, "float") )
+         else if( equalTokens(scip, fzninput->token, "float") )
          {
             /* parse a float constant */
             SCIP_CALL( parseConstant(scip, fzninput, FZN_FLOAT) );
          }
-         else if( equalTokens(fzninput->token, "bool") )
+         else if( equalTokens(scip, fzninput->token, "bool") )
          {
             /* parse a bool constant */
             SCIP_CALL( parseConstant(scip, fzninput, FZN_BOOL) );
          }
-         else if( equalTokens(fzninput->token, "set") )
+         else if( equalTokens(scip, fzninput->token, "set") )
          {
             /* deal with sets */
-            SCIPwarningMessage("sets are not supported yet\n");
+            SCIPwarningMessage(scip, "sets are not supported yet\n");
             fzninput->valid = FALSE;
             break;
          }
-         else if( equalTokens(fzninput->token, "solve") )
+         else if( equalTokens(scip, fzninput->token, "solve") )
          {
             /* parse solve item (objective sense and objective function) */
             SCIP_CALL( parseSolveItem(scip, fzninput) );
          }
-         else if( equalTokens(fzninput->token, "var") )
+         else if( equalTokens(scip, fzninput->token, "var") )
          {
             /* parse variables */
             SCIP_CALL( parseVariable(scip, readerdata, fzninput) );
          }
-         else if( equalTokens(fzninput->token, "output") )
+         else if( equalTokens(scip, fzninput->token, "output") )
          {
             /* the output section is the last section in the flatzinc model and can be skipped */
             SCIPdebugMessage("skip output section\n");
             break;
          }
-         else 
+         else
          {
             FZNNUMBERTYPE type;
             SCIP_Real lb;
             SCIP_Real ub;
-            
+
             /* check if the new statement starts with a range expression
              * which indicates a constant; therefore, push back the current token
              * since it belongs to the range expression */
             pushToken(fzninput);
-            
+
             /* parse range to detect constant type */
             parseRange(scip, fzninput, &type, &lb, &ub);
-            
+
             /* parse the remaining constant statement */
             SCIP_CALL( parseConstant(scip, fzninput, type) );
 
             if( hasError(fzninput) )
             {
-               SCIPwarningMessage("unknown keyword <%s> skip statement\n", fzninput->token);
+               SCIPwarningMessage(scip, "unknown keyword <%s> skip statement\n", fzninput->token);
                SCIPABORT();
                return SCIP_OKAY;  /*lint !e527*/
             }
-         }        
-         
+         }
+
          if( hasError(fzninput) )
             break;
-         
+
          /* if the current statement got marked as comment continue with the next line */
          if( fzninput->comment )
             continue;
-         
+
          /* each statement should be closed with a semicolon */
-         if( !getNextToken(fzninput) )
+         if( !getNextToken(scip, fzninput) )
             syntaxError(scip, fzninput, "expected semicolon");
 
          /* check for annotations */
-         if( equalTokens(fzninput->token, "::") )
+         if( equalTokens(scip, fzninput->token, "::") )
          {
             /* skip the annotation */
             do
             {
-               if( !getNextToken(fzninput) )
+               if( !getNextToken(scip, fzninput) )
                   syntaxError(scip, fzninput, "expected more tokens");
             }
             while( !isEndStatement(fzninput) );
          }
-            
-         if( !isEndStatement(fzninput) ) 
+
+         if( !isEndStatement(fzninput) )
             syntaxError(scip, fzninput, "expected semicolon");
       }
    }
-   
+
    /* close file */
    SCIPfclose(fzninput->file);
-   
+
    if( hasError(fzninput) )
    {
       SCIP_CALL( SCIPfreeProb(scip) );
@@ -3829,7 +3832,7 @@ SCIP_RETCODE readFZNFile(
    {
       SCIP_CALL( SCIPsetObjsense(scip, fzninput->objsense) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3850,7 +3853,7 @@ SCIP_RETCODE getActiveVariables(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   int requiredsize;                         /* number of active variables */ 
+   int requiredsize;                         /* number of active variables */
    int v;
 
    assert( scip != NULL );
@@ -3868,7 +3871,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -3879,7 +3882,7 @@ SCIP_RETCODE getActiveVariables(
          assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
       }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3894,11 +3897,11 @@ void writeBuffer(
 {
    assert( scip != NULL );
    assert( buffer != NULL );
-   
+
    if( bufferpos > 0 )
    {
       buffer[bufferpos] = '\0';
-      
+
       SCIPinfoMessage(scip, file, "%s", buffer);
    }
 }
@@ -3920,16 +3923,16 @@ SCIP_RETCODE appendBuffer(
    assert( bufferlen != NULL );
    assert( bufferpos != NULL );
    assert( extension != NULL );
-   
+
    /* avoid overflow by reallocation */
-   newpos = (*bufferpos) + (int)strlen(extension); 
+   newpos = (*bufferpos) + (int)strlen(extension);
    if( newpos >= (*bufferlen) )
-   { 
+   {
       *bufferlen = MAX( newpos, 2*(*bufferlen) );
 
       SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
    }
-   
+
    /* append extension to linebuffer */
    (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)strlen(extension));
    *bufferpos = newpos;
@@ -3938,18 +3941,18 @@ SCIP_RETCODE appendBuffer(
 }
 
 /* Writes a real value to a string with full precision, if fractional and adds a ".0" if integral */
-static 
+static
 void flattenFloat(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val,                /**< value to flatten */
    char*                 buffer              /**< string buffer to print in */
-   ) 
+   )
 {
    if( SCIPisIntegral(scip, val) )
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f", SCIPround(scip, val));
    else
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%+.15g", val);
- 
+
 }
 
 /* print row in FZN format to file stream */
@@ -3972,7 +3975,7 @@ SCIP_RETCODE printRow(
 
    assert( scip != NULL );
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
-  
+
    /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),"constraint ") );
    if( hasfloats )
@@ -3996,7 +3999,7 @@ SCIP_RETCODE printRow(
 
    /* print last coefficient */
    if( nvars > 0 )
-   { 
+   {
       if( hasfloats )
       {
          flattenFloat(scip, vals[nvars-1], buffy);
@@ -4006,16 +4009,16 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f", vals[nvars-1]);
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
-   }   
+   }
 
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], [") );
-   
+
    /* print all variables but the last one */
    for( v = 0; v < nvars-1; ++v )
    {
       var = vars[v];
       assert( var != NULL );
-   
+
       if( hasfloats )
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), SCIPvarGetProbindex(var) < fznoutput->ndiscretevars ? "_float" : "");
       else
@@ -4025,22 +4028,22 @@ SCIP_RETCODE printRow(
 
    /* print last variable */
    if( nvars > 0 )
-   { 
+   {
       if( hasfloats )
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]), 
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
             SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
-   
+
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], ") );
 
    /* print right hand side */
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
-   
+
    if( hasfloats )
    {
       flattenFloat(scip, rhs, buffy);
@@ -4049,7 +4052,7 @@ SCIP_RETCODE printRow(
    else
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f);\n",rhs);
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
-    
+
    return SCIP_OKAY;
 }
 
@@ -4064,7 +4067,7 @@ SCIP_RETCODE printLinearCons(
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */ 
+   SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */
    )
 {
    SCIP_VAR** activevars;                    /* active problem variables of a constraint */
@@ -4076,7 +4079,7 @@ SCIP_RETCODE printLinearCons(
 
    char buffer[FZN_BUFFERLEN];
    SCIP_Bool hasfloats;
-   
+
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
    assert( fznoutput != NULL );
@@ -4084,7 +4087,7 @@ SCIP_RETCODE printLinearCons(
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY;
-   
+
    /* duplicate variable and value array */
    nactivevars = nvars;
    hasfloats = FALSE;
@@ -4094,18 +4097,18 @@ SCIP_RETCODE printLinearCons(
    if( vars != NULL )
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   }   
-   
+   }
+
    if( vals != NULL )
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
-      
+
       for( v = 0; v < nactivevars; ++v )
          activevals[v] = 1.0;
    }
-   
+
    /* retransform given variables to active variables */
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
 
@@ -4124,12 +4127,12 @@ SCIP_RETCODE printLinearCons(
          SCIP_VAR* var;
 
          assert(activevars != 0);
-         var = activevars[v];         
-            
+         var = activevars[v];
+
          hasfloats = hasfloats || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY &&  SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER);
          hasfloats = hasfloats || !SCIPisIntegral(scip, activevals[v]);
       }
-    
+
       /* If the constraint has to be written as float type, all discrete variables need to have a float counterpart */
       if( hasfloats )
       {
@@ -4139,7 +4142,7 @@ SCIP_RETCODE printLinearCons(
             int idx;
 
             assert(activevars != 0);
-            var = activevars[v];         
+            var = activevars[v];
             idx = SCIPvarGetProbindex(var);
             assert( idx >= 0);
 
@@ -4147,7 +4150,7 @@ SCIP_RETCODE printLinearCons(
             if( idx < fznoutput->ndiscretevars && !fznoutput->varhasfloat[idx] )
             {
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-            
+
                (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
                SCIP_CALL( appendBuffer(scip, &(fznoutput->varbuffer), &(fznoutput->varbufferlen), &(fznoutput->varbufferpos),buffer) );
 
@@ -4160,7 +4163,7 @@ SCIP_RETCODE printLinearCons(
       }
    }
 
-   
+
    if( SCIPisEQ(scip, lhs, rhs) )
    {
       assert( !SCIPisInfinity(scip, rhs) );
@@ -4169,25 +4172,25 @@ SCIP_RETCODE printLinearCons(
       SCIP_CALL( printRow(scip, fznoutput, "eq", activevars, activevals, nactivevars, rhs - activeconstant, hasfloats) );
    }
    else
-   { 
+   {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
          SCIP_CALL( printRow(scip, fznoutput, "ge", activevars, activevals, nactivevars, lhs - activeconstant, hasfloats) );
       }
-      
+
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printRow(scip, fznoutput, "le", activevars, activevals, nactivevars, rhs - activeconstant, hasfloats) );
       }
    }
-   
+
    /* free buffer arrays */
    if( activevars != NULL )
       SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
-   
+
    return SCIP_OKAY;
 }
 
@@ -4227,7 +4230,7 @@ SCIP_RETCODE writeFzn(
    int* floatobjvars;                     /* discrete variables which have a fractional objective coefficient */
    int* intobjvars;                       /* discrete variables which have an integral objective coefficient */
 
-   SCIP_Real lb;                          /* lower bound of some variable */   
+   SCIP_Real lb;                          /* lower bound of some variable */
    SCIP_Real ub;                          /* upper bound of some variable */
 
    int nboundedvars;                      /* number of variables which are bounded to exactly one side */
@@ -4241,22 +4244,22 @@ SCIP_RETCODE writeFzn(
    char varname[SCIP_MAXSTRLEN];          /* buffer for storing variable names */
    char buffer[FZN_BUFFERLEN];            /* buffer for storing auxiliary variables and constraints */
    char buffy[FZN_BUFFERLEN];
-        
+
    assert( scip != NULL );
-   
+
    /* print problem statistics as comment to file */
    SCIPinfoMessage(scip, file, "%% SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "%% Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "%% Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "%% Constraints      : %d\n", nconss);
-      
+
    SCIP_CALL( SCIPallocBufferArray(scip, &boundedvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
    nboundedvars = 0;
 
    if( nvars > 0 )
-      SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Problem variables %%%%%%%%%%%%\n");   
+      SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Problem variables %%%%%%%%%%%%\n");
 
    /* write all (active) problem variables */
    for( v = 0; v < nvars; v++ )
@@ -4264,7 +4267,7 @@ SCIP_RETCODE writeFzn(
       var = vars[v];
       assert( var != NULL );
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
-     
+
       if( transformed )
       {
          /* in case the transformed is written only local bounds are posted which are valid in the current node */
@@ -4301,14 +4304,14 @@ SCIP_RETCODE writeFzn(
          {
             /* Real valued bounds have to be made type conform */
             if( fixed )
-            { 
+            {
                flattenFloat(scip, lb, buffy);
                SCIPinfoMessage(scip, file, "var float: %s = %s;\n", varname, buffy);
             }
             else
             {
                char buffy2[FZN_BUFFERLEN];
-  
+
                flattenFloat(scip, lb, buffy);
                flattenFloat(scip, ub, buffy2);
                SCIPinfoMessage(scip, file,  "var %s..%s: %s;\n", buffy, buffy2, varname);
@@ -4323,17 +4326,17 @@ SCIP_RETCODE writeFzn(
          /* declare the variable without any bound */
          if( v < ndiscretevars )
             SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
-         else 
+         else
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
-           
+
          /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
-         if( SCIPisInfinity(scip, ub) ) 
+         if( SCIPisInfinity(scip, ub) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
             nboundedvars++;
          }
-         if( SCIPisInfinity(scip, -lb) ) 
+         if( SCIPisInfinity(scip, -lb) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
@@ -4343,11 +4346,11 @@ SCIP_RETCODE writeFzn(
    }
 
    /* set up the datastructures for the auxiliary int2float variables, the casting constraints and the problem constraints */
-   fznoutput.ndiscretevars = ndiscretevars; 
+   fznoutput.ndiscretevars = ndiscretevars;
    fznoutput.varbufferpos = 0;
    fznoutput.consbufferpos = 0;
    fznoutput.castbufferpos = 0;
-   
+
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varhasfloat, ndiscretevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varbuffer, FZN_BUFFERLEN) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.castbuffer, FZN_BUFFERLEN) );
@@ -4355,7 +4358,7 @@ SCIP_RETCODE writeFzn(
    fznoutput.consbufferlen = FZN_BUFFERLEN;
    fznoutput.varbufferlen = FZN_BUFFERLEN;
    fznoutput.castbufferlen = FZN_BUFFERLEN;
-   
+
    for( v = 0; v < ndiscretevars; v++ )
       fznoutput.varhasfloat[v] = FALSE;
    fznoutput.varbuffer[0] = '\0';
@@ -4367,10 +4370,10 @@ SCIP_RETCODE writeFzn(
    {
       cons = conss[c];
       assert( cons != NULL);
-      
+
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
       assert(!transformed || SCIPconsIsEnabled(cons));
-      
+
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
 
@@ -4378,7 +4381,7 @@ SCIP_RETCODE writeFzn(
       assert( transformed == SCIPconsIsTransformed(cons) );
 
       /* By now, only linear, setppc, logicor, knapsack, and varbound constraints can be written.
-       * Since they are all linearizable, a linear representation of them is written. 
+       * Since they are all linearizable, a linear representation of them is written.
        */
       if( strcmp(conshdlrname, "linear") == 0 )
       {
@@ -4427,7 +4430,7 @@ SCIP_RETCODE writeFzn(
          for( v = 0; v < nconsvars; ++v )
             consvals[v] = weights[v];
 
-         SCIP_CALL( printLinearCons(scip, &fznoutput, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
+         SCIP_CALL( printLinearCons(scip, &fznoutput, consvars, consvals, nconsvars, -SCIPinfinity(scip),
                (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed, FALSE) );
 
          SCIPfreeBufferArray(scip, &consvals);
@@ -4454,12 +4457,12 @@ SCIP_RETCODE writeFzn(
       else if(  strcmp(conshdlrname, "cumulative") == 0 )
       {
          int* intvals;
-         
+
          consvars = SCIPgetVarsCumulative(scip, cons);
          nconsvars = SCIPgetNVarsCumulative(scip, cons);
-         
+
          SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "cumulative([") );
-         
+
          for( v = 0; v < nconsvars; ++v )
          {
             if( v < nconsvars - 1)
@@ -4471,9 +4474,9 @@ SCIP_RETCODE writeFzn(
          }
 
          SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "], [") );
-         
+
          intvals = SCIPgetDurationsCumulative(scip, cons);
-         
+
          for( v = 0; v < nconsvars; ++v )
          {
             if( v < nconsvars - 1)
@@ -4483,11 +4486,11 @@ SCIP_RETCODE writeFzn(
 
             SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), buffy) );
          }
-         
+
          SCIP_CALL( appendBuffer(scip, &(fznoutput.consbuffer), &(fznoutput.consbufferlen), &(fznoutput.consbufferpos), "], [") );
 
          intvals = SCIPgetDemandsCumulative(scip, cons);
-         
+
          for( v = 0; v < nconsvars; ++v )
          {
             if( v < nconsvars - 1)
@@ -4503,7 +4506,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> cannot print flatzinc format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print flatzinc format\n", conshdlrname );
       }
    }
 
@@ -4536,7 +4539,7 @@ SCIP_RETCODE writeFzn(
             if( v < ndiscretevars && !fznoutput.varhasfloat[v] )
             {
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-            
+
                (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
                SCIP_CALL( appendBuffer(scip, &(fznoutput.varbuffer), &(fznoutput.varbufferlen), &(fznoutput.varbufferpos),buffer) );
 
@@ -4565,7 +4568,7 @@ SCIP_RETCODE writeFzn(
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Variable conversions %%%%%%%%%%%%\n");
       writeBuffer(scip, file, fznoutput.castbuffer, fznoutput.castbufferpos );
    }
-   
+
    if( nboundedvars > 0 )
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Variable bounds %%%%%%%%%%%%\n");
 
@@ -4573,7 +4576,7 @@ SCIP_RETCODE writeFzn(
    for( v = 0; v < nboundedvars; v++ )
    {
       var = vars[boundedvars[v]];
-       
+
       if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
       {
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
@@ -4600,7 +4603,7 @@ SCIP_RETCODE writeFzn(
             assert( boundtypes[v] == SCIP_BOUNDTYPE_UPPER );
             flattenFloat(scip, transformed ? SCIPvarGetUbLocal(var) : SCIPvarGetUbOriginal(var), buffy);
             SCIPinfoMessage(scip, file,"constraint float_le(%s, %s);\n",SCIPvarGetName(var), buffy);
-         } 
+         }
       }
    }
 
@@ -4612,12 +4615,12 @@ SCIP_RETCODE writeFzn(
    }
 
    SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Objective function %%%%%%%%%%%%\n");
-   
+
    /* If there is at least one variable in the objective function write down the optimization problem, else declare it to be a satisfiability problem */
    if( nintobjvars > 0 || nfloatobjvars > 0 )
-   { 
+   {
       SCIPinfoMessage(scip, file, "solve %s int_float_lin([", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize" );
-     
+
       /* first array: coefficients (in float representation) of discrete variables with integral objective coefficient */
       for( v = 0; v < nintobjvars; v++ )
       {
@@ -4638,7 +4641,7 @@ SCIP_RETCODE writeFzn(
          SCIP_Real obj;
          obj = objscale*SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
-         assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS 
+         assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
             || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_IMPLINT);
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nfloatobjvars-1 ? ", " : "" );
       }
@@ -4655,11 +4658,11 @@ SCIP_RETCODE writeFzn(
       for( v = 0; v < nintobjvars; v++ )
          SCIPinfoMessage(scip, file, "%s%s", SCIPvarGetName(vars[intobjvars[v]]), v < nintobjvars-1 ? ", " : "" );
 
-      /* fourth array: all other variables with nonzero objective coefficient */ 
+      /* fourth array: all other variables with nonzero objective coefficient */
       SCIPinfoMessage(scip, file, "], [");
       for( v = 0; v < nfloatobjvars; v++ )
          SCIPinfoMessage(scip, file, "%s%s%s", SCIPvarGetName(vars[floatobjvars[v]]), floatobjvars[v] < ndiscretevars ? "_float" : "", v < nfloatobjvars-1 ? ", " : "" );
-      
+
       /* potentially add a 1.0 for the objective offset */
       if( !SCIPisZero(scip, objoffset) )
          SCIPinfoMessage(scip, file, "%s%.1f", nfloatobjvars == 0 ? "" : ", ", 1.0 );
@@ -4668,15 +4671,15 @@ SCIP_RETCODE writeFzn(
    else
       SCIPinfoMessage(scip, file, "solve satisfy;\n");
 
-   /* free all memory */   
+   /* free all memory */
    SCIPfreeBufferArray(scip, &fznoutput.castbuffer);
    SCIPfreeBufferArray(scip, &fznoutput.consbuffer);
    SCIPfreeBufferArray(scip, &fznoutput.varbuffer);
-   
+
    SCIPfreeBufferArray(scip, &boundtypes);
    SCIPfreeBufferArray(scip, &boundedvars);
    SCIPfreeBufferArray(scip, &floatobjvars);
-   SCIPfreeBufferArray(scip, &intobjvars);  
+   SCIPfreeBufferArray(scip, &intobjvars);
    SCIPfreeBufferArray(scip, &fznoutput.varhasfloat);
 
    *result = SCIP_SUCCESS;
@@ -4697,7 +4700,7 @@ SCIP_DECL_READERCOPY(readerCopyFzn)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -4711,18 +4714,18 @@ SCIP_DECL_READERFREE(readerFreeFzn)
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   
+
    /* free all variable array elements */
    for( v = 0; v < readerdata->nvararrays; ++v )
    {
       freeVararray(scip, &readerdata->vararrays[v]);
    }
-   
+
    SCIPfreeMemoryArrayNull(scip, &readerdata->vararrays);
-   
+
    /* free reader data */
    SCIPfreeMemory(scip, &readerdata);
-   
+
    return SCIP_OKAY;
 }
 
@@ -4761,10 +4764,10 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.constarrays = NULL;
    fzninput.nconstarrays = 0;
    fzninput.constarrayssize = 0;
-   
+
    SCIP_CALL( SCIPhashtableCreate(&fzninput.varHashtable, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
          hashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
-   
+
    SCIP_CALL( SCIPhashtableCreate(&fzninput.constantHashtable, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
          hashGetKeyConstant, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.constants, 10) );
@@ -4774,7 +4777,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    /* read the file */
    SCIP_CALL( readFZNFile(scip, SCIPreaderGetData(reader), &fzninput, filename) );
-   
+
    /* free dynamically allocated memory */
    SCIPfreeBufferArrayNull(scip, &fzninput.token);
    for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
@@ -4843,7 +4846,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          legal = isIdentifier(varname);
          if( !legal )
          {
-            SCIPwarningMessage("The name of variable <%d>: \"%s\" is not conform to the fzn standard.\n", i, varname);
+            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" is not conform to the fzn standard.\n", i, varname);
             break;
          }
 
@@ -4851,11 +4854,11 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
             legal = (strncmp(&varname[length-6],"_float",6) != 0);
          if( !legal )
          {
-            SCIPwarningMessage("The name of variable <%d>: \"%s\" ends with \"_float\" which is not supported.\n", i, varname);
+            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" ends with \"_float\" which is not supported.\n", i, varname);
             break;
          }
       }
-      
+
       /* If there is at least one name, which is not conform, use generic names */
       if( legal )
       {
@@ -4864,18 +4867,18 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
       }
       else if( transformed )
       {
-         SCIPwarningMessage("Write transformed problem with generic variable names.\n");
+         SCIPwarningMessage(scip, "Write transformed problem with generic variable names.\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "fzn", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("Write original problem with generic variable names.\n");
+         SCIPwarningMessage(scip, "Write original problem with generic variable names.\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "fzn", TRUE) );
       }
    }
 
    *result = SCIP_SUCCESS;
-   
+
    return SCIP_OKAY;
 }
 
@@ -4889,13 +4892,13 @@ SCIP_RETCODE SCIPincludeReaderFzn(
    )
 {
    SCIP_READERDATA* readerdata;
-   
+
    /* create fzn reader data */
    SCIP_CALL( readerdataCreate(scip, &readerdata) );
 
    /* include fzn reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFzn, readerFreeFzn, readerReadFzn, readerWriteFzn, 
+         readerCopyFzn, readerFreeFzn, readerReadFzn, readerWriteFzn,
          readerdata) );
 
    return SCIP_OKAY;
@@ -4926,10 +4929,10 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   
+
    vararrays = readerdata->vararrays;
    nvararrays = readerdata->nvararrays;
-   
+
    /* sort variable arrays */
    SCIPsortPtr((void**)vararrays, vararraysComp, nvararrays);
 
@@ -4953,30 +4956,30 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
       }
       else
       {
-            
+
          SCIPinfoMessage(scip, file, "%s = array%dd(", vararray->name, info->ndims);
 
          for( v = 0; v < info->ndims; ++v )
          {
             SCIPinfoMessage(scip, file, "%d..%d, ", info->lbs[v], info->ubs[v]);
          }
-         
+
          SCIPinfoMessage(scip, file, "[");
-            
+
          for( v = 0; v < nvars; ++v )
          {
             if( v > 0)
                SCIPinfoMessage(scip, file, ", ");
-            
+
             solvalue = SCIPgetSolVal(scip, sol, vars[v]);
             printValue(scip, file, solvalue, type);
          }
-            
+
          SCIPinfoMessage(scip, file, "]);\n");
       }
    }
-      
+
    SCIPinfoMessage(scip, file, "----------\n");
-   
+
    return SCIP_OKAY;
 }

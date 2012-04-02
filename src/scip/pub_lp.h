@@ -48,12 +48,6 @@ extern "C" {
  * Column methods
  */
 
-/** output column to file stream */
-extern
-void SCIPcolPrint(
-   SCIP_COL*             col,                /**< LP column */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
 
 /** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
@@ -289,13 +283,6 @@ SCIP_Real SCIProwGetOrthogonality(
    SCIP_ROW*             row1,               /**< first LP row */
    SCIP_ROW*             row2,               /**< second LP row */
    char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
-   );
-
-/** output row to file stream */
-extern
-void SCIProwPrint(
-   SCIP_ROW*             row,                /**< LP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede

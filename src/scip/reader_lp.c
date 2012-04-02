@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Stefan Heinz
  * @author Stefan Vigerske
+ * @author Lars Schewe
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -104,8 +105,6 @@ struct LpInput
 };
 typedef struct LpInput LPINPUT;
 
-static const char delimchars[] = " \f\n\r\t\v";
-static const char tokenchars[] = "-+:<>=[]*^";
 static const char commentchars[] = "\\";
 
 
@@ -159,7 +158,19 @@ SCIP_Bool isDelimChar(
    char                  c                   /**< input character */
    )
 {
-   return (c == '\0') || (strchr(delimchars, c) != NULL);
+   switch (c)
+   {
+   case ' ':
+   case '\f':
+   case '\n':
+   case '\r':
+   case '\t':
+   case '\v':
+   case '\0':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the given character is a single token */
@@ -168,7 +179,22 @@ SCIP_Bool isTokenChar(
    char                  c                   /**< input character */
    )
 {
-   return (strchr(tokenchars, c) != NULL);
+   switch (c)
+   {
+   case '-':
+   case '+':
+   case ':':
+   case '<':
+   case '>':
+   case '=':
+   case '[':
+   case ']':
+   case '*':
+   case '^':
+      return TRUE;
+   default:
+      return FALSE;
+   }
 }
 
 /** returns whether the current character is member of a value string */
@@ -218,6 +244,7 @@ SCIP_Bool isValueChar(
  */
 static
 SCIP_Bool getNextLine(
+   SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
@@ -241,15 +268,17 @@ SCIP_Bool getNextLine(
       lpinput->endline = TRUE;
    }
 
-   /* clear the line */
-   BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
-
    /* read next line */
    lpinput->linepos = 0;
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
 
    if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file) == NULL )
+   {
+      /* clear the line, this is really necessary here! */
+      BMSclearMemoryArray(lpinput->linebuf, LP_MAX_LINELEN);
+
       return FALSE;
+   }
 
    lpinput->linenumber++;
 
@@ -264,7 +293,7 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d characters from the file; this might indicate a corrupted input file!",
+         SCIPwarningMessage(scip, "we read %d characters from the file; this might indicate a corrupted input file!",
             LP_MAX_LINELEN - 2);
          lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
          SCIPdebugMessage("the buffer might be corrupted\n");
@@ -320,6 +349,7 @@ void swapPointers(
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
+   SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
@@ -336,6 +366,7 @@ SCIP_Bool getNextToken(
    {
       swapPointers(&lpinput->token, &lpinput->pushedtokens[lpinput->npushedtokens-1]);
       lpinput->npushedtokens--;
+
       SCIPdebugMessage("(line %d) read token again: '%s'\n", lpinput->linenumber, lpinput->token);
       return TRUE;
    }
@@ -346,7 +377,7 @@ SCIP_Bool getNextToken(
    {
       if( buf[lpinput->linepos] == '\0' )
       {
-         if( !getNextLine(lpinput) )
+         if( !getNextLine(scip, lpinput) )
          {
             lpinput->section = LP_END;
             SCIPdebugMessage("(line %d) end of file\n", lpinput->linenumber);
@@ -460,6 +491,7 @@ void swapTokenBuffer(
 /** checks whether the current token is a section identifier, and if yes, switches to the corresponding section */
 static
 SCIP_Bool isNewSection(
+   SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
@@ -472,7 +504,7 @@ SCIP_Bool isNewSection(
 
    /* look at next token: if this is a ':', the first token is a name and no section keyword */
    iscolon = FALSE;
-   if( getNextToken(lpinput) )
+   if( getNextToken(scip, lpinput) )
    {
       iscolon = (strcmp(lpinput->token, ":") == 0);
       pushToken(lpinput);
@@ -509,18 +541,18 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'TO' */
       swapTokenBuffer(lpinput);
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "TO") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "TO") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -529,23 +561,23 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'THAT' */
       swapTokenBuffer(lpinput);
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "THAT") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "THAT") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
 
-   if( strcasecmp(lpinput->token, "st") == 0
+   if( strcasecmp(lpinput->token, "ST") == 0
       || strcasecmp(lpinput->token, "S.T.") == 0
       || strcasecmp(lpinput->token, "ST.") == 0 )
    {
@@ -560,18 +592,18 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'CONSTRAINTS' */
       swapTokenBuffer(lpinput);
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = TRUE;
-            lpinput->inusercuts = FALSE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = TRUE;
+	    lpinput->inusercuts = FALSE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -580,18 +612,18 @@ SCIP_Bool isNewSection(
    {
       /* check if the next token is 'CUTS' */
       swapTokenBuffer(lpinput);
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
-         if( strcasecmp(lpinput->token, "CUTS") == 0 )
-         {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
-            lpinput->section = LP_CONSTRAINTS;
-            lpinput->inlazyconstraints = FALSE;
-            lpinput->inusercuts = TRUE;
-            return TRUE;
-         }
-         else
-            pushToken(lpinput);
+	 if( strcasecmp(lpinput->token, "CUTS") == 0 )
+	 {
+	    SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
+	    lpinput->section = LP_CONSTRAINTS;
+	    lpinput->inlazyconstraints = FALSE;
+	    lpinput->inusercuts = TRUE;
+	    return TRUE;
+	 }
+	 else
+	    pushToken(lpinput);
       }
       swapTokenBuffer(lpinput);
    }
@@ -797,10 +829,10 @@ SCIP_RETCODE readStart(
    do
    {
       /* get token */
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
          return SCIP_OKAY;
    }
-   while( !isNewSection(lpinput) );
+   while( !isNewSection(scip, lpinput) );
 
    return SCIP_OKAY;
 }
@@ -855,10 +887,10 @@ SCIP_RETCODE readCoefficients(
    inquadpart = FALSE;
 
    /* read the first token, which may be the name of the line */
-   if( getNextToken(lpinput) )
+   if( getNextToken(scip, lpinput) )
    {
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
       {
          *newsection = TRUE;
          return SCIP_OKAY;
@@ -868,12 +900,13 @@ SCIP_RETCODE readCoefficients(
       swapTokenBuffer(lpinput);
 
       /* get the next token and check, whether it is a colon */
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
+	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', LP_MAX_LINELEN);
+
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
@@ -909,12 +942,12 @@ SCIP_RETCODE readCoefficients(
    firstquadvar = NULL;
    *ncoefs = 0;
    *nquadcoefs = 0;
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
       
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
       {
          *newsection = TRUE;
          return SCIP_OKAY;
@@ -987,7 +1020,7 @@ SCIP_RETCODE readCoefficients(
          if( isobjective )
          {
             /* quadratic part in objective has to end with '/2' */
-            if( !getNextToken(lpinput) )
+            if( !getNextToken(scip, lpinput) )
             {
                syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                return SCIP_OKAY;
@@ -999,7 +1032,7 @@ SCIP_RETCODE readCoefficients(
             else if( strcmp(lpinput->token, "/") == 0 )
             {
                /* maybe it says '/ 2' */
-               if( !getNextToken(lpinput) || strcmp(lpinput->token, "2") != 0 )
+               if( !getNextToken(scip, lpinput) || strcmp(lpinput->token, "2") != 0 )
                {
                   syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
@@ -1316,7 +1349,7 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(lpinput) || !isSense(lpinput, &linsense) )
+   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &linsense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -1324,14 +1357,14 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* read the right hand side */
    linsidesign = +1;
-   if( !getNextToken(lpinput) )
+   if( !getNextToken(scip, lpinput) )
    {
       syntaxError(scip, lpinput, "missing right hand side.");
       goto TERMINATE;
    }
    if( isSign(lpinput, &linsidesign) )
    {
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "missing value of right hand side.");
          goto TERMINATE;
@@ -1470,7 +1503,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
+   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -1478,14 +1511,14 @@ SCIP_RETCODE readConstraints(
 
    /* read the right hand side */
    sidesign = +1;
-   if( !getNextToken(lpinput) )
+   if( !getNextToken(scip, lpinput) )
    {
       syntaxError(scip, lpinput, "missing right hand side.");
       goto TERMINATE;
    }
    if( isSign(lpinput, &sidesign) )
    {
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "missing value of right hand side.");
          goto TERMINATE;
@@ -1521,7 +1554,7 @@ SCIP_RETCODE readConstraints(
 
    /* check whether we read the first part of an indicator constraint */
    isIndicatorCons = FALSE;
-   if ( getNextToken(lpinput) && !isNewSection(lpinput) )
+   if ( getNextToken(scip, lpinput) && !isNewSection(scip, lpinput) )
    {
       /* check whether we have '<' from a "<->" string */
       if ( *lpinput->token == '<' )
@@ -1530,13 +1563,13 @@ SCIP_RETCODE readConstraints(
          int linepos = lpinput->linepos-1;
 
          /* check next token - cannot be a new section */
-         if ( getNextToken(lpinput) )
+         if ( getNextToken(scip, lpinput) )
          {
             /* check for "<-" */
             if ( *lpinput->token == '-' )
             {
                /* check next token - cannot be a new section */
-               if ( getNextToken(lpinput) )
+               if ( getNextToken(scip, lpinput) )
                {
                   /* check for "<->" */
                   if ( *lpinput->token == '>' )
@@ -1566,7 +1599,7 @@ SCIP_RETCODE readConstraints(
          swapTokenBuffer(lpinput);
 
          /* check next token - cannot be a new section */
-         if( getNextToken(lpinput) )
+         if( getNextToken(scip, lpinput) )
          {
             /* check for "->" */
             if ( *lpinput->token == '>' )
@@ -1658,7 +1691,7 @@ SCIP_RETCODE readBounds(
 {
    assert(lpinput != NULL);
 
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
       SCIP_Real value;
@@ -1669,7 +1702,7 @@ SCIP_RETCODE readBounds(
       LPSENSE leftsense;
 
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
          return SCIP_OKAY;
 
       /* default bounds are [0,+inf] */
@@ -1680,7 +1713,7 @@ SCIP_RETCODE readBounds(
       /* check if the first token is a sign */
       sign = +1;
       hassign = isSign(lpinput, &sign);
-      if( hassign && !getNextToken(lpinput) )
+      if( hassign && !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "expected value.");
          return SCIP_OKAY;
@@ -1690,7 +1723,7 @@ SCIP_RETCODE readBounds(
       if( isValue(scip, lpinput, &value) )
       {
          /* first token is a value: the second token must be a sense */
-         if( !getNextToken(lpinput) || !isSense(lpinput, &leftsense) )
+         if( !getNextToken(scip, lpinput) || !isSense(lpinput, &leftsense) )
          {
             syntaxError(scip, lpinput, "expected bound sense '<=', '=', or '>='.");
             return SCIP_OKAY;
@@ -1724,7 +1757,7 @@ SCIP_RETCODE readBounds(
          pushToken(lpinput);
 
       /* the next token must be a variable name */
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "expected variable name.");
          return SCIP_OKAY;
@@ -1732,7 +1765,7 @@ SCIP_RETCODE readBounds(
       SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
 
       /* the next token might be another sense, or the word "free" */
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
          LPSENSE rightsense;
 
@@ -1743,7 +1776,7 @@ SCIP_RETCODE readBounds(
                || (leftsense == LP_SENSE_LE && rightsense == LP_SENSE_LE)
                || (leftsense == LP_SENSE_GE && rightsense == LP_SENSE_GE) )
             {
-               if( !getNextToken(lpinput) )
+               if( !getNextToken(scip, lpinput) )
                {
                   syntaxError(scip, lpinput, "expected value or sign.");
                   return SCIP_OKAY;
@@ -1752,7 +1785,7 @@ SCIP_RETCODE readBounds(
                /* check if the next token is a sign */
                sign = +1;
                hassign = isSign(lpinput, &sign);
-               if( hassign && !getNextToken(lpinput) )
+               if( hassign && !getNextToken(scip, lpinput) )
                {
                   syntaxError(scip, lpinput, "expected value.");
                   return SCIP_OKAY;
@@ -1829,14 +1862,14 @@ SCIP_RETCODE readGenerals(
 {
    assert(lpinput != NULL);
 
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
@@ -1864,14 +1897,14 @@ SCIP_RETCODE readBinaries(
 {
    assert(lpinput != NULL);
 
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       SCIP_VAR* var;
       SCIP_Bool created;
       SCIP_Bool infeasible;
 
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
@@ -1925,7 +1958,7 @@ SCIP_RETCODE readSemicontinuous(
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
    if( strcasecmp(lpinput->token, "SEMI") == 0 )
    {
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "unexpected end.");
          return SCIP_OKAY;
@@ -1933,7 +1966,7 @@ SCIP_RETCODE readSemicontinuous(
       
       if( strcasecmp(lpinput->token, "-") == 0 )
       {
-         if( !getNextToken(lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
+         if( !getNextToken(scip, lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
          {
             syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'.");
             return SCIP_OKAY;
@@ -1945,10 +1978,10 @@ SCIP_RETCODE readSemicontinuous(
       }
    }
    
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
          return SCIP_OKAY;
 
       /* the token must be the name of an existing variable */
@@ -2026,13 +2059,13 @@ SCIP_RETCODE readSos(
    dynamic = FALSE;
    removable = FALSE;
 
-   while( getNextToken(lpinput) )
+   while( getNextToken(scip, lpinput) )
    {
       int type = -1;
       SCIP_CONS* cons;
 
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if( isNewSection(scip, lpinput) )
          return SCIP_OKAY;
 
       /* check for an SOS constraint name */
@@ -2042,12 +2075,13 @@ SCIP_RETCODE readSos(
       swapTokenBuffer(lpinput);
 
       /* get the next token and check, whether it is a colon */
-      if( getNextToken(lpinput) )
+      if( getNextToken(scip, lpinput) )
       {
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-            (void)strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
          else
@@ -2064,7 +2098,7 @@ SCIP_RETCODE readSos(
       }
 
       /* get type */
-      if( !getNextToken(lpinput) )
+      if( !getNextToken(scip, lpinput) )
       {
          syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'.");
          return SCIP_OKAY;
@@ -2106,30 +2140,28 @@ SCIP_RETCODE readSos(
       SCIPdebugMessage("created SOS%d constraint <%s>\n", type, name);
 
       /* make sure that a colons follows */
-      if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      if( !getNextToken(scip, lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
          syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons.");
          return SCIP_OKAY;
       }
 
       /* make sure that another colons follows */
-      if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      if( !getNextToken(scip, lpinput) || strcmp(lpinput->token, ":") != 0 )
       {
          syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons.");
          return SCIP_OKAY;
       }
 
       /* parse elements of SOS constraint */
-      while( getNextToken(lpinput) )
+      while( getNextToken(scip, lpinput) )
       {
          SCIP_VAR* var;
          SCIP_Real weight;
 
          /* check if we reached a new section */
-         if( isNewSection(lpinput) )
-         {
+         if( isNewSection(scip, lpinput) )
             break;
-         }
 
          /* remember the token in the token buffer */
          swapTokenBuffer(lpinput);
@@ -2146,13 +2178,13 @@ SCIP_RETCODE readSos(
          else
          {
             SCIPdebugMessage("found variable <%s>\n", SCIPvarGetName(var));
-            if( !getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+            if( !getNextToken(scip, lpinput) || strcmp(lpinput->token, ":") != 0 )
             {
                syntaxError(scip, lpinput, "expected colon and weight.");
                return SCIP_OKAY;
             }
             /* check next token */
-            if( !getNextToken(lpinput) )
+            if( !getNextToken(scip, lpinput) )
             {
                /* push back token, since it could be the name of a new constraint */
                pushToken(lpinput);
@@ -3011,7 +3043,7 @@ void checkVarnames(
    {
       if( strlen(SCIPvarGetName(vars[v])) > LP_MAX_NAMELEN )  /*lint !e613*/
       {
-         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
             LP_MAX_NAMELEN - 1);
          return;
       }
@@ -3057,14 +3089,14 @@ void checkConsnames(
          if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN)
             || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN -  4) )
          {
-            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
                LP_MAX_NAMELEN  - 1);
             return;
          }
       }
       else if( strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
             LP_MAX_NAMELEN  - 1);
          return;
       }
@@ -3567,7 +3599,7 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else
       {
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }

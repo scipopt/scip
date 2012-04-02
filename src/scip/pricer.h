@@ -53,6 +53,7 @@ extern
 SCIP_RETCODE SCIPpricerCreate(
    SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of variable pricer */
    const char*           desc,               /**< description of variable pricer */

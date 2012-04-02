@@ -50,7 +50,7 @@ int main(
    if( retcode != SCIP_OKAY )
    {
       /* write error back trace */
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       return -1;
    }
 

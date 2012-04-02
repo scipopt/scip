@@ -24,13 +24,13 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/primal.h"
 #include "scip/branch.h"
+#include "scip/pub_message.h"
 
 
 

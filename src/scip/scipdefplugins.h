@@ -106,6 +106,7 @@
 #include "scip/presol_boundshift.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_dualfix.h"
+#include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_trivial.h"

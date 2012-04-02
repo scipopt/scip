@@ -24,10 +24,8 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/pub_misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -36,6 +34,8 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -314,6 +314,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objoffset = 0.0;
    (*prob)->objscale = 1.0;
    (*prob)->objlim = SCIP_INVALID;
+   (*prob)->dualbound = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
 
@@ -450,6 +451,10 @@ SCIP_RETCODE SCIPprobTransform(
    if( source->objlim < SCIP_INVALID )
       SCIPprobSetObjlim(*target, source->objlim);
 
+   /* transform objective limit */
+   if( source->dualbound < SCIP_INVALID )
+      SCIPprobSetDualbound(*target, source->dualbound);
+
    /* transform and copy all variables to target problem */
    SCIP_CALL( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
@@ -519,6 +524,59 @@ SCIP_RETCODE SCIPprobResetBounds(
    return SCIP_OKAY;
 }
 
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int ncontvars;
+   int nvars;
+   int v;
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   nbinvars = prob->nbinvars;
+   nintvars = prob->nintvars;
+   nimplvars = prob->nimplvars;
+   ncontvars = prob->ncontvars;
+
+   assert(vars != NULL);
+   assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+
+   SCIPdebugMessage("entering sorting with respect to original block structure! \n");
+
+   /* sort binaries */
+   if( nbinvars > 0 )
+      SCIPsortPtr((void**)vars, SCIPvarComp, nbinvars);
+
+   /* sort integers */
+   if( nintvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
+
+   /* sort implicit variables */
+   if( nimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+
+   /* sort continuous variables*/
+   if( ncontvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+
+   /* after sorting, the problem index of each variable has to be adjusted */
+   for( v = 0; v < nvars; ++v )
+   {
+      vars[v]->probindex = v;
+      SCIPdebugMessage("Variable: Problem index <%d>, original index <%d> \n", vars[v]->probindex, vars[v]->index);
+   }
+}
 
 
 
@@ -1043,18 +1101,9 @@ SCIP_RETCODE SCIPprobAddCons(
       SCIPerrorMessage("constraint belongs to different scip instance\n");
       return SCIP_INVALIDDATA;
    }
-   /* check if we already added this constraint */
-   if( cons->isadded )
-   {
-      SCIPerrorMessage("try to add a constraint which was already added\n");
-      return SCIP_INVALIDDATA;
-   }
 #endif
    SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
-
-   /* mark the constraint added to a SCIP instance */
-   cons->isadded = TRUE;
 
    /* mark the constraint as problem constraint, and remember the constraint's position */
    cons->addconssetchg = NULL;
@@ -1205,6 +1254,17 @@ void SCIPprobAddObjoffset(
    prob->objoffset += addval;
 }
 
+/** sets the dual bound on objective function */
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = dualbound;
+}
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 void SCIPprobSetObjlim(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1305,6 +1365,33 @@ void SCIPprobUpdateNObjVars(
       prob->nobjvars++;
 
    assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
+}
+
+/** update the dual bound if its better as the current one */
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   )
+{
+   if( prob->dualbound == SCIP_INVALID ) /*lint !e777*/
+      SCIPprobSetDualbound(prob, newbound);
+   else
+   {
+      switch( prob->objsense )
+      {
+      case SCIP_OBJSENSE_MINIMIZE:
+         prob->dualbound = MIN(newbound, prob->dualbound);
+         break;
+
+      case SCIP_OBJSENSE_MAXIMIZE:
+         prob->dualbound = MAX(newbound, prob->dualbound);
+         break;
+
+      default:
+         SCIPerrorMessage("invalid objective sense <%d>\n", prob->objsense);
+         SCIPABORT();
+      }
+   }
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -1709,36 +1796,38 @@ SCIP_Bool SCIPprobAllColsInLP(
 /** displays current pseudo solution */
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_VAR* var;
    SCIP_Real solval;
    int v;
-   
+
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(messagehdlr, " <%s>=%.15g", SCIPvarGetName(var), solval);
    }
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(prob != NULL);
 
-   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
-   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
-   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    if( ! prob->transformed )
-      SCIPmessageFPrintInfo(file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+      SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

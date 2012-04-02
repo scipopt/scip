@@ -23,7 +23,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/lp.h"
@@ -31,6 +30,7 @@
 #include "scip/prob.h"
 #include "scip/tree.h"
 #include "scip/pricestore.h"
+#include "scip/pub_message.h"
 
 #include "scip/struct_pricestore.h"
 

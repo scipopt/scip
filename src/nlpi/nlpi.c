@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/pub_message.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/struct_nlpi.h"
 #include "blockmemshell/memory.h"

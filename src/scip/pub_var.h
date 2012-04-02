@@ -308,6 +308,12 @@ const char* SCIPvarGetName(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets number of times, the variable is currently captured */
+extern
+int SCIPvarGetNUses(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns the user data of the variable */
 extern
 SCIP_VARDATA* SCIPvarGetData(
@@ -822,6 +828,7 @@ int SCIPvarGetNBdchgInfosUb(
  */
 
 #define SCIPvarGetName(var)             (var)->name
+#define SCIPvarGetNUses(var)            (var)->nuses
 #define SCIPvarGetData(var)             (var)->vardata
 #define SCIPvarSetData(var,vdata)       (var)->vardata = (vdata)
 #define SCIPvarSetDelorigData(var,func) (var)->vardelorig = (func)

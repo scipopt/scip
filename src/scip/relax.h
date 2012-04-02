@@ -49,6 +49,7 @@ extern
 SCIP_RETCODE SCIPrelaxCreate(
    SCIP_RELAX**          relax,              /**< pointer to relaxator data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of relaxator */
    const char*           desc,               /**< description of relaxator */

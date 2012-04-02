@@ -25,7 +25,7 @@
 
 #include <stdio.h>
 
-#include "scip/type_retcode.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,7 +34,14 @@ extern "C" {
 /** prints error message for return code */
 extern
 void SCIPretcodePrint(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to write error message */
+   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
+   );
+
+/** prints error message for return code via error message */
+extern
+void SCIPretcodePrintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 

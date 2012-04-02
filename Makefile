@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.1.1.3
+VERSION		:=	2.1.1.4
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -563,6 +563,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_vbounds.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zirounding.o \
+			scip/message_default.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
@@ -571,6 +572,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_boundshift.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_dualfix.o \
+			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \

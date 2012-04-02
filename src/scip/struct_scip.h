@@ -56,6 +56,7 @@ struct Scip
    SCIP_SET*             set;                /**< global SCIP settings */
    SCIP_INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
    SCIP_DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler for output handling, or NULL */
    SCIP_CLOCK*           totaltime;          /**< total SCIP running time */
 
    /* PROBLEM */

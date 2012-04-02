@@ -1563,7 +1563,7 @@ SCIP_RETCODE solveCoveringProblem(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage("Error while solving covering problem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(coveringscip, "Error while solving covering problem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
       return SCIP_OKAY;
    }
 
@@ -2178,7 +2178,7 @@ SCIP_RETCODE solveSubproblem(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage("Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in Undercover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
       return SCIP_OKAY;
    }
 

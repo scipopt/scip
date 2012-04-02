@@ -681,7 +681,7 @@ SCIP_Bool SCIPconsIsAdded(
 #define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
 #define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
 #define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
-#define SCIPconsIsAdded(cons)           ((cons)->isadded)
+#define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 
 #endif
 

@@ -578,7 +578,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 
       if( !feasible )
       {
-         SCIPwarningMessage("solution in pricing problem (capacity <%d>) is infeasible\n", capacity); 
+         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%d>) is infeasible\n", capacity);
          continue;
       }
 

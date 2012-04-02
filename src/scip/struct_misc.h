@@ -144,6 +144,10 @@ struct SCIP_Digraph
    int**                 adjnodes;           /**< adjacency list: for each node (first dimension) list of adjacent nodes */
    int*                  adjnodessize;       /**< sizes of the adjacency lists for the nodes */
    int*                  nadjnodes;          /**< number of edges stored in the adjacency lists of the nodes */
+   int*                  components;         /**< array to store the node indices of the components, one component after the other */
+   int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
+   int                   ncomponents;        /**< number of undirected components stored */
+   int                   componentstartsize; /**< size of array componentstarts */
    int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
 };
 

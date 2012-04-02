@@ -1661,7 +1661,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       retstat = SCIPsolveDiveLP(scip, -1, &lperror);
       if( retstat != SCIP_OKAY )
       {
-         SCIPwarningMessage("Error while solving LP in Twoopt heuristic; LP solve terminated with code <%d>\n",retstat);
+         SCIPwarningMessage(scip, "Error while solving LP in Twoopt heuristic; LP solve terminated with code <%d>\n",retstat);
       }
 #else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );

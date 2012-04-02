@@ -170,7 +170,7 @@ SCIP_RETCODE LOPreadFile(
       return SCIP_READERROR;
    }
    assert( 0 < n );
-   SCIPmessagePrintInfo("Number of elements:\t%d\n\n", n);
+   SCIPinfoMessage(scip, NULL, "Number of elements:\t%d\n\n", n);
    probdata->n = n;
 
    /* set up matrix */
@@ -268,8 +268,8 @@ SCIP_RETCODE LOPcreateProb(
    /* take filename as problem name */
    SCIP_CALL( getProblemName(filename, probname, SCIP_MAXSTRLEN) );
 
-   SCIPmessagePrintInfo("File name:\t\t%s\n", filename);
-   SCIPmessagePrintInfo("Problem name:\t\t%s\n", probname);
+   SCIPinfoMessage(scip, NULL, "File name:\t\t%s\n", filename);
+   SCIPinfoMessage(scip, NULL, "Problem name:\t\t%s\n", probname);
 
    /* read file */
    SCIP_CALL( LOPreadFile(scip, filename, probdata) );

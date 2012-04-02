@@ -1950,7 +1950,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPtightenVarLb(scip, bvars[1], ABS(alpha2 * offset2), TRUE, &infeas, &tightened) );
       if( infeas == TRUE )
       {
-         SCIPwarningMessage("creating glineur outer approximation of SOC3 constraint found problem infeasible.\n");
+         SCIPwarningMessage(scip, "creating glineur outer approximation of SOC3 constraint found problem infeasible.\n");
       }
    }
 
@@ -3591,7 +3591,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
       }
    }
 
-   SCIPwarningMessage("could not enforce feasibility by separating or branching; declaring solution with viol %g feasible\n", SCIPconsGetData(maxviolcons)->violation);
+   SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g feasible\n", SCIPconsGetData(maxviolcons)->violation);
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
