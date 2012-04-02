@@ -1049,13 +1049,13 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation:");
             if( i == consdata->nvars )
             {
-               SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",                   
-                  SCIPvarGetName(consdata->resvar)); 
+               SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->resvar));
             }
             else
             {
                SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+                  SCIPvarGetName(consdata->vars[i]), SCIPvarGetName(consdata->resvar));
             }
          }
       }
