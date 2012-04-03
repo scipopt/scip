@@ -43,8 +43,8 @@
                                               *   to allow running again (1.0: do not run again) */
 
 #ifdef WITH_STATISTICS
-static int NCATEGORIES = 4;
-static int CATLIMITS[] = {20,50,100};
+static int NCATEGORIES = 6;
+static int CATLIMITS[] = {0,20,50,100,500};
 #endif
 
 /*
