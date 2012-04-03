@@ -1309,9 +1309,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
-
    *valid = TRUE;
 
    return SCIP_OKAY;
