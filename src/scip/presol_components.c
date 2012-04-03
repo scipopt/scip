@@ -62,6 +62,7 @@ struct SCIP_PresolData
    SCIP_Real             reldecrease;        /** percentage by which the number of variables has to be decreased after the last component solving
                                               *  to allow running again (1.0: do not run again) */
    int                   lastnvars;          /** number of variables after last run of the presolver */
+   SCIP*                 subscip;            /** sub-SCIP used to solve single components */
 #ifdef WITH_STATISTICS
    int*                  compspercat;        /** number of components of the different categories */
    int                   nsinglevars;        /** number of components with a single variable without constraint */
@@ -275,22 +276,41 @@ SCIP_RETCODE copyAndSolveComponent(
       return SCIP_OKAY;
 
    /* create sub-SCIP */
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
-   success = TRUE;
-   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
-
-   /* abort if the plugins could not be copied successfully */
-   if( !success )
+   if( presoldata->subscip == NULL )
    {
-      SCIP_CALL( SCIPfree(&subscip) );
-      return SCIP_OKAY;
-   }
+      SCIP_CALL( SCIPcreate(&presoldata->subscip) );
+      subscip = presoldata->subscip;
 
-   /* copy parameter settings */
-   SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+      /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
+      success = TRUE;
+      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
+
+      /* abort if the plugins were not successfully copied */
+      if( !success )
+         return SCIP_OKAY;
+
+      /* copy parameter settings */
+      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+      /* set gap limit to 0 */
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
+
+      /* reduce the effort spent for hash tables */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+
+      /* do not catch control-C */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+      /* disable output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   }
+   else
+   {
+      subscip = presoldata->subscip;
+   }
 
    /* set time and memory limit for the subproblem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
@@ -308,20 +328,6 @@ SCIP_RETCODE copyAndSolveComponent(
        */
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", presoldata->nodelimit) );
    }
-
-   /* set gap limit to 0 */
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
-
-   /* reduce the effort spent for hash tables */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
-
-   /* do not catch control-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* create problem in sub-SCIP */
    /* get name of the original problem and add "comp_nr" */
@@ -438,7 +444,6 @@ SCIP_RETCODE copyAndSolveComponent(
 
  TERMINATE:
    SCIPhashmapFree(&varmap);
-   SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
 }
@@ -666,6 +671,12 @@ SCIP_RETCODE splitProblem(
       }
    }
 
+   if( presoldata->subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&presoldata->subscip) );
+      presoldata->subscip = NULL;
+   }
+
    SCIPfreeBufferArray(scip, &conscomponent);
    SCIPhashmapFree(&consmap);
 
@@ -853,6 +864,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    /* initialize statistics */
    SCIP_CALL( initStatistics(scip, presoldata) );
 
+   presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
 
    return SCIP_OKAY;
