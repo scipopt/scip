@@ -25,8 +25,8 @@
  *
  * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
  *
- * This constraint can be created only with the integer variables. In this case the binary variables are only created on
- * demand. That is, at that point someone ask for the binary variables. Therefore, such constraints can be used to get a
+ * This constraint can be created only with the integer variable. In this case the binary variables are only created on
+ * demand. That is, whenever someone asks for the binary variables. Therefore, such constraints can be used to get a
  * "binary representation" of the domain of the integer variable which will be dynamically created.
  *
  *
@@ -160,7 +160,7 @@ SCIP_RETCODE conshdlrdataCreate(
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
    /* create hash map */
-   SCIP_CALL( SCIPhashmapCreate(&(*conshdlrdata)->varmap, SCIPblkmem(scip), HASHSIZE_BINVARSCONS) );
+   (*conshdlrdata)->varmap = NULL;
    
    /* get event handler for bound change events on binary variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -185,7 +185,8 @@ SCIP_RETCODE conshdlrdataFree(
    assert((*conshdlrdata)->varmap != NULL);
 
    /* free hash map */
-   SCIPhashmapFree(&(*conshdlrdata)->varmap);
+   if( (*conshdlrdata)->varmap != NULL )
+      SCIPhashmapFree(&(*conshdlrdata)->varmap);
    
    /* free memory of constraint handler data */
    SCIPfreeMemory(scip, conshdlrdata);
@@ -1723,6 +1724,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinking)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* remove linking constraint form variable hash map */
+   assert(conshdlrdata->varmap != NULL);
    assert(SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey((*consdata)->intvar)));
    SCIP_CALL( SCIPhashmapRemove(conshdlrdata->varmap, getHashmapKey((*consdata)->intvar)) );
       
@@ -1776,6 +1778,7 @@ SCIP_DECL_CONSTRANS(consTransLinking)
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    /* insert (transformed) linking constraint into the hash map */
+   assert(conshdlrdata->varmap != NULL);
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(targetdata->intvar), *targetcons) );
    
    return SCIP_OKAY;
@@ -2412,6 +2415,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    }
 
    /* transfer aggregated integer variables to the corresponding binary variables */
+   assert(conshdlrdata->varmap != NULL);
    SCIP_CALL( aggregateVariables(scip, conshdlrdata->varmap, conss, nconss, naggrvars, &cutoff) );
 
    if( cutoff )
@@ -2971,6 +2975,12 @@ SCIP_RETCODE SCIPcreateConsLinking(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   if( conshdlrdata->varmap == NULL )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varmap, SCIPblkmem(scip), HASHSIZE_BINVARSCONS) );
+   }
+   assert(conshdlrdata->varmap != NULL);
+
    /* check if the linking for the requests integer variable already exists */
    assert(!SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
 
@@ -3002,11 +3012,11 @@ SCIP_Bool SCIPexistsConsLinking(
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   
-   return SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar));
+
+   return (conshdlrdata->varmap != NULL) && SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar));
 }
  
-/** returns the linking constraint belonging the given integer variable or NULL if it does not exist yet */
+/** returns the linking constraint belonging to the given integer variable or NULL if it does not exist yet */
 SCIP_CONS* SCIPgetConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             intvar              /**< integer variable which should be linked */
@@ -3020,8 +3030,11 @@ SCIP_CONS* SCIPgetConsLinking(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   
-   return (SCIP_CONS*) SCIPhashmapGetImage(conshdlrdata->varmap, getHashmapKey(intvar));
+
+   if( conshdlrdata->varmap != NULL )
+      return (SCIP_CONS*) SCIPhashmapGetImage(conshdlrdata->varmap, getHashmapKey(intvar));
+   else
+      return NULL;
 }
  
 /** returns the integer variable of the linking constraint */
