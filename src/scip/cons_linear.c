@@ -4828,7 +4828,8 @@ SCIP_RETCODE checkCons(
       activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
-   
+
+   /* check whether violation is random noise or too small compared to the maximum absolute summand */
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       SCIP_Real maxabs;
@@ -4852,22 +4853,72 @@ SCIP_RETCODE checkCons(
          maxabs = MAX( maxabs, absval );
       }
 
-      /* check whether violation is random noise */
-      if( (activity - consdata->lhs) < -(1e-15 * maxabs) || (consdata->rhs - activity) < -(1e-15 * maxabs))
+      /* regard left hand side, first */
+      if( SCIPisFeasLT(scip, activity, consdata->lhs) )
       {
-         *violated = TRUE;
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         /* check whether violation is random noise */
+         if( (consdata->lhs - activity) <= (1e-15 * maxabs) )
+         {
+            printf("  lhs violated due to random noise: maxabs=%.15g\n", maxabs);
+            SCIPdebugMessage("  violated due to random noise: maxabs=%.15g\n", maxabs);
+            SCIP_CALL( SCIPincConsAge(scip, cons) );
+         }
+         /* lhs is violated and lhs is 0.0, use relative tolerance w.r.t. largest absolute value */
+         else if( SCIPisZero(scip, consdata->lhs) )
+         {
+            if( (consdata->lhs - activity) <= (SCIPfeastol(scip) * maxabs) )
+            {
+               printf("  lhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
+               SCIPdebugMessage("  lhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
+               SCIP_CALL( SCIPincConsAge(scip, cons) );
+            }
+            else
+            {
+               *violated = TRUE;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            }
+         }
+         else
+         {
+            *violated = TRUE;
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
       }
-      else
+
+      /* now regard right hand side */
+      if( SCIPisFeasGT(scip, activity, consdata->rhs) )
       {
-         SCIPdebugMessage("  violated due to random noise: maxabs=%.15g\n", maxabs);
-         *violated = FALSE;
-         SCIP_CALL( SCIPincConsAge(scip, cons) );
+         /* check whether violation is random noise */
+         if( (activity - consdata->rhs) <= (1e-15 * maxabs) )
+         {
+            printf("  rhs violated due to random noise: maxabs=%.15g\n", maxabs);
+            SCIPdebugMessage("  rhs violated due to random noise: maxabs=%.15g\n", maxabs);
+            SCIP_CALL( SCIPincConsAge(scip, cons) );
+         }
+         /* rhs is violated and rhs is 0.0, use relative tolerance w.r.t. largest absolute value */
+         else if( SCIPisZero(scip, consdata->rhs) )
+         {
+            if( (activity - consdata->rhs) <= (SCIPfeastol(scip) * maxabs) )
+            {
+               printf("  rhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
+               SCIPdebugMessage("  rhs violated absolutely, but feasible when using relative tolerance w.r.t. maximum absolute value (%.15g)\n", maxabs);
+               SCIP_CALL( SCIPincConsAge(scip, cons) );
+            }
+            else
+            {
+               *violated = TRUE;
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            }
+         }
+         else
+         {
+            *violated = TRUE;
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
       }
    }
    else
    {
-      *violated = FALSE;
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
