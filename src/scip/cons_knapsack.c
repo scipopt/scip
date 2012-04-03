@@ -809,7 +809,6 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, "violation: ");
 
             /* complete the activity computation to discover the violation */
             for( ; i < consdata->nvars; ++i )

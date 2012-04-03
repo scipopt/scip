@@ -2018,7 +2018,7 @@ SCIP_RETCODE SCIPaddPricedVar(
    SCIP_Real             score               /**< pricing score of variable (the larger, the better the variable) */
    );
 
-/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+/** removes variable from the problem */
 extern
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */

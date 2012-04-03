@@ -5116,7 +5116,7 @@ SCIP_RETCODE SCIPaddPricedVar(
    return SCIP_OKAY;
 }
 
-/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+/** removes variable from the problem */
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to delete */

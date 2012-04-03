@@ -3375,7 +3375,22 @@ SCIP_RETCODE focusnodeCleanupVars(
       {
          if( !SCIPvarIsInLP(var) )
          {
-            SCIP_CALL( SCIPdelVar(set->scip, var, &deleted) );
+            /* fix the variable to 0, first */
+            assert(!SCIPsetIsFeasPositive(set, SCIPvarGetLbGlobal(var)));
+            assert(!SCIPsetIsFeasNegative(set, SCIPvarGetUbGlobal(var)));
+
+            if( !SCIPsetIsFeasZero(set, SCIPvarGetLbGlobal(var)) )
+            {
+               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
+            if( !SCIPsetIsFeasZero(set, SCIPvarGetUbGlobal(var)) )
+            {
+               SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, prob,
+                     tree, lp, branchcand, eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+
+            SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
 
             if( deleted )
                ndelvars++;
