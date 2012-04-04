@@ -182,12 +182,11 @@ SCIP_RETCODE conshdlrdataFree(
 {
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
-   assert((*conshdlrdata)->varmap != NULL);
 
    /* free hash map */
    if( (*conshdlrdata)->varmap != NULL )
       SCIPhashmapFree(&(*conshdlrdata)->varmap);
-   
+
    /* free memory of constraint handler data */
    SCIPfreeMemory(scip, conshdlrdata);
 
