@@ -307,7 +307,6 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
          if( SCIPvarGetNCliques(var, (SCIP_Bool)value) >= 1 )
          {
             /* all cliques stored in the clique table are at least 3-cliques */
-            assert(SCIPcliqueGetNVars(SCIPvarGetCliques(var, (SCIP_Bool)value)[0]) >= 3);
             SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, var, (SCIP_Bool)value, &cliquegraphidx[value][i]) );
          }
       }
