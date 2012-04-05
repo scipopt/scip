@@ -5130,7 +5130,7 @@ SCIP_RETCODE SCIPaddPricedVar(
    return SCIP_OKAY;
 }
 
-/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+/** removes variable from the problem */
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to delete */
@@ -6253,7 +6253,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return SCIP_OKAY; /*lint !e527*/
    }  /*lint !e788*/
 
    return SCIP_OKAY;
@@ -10365,7 +10365,7 @@ SCIP_Real SCIPadjustedVarUb(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPchgVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10433,7 +10433,7 @@ SCIP_RETCODE SCIPchgVarLb(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPchgVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10554,7 +10554,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10620,7 +10620,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10734,7 +10734,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPtightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10828,7 +10828,7 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPtightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10922,7 +10922,7 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPinferVarLbCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11016,7 +11016,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPinferVarUbCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11203,7 +11203,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPinferVarLbProp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11297,7 +11297,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPinferVarUbProp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11483,7 +11483,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPtightenVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11579,7 +11579,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
  *           SCIPgetVars()) gets resorted.
  *
- *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
 SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */

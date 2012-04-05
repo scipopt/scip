@@ -1507,16 +1507,13 @@ SCIP_RETCODE SCIPrealarrayClear(
 
    if( realarray->minusedidx <= realarray->maxusedidx )
    {
-      int i;
-   
       assert(realarray->firstidx <= realarray->minusedidx);
       assert(realarray->maxusedidx < realarray->firstidx + realarray->valssize);
       assert(realarray->firstidx != -1);
       assert(realarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = realarray->minusedidx - realarray->firstidx; i <= realarray->maxusedidx - realarray->firstidx; ++i )
-         realarray->vals[i] = 0.0;
+      BMSclearMemoryArray(&realarray->vals[realarray->minusedidx - realarray->firstidx], realarray->maxusedidx - realarray->minusedidx + 1);
 
       /* mark the array cleared */
       realarray->minusedidx = INT_MAX;
@@ -1876,16 +1873,13 @@ SCIP_RETCODE SCIPintarrayClear(
 
    if( intarray->minusedidx <= intarray->maxusedidx )
    {
-      int i;
-   
       assert(intarray->firstidx <= intarray->minusedidx);
       assert(intarray->maxusedidx < intarray->firstidx + intarray->valssize);
       assert(intarray->firstidx != -1);
       assert(intarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = intarray->minusedidx - intarray->firstidx; i <= intarray->maxusedidx - intarray->firstidx; ++i )
-         intarray->vals[i] = 0;
+      BMSclearMemoryArray(&intarray->vals[intarray->minusedidx - intarray->firstidx], intarray->maxusedidx - intarray->minusedidx + 1);
 
       /* mark the array cleared */
       intarray->minusedidx = INT_MAX;
@@ -2241,16 +2235,13 @@ SCIP_RETCODE SCIPboolarrayClear(
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
    {
-      int i;
-   
       assert(boolarray->firstidx <= boolarray->minusedidx);
       assert(boolarray->maxusedidx < boolarray->firstidx + boolarray->valssize);
       assert(boolarray->firstidx != -1);
       assert(boolarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = boolarray->minusedidx - boolarray->firstidx; i <= boolarray->maxusedidx - boolarray->firstidx; ++i )
-         boolarray->vals[i] = FALSE;
+      BMSclearMemoryArray(&boolarray->vals[boolarray->minusedidx - boolarray->firstidx], boolarray->maxusedidx - boolarray->minusedidx + 1);
 
       /* mark the array cleared */
       boolarray->minusedidx = INT_MAX;
@@ -2594,16 +2585,13 @@ SCIP_RETCODE SCIPptrarrayClear(
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
    {
-      int i;
-   
       assert(ptrarray->firstidx <= ptrarray->minusedidx);
       assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
       assert(ptrarray->firstidx != -1);
       assert(ptrarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = ptrarray->minusedidx - ptrarray->firstidx; i <= ptrarray->maxusedidx - ptrarray->firstidx; ++i )
-         ptrarray->vals[i] = NULL;
+      BMSclearMemoryArray(&ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx], ptrarray->maxusedidx - ptrarray->minusedidx + 1);
 
       /* mark the array cleared */
       ptrarray->minusedidx = INT_MAX;

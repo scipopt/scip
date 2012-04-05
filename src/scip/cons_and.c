@@ -1036,7 +1036,7 @@ SCIP_RETCODE checkCons(
             else
             {
                SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
-                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar));
+                  SCIPvarGetName(consdata->vars[i]), SCIPvarGetName(consdata->resvar));
             }
          }
       }
@@ -1814,20 +1814,25 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** check if at least two operands or one operand and the resultant are in one clique, if so, we can fix the resultant
- *  to zero and in the former case we can also delete this constraint but we need to extract the clique information as
- *  constraint
+/** 1. check if at least two operands or one operand and the resultant are in one clique, if so, we can fix the
+ *     resultant to zero and in the former case we can also delete this constraint but we need to extract the clique
+ *     information as constraint
  *
- *  x == AND(y, z) and clique(y,z) => x = 0, delete constraint and create y + z <= 1
- *  x == AND(y, z) and clique(x,y) => x = 0
+ *     x == AND(y, z) and clique(y,z) => x = 0, delete constraint and create y + z <= 1
+ *     x == AND(y, z) and clique(x,y) => x = 0
  *
- *  special handled cases are:
- *  - if the resultant is a negation of an operand, in that case we fix the resultant to 0
- *  - if the resultant is equal to an operand, we will linearize this constraint by adding all necessary
- *    set-packing constraints like resultant + ~operand <= 1 and delete the old constraint
+ *     special handled cases are:
+ *     - if the resultant is a negation of an operand, in that case we fix the resultant to 0
+ *     - if the resultant is equal to an operand, we will linearize this constraint by adding all necessary
+ *       set-packing constraints like resultant + ~operand <= 1 and delete the old constraint
  *
- *  x == AND(~x, y) => x = 0
- *  x == AND(x, y)  => add x + ~y <= 1 and delete the constraint
+ *     x == AND(~x, y) => x = 0
+ *     x == AND(x, y)  => add x + ~y <= 1 and delete the constraint
+ *
+ *  2. check if one operand is in a clique with the negation of all other operands, this means we can aggregate this
+ *     operand to the resultant
+ *
+ *     r == AND(x,y,z) and clique(x,~y) and clique(x,~z) => r == x and delete the constraint
  *
  *  @note We removed also fixed variables and propagate them, and if only one operand is remaining due to removal, we
  *        will aggregate the resultant with this operand
@@ -1850,6 +1855,8 @@ SCIP_RETCODE cliquePresolve(
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    int nvars;
+   int vstart;
+   int vend;
    int v;
    int v2;
    SCIP_Bool negated;
@@ -2209,7 +2216,16 @@ SCIP_RETCODE cliquePresolve(
 	 }
       }
 
-      if( SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
+      /* due to SCIPvarsHaveCommonClique() returns on two same variables that they are in a clique, we need to handle
+       * it explicitly
+       */
+      if( var1 == var2 && value1 == value2 )
+	 continue;
+
+      /* due to SCIPvarsHaveCommonClique() returns on two negated variables that they are not in a clique, we need to
+       * handle it explicitly
+       */
+      if( (var1 == var2 && value1 != value2) || SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
       {
 	 SCIPdebugMessage("in constraint <%s> the resultant <%s> can be fixed to 0 because it is in a clique with operand <%s>\n",
 	    SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
@@ -2220,6 +2236,136 @@ SCIP_RETCODE cliquePresolve(
 	    ++(*nfixedvars);
 
 	 return SCIP_OKAY;
+      }
+   }
+
+   if( !SCIPconsIsActive(cons) )
+      return SCIP_OKAY;
+
+   v2 = -1;
+   /* check which operands have a negated variable */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      assert(vars != NULL);
+
+      var1 = vars[v];
+      assert(var1 != NULL);
+
+      negated = FALSE;
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+      assert(var1 != NULL);
+
+      if( SCIPvarGetNegatedVar(var1) == NULL )
+      {
+	 if( v2 >= 0 )
+	    break;
+	 v2 = v;
+      }
+   }
+
+   /* all operands have a negated variable, so we will check for all possible negated ciques */
+   if( v2 == -1 )
+   {
+      vstart = nvars - 1;
+      vend = 0;
+   }
+   /* exactly one operands has no negated variable, so only this variable can be in a clique with all other negations */
+   else if( v2 >= 0 && v == -1 )
+   {
+      vstart = v2;
+      vend = v2;
+   }
+   /* at least two operands have no negated variable, so there is no possible clique with negated variables */
+   else
+   {
+      vstart = -1;
+      vend = 0;
+   }
+
+   /* check for negated cliques in the operands */
+   for( v = vstart; v >= vend; --v )
+   {
+      assert(vars != NULL);
+
+      var1 = vars[v];
+      assert(var1 != NULL);
+
+      negated = FALSE;
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+      assert(var1 != NULL);
+
+      if( negated )
+	 value1 = FALSE;
+      else
+	 value1 = TRUE;
+
+      for( v2 = nvars - 1; v2 >= 0; --v2 )
+      {
+	 if( v2 == v )
+	    continue;
+
+	 var2 = vars[v2];
+	 assert(var2 != NULL);
+
+	 negated = FALSE;
+	 SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
+	 assert(var2 != NULL);
+
+	 if( negated )
+	    value2 = FALSE;
+	 else
+	    value2 = TRUE;
+
+	 assert(SCIPvarGetNegatedVar(var2) != NULL);
+
+	 /* invert flag, because we want to check var 1 against all negations of the other variables */
+	 value2 = !value2;
+
+	 /* due to SCIPvarsHaveCommonClique() returns on two same variables that they are in a clique, we need to handle
+	  * it explicitly
+	  */
+	 if( var1 == var2 && value1 == value2 )
+	 {
+	    SCIPdebugMessage("in constraint <%s> the resultant <%s> can be fixed to 0 because two operands are negated of each other\n",
+	       SCIPconsGetName(cons), SCIPvarGetName(consdata->resvar));
+
+	    SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
+	    *cutoff = *cutoff || infeasible;
+	    if( fixed )
+	       ++(*nfixedvars);
+
+	    return SCIP_OKAY;
+	 }
+
+	 /* due to SCIPvarsHaveCommonClique() returns on two negated variables that they are not in a clique, we need to
+	  * handle it explicitly
+	  */
+	 if( var1 == var2 && value1 != value2 )
+	    continue;
+
+	 if( !SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
+	    break;
+      }
+
+      if( v2 == -1 )
+      {
+	 SCIP_Bool redundant;
+	 SCIP_Bool aggregated;
+
+	 SCIPdebugMessage("In constraint <%s> the operand <%s> is in a negated clique with all other operands, so we can aggregated this operand to the resultant <%s>.\n",
+	    SCIPconsGetName(cons), SCIPvarGetName(vars[v]), SCIPvarGetName(consdata->resvar));
+
+	 SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, vars[v], 1.0, -1.0, 0.0,
+	       &infeasible, &redundant, &aggregated) );
+	 *cutoff = *cutoff || infeasible;
+
+	 if( aggregated )
+	    ++(*naggrvars);
+
+	 SCIP_CALL( SCIPdelCons(scip, cons) );
+	 ++(*ndelconss);
+
+	 break;
       }
    }
 

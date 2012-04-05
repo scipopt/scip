@@ -9699,6 +9699,9 @@ SCIP_RETCODE SCIPvarDelClique(
  *  the variables must be active binary variables;
  *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
  *  if regardimplics is TRUE, both the cliques and the implications of the implication graph are regarded
+ *
+ *  @note a variable with it's negated variable are NOT! in a clique
+ *  @note a variable with itself are in a clique
  */
 SCIP_Bool SCIPvarsHaveCommonClique(
    SCIP_VAR*             var1,               /**< first variable */

@@ -52,7 +52,6 @@ SCIP_RETCODE solClearArrays(
 {
    assert(sol != NULL);
 
-   SCIP_CALL( SCIPrealarrayClear(sol->vals) );
    SCIP_CALL( SCIPboolarrayClear(sol->valid) );
 
    return SCIP_OKAY;
@@ -103,11 +102,20 @@ SCIP_RETCODE solIncArrayVal(
    /* from now on, variable must not be deleted */
    SCIPvarMarkNotDeletable(var);
 
-   /* mark the variable valid */
-   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   /* if the variable was not valid, mark it to be valid and set the value to the incval (it is 0.0 if not valid) */
+   if( !SCIPboolarrayGetVal(sol->valid, idx) )
+   {
+      /* mark the variable valid */
+      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
 
-   /* increase the value in the solution array */
-   SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+      /* set the value in the solution array */
+      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, incval) );
+   }
+   else
+   {
+      /* increase the value in the solution array */
+      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+   }
 
    return SCIP_OKAY;
 }
@@ -132,8 +140,6 @@ SCIP_Real solGetArrayVal(
    }
    else
    {
-      assert(SCIPrealarrayGetVal(sol->vals, idx) == 0.0);
-
       /* return the variable's value corresponding to the origin */
       switch( sol->solorigin )
       {
@@ -182,8 +188,6 @@ SCIP_RETCODE solUnlinkVar(
    /* if variable is already valid, nothing has to be done */
    if( SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
       return SCIP_OKAY;
-
-   assert(SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var)) == 0.0);
 
    SCIPdebugMessage("unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
 
@@ -515,7 +519,6 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIPprimalSolFreed(primal, *sol);
 
-   SCIP_CALL( solClearArrays(*sol) );
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
    BMSfreeBlockMemory(blkmem, sol);
