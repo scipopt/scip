@@ -3123,14 +3123,14 @@ SCIP_RETCODE propAndSolve(
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          *forcedenforcement = TRUE;
 
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") LP solver hit %s limit in LP %d -- using pseudo solution instead\n",
             stat->nnodes, stat->nlps,  SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT ? "time" : "iteration");
       }
 
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") LP relaxation is unbounded (LP %d)\n", stat->nnodes, stat->nlps);
       }
 
