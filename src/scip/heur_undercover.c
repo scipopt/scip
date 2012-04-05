@@ -66,6 +66,8 @@
 #define DEFAULT_INFERENCEWEIGHT 1.0          /**< weight for inference score in fixing order */
 #define DEFAULT_MAXCOVERSIZEVARS  1.0           /**< maximum coversize (as fraction of total number of variables) */
 #define DEFAULT_MAXCOVERSIZECONSS SCIP_REAL_MAX /**< maximum coversize (as ratio to the percentage of non-affected constraints) */
+#define DEFAULT_MINCOVEREDREL   0.15         /**< minimum percentage of nonlinear constraints in the original problem */
+#define DEFAULT_MINCOVEREDABS   5            /**< minimum number of nonlinear constraints in the original problem */
 #define DEFAULT_MINIMPROVE      0.0          /**< factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_NODESQUOT       0.1          /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_RECOVERDIV      0.9          /**< fraction of covering variables in the last cover which need to change their value when recovering */
@@ -123,9 +125,11 @@ struct SCIP_HeurData
    SCIP_Real             inferenceweight;    /**< weight for inference score in foxing order */
    SCIP_Real             maxcoversizevars;   /**< maximum coversize (as fraction of total number of variables) */
    SCIP_Real             maxcoversizeconss;  /**< maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints) */
+   SCIP_Real             mincoveredrel;      /**< minimum percentage of nonlinear constraints in the original problem */
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             recoverdiv;         /**< fraction of covering variables in the last cover which need to change their value when recovering */
+   int                   mincoveredabs;      /**< minimum number of nonlinear constraints in the original problem */
    int                   maxbacktracks;      /**< maximum number of backtracks */
    int                   maxrecovers;        /**< maximum number of recoverings */
    int                   maxreorders;        /**< maximum number of reorderings of the fixing order */
@@ -2584,6 +2588,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    int nvars;
    int ncovers;
    int nunfixeds;
+   int nnlconss;
    int i;
 
    SCIP_Bool success;
@@ -2622,6 +2627,31 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
+   /* get number of nonlinear constraints */
+   nnlconss = 0;
+   for( i = 0; i < heurdata->nnlconshdlrs; ++i )
+      nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
+   assert(nnlconss >= 0);
+   assert(nnlconss <= SCIPgetNConss(scip));
+
+   /* run only if problem is sufficiently nonlinear */
+   if( nnlconss < (SCIP_Real) SCIPgetNConss(scip) * heurdata->mincoveredrel || nnlconss < heurdata->mincoveredabs )
+   {
+      SCIPdebugMessage("too few nonlinear constraints present, not running\n");
+
+      /* free clock */
+      SCIP_CALL( SCIPfreeClock(scip, &clock) );
+
+      return SCIP_OKAY;
+   }
+
+   /* calculate upper bound for cover size */
+   maxcoversize = nvars*heurdata->maxcoversizevars;
+   if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
+   {
+      maxcoversize = MIN(maxcoversize,heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) );
+   }
+
    /* create covering problem */
    success = FALSE;
    SCIP_CALL( SCIPcreate(&coveringscip) );
@@ -2657,22 +2687,6 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* update memory left */
    memorylimit -= SCIPgetMemUsed(coveringscip)/1048576.0;
-
-   /* calculate upper bound for cover size */
-   maxcoversize = nvars*heurdata->maxcoversizevars;
-   if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
-   {
-      int nnlconss;
-
-      nnlconss = 0;
-
-      /* get number of nonlinear ocnstraints */
-      for( i = 0; i < heurdata->nnlconshdlrs; ++i )
-         nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
-      assert(nnlconss <= SCIPgetNConss(scip));
-
-      maxcoversize = MIN(maxcoversize,heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) );
-   }
 
    /* allocate memory for storing bound disjunction information along probing path */
    SCIP_CALL( SCIPallocBufferArray(scip, &bdvars, 2*nvars) );
@@ -2738,20 +2752,11 @@ SCIP_RETCODE SCIPapplyUndercover(
             goto TERMINATE;
          }
 
-         if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
+         /* terminate, if cover too large for the ratio of nonlinear constraints */
+         if( heurdata->maxcoversizeconss < SCIP_REAL_MAX && coversize > heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) )
          {
-            int nnlconss;
-
-            nnlconss = 0;
-
-            /* get number of nonlinear ocnstraints */
-            for( i = 0; i < heurdata->nnlconshdlrs; ++i )
-               nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
-            assert(nnlconss <= SCIPgetNConss(scip));
-
-            /* terminate, if cover too large for the ratio of nonlinear constraints */
-            if( coversize > heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) )
-               goto TERMINATE;
+            SCIPdebugMessage("terminating due to coversize=%d\n", coversize);
+            goto TERMINATE;
          }
       }
 
@@ -3296,6 +3301,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints)",
          &heurdata->maxcoversizeconss, TRUE, DEFAULT_MAXCOVERSIZECONSS, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mincoveredrel",
+         "minimum percentage of nonlinear constraints in the original problem",
+         &heurdata->mincoveredrel, TRUE, DEFAULT_MINCOVEREDREL, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which the heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, -1.0, 1.0, NULL, NULL) );
@@ -3309,6 +3318,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          &heurdata->recoverdiv, TRUE, DEFAULT_RECOVERDIV, 0.0, 1.0, NULL, NULL) );
 
    /* add int parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/mincoveredabs",
+         "minimum number of nonlinear constraints in the original problem",
+         &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0.0, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
          "maximum number of backtracks in fix-and-propagate",
          &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, 0, INT_MAX, NULL, NULL) );
