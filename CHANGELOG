@@ -95,6 +95,7 @@ performance improvements:
 - improved time used for adding implications
 - improved tcliquegraphAddImplicsVars() in sepa_clique.c to faster add possible variables
 - added parameters mincoveredrel and mincoveredabs to heur_undercover to only run if problem is sufficiently nonlinear
+- heur_undercover treats indicator constraints as nonlinear and fixes the binary variable for linearization
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

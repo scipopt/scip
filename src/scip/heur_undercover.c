@@ -638,11 +638,6 @@ SCIP_RETCODE createCoveringProblem(
          mapsize = SCIPconshdlrGetNConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
          mapsize += SCIPconshdlrGetNConss(conshdlr);
-         if( coverbd )
-         {
-            conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
-            mapsize += SCIPconshdlrGetNConss(conshdlr);
-         }
          conshdlr = SCIPfindConshdlr(scip, "soc");
          mapsize += SCIPconshdlrGetNConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
@@ -983,6 +978,79 @@ SCIP_RETCODE createCoveringProblem(
          /* free memory for covering constraint */
          SCIPfreeBufferArray(coveringscip, &coveringconsvals);
          SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+      }
+   }
+
+   /* go through all indicator constraints in the original problem; fix the binary variable */
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   if( conshdlr != NULL )
+   {
+      int c;
+
+      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      {
+         SCIP_CONS* indcons;
+         SCIP_VAR* binvar;
+         SCIP_VAR* coveringvar;
+         SCIP_Bool negated;
+
+         /* get original constraint and variables */
+         indcons = SCIPconshdlrGetConss(conshdlr)[c];
+         assert(indcons != NULL);
+         binvar = SCIPgetBinaryVarIndicator(indcons);
+         assert(binvar != NULL);
+
+         /* indicator constraints are not passed to the NLP, hence nothing to store in the hash map */
+
+         /* if variable is fixed, nothing to do */
+         if( varIsFixed(scip, binvar, globalbounds ? SCIPvarGetLbGlobal(binvar) : SCIPvarGetLbLocal(binvar), globalbounds) )
+         {
+            continue;
+         }
+
+         /* if constraints with inactive variables are present, we have to find the corresponding active variable */
+         probindex = SCIPvarGetProbindex(binvar);
+         if( probindex == -1 )
+         {
+            SCIP_VAR* repvar;
+
+            /* get binary representative of variable */
+            negated = FALSE;
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, binvar, &repvar, &negated) );
+            assert(repvar != NULL);
+            assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
+
+            if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
+            {
+               SCIPdebugMessage("strange: multiaggregated variable found <%s>\n", SCIPvarGetName(binvar));
+               SCIPdebugMessage("inactive variables detected in constraint <%s>\n", SCIPconsGetName(indcons));
+               goto TERMINATE;
+            }
+
+            /* check for negation */
+            if( SCIPvarIsNegated(repvar) )
+            {
+               probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
+               negated = TRUE;
+            }
+            else
+            {
+               assert(SCIPvarIsActive(repvar));
+               probindex = SCIPvarGetProbindex(repvar);
+               negated = FALSE;
+            }
+         }
+         assert(probindex >= 0);
+
+         /* get covering variable for unfixed binary variable in indicator constraint */
+         coveringvar = coveringvars[probindex];
+
+         /* require covering variable to be fixed such that indicator is linearized */
+         SCIP_CALL( SCIPchgVarLb(coveringscip, coveringvar, 1.0) );
+
+         /* update counters */
+         BMSclearMemoryArray(consmarker, nvars);
+         incCounters(termcounter, conscounter, consmarker, probindex);
       }
    }
 
@@ -3043,7 +3111,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    /* find nonlinear constraint handlers */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 6) );/*lint !e506*/
+   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 7) );/*lint !e506*/
    h = 0;
 
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
@@ -3060,6 +3128,10 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       if( heurdata->nlconshdlrs[h] != NULL )
          h++;
    }
+
+   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "indicator");
+   if( heurdata->nlconshdlrs[h] != NULL )
+      h++;
 
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "soc");
    if( heurdata->nlconshdlrs[h] != NULL )
