@@ -38,7 +38,6 @@
 #include "scip/pub_misc.h"
 #include "scip/cons_xor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_pseudoboolean.h"
 
 
 /* constraint handler properties */
@@ -899,7 +898,7 @@ SCIP_RETCODE createRelaxation(
       {
          int ub;
 
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"%s_int", SCIPconsGetName(cons));
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "XOR_artificial_%s_int", SCIPconsGetName(cons));
          ub = consdata->nvars/2;
          SCIP_CALL( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (SCIP_Real)ub, 0.0,
                consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
