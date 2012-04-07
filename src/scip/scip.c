@@ -21347,7 +21347,7 @@ void printPresolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :       Time  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -21355,8 +21355,9 @@ void printPresolverStatistics(
       SCIP_PRESOL* presol;
       presol = scip->set->presols[i];
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpresolGetName(presol));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
+         SCIPpresolGetSetupTime(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
          SCIPpresolGetNChgVarTypes(presol),
@@ -21389,8 +21390,9 @@ void printPresolverStatistics(
          )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPpropGetPresolTime(prop),
+	    SCIPpropGetSetupTime(prop),
             SCIPpropGetNFixedVars(prop),
             SCIPpropGetNAggrVars(prop),
             SCIPpropGetNChgVarTypes(prop),
@@ -21425,8 +21427,9 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
+            SCIPconshdlrGetSetupTime(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
             SCIPconshdlrGetNChgVarTypes(conshdlr),
@@ -21440,7 +21443,7 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          - %10d          -          - %10d          -          -          -          -          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          - %10d          -          - %10d          -          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
@@ -21502,7 +21505,7 @@ void printConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -21515,15 +21518,17 @@ void printConstraintTimingStatistics(
       {
          SCIP_Real totaltime;
 
-         totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) 
-            + SCIPconshdlrGetEnfoLPTime(conshdlr) 
-            + SCIPconshdlrGetEnfoPSTime(conshdlr) 
+         totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr)
+            + SCIPconshdlrGetEnfoLPTime(conshdlr)
+            + SCIPconshdlrGetEnfoPSTime(conshdlr)
             + SCIPconshdlrGetCheckTime(conshdlr)
-            + SCIPconshdlrGetRespropTime(conshdlr);
-         
+            + SCIPconshdlrGetRespropTime(conshdlr)
+	    + SCIPconshdlrGetSetupTime(conshdlr);
+
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             totaltime,
+	    SCIPconshdlrGetSetupTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
@@ -21560,20 +21565,25 @@ void printPropagatorStatistics(
          SCIPpropGetNCutoffs(prop),
          SCIPpropGetNDomredsFound(prop));
    }
-   
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagator Timings :  TotalTime   Presolve  Propagate    ResProp\n");
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagator Timings :  TotalTime  SetupTime   Presolve  Propagate    ResProp\n");
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
       SCIP_PROP* prop;
       SCIP_Real totaltime;
-         
+
       prop = scip->set->props[i];
-      totaltime = SCIPpropGetPresolTime(prop) + SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop);
-      
+      totaltime = SCIPpropGetPresolTime(prop) + SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop)
+	 + SCIPpropGetSetupTime(prop);
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f\n",
-         totaltime, SCIPpropGetPresolTime(prop), SCIPpropGetTime(prop), SCIPpropGetRespropTime(prop));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         totaltime,
+	 SCIPpropGetSetupTime(prop),
+	 SCIPpropGetPresolTime(prop),
+	 SCIPpropGetTime(prop),
+	 SCIPpropGetRespropTime(prop));
    }
 }
 
@@ -21671,17 +21681,18 @@ void printSeparatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :       Time      Calls    Cutoffs    DomReds       Cuts      Conss\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f %10"SCIP_LONGINT_FORMAT"          -          - %10"SCIP_LONGINT_FORMAT"          -    (maximal pool size: %d)\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f            %10"SCIP_LONGINT_FORMAT"          -          - %10"SCIP_LONGINT_FORMAT"          -    (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool),
       SCIPcutpoolGetNCalls(scip->cutpool),
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
+         SCIPsepaGetSetupTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
          SCIPsepaGetNCutoffs(scip->set->sepas[i]),
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
@@ -21700,16 +21711,17 @@ void printPricerStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Pricers            :       Time      Calls       Vars\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  problem variables: %10.2f %10d %10d\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Pricers            :   ExecTime  SetupTime      Calls       Vars\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  problem variables: %10.2f          - %10d %10d\n",
       SCIPpricestoreGetProbPricingTime(scip->pricestore),
       SCIPpricestoreGetNProbPricings(scip->pricestore),
       SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
    for( i = 0; i < scip->set->nactivepricers; ++i )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10d %10d\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10d %10d\n",
          SCIPpricerGetName(scip->set->pricers[i]),
          SCIPpricerGetTime(scip->set->pricers[i]),
+         SCIPpricerGetSetupTime(scip->set->pricers[i]),
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
 }
@@ -21725,12 +21737,13 @@ void printBranchruleStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
+         SCIPbranchruleGetSetupTime(scip->set->branchrules[i]),
          SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNExternCalls(scip->set->branchrules[i])
          ,
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
@@ -21752,20 +21765,21 @@ void printHeuristicStatistics(
    assert(scip->set != NULL);
    assert(scip->tree != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :       Time      Calls      Found\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          - %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          - %10"SCIP_LONGINT_FORMAT"\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
    SCIPsetSortHeurs(scip->set);
 
    for( i = 0; i < scip->set->nheurs; ++i )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
+         SCIPheurGetSetupTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]));
 }
