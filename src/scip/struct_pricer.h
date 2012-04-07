@@ -46,6 +46,7 @@ struct SCIP_Pricer
    SCIP_DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
    SCIP_DECL_PRICERFARKAS((*pricerfarkas));  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata;         /**< variable pricers local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this pricer for the next stages */
    SCIP_CLOCK*           pricerclock;        /**< pricer execution time */
    int                   priority;           /**< priority of the variable pricer */
    int                   ncalls;             /**< number of times, this pricer was called */

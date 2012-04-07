@@ -75,6 +75,18 @@ SCIP_Bool SCIPnodeselIsInitialized(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
+/** gets time in seconds used in this node selector for setting up for next stages */
+extern
+SCIP_Real SCIPnodeselGetSetupTime(
+   SCIP_NODESEL*         nodesel             /**< node selector */
+   );
+
+/** gets time in seconds used in this node selector */
+extern
+SCIP_Real SCIPnodeselGetTime(
+   SCIP_NODESEL*         nodesel             /**< node selector */
+   );
+
 #ifdef __cplusplus
 }
 #endif

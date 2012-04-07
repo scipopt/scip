@@ -153,6 +153,7 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->heurexitsol = heurexitsol;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
+   SCIP_CALL( SCIPclockCreate(&(*heur)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*heur)->heurclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
@@ -199,6 +200,7 @@ SCIP_RETCODE SCIPheurFree(
    }
 
    SCIPclockFree(&(*heur)->heurclock);
+   SCIPclockFree(&(*heur)->setuptime);
    BMSfreeMemoryArray(&(*heur)->name);
    BMSfreeMemoryArray(&(*heur)->desc);
    BMSfreeMemory(heur);
@@ -223,6 +225,7 @@ SCIP_RETCODE SCIPheurInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(heur->setuptime);
       SCIPclockReset(heur->heurclock);
       
       heur->delaypos = -1;
@@ -233,7 +236,13 @@ SCIP_RETCODE SCIPheurInit(
 
    if( heur->heurinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurinit(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
    heur->initialized = TRUE;
 
@@ -257,7 +266,13 @@ SCIP_RETCODE SCIPheurExit(
 
    if( heur->heurexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurexit(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
    heur->initialized = FALSE;
 
@@ -282,7 +297,13 @@ SCIP_RETCODE SCIPheurInitsol(
    /* call solving process initialization method of primal heuristic */
    if( heur->heurinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurinitsol(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -300,7 +321,13 @@ SCIP_RETCODE SCIPheurExitsol(
    /* call solving process deinitialization method of primal heuristic */
    if( heur->heurexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurexitsol(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -628,6 +655,16 @@ SCIP_Bool SCIPheurIsInitialized(
    assert(heur != NULL);
 
    return heur->initialized;
+}
+
+/** gets time in seconds used in this heuristic for setting up for next stages */
+SCIP_Real SCIPheurGetSetupTime(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return SCIPclockGetTime(heur->setuptime);
 }
 
 /** gets time in seconds used in this heuristic */

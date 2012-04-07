@@ -129,6 +129,7 @@ SCIP_RETCODE SCIPpricerCreate(
    (*pricer)->pricerredcost = pricerredcost;
    (*pricer)->pricerfarkas = pricerfarkas;
    (*pricer)->pricerdata = pricerdata;
+   SCIP_CALL( SCIPclockCreate(&(*pricer)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*pricer)->pricerclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*pricer)->ncalls = 0;
    (*pricer)->nvarsfound = 0;
@@ -164,6 +165,7 @@ SCIP_RETCODE SCIPpricerFree(
    }
 
    SCIPclockFree(&(*pricer)->pricerclock);
+   SCIPclockFree(&(*pricer)->setuptime);
    BMSfreeMemoryArray(&(*pricer)->name);
    BMSfreeMemoryArray(&(*pricer)->desc);
    BMSfreeMemory(pricer);
@@ -189,6 +191,7 @@ SCIP_RETCODE SCIPpricerInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(pricer->setuptime);
       SCIPclockReset(pricer->pricerclock);
 
       pricer->ncalls = 0;
@@ -197,7 +200,13 @@ SCIP_RETCODE SCIPpricerInit(
 
    if( pricer->pricerinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(pricer->setuptime, set);
+
       SCIP_CALL( pricer->pricerinit(set->scip, pricer) );
+
+      /* stop timing */
+      SCIPclockStop(pricer->setuptime, set);
    }
    pricer->initialized = TRUE;
 
@@ -222,7 +231,13 @@ SCIP_RETCODE SCIPpricerExit(
 
    if( pricer->pricerexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(pricer->setuptime, set);
+
       SCIP_CALL( pricer->pricerexit(set->scip, pricer) );
+
+      /* stop timing */
+      SCIPclockStop(pricer->setuptime, set);
    }
    pricer->initialized = FALSE;
 
@@ -241,7 +256,13 @@ SCIP_RETCODE SCIPpricerInitsol(
    /* call solving process initialization method of variable pricer */
    if( pricer->pricerinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(pricer->setuptime, set);
+
       SCIP_CALL( pricer->pricerinitsol(set->scip, pricer) );
+
+      /* stop timing */
+      SCIPclockStop(pricer->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -259,7 +280,13 @@ SCIP_RETCODE SCIPpricerExitsol(
    /* call solving process deinitialization method of variable pricer */
    if( pricer->pricerexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(pricer->setuptime, set);
+
       SCIP_CALL( pricer->pricerexitsol(set->scip, pricer) );
+
+      /* stop timing */
+      SCIPclockStop(pricer->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -503,9 +530,19 @@ int SCIPpricerGetNVarsFound(
    return pricer->nvarsfound;
 }
 
+/** gets time in seconds used in this pricer for setting up for next stages */
+SCIP_Real SCIPpricerGetSetupTime(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   return SCIPclockGetTime(pricer->setuptime);
+}
+
 /** gets time in seconds used in this pricer */
 SCIP_Real SCIPpricerGetTime(
-   SCIP_PRICER*            pricer                /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);

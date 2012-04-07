@@ -169,6 +169,7 @@ struct SCIP_Conshdlr
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    SCIP_CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
    SCIP_CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this constraint handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */

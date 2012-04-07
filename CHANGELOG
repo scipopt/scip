@@ -149,6 +149,8 @@ features:
   components in the graph, and sort these components (almost) topologically
 - beta-version of a MATLAB interface can be found under interfaces/matlab
 - SCIP does now print an info message when the root LP could not be solved or is unbounded
+- added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
+  for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 
 SCIP version 2.1.2
 ==================

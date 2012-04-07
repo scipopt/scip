@@ -65,6 +65,17 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/** gets time in seconds used in this event handler for setting up for next stages */
+extern
+SCIP_Real SCIPeventhdlrGetSetupTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   );
+
+/** gets time in seconds used in this event handler */
+extern
+SCIP_Real SCIPeventhdlrGetTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   );
 
 
 /*

@@ -129,6 +129,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->sepaexeclp = sepaexeclp;
    (*sepa)->sepaexecsol = sepaexecsol;
    (*sepa)->sepadata = sepadata;
+   SCIP_CALL( SCIPclockCreate(&(*sepa)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*sepa)->sepaclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*sepa)->lastsepanode = -1;
    (*sepa)->ncalls = 0;
@@ -186,6 +187,7 @@ SCIP_RETCODE SCIPsepaFree(
    }
 
    SCIPclockFree(&(*sepa)->sepaclock);
+   SCIPclockFree(&(*sepa)->setuptime);
    BMSfreeMemoryArray(&(*sepa)->name);
    BMSfreeMemoryArray(&(*sepa)->desc);
    BMSfreeMemory(sepa);
@@ -210,6 +212,7 @@ SCIP_RETCODE SCIPsepaInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(sepa->setuptime);
       SCIPclockReset(sepa->sepaclock);
 
       sepa->lastsepanode = -1;
@@ -226,7 +229,13 @@ SCIP_RETCODE SCIPsepaInit(
 
    if( sepa->sepainit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(sepa->setuptime, set);
+
       SCIP_CALL( sepa->sepainit(set->scip, sepa) );
+
+      /* stop timing */
+      SCIPclockStop(sepa->setuptime, set);
    }
    sepa->initialized = TRUE;
 
@@ -250,7 +259,13 @@ SCIP_RETCODE SCIPsepaExit(
 
    if( sepa->sepaexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(sepa->setuptime, set);
+
       SCIP_CALL( sepa->sepaexit(set->scip, sepa) );
+
+      /* stop timing */
+      SCIPclockStop(sepa->setuptime, set);
    }
    sepa->initialized = FALSE;
 
@@ -272,7 +287,13 @@ SCIP_RETCODE SCIPsepaInitsol(
    /* call solving process initialization method of separator */
    if( sepa->sepainitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(sepa->setuptime, set);
+
       SCIP_CALL( sepa->sepainitsol(set->scip, sepa) );
+
+      /* stop timing */
+      SCIPclockStop(sepa->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -290,7 +311,13 @@ SCIP_RETCODE SCIPsepaExitsol(
    /* call solving process deinitialization method of separator */
    if( sepa->sepaexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(sepa->setuptime, set);
+
       SCIP_CALL( sepa->sepaexitsol(set->scip, sepa) );
+
+      /* stop timing */
+      SCIPclockStop(sepa->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -609,6 +636,16 @@ SCIP_Bool SCIPsepaUsesSubscip(
    assert(sepa != NULL);
 
    return sepa->usessubscip;
+}
+
+/** gets time in seconds used in this separator for setting up for next stages */
+SCIP_Real SCIPsepaGetSetupTime(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return SCIPclockGetTime(sepa->setuptime);
 }
 
 /** gets time in seconds used in this separator */

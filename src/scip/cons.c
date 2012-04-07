@@ -1870,6 +1870,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastnusefulsepaconss = 0;
    (*conshdlr)->lastnusefulenfoconss = 0;
 
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -1994,6 +1995,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->proptime);
    SCIPclockFree(&(*conshdlr)->checktime);
    SCIPclockFree(&(*conshdlr)->resproptime);
+   SCIPclockFree(&(*conshdlr)->setuptime);
 
    BMSfreeMemoryArray(&(*conshdlr)->name);
    BMSfreeMemoryArray(&(*conshdlr)->desc);
@@ -2028,6 +2030,7 @@ SCIP_RETCODE SCIPconshdlrInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(conshdlr->setuptime);
       SCIPclockReset(conshdlr->presoltime);
       SCIPclockReset(conshdlr->sepatime);
       SCIPclockReset(conshdlr->enfolptime);
@@ -2095,8 +2098,14 @@ SCIP_RETCODE SCIPconshdlrInit(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2133,8 +2142,14 @@ SCIP_RETCODE SCIPconshdlrExit(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2197,13 +2212,13 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set);
+      SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
       SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(conshdlr->presoltime, set);
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2279,13 +2294,13 @@ SCIP_RETCODE SCIPconshdlrExitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set);
+      SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
       SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(conshdlr->presoltime, set);
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2332,8 +2347,14 @@ SCIP_RETCODE SCIPconshdlrInitsol(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2363,8 +2384,14 @@ SCIP_RETCODE SCIPconshdlrExitsol(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, restart) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3546,6 +3573,16 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets time in seconds used for setting up this constraint handler for new stages */
+SCIP_Real SCIPconshdlrGetSetupTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->setuptime);
 }
 
 /** gets time in seconds used for presolving in this constraint handler */

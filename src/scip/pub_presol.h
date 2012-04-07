@@ -86,6 +86,12 @@ SCIP_Bool SCIPpresolIsInitialized(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+/** gets time in seconds used in this presolver for setting up for next stages */
+extern
+SCIP_Real SCIPpresolGetSetupTime(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 /** gets time in seconds used in this presolver */
 extern
 SCIP_Real SCIPpresolGetTime(

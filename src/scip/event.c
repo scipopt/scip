@@ -25,6 +25,7 @@
 
 #include "scip/def.h"
 #include "scip/set.h"
+#include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -93,6 +94,10 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    (*eventhdlr)->eventhdlrdata = eventhdlrdata;
    (*eventhdlr)->initialized = FALSE;
 
+   /* create clocks */
+   SCIP_CALL( SCIPclockCreate(&(*eventhdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*eventhdlr)->eventtime, SCIP_CLOCKTYPE_DEFAULT) );
+
    return SCIP_OKAY;
 }
 
@@ -112,6 +117,10 @@ SCIP_RETCODE SCIPeventhdlrFree(
    {
       SCIP_CALL( (*eventhdlr)->eventfree(set->scip, *eventhdlr) );
    }
+
+   /* free clocks */
+   SCIPclockFree(&(*eventhdlr)->eventtime);
+   SCIPclockFree(&(*eventhdlr)->setuptime);
 
    BMSfreeMemoryArray(&(*eventhdlr)->name);
    BMSfreeMemoryArray(&(*eventhdlr)->desc);
@@ -135,9 +144,21 @@ SCIP_RETCODE SCIPeventhdlrInit(
       return SCIP_INVALIDCALL;
    }
 
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(eventhdlr->setuptime);
+      SCIPclockReset(eventhdlr->eventtime);
+   }
+
    if( eventhdlr->eventinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(eventhdlr->setuptime, set);
+
       SCIP_CALL( eventhdlr->eventinit(set->scip, eventhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(eventhdlr->setuptime, set);
    }
    eventhdlr->initialized = TRUE;
 
@@ -161,7 +182,13 @@ SCIP_RETCODE SCIPeventhdlrExit(
 
    if( eventhdlr->eventexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(eventhdlr->setuptime, set);
+
       SCIP_CALL( eventhdlr->eventexit(set->scip, eventhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(eventhdlr->setuptime, set);
    }
    eventhdlr->initialized = FALSE;
 
@@ -180,7 +207,13 @@ SCIP_RETCODE SCIPeventhdlrInitsol(
    /* call solving process initialization method of event handler */
    if( eventhdlr->eventinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(eventhdlr->setuptime, set);
+
       SCIP_CALL( eventhdlr->eventinitsol(set->scip, eventhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(eventhdlr->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -198,7 +231,13 @@ SCIP_RETCODE SCIPeventhdlrExitsol(
    /* call solving process deinitialization method of event handler */
    if( eventhdlr->eventexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(eventhdlr->setuptime, set);
+
       SCIP_CALL( eventhdlr->eventexitsol(set->scip, eventhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(eventhdlr->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -219,7 +258,13 @@ SCIP_RETCODE SCIPeventhdlrExec(
 
    SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
 
+   /* start timing */
+   SCIPclockStart(eventhdlr->eventtime, set);
+
    SCIP_CALL( eventhdlr->eventexec(set->scip, eventhdlr, event, eventdata) );
+
+   /* stop timing */
+   SCIPclockStop(eventhdlr->eventtime, set);
 
    return SCIP_OKAY;
 }
@@ -265,6 +310,25 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
    return eventhdlr->initialized;
 }
 
+/** gets time in seconds used in this event handler for setting up for next stages */
+SCIP_Real SCIPeventhdlrGetSetupTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   return SCIPclockGetTime(eventhdlr->setuptime);
+}
+
+/** gets time in seconds used in this event handler */
+SCIP_Real SCIPeventhdlrGetTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   return SCIPclockGetTime(eventhdlr->eventtime);
+}
 
 
 

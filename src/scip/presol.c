@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPpresolCreate(
    (*presol)->presolexitpre = presolexitpre;
    (*presol)->presolexec = presolexec;
    (*presol)->presoldata = presoldata;
+   SCIP_CALL( SCIPclockCreate(&(*presol)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*presol)->presolclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*presol)->wasdelayed = FALSE;
    (*presol)->initialized = FALSE;
@@ -161,6 +162,7 @@ SCIP_RETCODE SCIPpresolFree(
    }
 
    SCIPclockFree(&(*presol)->presolclock);
+   SCIPclockFree(&(*presol)->setuptime);
    BMSfreeMemoryArray(&(*presol)->name);
    BMSfreeMemoryArray(&(*presol)->desc);
    BMSfreeMemory(presol);
@@ -185,6 +187,7 @@ SCIP_RETCODE SCIPpresolInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(presol->setuptime);
       SCIPclockReset(presol->presolclock);
 
       presol->lastnfixedvars = 0;
@@ -213,7 +216,13 @@ SCIP_RETCODE SCIPpresolInit(
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(presol->setuptime, set);
+
       SCIP_CALL( presol->presolinit(set->scip, presol) );
+
+      /* stop timing */
+      SCIPclockStop(presol->setuptime, set);
    }
    presol->initialized = TRUE;
 
@@ -238,7 +247,13 @@ SCIP_RETCODE SCIPpresolExit(
    /* call deinitialization method of presolver */
    if( presol->presolexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(presol->setuptime, set);
+
       SCIP_CALL( presol->presolexit(set->scip, presol) );
+
+      /* stop timing */
+      SCIPclockStop(presol->setuptime, set);
    }
    presol->initialized = FALSE;
 
@@ -276,12 +291,12 @@ SCIP_RETCODE SCIPpresolInitpre(
    if( presol->presolinitpre != NULL )
    {
       /* start timing */
-      SCIPclockStart(presol->presolclock, set);
+      SCIPclockStart(presol->setuptime, set);
 
       SCIP_CALL( presol->presolinitpre(set->scip, presol, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(presol->presolclock, set);
+      SCIPclockStop(presol->setuptime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -316,12 +331,12 @@ SCIP_RETCODE SCIPpresolExitpre(
    if( presol->presolexitpre != NULL )
    {
       /* start timing */
-      SCIPclockStart(presol->presolclock, set);
+      SCIPclockStart(presol->setuptime, set);
 
       SCIP_CALL( presol->presolexitpre(set->scip, presol, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(presol->presolclock, set);
+      SCIPclockStop(presol->setuptime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED && *result != SCIP_FEASIBLE )
@@ -557,6 +572,16 @@ SCIP_Bool SCIPpresolIsInitialized(
    assert(presol != NULL);
 
    return presol->initialized;
+}
+
+/** gets time in seconds used in this presolver for setting up for next stages */
+SCIP_Real SCIPpresolGetSetupTime(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return SCIPclockGetTime(presol->setuptime);
 }
 
 /** gets time in seconds used in this presolver */

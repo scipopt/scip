@@ -45,6 +45,7 @@ struct SCIP_Presol
    SCIP_DECL_PRESOLEXITPRE((*presolexitpre));/**< presolving deinitialization method of presolver (called after presolving has been finished) */
    SCIP_DECL_PRESOLEXEC  ((*presolexec));    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata;         /**< presolver data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this presolver for the next stages */
    SCIP_CLOCK*           presolclock;        /**< presolving time */
    int                   priority;           /**< priority of the presolver */
    int                   maxrounds;          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */

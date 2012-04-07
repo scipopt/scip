@@ -60,6 +60,8 @@ struct SCIP_Nodesel
    SCIP_DECL_NODESELEXITSOL((*nodeselexitsol));/**< solving process deinitialization method of node selector */
    SCIP_DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    SCIP_DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this node selector for the next stages */
+   SCIP_CLOCK*           nodeseltime;        /**< node selector execution time */
    SCIP_NODESELDATA*     nodeseldata;        /**< node selector data */
    int                   stdpriority;        /**< priority of the node selector in standard mode */
    int                   memsavepriority;    /**< priority of the node selector in memory saving mode */

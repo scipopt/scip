@@ -424,6 +424,9 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    (*conflicthdlr)->conflicthdlrdata = conflicthdlrdata;
    (*conflicthdlr)->initialized = FALSE;
 
+   SCIP_CALL( SCIPclockCreate(&(*conflicthdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conflicthdlr)->conflicttime, SCIP_CLOCKTYPE_DEFAULT) );
+
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "conflict/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of conflict handler <%s>", name);
@@ -451,6 +454,9 @@ SCIP_RETCODE SCIPconflicthdlrFree(
       SCIP_CALL( (*conflicthdlr)->conflictfree(set->scip, *conflicthdlr) );
    }
 
+   SCIPclockFree(&(*conflicthdlr)->conflicttime);
+   SCIPclockFree(&(*conflicthdlr)->setuptime);
+
    BMSfreeMemoryArray(&(*conflicthdlr)->name);
    BMSfreeMemoryArray(&(*conflicthdlr)->desc);
    BMSfreeMemory(conflicthdlr);
@@ -473,10 +479,22 @@ SCIP_RETCODE SCIPconflicthdlrInit(
       return SCIP_INVALIDCALL;
    }
 
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(conflicthdlr->setuptime);
+      SCIPclockReset(conflicthdlr->conflicttime);
+   }
+
    /* call initialization method of conflict handler */
    if( conflicthdlr->conflictinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conflicthdlr->setuptime, set);
+
       SCIP_CALL( conflicthdlr->conflictinit(set->scip, conflicthdlr) );
+
+      /* stop timing */
+      SCIPclockStop(conflicthdlr->setuptime, set);
    }
    conflicthdlr->initialized = TRUE;
 
@@ -501,7 +519,13 @@ SCIP_RETCODE SCIPconflicthdlrExit(
    /* call deinitialization method of conflict handler */
    if( conflicthdlr->conflictexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conflicthdlr->setuptime, set);
+
       SCIP_CALL( conflicthdlr->conflictexit(set->scip, conflicthdlr) );
+
+      /* stop timing */
+      SCIPclockStop(conflicthdlr->setuptime, set);
    }
    conflicthdlr->initialized = FALSE;
 
@@ -520,7 +544,13 @@ SCIP_RETCODE SCIPconflicthdlrInitsol(
    /* call solving process initialization method of conflict handler */
    if( conflicthdlr->conflictinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conflicthdlr->setuptime, set);
+
       SCIP_CALL( conflicthdlr->conflictinitsol(set->scip, conflicthdlr) );
+
+      /* stop timing */
+      SCIPclockStop(conflicthdlr->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -538,7 +568,13 @@ SCIP_RETCODE SCIPconflicthdlrExitsol(
    /* call solving process deinitialization method of conflict handler */
    if( conflicthdlr->conflictexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conflicthdlr->setuptime, set);
+
       SCIP_CALL( conflicthdlr->conflictexitsol(set->scip, conflicthdlr) );
+
+      /* stop timing */
+      SCIPclockStop(conflicthdlr->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -565,8 +601,14 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    *result = SCIP_DIDNOTRUN;
    if( conflicthdlr->conflictexec != NULL )
    {
+      /* start timing */
+      SCIPclockStart(conflicthdlr->conflicttime, set);
+
       SCIP_CALL( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, validnode, bdchginfos, nbdchginfos,
             set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic, set->conf_removable, resolved, result) );
+
+      /* stop timing */
+      SCIPclockStop(conflicthdlr->conflicttime, set);
 
       if( *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND
@@ -656,6 +698,26 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
    return conflicthdlr->initialized;
 }
 
+
+/** gets time in seconds used in this conflict handler for setting up for next stages */
+SCIP_Real SCIPconflicthdlrGetSetupTime(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return SCIPclockGetTime(conflicthdlr->setuptime);
+}
+
+/** gets time in seconds used in this conflict handler */
+SCIP_Real SCIPconflicthdlrGetTime(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return SCIPclockGetTime(conflicthdlr->conflicttime);
+}
 
 /*
  * Conflict LP Bound Changes

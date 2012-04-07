@@ -53,9 +53,10 @@ struct SCIP_Prop
    SCIP_DECL_PROPEXEC    ((*propexec));      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop));   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata;           /**< propagators local data */
-   SCIP_CLOCK*           proptime;           /**< propagation time */
-   SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
-   SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this propagator for the next stages */
+   SCIP_CLOCK*           proptime;           /**< time used for propagation of this propagator */
+   SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this propagator */
+   SCIP_CLOCK*           presoltime;         /**< time used for presolving of this propagator */
    int                   priority;           /**< priority of the propagator for propagation */
    int                   freq;               /**< frequency for calling propagator */
    SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagator should be executed */
