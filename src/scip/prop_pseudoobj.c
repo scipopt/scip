@@ -636,7 +636,9 @@ SCIP_Real collectMinactImplicVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
    SCIP_Bool             bound,              /**< bound to which the variable gets fixed due to an implication r */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable which have a non-zero objective coefficient */
+   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable
+					      *   which have a non-zero objective coefficient
+					      */
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
@@ -646,11 +648,24 @@ SCIP_Real collectMinactImplicVar(
    SCIP_Real objval;
    SCIP_Bool diff;
    int pos;
+#ifndef NDEBUG
+   SCIP_Bool found;
+#endif
 
+   assert(scip != NULL);
    assert(var != NULL);
+   assert(binobjidxs != NULL);
+   assert(collectedvars != NULL);
+   assert(contributors != NULL);
+   assert(ncontributors != NULL);
+
+   diff = (bound != (SCIP_Bool)SCIPvarGetBestBoundType(var));
+
+   if( !diff )
+      return 0.0;
 
    /* ignore global fixed variables */
-   if( SCIPvarGetLbGlobal(var) > 0.5 && SCIPvarGetUbGlobal(var) < 0.5 )
+   if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
       return 0.0;
 
    objval = SCIPvarGetObj(var);
@@ -659,30 +674,29 @@ SCIP_Real collectMinactImplicVar(
    if( SCIPisZero(scip, objval) )
       return 0.0;
 
-   assert(SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos));
+#ifndef NDEBUG
+   found = SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
+   assert(found);
+#else
    (void) SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
+#endif
 
    /* check if the variables was already collected through other cliques */
    if( collectedvars[pos] )
       return 0.0;
 
-   diff = (bound != (SCIP_Bool)SCIPvarGetBestBoundType(var));
+   assert(diff);
 
-   if( diff )
-   {
-      /* collect variable */
-      assert(*ncontributors < nbinobjvars);
-      contributors[*ncontributors] = var;
-      (*ncontributors)++;
+   /* collect variable */
+   assert(*ncontributors < nbinobjvars);
+   contributors[*ncontributors] = var;
+   (*ncontributors)++;
 
-      /* mark variable to be collected */
-      collectedvars[pos] = TRUE;
+   /* mark variable to be collected */
+   collectedvars[pos] = TRUE;
 
-      /* return the absolute value of the objective coefficient as constriction */
-      return REALABS(objval);
-   }
-
-   return 0.0;
+   /* return the absolute value of the objective coefficient as constriction */
+   return REALABS(objval);
 }
 
 /** returns the objective change provided by the implications of the given variable by fixing it to the given bound
