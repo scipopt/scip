@@ -33,7 +33,8 @@
 #include "scip/branch.h"
 #include "scip/pub_message.h"
 
-
+/* timing the execution methods for event handling takes a lot of time, so it is disabled */
+/* #define TIMEEVENTEXEC */
 
 
 /*
@@ -258,13 +259,17 @@ SCIP_RETCODE SCIPeventhdlrExec(
 
    SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
 
+#if TIMEEVENTEXEC
    /* start timing */
    SCIPclockStart(eventhdlr->eventtime, set);
+#endif
 
    SCIP_CALL( eventhdlr->eventexec(set->scip, eventhdlr, event, eventdata) );
 
+#if TIMEEVENTEXEC
    /* stop timing */
    SCIPclockStop(eventhdlr->eventtime, set);
+#endif
 
    return SCIP_OKAY;
 }
@@ -320,7 +325,9 @@ SCIP_Real SCIPeventhdlrGetSetupTime(
    return SCIPclockGetTime(eventhdlr->setuptime);
 }
 
-/** gets time in seconds used in this event handler */
+/** gets time in seconds used in this event handler, this measurement is currently disabled so this method will return
+ *  0, define TIMEEVENTEXEC in the beginning of this file to enable
+ */
 SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
