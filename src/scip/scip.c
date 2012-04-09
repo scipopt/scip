@@ -485,6 +485,8 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   assert( scip != NULL );
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP version %d.%d.%d",
       SCIPmajorVersion(), SCIPminorVersion(), SCIPtechVersion());
 #if SCIP_SUBVERSION > 0
