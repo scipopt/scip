@@ -1380,67 +1380,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 }
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-static
-SCIP_DECL_CONSEXITPRE(consExitpreSOS1)
-{  /*lint --e{715}*/
-   SCIP_EVENTHDLR* eventhdlr;
-   int nremovedvars;
-   int nfixedvars;
-   int ndelconss;
-   int c;
-
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
-
-   *result = SCIP_FEASIBLE;
-   SCIPdebugMessage("Exitpre method for SOS1 constraints.\n");
-
-   nremovedvars = 0;
-   nfixedvars = 0;
-   ndelconss = 0;
-
-   /* get constraint handler data */
-   assert( SCIPconshdlrGetData(conshdlr) != NULL );
-   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-   assert( eventhdlr != NULL );
-   
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_CONS* cons;
-      SCIP_Bool cutoff;
-      SCIP_Bool success;
-
-      assert( conss != NULL );
-      assert( conss[c] != NULL );
-      cons = conss[c];
-      consdata = SCIPconsGetData(cons);
-      assert( consdata != NULL );
-      assert( consdata->nvars >= 0 );
-      assert( consdata->nvars <= consdata->maxvars );
-      assert( ! SCIPconsIsModifiable(cons) );
-
-      /** perform one presolving round */
-      SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, &ndelconss, &nfixedvars, &nremovedvars) );
-
-      if ( cutoff )
-      {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-   }
-
-   SCIPdebugMessage("exitpre fixed %d variables, removed %d variables, and deleted %d constraints.\n",
-      nfixedvars, nremovedvars, ndelconss);
-
-   return SCIP_OKAY;
-}
-
-
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpSOS1)
@@ -2053,6 +1992,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #define consInitpreSOS1 NULL
 
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreSOS1 NULL
 
 /** variable deletion method of constraint handler */
 #define consDelvarsSOS1 NULL
