@@ -53,6 +53,7 @@
 
 #include "scip/cons_sos1.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 #include <string.h>
 #include <ctype.h>
@@ -491,11 +492,13 @@ SCIP_RETCODE presolRoundSOS1(
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    SCIP_Bool*            success,            /**< whether we performed a successful reduction */
    int*                  ndelconss,          /**< number of deleted constraints */
+   int*                  nupgdconss,         /**< number of upgraded constraints */
    int*                  nfixedvars,         /**< number of fixed variables */
    int*                  nremovedvars        /**< number of variables removed */
    )
 {
    SCIP_VAR** vars;
+   SCIP_Bool allvarsbinary;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
    int nfixednonzeros;
@@ -520,6 +523,7 @@ SCIP_RETCODE presolRoundSOS1(
    j = 0;
    nfixednonzeros = 0;
    lastFixedNonzero = -1;
+   allvarsbinary = TRUE;
    vars = consdata->vars;
 
    /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
@@ -592,13 +596,19 @@ SCIP_RETCODE presolRoundSOS1(
          ++(*nremovedvars);
       }
       else
+      {
+         /* check whether all variables are binary */
+         if ( ! SCIPvarIsBinary(vars[j]) )
+            allvarsbinary = FALSE;
+
          ++j;
+      }
    }
 
    /* if the number of variables is less than 2 */
    if ( consdata->nvars < 2 )
    {
-      SCIPdebugMessage("Deleting constraint with < 2 variables.\n");
+      SCIPdebugMessage("Deleting SOS1 constraint <%s> with < 2 variables.\n", SCIPconsGetName(cons));
 
       /* delete constraint */
       assert( ! SCIPconsIsModifiable(cons) );
@@ -634,6 +644,8 @@ SCIP_RETCODE presolRoundSOS1(
          }
       }
 
+      SCIPdebugMessage("Deleting redundant SOS1 constraint <%s> with one variable.\n", SCIPconsGetName(cons));
+
       /* delete original constraint */
       assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -641,6 +653,30 @@ SCIP_RETCODE presolRoundSOS1(
       *success = TRUE;
    }
    /* note: there is no need to update consdata->nfixednonzeros, since the constraint is deleted as soon nfixednonzeros > 0. */
+   else
+   {
+      /* if all variables are binary create a set packing constraint */
+      if ( allvarsbinary )
+      {
+         SCIP_CONS* setpackcons;
+
+         /* create, add, and release the logicor constraint */
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
+
+         SCIPdebugMessage("Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
+
+         /* remove the SOS1 constraint globally */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*nupgdconss);
+         *success = TRUE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1314,6 +1350,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    int oldnfixedvars;
    int oldndelconss;
+   int oldnupgdconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
    int c;
@@ -1328,6 +1365,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    *result = SCIP_DIDNOTRUN;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
+   oldnupgdconss = *nupgdconss;
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -1359,7 +1397,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          assert( ! SCIPconsIsModifiable(cons) );
          
          /** perform one presolving round */
-         SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nfixedvars, &nremovedvars) );
+         SCIP_CALL( presolRoundSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
 
          if ( cutoff )
          {
@@ -1373,8 +1411,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
-      *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss);
+   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+      *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
 }
