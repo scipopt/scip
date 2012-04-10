@@ -74,6 +74,9 @@ interface
   BMSfreeMemorySizeNull() in memory.h
 - new methods BMSmoveMemory(), BMSmoveMemoryArray(), BMSmoveMemorySize() and corresponding  BMSmoveMemory_call() in
   memory.{h,c} too move memory elements
+- added public wrapper functions for calling constraint handler callback methods for a single constraint:
+  SCIPactiveCons(), SCIPdeactiveCons(), SCIPinitlpCons(), SCIPsepalpCons(), SCIPsepasolCons(), SCIPpropCons(),
+  SCIPrespropCons(), SCIPenfopsCons(), SCIPenfolpCons()
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
