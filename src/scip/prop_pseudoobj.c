@@ -287,6 +287,29 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
    return SCIPvarCompare(var1, var2);
 }
 
+/** hash key retrieval function for cliques*/
+static
+SCIP_DECL_HASHGETKEY(cliqueGetHashkey)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the cliques are equal */
+static
+SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
+{  /*lint --e{715}*/
+   if( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
+{  /*lint --e{715}*/
+   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
+   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+}
 
 /*
  * methods for SCIP_OBJIMPLICS data structure
@@ -635,7 +658,6 @@ static
 SCIP_Real collectMinactImplicVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
-   SCIP_Bool             bound,              /**< bound to which the variable gets fixed due to an implication r */
    int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable
 					      *   which have a non-zero objective coefficient
 					      */
@@ -646,7 +668,6 @@ SCIP_Real collectMinactImplicVar(
    )
 {
    SCIP_Real objval;
-   SCIP_Bool diff;
    int pos;
 #ifndef NDEBUG
    SCIP_Bool found;
@@ -658,11 +679,6 @@ SCIP_Real collectMinactImplicVar(
    assert(collectedvars != NULL);
    assert(contributors != NULL);
    assert(ncontributors != NULL);
-
-   diff = (bound != (SCIP_Bool)SCIPvarGetBestBoundType(var));
-
-   if( !diff )
-      return 0.0;
 
    /* ignore global fixed variables */
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
@@ -684,8 +700,6 @@ SCIP_Real collectMinactImplicVar(
    /* check if the variables was already collected through other cliques */
    if( collectedvars[pos] )
       return 0.0;
-
-   assert(diff);
 
    /* collect variable */
    assert(*ncontributors < nbinobjvars);
@@ -723,6 +737,7 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    int*                  ncontributors,      /**< pointer to store number of contributor to the objective contribution */
    SCIP_Real*            objchg              /**< pointer to store the objective change */
    )
@@ -764,12 +779,21 @@ SCIP_RETCODE collectMinactImplicVars(
    /* collect all implication which are given via cliques */
    for( c = 0; c < ncliques; ++c )
    {
+      SCIP_Bool useless;
+
+      assert(uselesscliques != NULL);
+
       clique = cliques[c];
       assert(clique != NULL);
+
+      /* check if the clique was previously detected to be useless with respect to minimum activity */
+      if( SCIPhashtableExists(uselesscliques, (void*)clique) )
+         continue;
 
       nbinvars = SCIPcliqueGetNVars(clique);
       vars = SCIPcliqueGetVars(clique);
       values = SCIPcliqueGetValues(clique);
+      useless = TRUE;
 
       for( v = 0; v < nbinvars; ++v )
       {
@@ -777,9 +801,30 @@ SCIP_RETCODE collectMinactImplicVars(
          assert(implvar != NULL);
 
          if( implvar == var )
-            continue;
+         {
+            /* check if the clique is useful at all */
+            if( useless )
+            {
+               SCIP_Real objval;
 
-         (*objchg) += collectMinactImplicVar(scip, implvar, !values[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+               objval = SCIPvarGetObj(var);
+
+               if( varfixing == (SCIP_Bool)SCIPvarGetBestBoundType(var) && !SCIPisZero(scip, objval) )
+                  useless = FALSE;
+            }
+         }
+         else if( values[v] == (SCIP_Bool)SCIPvarGetBestBoundType(var) )
+         {
+            useless = FALSE;
+            (*objchg) += collectMinactImplicVar(scip, implvar, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+         }
+      }
+
+      /* if the clique is useless store it in the hash table to skip it later */
+      if( useless )
+      {
+         assert(!SCIPhashtableExists(uselesscliques, (void*)clique));
+         SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
       }
    }
 
@@ -792,7 +837,11 @@ SCIP_RETCODE collectMinactImplicVars(
    for( v = 0; v < nbinvars; ++v )
    {
       assert(vars[v] != NULL);
-      (*objchg) += collectMinactImplicVar(scip, vars[v], bounds[v] > 0.5, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+
+      if( (bounds[v] < 0.5) == (SCIP_Bool)SCIPvarGetBestBoundType(var) )
+      {
+         (*objchg) += collectMinactImplicVar(scip, vars[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+      }
    }
 
    return SCIP_OKAY;
@@ -906,6 +955,7 @@ SCIP_RETCODE collectMinactObjchg(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contriboters */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    int*                  ncontributors,      /**< pointer to store number of contributor to the objective contribution */
    SCIP_Real*            objchg              /**< pointer to store the objective change */
    )
@@ -920,7 +970,7 @@ SCIP_RETCODE collectMinactObjchg(
    (*ncontributors) = 0;
 
    /* add the objective contribution from the implication variable */
-   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors, objchg) );
+   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjidxs, collectedvars, nbinobjvars, contributors, uselesscliques, ncontributors, objchg) );
 
    return SCIP_OKAY;
 }
@@ -1046,6 +1096,7 @@ SCIP_RETCODE collectMinactVar(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< temporary buffer to use for collecting contributors */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    SCIP_Bool*            collect             /**< pointer to store if the variable should be stored */
    )
 {
@@ -1086,7 +1137,7 @@ SCIP_RETCODE collectMinactVar(
 
       /* get contribution of variable by fixing it to its lower bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjidxs, collectedvars, nbinobjvars,
-            contributors, &nlbcontributors, &lbobjchg) );
+            contributors, uselesscliques, &nlbcontributors, &lbobjchg) );
       assert(!SCIPisNegative(scip, lbobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
@@ -1111,7 +1162,7 @@ SCIP_RETCODE collectMinactVar(
 
       /* get contribution of variable by fixing it to its upper bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_UPPER, binobjidxs, collectedvars, nbinobjvars,
-            &contributors[nlbcontributors], &nubcontributors, &ubobjchg) );
+            &contributors[nlbcontributors], uselesscliques, &nubcontributors, &ubobjchg) );
       assert(!SCIPisNegative(scip, ubobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
@@ -1256,6 +1307,7 @@ SCIP_RETCODE propdataInit(
    {
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_OBJIMPLICS* objimplics;
+      SCIP_HASHTABLE* uselesscliques;
       SCIP_VAR** contributors;
       SCIP_Bool* collectedvars;
       SCIP_Bool collect;
@@ -1277,15 +1329,28 @@ SCIP_RETCODE propdataInit(
 
       if( useimplics )
       {
+         int ncliques;
+
          /* create temporary buffer */
          SCIP_CALL( SCIPallocBufferArray(scip, &contributors, nbinobjvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &collectedvars, nbinobjvars) );
          BMSclearMemoryArray(collectedvars, nbinobjvars);
+
+         ncliques = SCIPgetNCliques(scip);
+
+         if( ncliques > 0 )
+         {
+            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), SCIPcalcHashtableSize(ncliques),
+                  cliqueGetHashkey, cliqueIsHashkeyEq, cliqueGetHashkeyVal, NULL) );
+         }
+         else
+            uselesscliques = NULL;
       }
       else
       {
          contributors = NULL;
          collectedvars = NULL;
+         uselesscliques = NULL;
       }
 
       /* collect the variables with non-zero objective contribution and catch global bound tighten events that decrease the
@@ -1311,7 +1376,7 @@ SCIP_RETCODE propdataInit(
             }
 
             /* check if the variable should be collected for the minimum activity propagation */
-            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvars, collectedvars, nbinobjvars, contributors, &collect) );
+            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvars, collectedvars, nbinobjvars, contributors, uselesscliques, &collect) );
 
             if( collect )
             {
@@ -1381,6 +1446,9 @@ SCIP_RETCODE propdataInit(
 
       if( useimplics )
       {
+         if( uselesscliques != NULL )
+            SCIPhashtableFree(&uselesscliques);
+
          SCIPfreeBufferArray(scip, &collectedvars);
          SCIPfreeBufferArray(scip, &contributors);
       }
@@ -2724,6 +2792,10 @@ SCIP_RETCODE propagateLowerboundBinvar(
    assert(SCIPvarIsBinary(var));
    assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
    assert(!SCIPisInfinity(scip, maxpseudoobjact));
+
+   /*@todo Instead of running always over all implications use SCIP_OBJIMPLICS in the same way as for the propagation of
+    *      the minimum activity against the cutoff bound. If so we could use the cliques as well.
+    */
 
    /* get contribution of variable by fixing it to its lower bound w.r.t. maximum activity of the objective function */
    lbobjchg = getMaxactObjchg(var, SCIP_BOUNDTYPE_LOWER, useimplics);
