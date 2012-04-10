@@ -77,6 +77,8 @@ interface
 - added public wrapper functions for calling constraint handler callback methods for a single constraint:
   SCIPactiveCons(), SCIPdeactiveCons(), SCIPinitlpCons(), SCIPsepalpCons(), SCIPsepasolCons(), SCIPpropCons(),
   SCIPrespropCons(), SCIPenfopsCons(), SCIPenfolpCons()
+- added new stages SCIP_STAGE_INITPRESOLVE, SCIP_STAGE_EXITPRESOLVE, and SCIP_STAGE_FREE; renamed SCIP_STAGE_FREESOLVE
+  to SCIP_STAGE_EXITSOLVE
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

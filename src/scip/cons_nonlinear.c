@@ -2504,7 +2504,8 @@ SCIP_RETCODE reformulate(
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(naddcons != NULL);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE);
    assert(!SCIPinProbing(scip));
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3533,7 +3534,8 @@ SCIP_RETCODE computeViolation(
    {
       SCIP_Real val;
 
-      assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+      /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+      assert(SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE);
 
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
       assert(val != SCIP_INVALID);  /*lint !e777*/
@@ -3599,7 +3601,8 @@ SCIP_RETCODE computeViolations(
    assert(conss != NULL || nconss == 0);
    assert(maxviolcon != NULL);
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_Real* varvals;
 
@@ -7183,7 +7186,8 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    *result = SCIP_FEASIBLE;
 
    /* during presolve, we do not have exprtrees in the constraints, but we can get values from the expression graph, if we have evaluated it */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_Real* varvals;
 
@@ -7200,7 +7204,9 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    /* @todo adapt proposeFeasibleSolution to function also during presolving */
    maxviol = 0.0;
    maypropfeasible = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) &&
-      SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING;
+      SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING &&
+      (SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7559,7 +7565,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
       /* @todo do something with exprtreeisnew? */
 
       /* if during presolving, then forget expression trees */
-      if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+      if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
       {
          SCIP_CALL( consdataSetExprtrees(scip, consdata, 0, NULL, NULL, FALSE) );
       }
@@ -7606,7 +7613,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveNonlinear)
          SCIP_EXPRTREE* exprtree;
 
          /* if only presolve is run and problem is found infeasible there, then constraints may not be deactivated there, but in a later call to freeTransform */
-         assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_FREETRANS);
+         /**@todo maybe only in SCIP_STAGE_PRESOLVING or SCIP_STAGE_FREETRANS ? */
+         assert((SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE)
+            || SCIPgetStage(scip) == SCIP_STAGE_FREETRANS);
 
          SCIP_CALL( SCIPexprgraphGetTree(conshdlrdata->exprgraph, consdata->exprgraphnode, &exprtree) );
          SCIP_CALL( consdataSetExprtrees(scip, consdata, 1, &exprtree, NULL, FALSE) );
@@ -8205,7 +8214,8 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
    int i;
 
    assert(modifiable == FALSE); /* we do not support column generation */
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE);
 
    /* find the nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -8360,7 +8370,7 @@ int SCIPgetNExprtreesNonlinear(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
-   assert(SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
    return SCIPconsGetData(cons)->nexprtrees;
 }
@@ -8373,7 +8383,7 @@ SCIP_EXPRTREE** SCIPgetExprtreesNonlinear(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
-   assert(SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
    return SCIPconsGetData(cons)->exprtrees;
 }
@@ -8386,7 +8396,7 @@ SCIP_Real* SCIPgetExprtreeCoefsNonlinear(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
-   assert(SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
    return SCIPconsGetData(cons)->nonlincoefs;
 }
@@ -8499,7 +8509,8 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    assert(cons != NULL);
    assert(violation != NULL);
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(cons) )
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE && SCIPconsIsActive(cons) )
    {
       /* @todo make available */
       SCIPwarningMessage(scip, "SCIPgetViolationNonlinear is not available for active constraints during presolve.\n");

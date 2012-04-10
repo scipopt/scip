@@ -1316,7 +1316,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
@@ -1358,7 +1358,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");

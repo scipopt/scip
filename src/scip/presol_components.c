@@ -739,7 +739,8 @@ SCIP_RETCODE presolComponents(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
+   /**@todo maybe only not in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
    if( SCIPgetNActivePricers(scip) > 0 )

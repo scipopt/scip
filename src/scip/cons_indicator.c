@@ -6576,7 +6576,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    *changed = FALSE;
 
    /* avoid deleted indicator constraints, e.g., due to preprocessing */
-   if ( ! SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
+   if ( ! SCIPconsIsActive(cons) && SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE )
       return SCIP_OKAY;
 
    assert( cons != NULL );
@@ -6591,7 +6591,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    assert( lincons != NULL );
 
    /* avoid non-active linear constraints, e.g., due to preprocessing */
-   if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING )
+   if ( SCIPconsIsActive(lincons) || SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE )
    {
       slackvar = consdata->slackvar;
       binvar = consdata->binvar;
@@ -6732,7 +6732,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    *changed = FALSE;
 
    /* only run after or in presolving */
-   if ( SCIPgetStage(scip) < SCIP_STAGE_PRESOLVING )
+   if ( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE )
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
