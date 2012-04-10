@@ -4611,6 +4611,113 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enforces single constraint for a given pseudo solution */
+extern
+SCIP_RETCODE SCIPenfopsCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** enforces single constraint for a given LP solution */
+extern
+SCIP_RETCODE SCIPenfolpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls LP initialization method for single constraint */
+extern
+SCIP_RETCODE SCIPinitlpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to initialize */
+   );
+
+/** calls separation method of single constraint for LP solution */
+extern
+SCIP_RETCODE SCIPsepalpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/** calls separation method of single constraint for given primal solution */
+extern
+SCIP_RETCODE SCIPsepasolCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated*/
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/** calls domain propagation method of single constraint */
+extern
+SCIP_RETCODE SCIPpropCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving loop */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** resolves propagation conflict of single constraint */
+extern
+SCIP_RETCODE SCIPrespropCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** presolves of single constraint */
+extern
+SCIP_RETCODE SCIPpresolCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to presolve */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
+   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
+   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */
+   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolving method */
+   int                   nnewholes,          /**< number of domain holes added since the last call to the presolving method */
+   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolving method */
+   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolving method */
+   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolving method */
+   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolving method */
+   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolving method */
+   int*                  nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to count total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to count total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to count total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls constraint activation notification method of single constraint */
+extern
+SCIP_RETCODE SCIPactiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to notify */
+   );
+
+/** calls constraint deactivation notification method of single constraint */
+extern
+SCIP_RETCODE SCIPdeactiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to notify */
+   );
+
 /** outputs constraint information to file stream via the message handler system
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed

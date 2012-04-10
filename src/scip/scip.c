@@ -13527,6 +13527,7 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_CALL( SCIPconsParse(cons, scip->set, scip->messagehdlr, str,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
+
    return SCIP_OKAY;
 }
 
@@ -14016,6 +14017,226 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, result) );
+
+   return SCIP_OKAY;
+}
+
+/** enforces single constraint for a given pseudo solution */
+SCIP_RETCODE SCIPenfopsCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPenfopsCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+
+   SCIP_CALL( SCIPconsEnfops(cons, scip->set, solinfeasible, objinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+/** enforces single constraint for a given LP solution */
+SCIP_RETCODE SCIPenfolpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPenfolpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsEnfolp(cons, scip->set, solinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls LP initialization method for single */
+SCIP_RETCODE SCIPinitlpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to initialize */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsInitlp(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** calls separation method of single constraint for LP solution */
+SCIP_RETCODE SCIPsepalpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsepalpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSepalp(cons, scip->set, result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls separation method of single constraint for given primal solution */
+SCIP_RETCODE SCIPsepasolCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated*/
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(sol != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsepasolCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSepasol(cons, scip->set, sol, result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls domain propagation method of single constraint */
+SCIP_RETCODE SCIPpropCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving loop */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPpropCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsProp(cons, scip->set, proptiming, result) );
+
+   return SCIP_OKAY;
+}
+
+/** resolves propagation conflict of single constraint */
+SCIP_RETCODE SCIPrespropCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(infervar != NULL);
+   assert(bdchgidx != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPrespropCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, result) );
+
+   return SCIP_OKAY;
+}
+
+/** presolves of single constraint */
+SCIP_RETCODE SCIPpresolCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to presolve */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
+   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
+   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */
+   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolving method */
+   int                   nnewholes,          /**< number of domain holes added since the last call to the presolving method */
+   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolving method */
+   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolving method */
+   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolving method */
+   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolving method */
+   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolving method */
+   int*                  nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to count total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to count total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to count total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPpresolCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsPresol(cons, scip->set, nrounds,  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds,nnewholes,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes,
+         nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides , result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls constraint activation notification method of single constraint */
+SCIP_RETCODE SCIPactiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to notify */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsActive(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** calls constraint deactivation notification method of single constraint */
+SCIP_RETCODE SCIPdeactiveCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to notify */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPdeactiveCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsDeactive(cons, scip->set) );
 
    return SCIP_OKAY;
 }
