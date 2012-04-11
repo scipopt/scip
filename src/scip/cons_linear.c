@@ -3972,17 +3972,31 @@ SCIP_RETCODE applyFixings(
             break;
 
          case SCIP_VARSTATUS_AGGREGATED:
-            SCIP_CALL( addCoef(scip, cons, SCIPvarGetAggrVar(var), val * SCIPvarGetAggrScalar(var)) );
-            aggrconst = SCIPvarGetAggrConstant(var);
+	 {
+	    SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
+	    SCIP_Real activescalar = val * SCIPvarGetAggrScalar(var);
+	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
-            if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * aggrconst;
-            if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * aggrconst;
+	    assert(activevar != NULL);
+	    SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant);
+	    assert(activevar != NULL);
+
+	    if( !SCIPisZero(scip, activescalar) )
+	    {
+	       SCIP_CALL( addCoef(scip, cons, activevar, activescalar) );
+	    }
+
+	    if( !SCIPisZero(scip, activeconstant) )
+	    {
+	       if( !SCIPisInfinity(scip, -consdata->lhs) )
+		  lhssubtrahend += activeconstant;
+	       if( !SCIPisInfinity(scip, consdata->rhs) )
+		  rhssubtrahend += activeconstant;
+	    }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
-
+	 }
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip,var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
