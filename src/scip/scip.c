@@ -2089,6 +2089,8 @@ SCIP_RETCODE SCIPcopy(
 {
    SCIP_HASHMAP* localvarmap;
    SCIP_HASHMAP* localconsmap;
+   SCIP_Real startcopytime;
+   SCIP_Real copytime;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    SCIP_Bool consscopyvalid;
@@ -2102,6 +2104,12 @@ SCIP_RETCODE SCIPcopy(
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* get time before start of copy procedure */
+   startcopytime = SCIPclockGetTime(sourcescip->stat->copyclock);
+
+   /* start time measuring */
+   SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
 
    /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
     * SCIP 
@@ -2162,6 +2170,20 @@ SCIP_RETCODE SCIPcopy(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
+
+   /* stop time measuring */
+   SCIPclockStop(sourcescip->stat->copyclock, sourcescip->set);
+
+   /* get time after copying procedure */
+   copytime = SCIPclockGetTime(sourcescip->stat->copyclock) - startcopytime;
+
+   if( copytime > sourcescip->stat->maxcopytime )
+      sourcescip->stat->maxcopytime = copytime;
+   if( copytime < sourcescip->stat->mincopytime )
+      sourcescip->stat->mincopytime = copytime;
+
+   /* increase copy counter */
+   ++(sourcescip->stat->ncopies);
 
    return SCIP_OKAY;
 }
@@ -22670,18 +22692,30 @@ void printTimingStatistics(
    {
       SCIP_Real totaltime;
       SCIP_Real solvingtime;
-      
+
       solvingtime  = SCIPclockGetTime(scip->stat->solvingtime);
 
-      if( scip->set->time_reading ) 
+      if( scip->set->time_reading )
          totaltime = solvingtime;
       else
          totaltime = solvingtime + readingtime;
-   
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Total Time         : %10.2f\n", totaltime);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solvingtime);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (included in solving)" : "");
+
+      if( scip->stat->ncopies > 0 )
+      {
+	 SCIP_Real copytime;
+
+	 copytime = SCIPclockGetTime(scip->stat->copyclock);
+
+	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f (%d #copies) (minimal %.2f, maximal %.2f, average %.2f)\n",
+	    copytime, scip->stat->ncopies, scip->stat->mincopytime, scip->stat->maxcopytime, copytime / scip->stat->ncopies);
+      }
+      else
+	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
    }
 }
 

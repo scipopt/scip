@@ -179,6 +179,7 @@ features:
 - SCIP does now print an info message when the root LP could not be solved or is unbounded
 - added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
+- added counter and clock for SCIPcopy() calls
 
 SCIP version 2.1.2
 ==================
