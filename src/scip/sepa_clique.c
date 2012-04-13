@@ -1447,6 +1447,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create clique separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -1459,12 +1460,15 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraphloaded = FALSE;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyClique, sepaFreeClique, sepaInitClique, sepaExitClique,
-         sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,
          sepadata) );
+
+   /* set non-NULL pointers to callback methods */
+   SCIPsepaSetCopy(sepa, sepaCopyClique);
+   SCIPsepaSetFree(sepa, sepaFreeClique);
+   SCIPsepaSetExitsol(sepa, sepaExitsolClique);
 
    /* add clique separator parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

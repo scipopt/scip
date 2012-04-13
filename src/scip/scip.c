@@ -3402,7 +3402,11 @@ SCIP_RETCODE SCIPsetRelaxPriority(
    return SCIP_OKAY;
 }
 
-/** creates a separator and includes it in SCIP */
+/** creates a separator and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeSepaBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of separator */
@@ -3440,6 +3444,52 @@ SCIP_RETCODE SCIPincludeSepa(
          sepacopy,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
+
+   return SCIP_OKAY;
+}
+
+/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPSepaSetInit() in pub_sepa.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeSepa</code>.
+ */
+SCIP_RETCODE SCIPincludeSepaBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA**           sepa,               /**< reference to a separator, or NULL */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
+   )
+{
+   SCIP_SEPA* sepaptr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether separator is already present */
+   if( SCIPfindSepa(scip, name) != NULL )
+   {
+      SCIPerrorMessage("separator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPsepaCreate(&sepaptr, scip->set, scip->mem->setmem,
+         name, desc, priority, freq, maxbounddist, usessubscip, delay,
+         NULL, NULL, NULL, NULL, NULL, NULL, sepaexeclp, sepaexecsol, sepadata) );
+
+   assert(sepaptr != NULL);
+
+   SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepaptr) );
+
+   if( sepa != NULL)
+      *sepa = sepaptr;
 
    return SCIP_OKAY;
 }
