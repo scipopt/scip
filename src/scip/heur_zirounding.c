@@ -845,17 +845,23 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create zirounding primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyZirounding,
-         heurFreeZirounding, heurInitZirounding, heurExitZirounding,
-         heurInitsolZirounding, heurExitsolZirounding, heurExecZirounding,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIPheurSetCopy(heur, heurCopyZirounding);
+   SCIPheurSetFree(heur, heurFreeZirounding);
+   SCIPheurSetInit(heur, heurInitZirounding);
+   SCIPheurSetExit(heur, heurExitZirounding);
+   SCIPheurSetInitsol(heur, heurInitsolZirounding);
 
    /* add zirounding primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",

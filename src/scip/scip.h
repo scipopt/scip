@@ -1409,7 +1409,11 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    );
 
 
-/** creates a primal heuristic and includes it in SCIP */
+/** creates a primal heuristic and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeHeurBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1429,6 +1433,28 @@ SCIP_RETCODE SCIPincludeHeur(
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
    SCIP_DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
    SCIP_DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   );
+
+/** Creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental (or optional) callbacks
+ *  as, e. g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeHeur</code>. */
+extern
+SCIP_RETCODE SCIPincludeHeurBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR**           heur,               /**< pointer to the heuristic */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    );

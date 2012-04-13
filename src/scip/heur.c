@@ -494,6 +494,74 @@ void SCIPheurSetData(
    heur->heurdata = heurdata;
 }
 
+/* new method setter methods */
+
+/** sets copy method of primal heuristic */
+void SCIPheurSetCopy(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurcopy = heurcopy;
+}
+
+/** sets destructor method of primal heuristic */
+void SCIPheurSetFree(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurfree = heurfree;
+}
+
+/** sets initialization method of primal heuristic */
+void SCIPheurSetInit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurinit = heurinit;
+}
+
+/** sets deinitialization method of primal heuristic */
+void SCIPheurSetExit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurexit = heurexit;
+}
+
+/** sets solving process initialization method of primal heuristic */
+void SCIPheurSetInitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurinitsol = heurinitsol;
+}
+
+/** sets solving process deinitialization method of primal heuristic */
+void SCIPheurSetExitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->heurexitsol = heurexitsol;
+}
+
 /** gets name of primal heuristic */
 const char* SCIPheurGetName(
    SCIP_HEUR*            heur                /**< primal heuristic */

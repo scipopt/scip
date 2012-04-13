@@ -54,6 +54,48 @@ void SCIPheurSetData(
    SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
+/** sets copy method of primal heuristic */
+extern
+void SCIPheurSetCopy(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of primal heuristic */
+extern
+void SCIPheurSetFree(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   );
+
+/** sets initialization method of primal heuristic */
+extern
+void SCIPheurSetInit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   );
+
+/** sets deinitialization method of primal heuristic */
+extern
+void SCIPheurSetExit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   );
+
+/** sets solving process initialization method of primal heuristic */
+extern
+void SCIPheurSetInitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   );
+
+/** sets solving process deinitialization method of primal heuristic */
+extern
+void SCIPheurSetExitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   );
+
 /** gets name of primal heuristic */
 extern
 const char* SCIPheurGetName(
