@@ -3471,7 +3471,7 @@ SCIP_RETCODE SCIPincludeSepaBasic(
 {
    SCIP_SEPA* sepaptr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether separator is already present */
    if( SCIPfindSepa(scip, name) != NULL )
@@ -3480,7 +3480,7 @@ SCIP_RETCODE SCIPincludeSepaBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPsepaCreate(&sepaptr, scip->set, scip->mem->setmem,
+   SCIP_CALL( SCIPsepaCreate(&sepaptr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq, maxbounddist, usessubscip, delay,
          NULL, NULL, NULL, NULL, NULL, NULL, sepaexeclp, sepaexecsol, sepadata) );
 
