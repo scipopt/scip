@@ -1465,6 +1465,8 @@ SCIP_RETCODE SCIPincludeSepaClique(
          sepaExeclpClique, sepaExecsolClique,
          sepadata) );
 
+   assert(sepa != NULL);
+
    /* set non-NULL pointers to callback methods */
    SCIPsepaSetCopy(sepa, sepaCopyClique);
    SCIPsepaSetFree(sepa, sepaFreeClique);

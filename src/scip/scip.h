@@ -1567,6 +1567,24 @@ SCIP_RETCODE SCIPincludeNodesel(
    SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    );
 
+/** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ */
+extern
+SCIP_RETCODE SCIPincludeNodeselBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL**        nodesel,            /**< reference to a node selector, or NULL */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   );
+
 /** returns the node selector of the given name, or NULL if not existing */
 extern
 SCIP_NODESEL* SCIPfindNodesel(

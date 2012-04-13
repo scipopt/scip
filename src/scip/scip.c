@@ -3865,7 +3865,11 @@ int SCIPgetNEventhdlrs(
    return scip->set->neventhdlrs;
 }
 
-/** creates a node selector and includes it in SCIP */
+/** creates a node selector and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeNodeselBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of node selector */
@@ -3899,6 +3903,46 @@ SCIP_RETCODE SCIPincludeNodesel(
          nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+/** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ */
+SCIP_RETCODE SCIPincludeNodeselBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL**        nodesel,            /**< reference to a node selector, or NULL */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   )
+{
+   SCIP_NODESEL* nodeselptr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether node selector is already present */
+   if( SCIPfindNodesel(scip, name) != NULL )
+   {
+      SCIPerrorMessage("node selector <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPnodeselCreate(&nodeselptr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL,
+         nodeselselect, nodeselcomp, nodeseldata) );
+   SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodeselptr) );
+
+   if( nodesel != NULL )
+      *nodesel = nodeselptr;
 
    return SCIP_OKAY;
 }

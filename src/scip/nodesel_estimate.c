@@ -351,16 +351,19 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyEstimate,
-         nodeselFreeEstimate, nodeselInitEstimate, nodeselExitEstimate, 
-         nodeselInitsolEstimate, nodeselExitsolEstimate, nodeselSelectEstimate, nodeselCompEstimate,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectEstimate, nodeselCompEstimate, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetCopy(nodesel, nodeselCopyEstimate);
+   SCIPnodeselSetFree(nodesel, nodeselFreeEstimate);
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
