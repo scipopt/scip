@@ -1205,7 +1205,11 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
-/** creates a presolver and includes it in SCIP */
+/** creates a presolver and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludePresolBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1220,6 +1224,24 @@ SCIP_RETCODE SCIPincludePresol(
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
    SCIP_DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
    SCIP_DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   );
+
+/** Creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPpresolSetInit() in pub_presol.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludePresol</code>.
+ */
+extern
+SCIP_RETCODE SCIPincludePresolBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL**         presolptr,          /**< reference to presolver, or NULL */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    );
@@ -1548,7 +1570,11 @@ int SCIPgetNEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a node selector and includes it in SCIP */
+/** creates a node selector and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeNodeselBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -3230,7 +3230,11 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    return SCIP_OKAY;
 }
 
-/** creates a presolver and includes it in SCIP */
+/** creates a presolver and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludePresolBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of presolver */
@@ -3266,6 +3270,46 @@ SCIP_RETCODE SCIPincludePresol(
 
    return SCIP_OKAY;
 }
+
+/** Creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPpresolSetInit() in pub_presol.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludePresol</code>.
+ */
+SCIP_RETCODE SCIPincludePresolBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL**         presolptr,          /**< reference to presolver, or NULL */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   SCIP_PRESOL* presol;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether presolver is already present */
+   if( SCIPfindPresol(scip, name) != NULL )
+   {
+      SCIPerrorMessage("presolver <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpresolCreate(&presol, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority, maxrounds, delay,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, presolexec, presoldata) );
+   SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
+
+   if( presol != NULL )
+      *presolptr = presol;
+
+   return SCIP_OKAY;
+}
+
 
 /** returns the presolver of the given name, or NULL if not existing */
 SCIP_PRESOL* SCIPfindPresol(

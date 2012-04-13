@@ -215,16 +215,19 @@ SCIP_RETCODE SCIPincludePresolDualfix(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create dualfix presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyDualfix,
-         presolFreeDualfix, presolInitDualfix, presolExitDualfix,
-         presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecDualfix,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIPpresolSetCopy(presolptr, presolCopyDualfix);
 
    return SCIP_OKAY;
 }
