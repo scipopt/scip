@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
           * ExactIP information *
           ***********************/
 #ifdef WITH_EXACTSOLVE
-         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in EXACT mode (version 0.2):\n");
+         SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in EXACT mode (version 0.3):\n");
 #else
          SCIPinfoMessage(scip, NULL, "Reduced version of SCIP in STANDARD (floating-point) mode:\n");
 #endif
