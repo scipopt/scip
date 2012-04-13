@@ -3674,7 +3674,7 @@ SCIP_RETCODE SCIPincludeHeurBasic(
 {
    SCIP_HEUR* heurptr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeHeurBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeHeurBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether heuristic is already present */
    if( SCIPfindHeur(scip, name) != NULL )
@@ -3683,7 +3683,7 @@ SCIP_RETCODE SCIPincludeHeurBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPheurCreate(&heurptr, scip->set, scip->mem->setmem,
+   SCIP_CALL( SCIPheurCreate(&heurptr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask, usessubscip,
          NULL, NULL, NULL, NULL, NULL, NULL, heurexec, heurdata) );
 

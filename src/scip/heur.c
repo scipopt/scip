@@ -494,12 +494,12 @@ void SCIPheurSetData(
    heur->heurdata = heurdata;
 }
 
-/* new method setter methods */
+/* new callback setter methods */
 
-/** sets copy method of primal heuristic */
+/** sets copy callback of primal heuristic */
 void SCIPheurSetCopy(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy callback of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(heur != NULL);
@@ -507,7 +507,7 @@ void SCIPheurSetCopy(
    heur->heurcopy = heurcopy;
 }
 
-/** sets destructor method of primal heuristic */
+/** sets destructor callback of primal heuristic */
 void SCIPheurSetFree(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
@@ -518,7 +518,7 @@ void SCIPheurSetFree(
    heur->heurfree = heurfree;
 }
 
-/** sets initialization method of primal heuristic */
+/** sets initialization callback of primal heuristic */
 void SCIPheurSetInit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
@@ -529,7 +529,7 @@ void SCIPheurSetInit(
    heur->heurinit = heurinit;
 }
 
-/** sets deinitialization method of primal heuristic */
+/** sets deinitialization callback of primal heuristic */
 void SCIPheurSetExit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
@@ -540,10 +540,10 @@ void SCIPheurSetExit(
    heur->heurexit = heurexit;
 }
 
-/** sets solving process initialization method of primal heuristic */
+/** sets solving process initialization callback of primal heuristic */
 void SCIPheurSetInitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization callback of primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -551,10 +551,10 @@ void SCIPheurSetInitsol(
    heur->heurinitsol = heurinitsol;
 }
 
-/** sets solving process deinitialization method of primal heuristic */
+/** sets solving process deinitialization callback of primal heuristic */
 void SCIPheurSetExitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
-   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization callback of primal heuristic */
    )
 {
    assert(heur != NULL);
