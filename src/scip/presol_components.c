@@ -360,8 +360,11 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
-   assert(nbinvars == SCIPgetNBinVars(subscip));
-   assert(nintvars == SCIPgetNIntVars(subscip));
+   /* there might be less variables in the subscip, because variables might be cancelled out during copying constraint
+    * when transferring variables to active variables
+    */
+   assert(nbinvars >= SCIPgetNBinVars(subscip));
+   assert(nintvars >= SCIPgetNIntVars(subscip));
 
    if( SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
    {
@@ -373,6 +376,8 @@ SCIP_RETCODE copyAndSolveComponent(
       if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       {
          SCIP_SOL* sol;
+         SCIP_VAR* subvar;
+         SCIP_Real fixval;
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
 
@@ -383,10 +388,27 @@ SCIP_RETCODE copyAndSolveComponent(
          /* fix variables */
          for( i = 0; i < nvars; ++i )
          {
-            assert( SCIPhashmapExists(varmap, vars[i]) );
+            subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
 
-            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])),
-                  &infeasible, &fixed) );
+            if( subvar != NULL )
+            {
+               /* get solution value from optimal solution of the component */
+               fixval = SCIPgetSolVal(subscip, sol, subvar);
+            }
+            else
+            {
+               /* the variable was not copied, so it was cancelled out of constraints during copying;
+                * thus, the variable is not constrained and we fix it to its best bound
+                */
+               fixval = 0.0;
+
+               if( SCIPisPositive(scip, SCIPvarGetObj(vars[i])) )
+                  fixval = SCIPvarGetLbGlobal(vars[i]);
+               else if( SCIPisNegative(scip, SCIPvarGetObj(vars[i])) )
+                  fixval = SCIPvarGetUbGlobal(vars[i]);
+            }
+
+            SCIP_CALL( SCIPfixVar(scip, vars[i], fixval, &infeasible, &fixed) );
             assert(!infeasible);
             assert(fixed);
             (*ndeletedvars)++;
