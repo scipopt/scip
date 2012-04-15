@@ -494,7 +494,7 @@ SCIP_RETCODE consdataPrint(
    /* print coefficients */
    if( consdata->nvars == 0 )
       SCIPinfoMessage(scip, file, "0 ");
- 
+
    /* write linear sum */
    SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, consdata->vars, NULL, consdata->nvars, TRUE) );
    
@@ -628,6 +628,7 @@ SCIP_RETCODE catchEvent(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
    SCIP_VAR* var;
 
    consdata = SCIPconsGetData(cons);
@@ -639,8 +640,22 @@ SCIP_RETCODE catchEvent(
    var = consdata->vars[pos];
    assert(var != NULL);
 
+   /* we are catching the following events:
+    *
+    * - SCIP_EVENTTYPE_BOUNDCHANGED: Is used to count the number of variable fixed locally to zero and one. That helps
+    *                                to speed up the propagation
+    *
+    * - SCIP_EVENTTYPE_VARDELETED: Is caught to remove a deleted variable from the constraint
+    *
+    * - SCIP_EVENTTYPE_VARFIXED: Is used to get informed if a variable of the constraint was aggregated which means was
+    *                            detected to be equal or a negated variable of on other variable. in case of a negation
+    *                            this could lead to a redundant constraint if the (other) active variable is also part
+    *                            of the constraint.
+    */
+   eventtype =  SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARFIXED;
+
    /* catch bound change events on variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -661,6 +676,7 @@ SCIP_RETCODE dropEvent(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_EVENTTYPE eventtype;
    SCIP_VAR* var;
 
    consdata = SCIPconsGetData(cons);
@@ -672,8 +688,10 @@ SCIP_RETCODE dropEvent(
    var = consdata->vars[pos];
    assert(var != NULL);
 
+   eventtype =  SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARFIXED;
+
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARDELETED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -4422,6 +4440,18 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
       break;
    case SCIP_EVENTTYPE_VARDELETED:
       consdata->varsdeleted = TRUE;
+      break;
+   case SCIP_EVENTTYPE_VARFIXED:
+      if( consdata->merged )
+      {
+	 /* this event should only arise during the presolving stage */
+	 assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+	 assert(SCIPeventGetVar(event) != NULL);
+
+	 /* one variable was changed to a negated or aggregated variable, so maybe we can merge again */
+	 if( SCIPvarGetStatus(SCIPeventGetVar(event)) != SCIP_VARSTATUS_FIXED )
+	    consdata->merged = FALSE;
+      }
       break;
    default:
       SCIPerrorMessage("invalid event type\n");
