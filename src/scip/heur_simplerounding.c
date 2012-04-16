@@ -36,6 +36,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_DURINGPRICINGLOOP
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
+#define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -43,6 +44,7 @@ struct SCIP_HeurData
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
    int                   nroundablevars;     /**< number of variables that can be rounded (-1 if not yet calculated) */
+   SCIP_Bool             oncepernode;         /**< should the heuristic only be called once per node? */
 };
 
 
@@ -67,7 +69,23 @@ SCIP_DECL_HEURCOPY(heurCopySimplerounding)
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeSimplerounding NULL
+static
+SCIP_DECL_HEURFREE(heurFreeSimplerounding) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
@@ -77,14 +95,13 @@ SCIP_DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(SCIPheurGetData(heur) == NULL);
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
    heurdata->nroundablevars = -1;
-   SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
 }
@@ -102,8 +119,6 @@ SCIP_DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
@@ -121,12 +136,23 @@ SCIP_DECL_HEURINITSOL(heurInitsolSimplerounding)
    assert(heurdata != NULL);
    heurdata->lastlp = -1;
 
+   /* change the heuristic's timingmask, if nit should be called only once per node */
+   if( heurdata->oncepernode )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_AFTERLPNODE);
+
    return SCIP_OKAY;
 }
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolSimplerounding NULL
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolSimplerounding)
+{
+   /* reset the timing mask to its default value */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   return SCIP_OKAY;
+}
 
 
 /** execution method of primal heuristic */
@@ -282,14 +308,22 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_HEURDATA* heurdata;
+
+   /* create heuristic data */
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
          heurCopySimplerounding,
          heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding,
          heurInitsolSimplerounding, heurExitsolSimplerounding, heurExecSimplerounding,
-         NULL) );
+         heurdata) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+         "should the heuristic only be called once per node?",
+         &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
-

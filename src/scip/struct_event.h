@@ -194,6 +194,8 @@ struct SCIP_Eventhdlr
    SCIP_DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
    SCIP_DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
    SCIP_EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this event handler for the next stages */
+   SCIP_CLOCK*           eventtime;          /**< time spend in this event handler execution method */
    SCIP_Bool             initialized;        /**< is event handler initialized? */
 };
 

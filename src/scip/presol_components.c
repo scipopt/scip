@@ -203,7 +203,6 @@ void printStatistics(
 
 #else
 #define initStatistics(scip, presoldata) SCIP_OKAY
-#define freeStatistics(scip, presoldata) /**/
 #define resetStatistics(scip, presoldata) /**/
 #define updateStatisticsComp(presoldata, nbinvars, nintvars) /**/
 #define updateStatisticsSingleVar(presoldata) /**/
@@ -360,8 +359,24 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
-   assert(nbinvars == SCIPgetNBinVars(subscip));
-   assert(nintvars == SCIPgetNIntVars(subscip));
+   /* there might be less variables in the subscip, because variables might be cancelled out during copying constraint
+    * when transferring variables to active variables
+    */
+   assert(nbinvars >= SCIPgetNBinVars(subscip));
+   assert(nintvars >= SCIPgetNIntVars(subscip));
+
+   /* In debug mode, we want to be informed if the number of variables was reduced during copying.
+    * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
+    * active representation, while SCIPgetConsCopy() might use SCIPgetProbvarLinearSum() and this might cancel out some
+    * of the active variables and cannot be avoided. However, we want to notice it and check whether the constraint
+    * handler could do something more clever.
+    */
+#ifndef NDEBUG
+   if( nvars > SCIPgetNVars(subscip) )
+   {
+      SCIPwarningMessage(scip, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
+   }
+#endif
 
    if( SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
    {
@@ -373,6 +388,8 @@ SCIP_RETCODE copyAndSolveComponent(
       if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       {
          SCIP_SOL* sol;
+         SCIP_VAR* subvar;
+         SCIP_Real fixval;
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
 
@@ -383,10 +400,27 @@ SCIP_RETCODE copyAndSolveComponent(
          /* fix variables */
          for( i = 0; i < nvars; ++i )
          {
-            assert( SCIPhashmapExists(varmap, vars[i]) );
+            subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
 
-            SCIP_CALL( SCIPfixVar(scip, vars[i], SCIPgetSolVal(subscip, sol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i])),
-                  &infeasible, &fixed) );
+            if( subvar != NULL )
+            {
+               /* get solution value from optimal solution of the component */
+               fixval = SCIPgetSolVal(subscip, sol, subvar);
+            }
+            else
+            {
+               /* the variable was not copied, so it was cancelled out of constraints during copying;
+                * thus, the variable is not constrained and we fix it to its best bound
+                */
+               fixval = 0.0;
+
+               if( SCIPisPositive(scip, SCIPvarGetObj(vars[i])) )
+                  fixval = SCIPvarGetLbGlobal(vars[i]);
+               else if( SCIPisNegative(scip, SCIPvarGetObj(vars[i])) )
+                  fixval = SCIPvarGetUbGlobal(vars[i]);
+            }
+
+            SCIP_CALL( SCIPfixVar(scip, vars[i], fixval, &infeasible, &fixed) );
             assert(!infeasible);
             assert(fixed);
             (*ndeletedvars)++;
@@ -658,6 +692,17 @@ SCIP_RETCODE splitProblem(
       {
          assert(ncompconss > 0);
 
+         /* in debug mode, we want to be informed about components with single constraints;
+          * this is only for noticing this case and possibly handling it within the constraint handler
+          */
+#ifndef NDEBUG
+         if( ncompconss == 1 )
+         {
+            SCIPwarningMessage(scip, "presol component detected component with a single constraint:\n");
+            SCIP_CALL( SCIPprintCons(scip, compconss[0], NULL) );
+         }
+#endif
+
          /* we do not want to solve the component, if it is the last unsolved one */
          if( ncompvars < SCIPgetNVars(scip) )
          {
@@ -717,7 +762,8 @@ SCIP_RETCODE presolComponents(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
+   /**@todo maybe only not in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
    if( SCIPgetNActivePricers(scip) > 0 )
@@ -862,7 +908,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    assert(presoldata != NULL);
 
    /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) );
+   SCIP_CALL( initStatistics(scip, presoldata) ); /*lint !e506 !e774*/
 
    presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
@@ -870,12 +916,11 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    return SCIP_OKAY;
 }
 
-
+#ifdef WITH_STATISTICS
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitComponents)
 {  /*lint --e{715}*/
-#ifdef WITH_STATISTICS
    SCIP_PRESOLDATA* presoldata;
 
    /* free presolver data */
@@ -883,10 +928,12 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    assert(presoldata != NULL);
 
    freeStatistics(scip, presoldata);
-#endif
 
    return SCIP_OKAY;
 }
+#else
+#define presolExitComponents NULL
+#endif
 
 /* define unused callbacks as NULL */
 #define presolInitpreComponents NULL

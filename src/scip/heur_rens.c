@@ -63,6 +63,11 @@
                                          */
 #define DEFAULT_ADDALLSOLS   FALSE      /* should all subproblem solutions be added to the original SCIP?       */
 
+#define DEFAULT_FULLSCALE    FALSE      /* should the RENS sub-CIP be solved with full-scale SCIP settings, including
+                                         * techniques that merely work on the dual bound, e.g., cuts?  This is only
+                                         * implemented for testing and not recommended to be used!
+                                         */
+
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
 #define STATISTIC(x)                x 
@@ -94,7 +99,10 @@ struct SCIP_HeurData
                                               *   implemented for testing and not recommended to be used!
                                               */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
-
+   SCIP_Bool             fullscale;           /**< should the RENS sub-CIP be solved with full-scale SCIP settings,
+                                               * including techniques that merely work on the dual bound, e.g., cuts?
+                                               * This is only implemented for testing and not recommended to be used!
+                                               */
 };
 
 
@@ -459,31 +467,34 @@ SCIP_RETCODE SCIPapplyRens(
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   /* disable expensive techniques that merely work on the dual bound */
+   if( !heurdata->fullscale )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+      /* disable cutting plane separation */
+      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+      /* disable expensive presolving */
+      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      /* use best estimate node selection */
+      if( SCIPfindNodesel(scip, "estimate") != NULL )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+      }
+
+      /* use inference branching */
+      if( SCIPfindBranchrule(scip, "inference") != NULL )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      }
+
+      /* disable conflict analysis */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
-
-   /* use inference branching */
-   if( SCIPfindBranchrule(scip, "inference") != NULL )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-   }
-
-   /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-
 
 #ifdef SCIP_DEBUG
    /* for debugging RENS, enable MIP output */
@@ -809,6 +820,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/addallsols",
          "should all subproblem solutions be added to the original SCIP?",
          &heurdata->addallsols, TRUE, DEFAULT_ADDALLSOLS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/fullscale",
+         "should the RENS sub-CIP be solved with cuts, conflicts, strong branching,... This is only for tesing and not recommended!",
+         &heurdata->fullscale, TRUE, DEFAULT_FULLSCALE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

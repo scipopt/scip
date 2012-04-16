@@ -165,60 +165,63 @@ using namespace soplex;
 /** SCIP's SoPlex class */
 class SPxSCIP : public SPxSolver
 {
-   SPxLP::SPxSense  m_sense;            /**< optimization sense */
-   SLUFactor        m_slu;              /**< sparse LU factorization */
-   SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
-   SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
-   SPxDevexPR       m_price_devex;      /**< devex pricer */
+   SPxLP::SPxSense       m_sense;            /**< optimization sense */
+   SLUFactor             m_slu;              /**< sparse LU factorization */
+   SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
+   SPxParMultPR          m_price_parmult;    /**< partial multiple pricer */
+   SPxDevexPR            m_price_devex;      /**< devex pricer */
 #ifdef WITH_BOUNDFLIPPING
-   SPxBoundFlippingRT m_ratio;          /**< Long step dual ratio tester */
+   SPxBoundFlippingRT    m_ratio;            /**< Long step dual ratio tester */
 #else
-   SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+   SPxFastRT             m_ratio;            /**< Harris fast ratio tester */
 #endif
-   char*            m_probname;         /**< problem name */
-   bool             m_fromscratch;      /**< use old basis indicator */
-   bool             m_scaling;          /**< use lp scaling */
-   bool             m_presolving;       /**< use lp presolving */
-   Real             m_feastol;          /**< feasibility tolerance of SCIP */
-   Real             m_objLoLimit;       /**< lower objective limit */
-   Real             m_objUpLimit;       /**< upper objective limit */
-   Status           m_stat;             /**< solving status */
-   bool             m_lpinfo;           /**< storing whether output is turned on */
-   bool             m_autopricing;      /**< is automatic pricing selected? */
-   int              m_itlim;            /**< iteration limit */
-   int              m_itused;           /**< number of iterations spent in phase one of auto pricing */
-   SPxSolver::VarStatus* m_rowstat;     /**< basis status of rows before starting strong branching (if available, NULL otherwise) */
-   SPxSolver::VarStatus* m_colstat;     /**< basis status of columns before starting strong branching (if available, NULL otherwise) */
-   NameSet*         m_rownames;         /**< row names */
-   NameSet*         m_colnames;         /**< column names */
+   char*                 m_probname;         /**< problem name */
+   bool                  m_fromscratch;      /**< use old basis indicator */
+   bool                  m_scaling;          /**< use lp scaling */
+   bool                  m_presolving;       /**< use lp presolving */
+   Real                  m_feastol;          /**< feasibility tolerance of SCIP */
+   Real                  m_objLoLimit;       /**< lower objective limit */
+   Real                  m_objUpLimit;       /**< upper objective limit */
+   Status                m_stat;             /**< solving status */
+   bool                  m_lpinfo;           /**< storing whether output is turned on */
+   bool                  m_autopricing;      /**< is automatic pricing selected? */
+   int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
+   int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
+   SPxSolver::VarStatus* m_rowstat;          /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
+   SPxSolver::VarStatus* m_colstat;          /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
+   NameSet*              m_rownames;         /**< row names */
+   NameSet*              m_colnames;         /**< column names */
 
 #ifdef WITH_LPSCHECK
-   bool             m_doublecheck;
-   CPXENVptr        m_cpxenv;           /**< CPLEX memory environment */
-   CPXLPptr         m_cpxlp;            /**< CPLEX lp structure */
+   bool                  m_doublecheck;
+   CPXENVptr             m_cpxenv;           /**< CPLEX memory environment */
+   CPXLPptr              m_cpxlp;            /**< CPLEX lp structure */
 #endif
-   SCIP_MESSAGEHDLR* m_messagehdlr;       /**< messagehdlr handler to printing messages, or NULL */
+   SCIP_MESSAGEHDLR*     m_messagehdlr;      /**< messagehdlr handler to printing messages, or NULL */
 
 public:
-   SPxSCIP(SCIP_MESSAGEHDLR* messagehdlr = NULL, const char* probname = NULL)
-        : SPxSolver(LEAVE, COLUMN),
-          m_probname(0),
-          m_fromscratch(false),
-          m_scaling(false),
-          m_presolving(false),
-          m_feastol(1e-06),
-          m_objLoLimit(-soplex::infinity),
-          m_objUpLimit(soplex::infinity),
-          m_stat(NO_PROBLEM),
-          m_lpinfo(false),
-          m_autopricing(true),
-          m_itlim(-1),
-          m_itused(0),
-          m_rowstat(NULL),
-          m_colstat(NULL),
-	  m_rownames(0),
-	  m_colnames(0),
-          m_messagehdlr(messagehdlr)
+   SPxSCIP(
+      SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
+      const char*        probname = NULL     /**< name of problem */
+      )
+      : SPxSolver(LEAVE, COLUMN),
+        m_probname(0),
+        m_fromscratch(false),
+        m_scaling(false),
+        m_presolving(false),
+        m_feastol(1e-06),
+        m_objLoLimit(-soplex::infinity),
+        m_objUpLimit(soplex::infinity),
+        m_stat(NO_PROBLEM),
+        m_lpinfo(false),
+        m_autopricing(true),
+        m_itlim(-1),
+        m_itused(0),
+        m_rowstat(NULL),
+        m_colstat(NULL),
+        m_rownames(0),
+        m_colnames(0),
+        m_messagehdlr(messagehdlr)
    {
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
@@ -252,11 +255,11 @@ public:
 #endif
    }
 
+   /** set iteration limit (-1 = unbounded) */
    void setIterationLimit(
       const int          itlim
       )
    {
-      assert(itlim >= 0);
       m_itlim = itlim;
    }
 
@@ -296,8 +299,8 @@ public:
       m_autopricing = false;
    }
 
-   int getIterationLimit(
-      )
+   /** get iteration limit (-1 = unbounded) */
+   int getIterationLimit()
    {
       return m_itlim;
    }
@@ -564,17 +567,17 @@ public:
 
       /* in auto pricing, do the first iterations with devex, then switch to steepest edge */
       setTerminationIter(m_autopricing && (m_itlim < 0 || m_itlim - m_itused > AUTOPRICING_ITERSWITCH) ? AUTOPRICING_ITERSWITCH : m_itlim - m_itused);
-      
+
       trySolve(printwarning);
 
       if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && (m_itlim < 0 || m_itlim - m_itused > 0) )
       {
-            setTerminationIter(m_itlim - m_itused);
-            setPricer(&m_price_steep);
+         setTerminationIter(m_itlim - m_itused);
+         setPricer(&m_price_steep);
 
-            trySolve(printwarning);
+         trySolve(printwarning);
 
-            setPricer(&m_price_devex);
+         setPricer(&m_price_devex);
       }
 
       /* for safety reset iteration limit */
@@ -583,7 +586,7 @@ public:
       if( m_stat == OPTIMAL )
       {
          Real objval = value();
-         
+
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
       }
@@ -754,6 +757,7 @@ public:
       if( simplifier != NULL )
       {
          int verbosity;
+
          /* store and set verbosity */
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? 3 : 0);
@@ -2669,7 +2673,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    *downvalid = FALSE;
    *upvalid = FALSE;
-   
+
    if( iter != NULL )
       *iter = 0;
 
@@ -4221,7 +4225,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert(ival >= 0);
+      assert(ival >= -1);
       lpi->spx->setIterationLimit(ival);
       break;
    case SCIP_LPPAR_PRESOLVING:

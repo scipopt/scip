@@ -419,7 +419,8 @@ SCIP_RETCODE addCoef(
    consdata->nvars++;
 
    /* we only catch this event in presolving stage */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo should this be only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_CONSHDLR* conshdlr;
@@ -472,7 +473,8 @@ SCIP_RETCODE delCoefPos(
    SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    /* we only catch this event in presolving stage, so we need to only drop it there */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo should this be only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_VARFIXED, eventhdlr,
             (SCIP_EVENTDATA*)cons, -1) );
@@ -2269,7 +2271,8 @@ SCIP_DECL_CONSDELETE(consDeleteLogicor)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo should this be only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int v;
@@ -2320,7 +2323,8 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo should this be only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int v;
@@ -3225,7 +3229,8 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
       SCIP_CONSDATA* consdata;
 
       /* we only catch this event in presolving stage */
-      assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+      /**@todo should assert be stronger, i.e., should this be only in SCIP_STAGE_PRESOLVING ? */
+      assert(SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE);
       assert(SCIPeventGetVar(event) != NULL);
 
       if( SCIPvarGetStatus(SCIPeventGetVar(event)) != SCIP_VARSTATUS_FIXED )
@@ -3440,7 +3445,8 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
 
-   if( SCIPisTransformed(scip) && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo should this be only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPisTransformed(scip) && SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int v;

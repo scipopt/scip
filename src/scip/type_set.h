@@ -30,17 +30,20 @@ extern "C" {
 /** SCIP operation stage */
 enum SCIP_Stage
 {
-   SCIP_STAGE_INIT         =  0,        /**< SCIP datastructures are initialized, no problem exists */
+   SCIP_STAGE_INIT         =  0,        /**< SCIP data structures are initialized, no problem exists */
    SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified */
    SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space */
    SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space */
-   SCIP_STAGE_PRESOLVING   =  4,        /**< the problem is being presolved */
-   SCIP_STAGE_PRESOLVED    =  5,        /**< the problem was presolved */
-   SCIP_STAGE_INITSOLVE    =  6,        /**< the solving process data is being initialized */
-   SCIP_STAGE_SOLVING      =  7,        /**< the problem is being solved */
-   SCIP_STAGE_SOLVED       =  8,        /**< the problem was solved */
-   SCIP_STAGE_FREESOLVE    =  9,        /**< the solving process data is being freed */
-   SCIP_STAGE_FREETRANS    = 10         /**< the transformed problem is being freed */
+   SCIP_STAGE_INITPRESOLVE =  4,        /**< presolving is initialized */
+   SCIP_STAGE_PRESOLVING   =  5,        /**< the problem is being presolved */
+   SCIP_STAGE_EXITPRESOLVE =  6,        /**< presolving is exited */
+   SCIP_STAGE_PRESOLVED    =  7,        /**< the problem was presolved */
+   SCIP_STAGE_INITSOLVE    =  8,        /**< the solving process data is being initialized */
+   SCIP_STAGE_SOLVING      =  9,        /**< the problem is being solved */
+   SCIP_STAGE_SOLVED       = 10,        /**< the problem was solved */
+   SCIP_STAGE_EXITSOLVE    = 11,        /**< the solving process data is being freed */
+   SCIP_STAGE_FREETRANS    = 12,        /**< the transformed problem is being freed */
+   SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed */
 };
 typedef enum SCIP_Stage SCIP_STAGE;
 

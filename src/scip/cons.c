@@ -1870,6 +1870,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastnusefulsepaconss = 0;
    (*conshdlr)->lastnusefulenfoconss = 0;
 
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -1994,6 +1995,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->proptime);
    SCIPclockFree(&(*conshdlr)->checktime);
    SCIPclockFree(&(*conshdlr)->resproptime);
+   SCIPclockFree(&(*conshdlr)->setuptime);
 
    BMSfreeMemoryArray(&(*conshdlr)->name);
    BMSfreeMemoryArray(&(*conshdlr)->desc);
@@ -2028,6 +2030,7 @@ SCIP_RETCODE SCIPconshdlrInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(conshdlr->setuptime);
       SCIPclockReset(conshdlr->presoltime);
       SCIPclockReset(conshdlr->sepatime);
       SCIPclockReset(conshdlr->enfolptime);
@@ -2095,8 +2098,14 @@ SCIP_RETCODE SCIPconshdlrInit(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2133,8 +2142,14 @@ SCIP_RETCODE SCIPconshdlrExit(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexit(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2197,13 +2212,13 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set);
+      SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
       SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(conshdlr->presoltime, set);
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2279,13 +2294,13 @@ SCIP_RETCODE SCIPconshdlrExitpre(
       conshdlrDelayUpdates(conshdlr);
 
       /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set);
+      SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
       SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(conshdlr->presoltime, set);
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2332,8 +2347,14 @@ SCIP_RETCODE SCIPconshdlrInitsol(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -2363,8 +2384,14 @@ SCIP_RETCODE SCIPconshdlrExitsol(
        */
       conshdlrDelayUpdates(conshdlr);
 
+      /* start timing */
+      SCIPclockStart(conshdlr->setuptime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consexitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, restart) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3548,6 +3575,16 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets time in seconds used for setting up this constraint handler for new stages */
+SCIP_Real SCIPconshdlrGetSetupTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->setuptime);
 }
 
 /** gets time in seconds used for presolving in this constraint handler */
@@ -5921,11 +5958,14 @@ SCIP_RETCODE SCIPconsCheck(
 
    assert(cons != NULL);
    assert(set != NULL);
+   assert(result != NULL);
 
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
    /* call external method */
+   assert(conshdlr->conscheck != NULL);
+
    SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
 
@@ -5939,6 +5979,387 @@ SCIP_RETCODE SCIPconsCheck(
    return SCIP_OKAY;
 }
 
+/** enforces single constraint for a given pseudo solution */
+SCIP_RETCODE SCIPconsEnfops(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   assert(conshdlr->consenfops != NULL);
+
+   SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, &cons, 1, 1, solinfeasible, objinfeasible, result) );
+   SCIPdebugMessage(" -> enfops returned result <%d>\n", *result);
+
+
+
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_CONSADDED
+      && *result != SCIP_REDUCEDDOM
+      && *result != SCIP_BRANCHED
+      && *result != SCIP_SOLVELP
+      && *result != SCIP_INFEASIBLE
+      && *result != SCIP_FEASIBLE
+      && *result != SCIP_DIDNOTRUN )
+   {
+      SCIPerrorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n",
+         conshdlr->name, *result);
+      return SCIP_INVALIDRESULT;
+   }
+
+   /* do not update statistics */
+
+   return SCIP_OKAY;
+}
+
+/** enforces single constraint for a given LP solution */
+SCIP_RETCODE SCIPconsEnfolp(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   assert(conshdlr->consenfolp != NULL);
+
+   SCIP_CALL( conshdlr->consenfolp(set->scip, conshdlr, &cons, 1, 1, solinfeasible, result) );
+   SCIPdebugMessage(" -> enfolp returned result <%d>\n", *result);
+
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_CONSADDED
+      && *result != SCIP_REDUCEDDOM
+      && *result != SCIP_BRANCHED
+      && *result != SCIP_SEPARATED
+      && *result != SCIP_INFEASIBLE
+      && *result != SCIP_FEASIBLE)
+   {
+      SCIPerrorMessage("enforcing method of constraint handler <%s> for LP returned invalid result <%d>\n",
+         conshdlr->name, *result);
+      return SCIP_INVALIDRESULT;
+   }
+
+   /* do not update statistics */
+
+   return SCIP_OKAY;
+}
+
+
+/** calls LP initialization method for single constraint */
+SCIP_RETCODE SCIPconsInitlp(
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->consinitlp != NULL )
+   SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+
+   return SCIP_OKAY;
+}
+
+/** calls separation method of single constraint for LP solution */
+SCIP_RETCODE SCIPconsSepalp(
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->conssepalp != NULL )
+   {
+      SCIP_CALL( conshdlr->conssepalp(set->scip, conshdlr, &cons, 1, 1, result) );
+      SCIPdebugMessage(" -> sepalp returned result <%d>\n", *result);
+
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_CONSADDED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_NEWROUND
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         SCIPerrorMessage("separation method of constraint handler <%s> returned invalid result <%d>\n", conshdlr->name,
+            *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls separation method of single constraint for given primal solution */
+SCIP_RETCODE SCIPconsSepasol(
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(sol != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->conssepasol != NULL )
+   {
+      SCIP_CALL( conshdlr->conssepasol(set->scip, conshdlr, &cons, 1, 1, sol, result) );
+      SCIPdebugMessage(" -> sepasol returned result <%d>\n", *result);
+
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_CONSADDED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_NEWROUND
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         SCIPerrorMessage("separation method of constraint handler for arbitrary primal solution <%s> returned invalid result <%d>\n",
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls domain propagation method of single constraint */
+SCIP_RETCODE SCIPconsProp(
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving loop */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->consprop != NULL )
+   {
+      SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, &cons, 1, 1, proptiming, result) );
+      SCIPdebugMessage(" -> prop returned result <%d>\n", *result);
+
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_CONSADDED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n",
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resolves propagation conflict of single constraint */
+SCIP_RETCODE SCIPconsResprop(
+   SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(result != NULL);
+   assert(infervar != NULL);
+   assert(bdchgidx != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->consresprop != NULL )
+   {
+      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIPdebugMessage(" -> resprop returned result <%d>\n", *result);
+
+      if( *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND )
+      {
+         SCIPerrorMessage("propagation conflict resolving method of constraint handler <%s> returned invalid result <%d>\n",
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolves single constraint */
+SCIP_RETCODE SCIPconsPresol(
+   SCIP_CONS*            cons,               /**< constraint to presolve */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
+   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
+   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */
+   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolving method */
+   int                   nnewholes,          /**< number of domain holes added since the last call to the presolving method */
+   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolving method */
+   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolving method */
+   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolving method */
+   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolving method */
+   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolving method */
+   int*                  nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to count total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to count total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to count total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->conspresol != NULL )
+   {
+      SCIP_CALL( conshdlr->conspresol(set->scip, conshdlr, &cons, 1, nrounds,  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds,
+            nnewholes,  nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes,
+            nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+      SCIPdebugMessage(" -> presol returned result <%d>\n", *result);
+
+      if( *result != SCIP_UNBOUNDED
+         && *result != SCIP_CUTOFF
+         && *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN
+         && *result != SCIP_DELAYED )
+      {
+         SCIPerrorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n",
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls constraint activation notification method of single constraint */
+SCIP_RETCODE SCIPconsActive(
+   SCIP_CONS*            cons,               /**< constraint to notify */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->consactive != NULL )
+   SCIP_CALL( conshdlr->consactive(set->scip, conshdlr, cons) );
+
+   return SCIP_OKAY;
+}
+
+/** calls constraint deactivation notification method of single constraint */
+SCIP_RETCODE SCIPconsDeactive(
+   SCIP_CONS*            cons,               /**< constraint to notify */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   if( conshdlr->consdeactive != NULL )
+   SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+
+   return SCIP_OKAY;
+}
 
 
 

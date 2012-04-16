@@ -26,6 +26,7 @@
 
 #include "scip/def.h"
 #include "scip/set.h"
+#include "scip/clock.h"
 #include "scip/stat.h"
 #include "scip/vbc.h"
 #include "scip/paramset.h"
@@ -744,6 +745,9 @@ SCIP_RETCODE SCIPnodeselCreate(
    (*nodesel)->nodeselcomp = nodeselcomp;
    (*nodesel)->nodeseldata = nodeseldata;
    (*nodesel)->initialized = FALSE;
+   /* create clocks */
+   SCIP_CALL( SCIPclockCreate(&(*nodesel)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*nodesel)->nodeseltime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
@@ -778,6 +782,10 @@ SCIP_RETCODE SCIPnodeselFree(
       SCIP_CALL( (*nodesel)->nodeselfree(set->scip, *nodesel) );
    }
 
+   /* free clocks */
+   SCIPclockFree(&(*nodesel)->nodeseltime);
+   SCIPclockFree(&(*nodesel)->setuptime);
+
    BMSfreeMemoryArray(&(*nodesel)->name);
    BMSfreeMemoryArray(&(*nodesel)->desc);
    BMSfreeMemory(nodesel);
@@ -800,9 +808,21 @@ SCIP_RETCODE SCIPnodeselInit(
       return SCIP_INVALIDCALL;
    }
 
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(nodesel->setuptime);
+      SCIPclockReset(nodesel->nodeseltime);
+   }
+
    if( nodesel->nodeselinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(nodesel->setuptime, set);
+
       SCIP_CALL( nodesel->nodeselinit(set->scip, nodesel) );
+
+      /* stop timing */
+      SCIPclockStop(nodesel->setuptime, set);
    }
    nodesel->initialized = TRUE;
 
@@ -826,7 +846,13 @@ SCIP_RETCODE SCIPnodeselExit(
 
    if( nodesel->nodeselexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(nodesel->setuptime, set);
+
       SCIP_CALL( nodesel->nodeselexit(set->scip, nodesel) );
+
+      /* stop timing */
+      SCIPclockStop(nodesel->setuptime, set);
    }
    nodesel->initialized = FALSE;
 
@@ -845,7 +871,13 @@ SCIP_RETCODE SCIPnodeselInitsol(
    /* call solving process initialization method of node selector */
    if( nodesel->nodeselinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(nodesel->setuptime, set);
+
       SCIP_CALL( nodesel->nodeselinitsol(set->scip, nodesel) );
+
+      /* stop timing */
+      SCIPclockStop(nodesel->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -863,7 +895,13 @@ SCIP_RETCODE SCIPnodeselExitsol(
    /* call solving process deinitialization method of node selector */
    if( nodesel->nodeselexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(nodesel->setuptime, set);
+
       SCIP_CALL( nodesel->nodeselexitsol(set->scip, nodesel) );
+
+      /* stop timing */
+      SCIPclockStop(nodesel->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -881,7 +919,13 @@ SCIP_RETCODE SCIPnodeselSelect(
    assert(set != NULL);
    assert(selnode != NULL);
 
+   /* start timing */
+   SCIPclockStart(nodesel->nodeseltime, set);
+
    SCIP_CALL( nodesel->nodeselselect(set->scip, nodesel, selnode) );
+
+   /* stop timing */
+   SCIPclockStop(nodesel->nodeseltime, set);
 
    return SCIP_OKAY;
 }
@@ -1002,3 +1046,22 @@ SCIP_Bool SCIPnodeselIsInitialized(
    return nodesel->initialized;
 }
 
+/** gets time in seconds used in this node selector for setting up for next stages */
+SCIP_Real SCIPnodeselGetSetupTime(
+   SCIP_NODESEL*         nodesel             /**< node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   return SCIPclockGetTime(nodesel->setuptime);
+}
+
+/** gets time in seconds used in this node selector */
+SCIP_Real SCIPnodeselGetTime(
+   SCIP_NODESEL*         nodesel             /**< node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   return SCIPclockGetTime(nodesel->nodeseltime);
+}

@@ -90,6 +90,7 @@ struct SCIP_Branchrule
    SCIP_DECL_BRANCHEXECEXT((*branchexecext));/**< branching execution method for external candidates */
    SCIP_DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this branchrule for the next stages */
    SCIP_CLOCK*           branchclock;        /**< branching rule execution time */
    int                   priority;           /**< priority of the branching rule */
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */

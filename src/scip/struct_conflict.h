@@ -48,6 +48,8 @@ struct SCIP_Conflicthdlr
    SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol));/**< solving process deinitialization method of conflict handler */
    SCIP_DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this conflict handler for the next stages */
+   SCIP_CLOCK*           conflicttime;       /**< conflict handler execution time */
    int                   priority;           /**< priority of the conflict handler */
    SCIP_Bool             initialized;        /**< is conflict handler initialized? */
 };

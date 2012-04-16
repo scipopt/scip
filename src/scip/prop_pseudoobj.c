@@ -287,6 +287,29 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
    return SCIPvarCompare(var1, var2);
 }
 
+/** hash key retrieval function for cliques*/
+static
+SCIP_DECL_HASHGETKEY(cliqueGetHashkey)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff the cliques are equal */
+static
+SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
+{  /*lint --e{715}*/
+   if( key1 == key2 )
+      return TRUE;
+   return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
+{  /*lint --e{715}*/
+   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
+   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+}
 
 /*
  * methods for SCIP_OBJIMPLICS data structure
@@ -635,8 +658,9 @@ static
 SCIP_Real collectMinactImplicVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to computes the objective contribution */
-   SCIP_Bool             bound,              /**< bound to which the variable gets fixed due to an implication r */
-   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable which have a non-zero objective coefficient */
+   int*                  binobjidxs,         /**< sorted array which contains all variable problem indices of variable
+					      *   which have a non-zero objective coefficient
+					      */
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
@@ -644,13 +668,20 @@ SCIP_Real collectMinactImplicVar(
    )
 {
    SCIP_Real objval;
-   SCIP_Bool diff;
    int pos;
+#ifndef NDEBUG
+   SCIP_Bool found;
+#endif
 
+   assert(scip != NULL);
    assert(var != NULL);
+   assert(binobjidxs != NULL);
+   assert(collectedvars != NULL);
+   assert(contributors != NULL);
+   assert(ncontributors != NULL);
 
    /* ignore global fixed variables */
-   if( SCIPvarGetLbGlobal(var) > 0.5 && SCIPvarGetUbGlobal(var) < 0.5 )
+   if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
       return 0.0;
 
    objval = SCIPvarGetObj(var);
@@ -659,30 +690,27 @@ SCIP_Real collectMinactImplicVar(
    if( SCIPisZero(scip, objval) )
       return 0.0;
 
-   assert(SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos));
+#ifndef NDEBUG
+   found = SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
+   assert(found);
+#else
    (void) SCIPsortedvecFindInt(binobjidxs, SCIPvarGetProbindex(var), nbinobjvars, &pos);
+#endif
 
    /* check if the variables was already collected through other cliques */
    if( collectedvars[pos] )
       return 0.0;
 
-   diff = (bound != (SCIP_Bool)SCIPvarGetBestBoundType(var));
+   /* collect variable */
+   assert(*ncontributors < nbinobjvars);
+   contributors[*ncontributors] = var;
+   (*ncontributors)++;
 
-   if( diff )
-   {
-      /* collect variable */
-      assert(*ncontributors < nbinobjvars);
-      contributors[*ncontributors] = var;
-      (*ncontributors)++;
+   /* mark variable to be collected */
+   collectedvars[pos] = TRUE;
 
-      /* mark variable to be collected */
-      collectedvars[pos] = TRUE;
-
-      /* return the absolute value of the objective coefficient as constriction */
-      return REALABS(objval);
-   }
-
-   return 0.0;
+   /* return the absolute value of the objective coefficient as constriction */
+   return REALABS(objval);
 }
 
 /** returns the objective change provided by the implications of the given variable by fixing it to the given bound
@@ -709,6 +737,7 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contributors */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    int*                  ncontributors,      /**< pointer to store number of contributor to the objective contribution */
    SCIP_Real*            objchg              /**< pointer to store the objective change */
    )
@@ -717,7 +746,7 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP_CLIQUE* clique;
    SCIP_VAR** vars;
    SCIP_VAR* implvar;
-   SCIP_Real* bounds;
+   SCIP_BOUNDTYPE* boundtypes;
    SCIP_Bool* values;
    SCIP_Bool varfixing;
    int nbinvars;
@@ -750,12 +779,21 @@ SCIP_RETCODE collectMinactImplicVars(
    /* collect all implication which are given via cliques */
    for( c = 0; c < ncliques; ++c )
    {
+      SCIP_Bool useless;
+
+      assert(uselesscliques != NULL);
+
       clique = cliques[c];
       assert(clique != NULL);
+
+      /* check if the clique was previously detected to be useless with respect to minimum activity */
+      if( SCIPhashtableExists(uselesscliques, (void*)clique) )
+         continue;
 
       nbinvars = SCIPcliqueGetNVars(clique);
       vars = SCIPcliqueGetVars(clique);
       values = SCIPcliqueGetValues(clique);
+      useless = TRUE;
 
       for( v = 0; v < nbinvars; ++v )
       {
@@ -763,22 +801,47 @@ SCIP_RETCODE collectMinactImplicVars(
          assert(implvar != NULL);
 
          if( implvar == var )
-            continue;
+         {
+            /* check if the clique is useful at all */
+            if( useless )
+            {
+               SCIP_Real objval;
 
-         (*objchg) += collectMinactImplicVar(scip, implvar, !values[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+               objval = SCIPvarGetObj(var);
+
+               if( varfixing == (SCIP_Bool)SCIPvarGetBestBoundType(var) && !SCIPisZero(scip, objval) )
+                  useless = FALSE;
+            }
+         }
+         else if( values[v] == (SCIP_Bool)SCIPvarGetBestBoundType(implvar) )
+         {
+            useless = FALSE;
+            (*objchg) += collectMinactImplicVar(scip, implvar, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+         }
+      }
+
+      /* if the clique is useless store it in the hash table to skip it later */
+      if( useless )
+      {
+         assert(!SCIPhashtableExists(uselesscliques, (void*)clique));
+         SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
       }
    }
 
    /* collect implications */
    vars = SCIPvarGetImplVars(var, varfixing);
    nbinvars = SCIPvarGetNBinImpls(var, varfixing);
-   bounds = SCIPvarGetImplBounds(var, varfixing);
+   boundtypes = SCIPvarGetImplTypes(var, varfixing);
 
    /* loop over all implications */
    for( v = 0; v < nbinvars; ++v )
    {
       assert(vars[v] != NULL);
-      (*objchg) += collectMinactImplicVar(scip, vars[v], bounds[v] > 0.5, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+
+      if( boundtypes[v] == SCIPvarGetBestBoundType(vars[v]) )
+      {
+         (*objchg) += collectMinactImplicVar(scip, vars[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
+      }
    }
 
    return SCIP_OKAY;
@@ -872,6 +935,9 @@ SCIP_RETCODE getMinactImplicObjchg(
          }
       }
 
+      assert(SCIPvarGetObj(implvar) > 0.0 || SCIPvarsHaveCommonClique(var, (SCIP_Bool) bound, implvar, TRUE, TRUE));
+      assert(SCIPvarGetObj(implvar) < 0.0 || SCIPvarsHaveCommonClique(var, (SCIP_Bool) bound, implvar, FALSE, TRUE));
+
       /* add objective change */
       (*objchg) += REALABS(SCIPvarGetObj(implvar));
       v++;
@@ -892,6 +958,7 @@ SCIP_RETCODE collectMinactObjchg(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< array to store the contriboters */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    int*                  ncontributors,      /**< pointer to store number of contributor to the objective contribution */
    SCIP_Real*            objchg              /**< pointer to store the objective change */
    )
@@ -906,7 +973,7 @@ SCIP_RETCODE collectMinactObjchg(
    (*ncontributors) = 0;
 
    /* add the objective contribution from the implication variable */
-   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors, objchg) );
+   SCIP_CALL( collectMinactImplicVars(scip, var, bound, binobjidxs, collectedvars, nbinobjvars, contributors, uselesscliques, ncontributors, objchg) );
 
    return SCIP_OKAY;
 }
@@ -1032,6 +1099,7 @@ SCIP_RETCODE collectMinactVar(
    SCIP_Bool*            collectedvars,      /**< temporary buffer to mark collected variables */
    int                   nbinobjvars,        /**< number of binary variables with non-zero objective coefficient */
    SCIP_VAR**            contributors,       /**< temporary buffer to use for collecting contributors */
+   SCIP_HASHTABLE*       uselesscliques,     /**< hash table to store useless cliques, or NULL */
    SCIP_Bool*            collect             /**< pointer to store if the variable should be stored */
    )
 {
@@ -1072,7 +1140,7 @@ SCIP_RETCODE collectMinactVar(
 
       /* get contribution of variable by fixing it to its lower bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjidxs, collectedvars, nbinobjvars,
-            contributors, &nlbcontributors, &lbobjchg) );
+            contributors, uselesscliques, &nlbcontributors, &lbobjchg) );
       assert(!SCIPisNegative(scip, lbobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
@@ -1097,7 +1165,7 @@ SCIP_RETCODE collectMinactVar(
 
       /* get contribution of variable by fixing it to its upper bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_UPPER, binobjidxs, collectedvars, nbinobjvars,
-            &contributors[nlbcontributors], &nubcontributors, &ubobjchg) );
+            &contributors[nlbcontributors], uselesscliques, &nubcontributors, &ubobjchg) );
       assert(!SCIPisNegative(scip, ubobjchg));
 
       SCIPdebugMessage("variable <%s> fixed to bound=%d implies %d(%d)\n", SCIPvarGetName(var),
@@ -1242,6 +1310,7 @@ SCIP_RETCODE propdataInit(
    {
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_OBJIMPLICS* objimplics;
+      SCIP_HASHTABLE* uselesscliques;
       SCIP_VAR** contributors;
       SCIP_Bool* collectedvars;
       SCIP_Bool collect;
@@ -1263,15 +1332,28 @@ SCIP_RETCODE propdataInit(
 
       if( useimplics )
       {
+         int ncliques;
+
          /* create temporary buffer */
          SCIP_CALL( SCIPallocBufferArray(scip, &contributors, nbinobjvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &collectedvars, nbinobjvars) );
          BMSclearMemoryArray(collectedvars, nbinobjvars);
+
+         ncliques = SCIPgetNCliques(scip);
+
+         if( ncliques > 0 )
+         {
+            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), SCIPcalcHashtableSize(ncliques),
+                  cliqueGetHashkey, cliqueIsHashkeyEq, cliqueGetHashkeyVal, NULL) );
+         }
+         else
+            uselesscliques = NULL;
       }
       else
       {
          contributors = NULL;
          collectedvars = NULL;
+         uselesscliques = NULL;
       }
 
       /* collect the variables with non-zero objective contribution and catch global bound tighten events that decrease the
@@ -1297,7 +1379,7 @@ SCIP_RETCODE propdataInit(
             }
 
             /* check if the variable should be collected for the minimum activity propagation */
-            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvars, collectedvars, nbinobjvars, contributors, &collect) );
+            SCIP_CALL( collectMinactVar(scip, var, &objimplics, useimplics, binobjvars, collectedvars, nbinobjvars, contributors, uselesscliques, &collect) );
 
             if( collect )
             {
@@ -1367,6 +1449,9 @@ SCIP_RETCODE propdataInit(
 
       if( useimplics )
       {
+         if( uselesscliques != NULL )
+            SCIPhashtableFree(&uselesscliques);
+
          SCIPfreeBufferArray(scip, &collectedvars);
          SCIPfreeBufferArray(scip, &contributors);
       }
@@ -1993,6 +2078,7 @@ SCIP_RETCODE propagateCutoffboundBinvar(
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
    SCIP_Bool*            tightened,          /**< pointer to store if the variable domain was tightened */
+   SCIP_Bool*            cutoff,             /**< pointer to store if a cutoff was detected */
    SCIP_Bool             local               /**< propagate local bounds, otherwise global bounds */
    )
 {
@@ -2024,13 +2110,38 @@ SCIP_RETCODE propagateCutoffboundBinvar(
    if( SCIPisZero(scip, lbobjchg) && SCIPisZero(scip, ubobjchg) )
       return SCIP_OKAY;
 
-   /* try to tighten the variable bound use the larger objective contribution */
-   if( lbobjchg > ubobjchg )
-      objchg = -lbobjchg;
-   else
-      objchg = ubobjchg;
+   /* if the lbobjchg and ubobjchg are both able to fix the variable to its upper (1.0) or lower (0.0) bound,
+    * respectively, we detected an cutoff
+    */
+   if( cutoffbound < pseudoobjval + ubobjchg && cutoffbound < pseudoobjval + lbobjchg )
+   {
+      /* check if conflict analysis is applicable */
+      if( local && SCIPisConflictAnalysisApplicable(scip) )
+      {
+         assert(SCIPgetDepth(scip) > 0);
 
-   SCIP_CALL( propagateCutoffboundVar(scip, prop, var, pos, objchg, cutoffbound, pseudoobjval, local, tightened) );
+         /* initialize conflict analysis */
+         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
+         SCIP_CALL( resolvePropagation(scip, propdata, pseudoobjval, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
+
+         /* analyze the conflict */
+         SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
+      }
+
+      (*cutoff) = TRUE;
+   }
+   else
+   {
+      /* try to tighten the variable bound use the larger objective contribution */
+      if( lbobjchg > ubobjchg )
+         objchg = -lbobjchg;
+      else
+         objchg = ubobjchg;
+
+      SCIP_CALL( propagateCutoffboundVar(scip, prop, var, pos, objchg, cutoffbound, pseudoobjval, local, tightened) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2090,6 +2201,8 @@ SCIP_RETCODE propagateCutoffboundGlobally(
    checkGlbfirstnonfixed(scip, propdata);
 #endif
 
+   *cutoff = FALSE;
+
    /* always propagate the binary variables completely */
    for( v = propdata->glbfirstnonfixed; v < nminactvars; ++v )
    {
@@ -2101,7 +2214,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, FALSE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, FALSE) );
 
       /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
        * contribution w.r.t. minimum activity (pseudo objective value) of the objective function; these values are the
@@ -2114,6 +2227,9 @@ SCIP_RETCODE propagateCutoffboundGlobally(
             cutoffbound, v, nminactvars);
          break;
       }
+
+      if( *cutoff )
+         return SCIP_OKAY;
 
       /* @note The variable might not be globally fixed right away since this would destroy the local internal
        *       data structure of a search node; the bound change is in that case pending; hence we cannot assert
@@ -2135,11 +2251,14 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, FALSE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, FALSE) );
 
       /* check if the domain of the variable was reduced */
       if( tightened )
          (*nchgbds)++;
+
+      if( *cutoff )
+         return SCIP_OKAY;
    }
 
 #ifndef NDEBUG
@@ -2158,8 +2277,9 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, FALSE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, FALSE) );
       assert(!tightened);
+      assert(!(*cutoff));
    }
 #endif
 
@@ -2190,7 +2310,8 @@ SCIP_RETCODE propagateCutoffboundBinvars(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_Real             cutoffbound,        /**< cutoff bound to use */
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
-   int*                  nfixedvars          /**< pointer to store the number of fixed variables */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cutoff was detected */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -2225,6 +2346,8 @@ SCIP_RETCODE propagateCutoffboundBinvars(
    }
 #endif
 
+   (*cutoff) = FALSE;
+
    for( v = propdata->firstnonfixed; v < nminactvars; ++v )
    {
       var =  minactvars[v];
@@ -2237,7 +2360,7 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, TRUE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, TRUE) );
 
       /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
        * contribution w.r.t. minimum activity of the objective function; These values are the increase in the pseudo
@@ -2251,6 +2374,9 @@ SCIP_RETCODE propagateCutoffboundBinvars(
             cutoffbound, v, nminactvars);
          break;
       }
+
+      if( *cutoff )
+         return SCIP_OKAY;
 
       /* check that the binary variable is locally fixed */
       assert(SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5);
@@ -2271,13 +2397,16 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, TRUE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, TRUE) );
 
       if( tightened )
       {
          assert(SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5);
          (*nfixedvars)++;
       }
+
+      if( *cutoff )
+         return SCIP_OKAY;
    }
 
 #ifndef NDEBUG
@@ -2296,8 +2425,9 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          continue;
 
       /* propagates the cutoff bound for the given binary variable */
-      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, TRUE) );
+      SCIP_CALL( propagateCutoffboundBinvar(scip, prop, var, v, cutoffbound, pseudoobjval, &tightened, cutoff, TRUE) );
       assert(!tightened);
+      assert(!(*cutoff));
    }
 #endif
 
@@ -2354,7 +2484,7 @@ SCIP_RETCODE propagateCutoffbound(
 
    /* check if we have a new cutoff bound; in that case we globally propagate this new bound
     *
-    * @note there is no need to propagate the cutoff pound if we are in the root node since this will be done by the
+    * @note there is no need to propagate the cutoff bound if we are in the root node since this will be done by the
     *       standard local propagation
     */
    if( propdata->propcutoffbound && !propdata->glbpropagated && SCIPgetDepth(scip) > 0 )
@@ -2408,7 +2538,13 @@ SCIP_RETCODE propagateCutoffbound(
    SCIPdebugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
    /* propagate binary variables */
-   SCIP_CALL( propagateCutoffboundBinvars(scip, prop, cutoffbound, pseudoobjval, &nchgbds) );
+   SCIP_CALL( propagateCutoffboundBinvars(scip, prop, cutoffbound, pseudoobjval, &nchgbds, &cutoff) );
+
+   if( cutoff )
+   {
+      (*result) = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    /* tighten domains of none binary variables, if they would increase the pseudo objective value above the cutoff
     * bound
@@ -2660,6 +2796,10 @@ SCIP_RETCODE propagateLowerboundBinvar(
    assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
    assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
+   /*@todo Instead of running always over all implications use SCIP_OBJIMPLICS in the same way as for the propagation of
+    *      the minimum activity against the cutoff bound. If so we could use the cliques as well.
+    */
+
    /* get contribution of variable by fixing it to its lower bound w.r.t. maximum activity of the objective function */
    lbobjchg = getMaxactObjchg(var, SCIP_BOUNDTYPE_LOWER, useimplics);
    assert(!SCIPisPositive(scip, lbobjchg));
@@ -2674,9 +2814,9 @@ SCIP_RETCODE propagateLowerboundBinvar(
    /* if the maximum activity of the objective function without the contribution of the given variable shrinks below the
     * global lower bound, the contribution of the variable is need; hence, we can fix it to corresponding bound globally
     */
-   if( maxpseudoobjact + lbobjchg < lowerbound &&  maxpseudoobjact + ubobjchg < lowerbound )
+   if( maxpseudoobjact + lbobjchg < lowerbound && maxpseudoobjact + ubobjchg < lowerbound )
    {
-      /* fixing the variable to zero and one leads to decreases of the maximum activity below the lower bound, hence, we
+      /* fixing the variable to zero or one leads to decreases of the maximum activity below the lower bound, hence, we
        * detected an cutoff
        */
       (*infeasible) = TRUE;
@@ -2805,7 +2945,7 @@ SCIP_RETCODE propagateLowerbound(
          nmaxactvars = propdata->nmaxactvars;
          assert(nmaxactvars == 0 || maxactvars != NULL);
 
-         for( v = propdata->maxactfirstnonfixed; v < nmaxactvars && !cutoff; ++v )
+         for( v = propdata->maxactfirstnonfixed; v < nmaxactvars; ++v )
          {
             var = maxactvars[v];
             assert(var != NULL);
@@ -2834,6 +2974,9 @@ SCIP_RETCODE propagateLowerbound(
                break;
             }
 
+            if( cutoff )
+               break;
+
             /* update maximum pseudo activity since the previous global bound change might invalidated the maximum
              * pseudo activity
              */
@@ -2845,7 +2988,7 @@ SCIP_RETCODE propagateLowerbound(
          propdata->maxactfirstnonfixed = v;
 
          /* check all binary variables which could potentially be fixed */
-         for( ; v < nmaxactvars && maxpseudoobjact - lowerbound < propdata->maxactchgs[v] ; ++v )
+         for( ; v < nmaxactvars && maxpseudoobjact - lowerbound < propdata->maxactchgs[v] && !cutoff; ++v )
          {
             var =  maxactvars[v];
             assert(var != NULL);

@@ -74,6 +74,12 @@ int SCIPrelaxGetFreq(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
+/** gets time in seconds used in this relaxator for setting up for next stages */
+extern
+SCIP_Real SCIPrelaxGetSetupTime(
+   SCIP_RELAX*           relax               /**< relaxator */
+   );
+
 /** gets time in seconds used in this relaxator */
 extern
 SCIP_Real SCIPrelaxGetTime(

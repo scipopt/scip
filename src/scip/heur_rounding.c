@@ -39,7 +39,7 @@
 #define DEFAULT_SUCCESSFACTOR 100            /**< number of calls per found solution that are considered as standard success, 
                                               * a higher factor causes the heuristic to be called more often 
                                               */
-
+#define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -49,6 +49,7 @@ struct SCIP_HeurData
    int                   successfactor;      /**< number of calls per found solution that are considered as standard success, 
                                               * a higher factor causes the heuristic to be called more often 
                                               */
+   SCIP_Bool             oncepernode;         /**< should the heuristic only be called once per node? */
 };
 
 
@@ -487,12 +488,22 @@ SCIP_DECL_HEURINITSOL(heurInitsolRounding)
    assert(heurdata != NULL);
    heurdata->lastlp = -1;
 
+   /* change the heuristic's timingmask, if nit should be called only once per node */
+   if( heurdata->oncepernode )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_AFTERLPNODE);
+
    return SCIP_OKAY;
 }
 
-
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolRounding NULL
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolRounding)
+{
+   /* reset the timing mask to its default value */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   return SCIP_OKAY;
+}
 
 
 /** execution method of primal heuristic */
@@ -749,6 +760,9 @@ SCIP_RETCODE SCIPincludeHeurRounding(
          "number of calls per found solution that are considered as standard success, a higher factor causes the heuristic to be called more often",
          &heurdata->successfactor, TRUE, DEFAULT_SUCCESSFACTOR, -1, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+         "should the heuristic only be called once per node?",
+         &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
+
    return SCIP_OKAY;
 }
-

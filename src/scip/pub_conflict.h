@@ -75,6 +75,18 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
+/** gets time in seconds used in this conflict handler for setting up for next stages */
+extern
+SCIP_Real SCIPconflicthdlrGetSetupTime(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** gets time in seconds used in this conflict handler */
+extern
+SCIP_Real SCIPconflicthdlrGetTime(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
 #ifdef __cplusplus
 }
 #endif

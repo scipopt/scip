@@ -358,7 +358,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
 #endif
 
    assert(primal != NULL);
-   assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVING);
+   assert(SCIPsetGetStage(set) <= SCIP_STAGE_EXITPRESOLVE);
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set));

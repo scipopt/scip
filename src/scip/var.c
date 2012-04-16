@@ -2843,7 +2843,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    int                   addnlocksup         /**< increase in number of rounding up locks */
    )
 {
-   int i;
+   SCIP_VAR* lockvar;
 
    assert(var != NULL);
    assert(var->nlocksup >= 0);
@@ -2855,73 +2855,99 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIPdebugMessage("add rounding locks %d/%d to variable <%s> (locks=%d/%d)\n",
       addnlocksdown, addnlocksup, var->name, var->nlocksdown, var->nlocksup);
 
-   switch( SCIPvarGetStatus(var) )
+   lockvar = var;
+
+   while( TRUE ) /*lint !e716 */
    {
-   case SCIP_VARSTATUS_ORIGINAL:
-      if( var->data.original.transvar != NULL )
-      {
-         SCIP_CALL( SCIPvarAddLocks(var->data.original.transvar, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
-      }
-      else
-      {
-         var->nlocksdown += addnlocksdown;
-         var->nlocksup += addnlocksup;
-      }
-      break;
+      assert(lockvar != NULL);
 
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-   case SCIP_VARSTATUS_FIXED:
-      var->nlocksdown += addnlocksdown;
-      var->nlocksup += addnlocksup;
-      if( var->nlocksdown <= 1 && var->nlocksup <= 1 )
+      switch( SCIPvarGetStatus(lockvar) )
       {
-         SCIP_CALL( varEventVarUnlocked(var, blkmem, set, eventqueue) );
-      }
-      break;
+      case SCIP_VARSTATUS_ORIGINAL:
+	 if( lockvar->data.original.transvar != NULL )
+	 {
+	    lockvar = lockvar->data.original.transvar;
+	    break;
+	 }
+	 else
+	 {
+	    lockvar->nlocksdown += addnlocksdown;
+	    lockvar->nlocksup += addnlocksup;
 
-   case SCIP_VARSTATUS_AGGREGATED:
-      if( var->data.aggregate.scalar > 0.0 )
+	    assert(lockvar->nlocksdown >= 0);
+	    assert(lockvar->nlocksup >= 0);
+
+	    return SCIP_OKAY;
+	 }
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_FIXED:
+	 lockvar->nlocksdown += addnlocksdown;
+	 lockvar->nlocksup += addnlocksup;
+
+	 assert(lockvar->nlocksdown >= 0);
+	 assert(lockvar->nlocksup >= 0);
+
+	 if( lockvar->nlocksdown <= 1 && lockvar->nlocksup <= 1 )
+	 {
+	    SCIP_CALL( varEventVarUnlocked(lockvar, blkmem, set, eventqueue) );
+	 }
+
+	 return SCIP_OKAY;
+      case SCIP_VARSTATUS_AGGREGATED:
+	 if( lockvar->data.aggregate.scalar < 0.0 )
+	 {
+	    int tmp = addnlocksup;
+
+	    addnlocksup = addnlocksdown;
+	    addnlocksdown = tmp;
+	 }
+
+	 lockvar = lockvar->data.aggregate.var;
+	 break;
+      case SCIP_VARSTATUS_MULTAGGR:
       {
-         SCIP_CALL( SCIPvarAddLocks(var->data.aggregate.var, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
+	 int v;
+
+	 assert(!lockvar->donotmultaggr);
+
+	 for( v = lockvar->data.multaggr.nvars - 1; v >= 0; --v )
+	 {
+	    if( lockvar->data.multaggr.scalars[v] > 0.0 )
+	    {
+	       SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue,
+		     addnlocksdown, addnlocksup) );
+	    }
+	    else
+	    {
+	       SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue,
+		     addnlocksup, addnlocksdown) );
+	    }
+	 }
+	 return SCIP_OKAY;
       }
-      else
+      case SCIP_VARSTATUS_NEGATED:
       {
-         SCIP_CALL( SCIPvarAddLocks(var->data.aggregate.var, blkmem, set, eventqueue, addnlocksup, addnlocksdown) );
+	 int tmp = addnlocksup;
+
+	 assert(lockvar->negatedvar != NULL);
+	 assert(SCIPvarGetStatus(lockvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+	 assert(lockvar->negatedvar->negatedvar == lockvar);
+
+	 addnlocksup = addnlocksdown;
+	 addnlocksdown = tmp;
+
+	 lockvar = lockvar->negatedvar;
+	 break;
       }
-      break;
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
-      {
-         if( var->data.multaggr.scalars[i] > 0.0 )
-         {
-            SCIP_CALL( SCIPvarAddLocks(var->data.multaggr.vars[i], blkmem, set, eventqueue, 
-                  addnlocksdown, addnlocksup) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPvarAddLocks(var->data.multaggr.vars[i], blkmem, set, eventqueue, 
-                  addnlocksup, addnlocksdown) );
-         }
+      default:
+	 SCIPerrorMessage("unknown variable status\n");
+	 return SCIP_INVALIDDATA;
       }
-      break;
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      assert(var->negatedvar->negatedvar == var);
-      SCIP_CALL( SCIPvarAddLocks(var->negatedvar, blkmem, set, eventqueue, addnlocksup, addnlocksdown) );
-      break;
-
-   default:
-      SCIPerrorMessage("unknown variable status\n");
-      return SCIP_INVALIDDATA;
    }
 
-   assert(var->nlocksdown >= 0);
-   assert(var->nlocksup >= 0);
+   assert(lockvar->nlocksdown >= 0);
+   assert(lockvar->nlocksup >= 0);
 
    return SCIP_OKAY;
 }
@@ -3237,25 +3263,65 @@ SCIP_RETCODE varEventVarFixed(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int                   fixeventtype        /**< is this event a fixation(0), an aggregation(1), or an
+					      *   multi-aggregation(2)
+					      */
    )
 {
    SCIP_EVENT* event;
+   SCIP_VARSTATUS varstatus;
    int i;
 
    assert(var != NULL);
+   assert(0 <= fixeventtype && fixeventtype <= 2);
 
    /* issue VARFIXED event on variable */
    SCIP_CALL( SCIPeventCreateVarFixed(&event, blkmem, var) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
-   /* process all parents */
-   for( i = 0; i < var->nparentvars; ++i )
+   switch( fixeventtype )
    {
-      if( SCIPvarGetStatus(var->parentvars[i]) != SCIP_VARSTATUS_ORIGINAL )
+   case 0:
+      /* process all parents of a fixed variable */
+      for( i = 0; i < var->nparentvars; ++i )
       {
-         SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue) );
+	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+
+	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+
+	 /* issue event on all not yet fixed parent variables, (that should already issued this event) except the original
+	  * one
+	  */
+	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
+	 {
+	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+	 }
       }
+      break;
+   case 1:
+      /* process all parents of a aggregated variable */
+      for( i = 0; i < var->nparentvars; ++i )
+      {
+	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+
+	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+
+	 /* issue event on all not yet fixed and aggregated parent variables, (that should already issued this event)
+	  * except the original one
+	  */
+	 if( varstatus != SCIP_VARSTATUS_AGGREGATED && varstatus != SCIP_VARSTATUS_ORIGINAL )
+	 {
+	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+	 }
+      }
+      break;
+   case 2:
+      /* do not process event on parents in multi-aggregation case */
+      break;
+   default:
+      SCIPerrorMessage("unknown variable fixation event origin\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -3378,7 +3444,7 @@ SCIP_RETCODE SCIPvarFix(
       SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, lp, eventqueue, obj) );
 
       /* issue VARFIXED event */
-      SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue) );
+      SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 0) );
 
       *fixed = TRUE;
       break;
@@ -4274,7 +4340,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, lp, eventqueue, obj) );
 
    /* issue VARFIXED event */
-   SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue) );
+   SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 1) );
 
    *aggregated = TRUE;
 
@@ -4687,7 +4753,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 {
    SCIP_VAR** tmpvars;
    SCIP_Real* tmpscalars;
-   SCIP_EVENT* event;
    SCIP_Real obj;
    SCIP_Real branchfactor;
    int branchpriority;
@@ -4938,8 +5003,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       }
 
       /* issue VARFIXED event */
-      SCIP_CALL( SCIPeventCreateVarFixed(&event, blkmem, var) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
+      SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 2) );
 
       /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
        * variables and the problem's objective offset

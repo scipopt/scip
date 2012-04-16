@@ -14918,6 +14918,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    }
    else
    {
+      assert(rayobjval != 0.0);
+
       /* scale the ray, such that the resulting point has infinite objective value */
       rayscale = -2*SCIPsetInfinity(set)/rayobjval;
       assert(SCIPsetIsFeasPositive(set, rayscale));
@@ -16018,7 +16020,7 @@ SCIP_RETCODE SCIPlpEndDive(
       }
       else
       {
-         SCIP_CALL( lpRestoreSolVals(lp, blkmem, -1) );
+         SCIP_CALL( lpRestoreSolVals(lp, blkmem, -1LL) );
       }
    }
 

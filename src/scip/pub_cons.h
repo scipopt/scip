@@ -132,6 +132,12 @@ int SCIPconshdlrGetNEnabledConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for setting up this constraint handler for new stages */
+extern
+SCIP_Real SCIPconshdlrGetSetupTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for presolving in this constraint handler */
 extern
 SCIP_Real SCIPconshdlrGetPresolTime(

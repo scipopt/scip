@@ -5309,7 +5309,7 @@
  *  @section SETUP Setting up the test environment
  *
  *  At first you should create a file listing all problem instances that should be part of the test.
- *  This file has to be located in the the directory <code>scip/check/</code>
+ *  This file has to be located in the the directory <code>scip/check/testset/</code>
  *  and has to have the file extension <code>.test</code>, e.g., <code>testrun.test</code>,
  *  in order to be found by the <code>scip/check/check.sh</code> script.
  *  \n
@@ -5319,7 +5319,7 @@
  *  Note that these problems have to be readable for SCIP in order to solve them.
  *  However, you can use different file formats.
  *
- *  Optionally, you can provide a solution file in the <code>scip/check/</code> directory containing
+ *  Optionally, you can provide a solution file in the <code>scip/check/testset/</code> directory containing
  *  known information about the feasibility and the best known objective values for the test instances.
  *  SCIP can use these values to verify the results. The file has to have the same basename as the
  *  <code>.test</code>-file, i.e., in our case <code>testrun.solu</code>. One line can only contain
@@ -5356,7 +5356,7 @@
  *
  * <b>Note that in all lines the file extension of the file name is omitted.</b>
  *  \n
- *  See the files <code>scip/check/short.test</code> and <code>scip/check/short.solu</code>
+ *  See the files <code>scip/check/testset/short.test</code> and <code>scip/check/testset/short.solu</code>
  *  for an example of a <code>test</code>-file and its corresponding <code>solu</code>-file.
  *
  *

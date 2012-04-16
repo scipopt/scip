@@ -1167,6 +1167,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchexecext = branchexecext;
    (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
+   SCIP_CALL( SCIPclockCreate(&(*branchrule)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*branchrule)->branchclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*branchrule)->nlpcalls = 0;
    (*branchrule)->nexterncalls = 0;
@@ -1216,6 +1217,7 @@ SCIP_RETCODE SCIPbranchruleFree(
    }
 
    SCIPclockFree(&(*branchrule)->branchclock);
+   SCIPclockFree(&(*branchrule)->setuptime);
    BMSfreeMemoryArray(&(*branchrule)->name);
    BMSfreeMemoryArray(&(*branchrule)->desc);
    BMSfreeMemory(branchrule);
@@ -1240,6 +1242,7 @@ SCIP_RETCODE SCIPbranchruleInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(branchrule->setuptime);
       SCIPclockReset(branchrule->branchclock);
       branchrule->nlpcalls = 0;
       branchrule->nexterncalls = 0;
@@ -1253,7 +1256,13 @@ SCIP_RETCODE SCIPbranchruleInit(
 
    if( branchrule->branchinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(branchrule->setuptime, set);
+
       SCIP_CALL( branchrule->branchinit(set->scip, branchrule) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->setuptime, set);
    }
    branchrule->initialized = TRUE;
 
@@ -1277,7 +1286,13 @@ SCIP_RETCODE SCIPbranchruleExit(
 
    if( branchrule->branchexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(branchrule->setuptime, set);
+
       SCIP_CALL( branchrule->branchexit(set->scip, branchrule) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->setuptime, set);
    }
    branchrule->initialized = FALSE;
 
@@ -1296,7 +1311,13 @@ SCIP_RETCODE SCIPbranchruleInitsol(
    /* call solving process initialization method of branching rule */
    if( branchrule->branchinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(branchrule->setuptime, set);
+
       SCIP_CALL( branchrule->branchinitsol(set->scip, branchrule) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -1314,7 +1335,13 @@ SCIP_RETCODE SCIPbranchruleExitsol(
    /* call solving process deinitialization method of branching rule */
    if( branchrule->branchexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(branchrule->setuptime, set);
+
       SCIP_CALL( branchrule->branchexitsol(set->scip, branchrule) );
+
+      /* stop timing */
+      SCIPclockStop(branchrule->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -1705,6 +1732,16 @@ void SCIPbranchruleSetMaxbounddist(
    assert(maxbounddist >= -1);
 
    branchrule->maxbounddist = maxbounddist;
+}
+
+/** gets time in seconds used in this branching rule for setting up for next stages */
+SCIP_Real SCIPbranchruleGetSetupTime(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return SCIPclockGetTime(branchrule->setuptime);
 }
 
 /** gets time in seconds used in this branching rule */

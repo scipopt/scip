@@ -3507,7 +3507,7 @@ int SCIPdigraphGetNComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
-/** Returns the number of previously computed undirected components for the given directed graph.
+/** Returns the previously computed undirected components of the given number for the given directed graph.
  *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
  */
 extern

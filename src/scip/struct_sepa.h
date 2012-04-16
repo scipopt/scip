@@ -54,6 +54,7 @@ struct SCIP_Sepa
    SCIP_DECL_SEPAEXECLP  ((*sepaexeclp));    /**< LP solution separation method of separator */
    SCIP_DECL_SEPAEXECSOL ((*sepaexecsol));   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata;           /**< separators local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this separator for the next stages */
    SCIP_CLOCK*           sepaclock;          /**< separation time */
    int                   priority;           /**< priority of the separator */
    int                   freq;               /**< frequency for calling separator */

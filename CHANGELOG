@@ -76,6 +76,11 @@ interface
   BMSfreeMemorySizeNull() in memory.h
 - new methods BMSmoveMemory(), BMSmoveMemoryArray(), BMSmoveMemorySize() and corresponding  BMSmoveMemory_call() in
   memory.{h,c} too move memory elements
+- added public wrapper functions for calling constraint handler callback methods for a single constraint:
+  SCIPactiveCons(), SCIPdeactiveCons(), SCIPinitlpCons(), SCIPsepalpCons(), SCIPsepasolCons(), SCIPpropCons(),
+  SCIPrespropCons(), SCIPenfopsCons(), SCIPenfolpCons()
+- added new stages SCIP_STAGE_INITPRESOLVE, SCIP_STAGE_EXITPRESOLVE, and SCIP_STAGE_FREE; renamed SCIP_STAGE_FREESOLVE
+  to SCIP_STAGE_EXITSOLVE
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -108,6 +113,13 @@ performance improvements:
 - improved lp-, mps-, opb-reading time
 - improved time used for adding implications
 - improved tcliquegraphAddImplicsVars() in sepa_clique.c to faster add possible variables
+- added parameters mincoveredrel and mincoveredabs to heur_undercover to only run if problem is sufficiently nonlinear
+- heur_undercover treats indicator constraints as nonlinear and fixes the binary variable for linearization
+- speed up in linear constraint handler replacing aggregated variables
+- speed up in SCIPboolarrayExtend() in misc.c replacing a for loop with BMSmoveMemoryArray() call
+- speed up mps reader asking paramters only ones
+- speed up in var.c changing some recursive calls into iterative calls and reducing the number of VARFIX event that are
+  thrown for fixation, aggregation or multi-aggregations
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -151,6 +163,7 @@ parameters:
   separating/cgmip/nodelimit.
 - new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
   only extract set-partitioning and no and-constraints
+- new parameter oncepernode in Rounding and Simple Rounding heuristic
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -164,6 +177,9 @@ features:
 - digraph structure added to misc.c and pub_misc.h that can be used to handle directed graphs, compute undirected
   components in the graph, and sort these components (almost) topologically
 - beta-version of a MATLAB interface can be found under interfaces/matlab
+- SCIP does now print an info message when the root LP could not be solved or is unbounded
+- added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
+  for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 
 SCIP version 2.1.2
 ==================

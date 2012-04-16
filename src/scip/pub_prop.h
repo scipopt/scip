@@ -84,6 +84,12 @@ int SCIPpropGetFreq(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** gets time in seconds used for setting up this propagator for new stages */
+extern
+SCIP_Real SCIPpropGetSetupTime(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
 /** gets time in seconds used in this propagator */
 extern
 SCIP_Real SCIPpropGetTime(

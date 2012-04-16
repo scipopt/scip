@@ -142,6 +142,12 @@ SCIP_Bool SCIPheurIsInitialized(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets time in seconds used in this heuristic for setting up for next stages */
+extern
+SCIP_Real SCIPheurGetSetupTime(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 /** gets time in seconds used in this heuristic */
 extern
 SCIP_Real SCIPheurGetTime(
