@@ -203,7 +203,6 @@ void printStatistics(
 
 #else
 #define initStatistics(scip, presoldata) SCIP_OKAY
-#define freeStatistics(scip, presoldata) /**/
 #define resetStatistics(scip, presoldata) /**/
 #define updateStatisticsComp(presoldata, nbinvars, nintvars) /**/
 #define updateStatisticsSingleVar(presoldata) /**/
@@ -909,7 +908,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    assert(presoldata != NULL);
 
    /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) );
+   SCIP_CALL( initStatistics(scip, presoldata) ); /*lint !e506 !e774*/
 
    presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
@@ -917,12 +916,11 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    return SCIP_OKAY;
 }
 
-
+#ifdef WITH_STATISTICS
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitComponents)
 {  /*lint --e{715}*/
-#ifdef WITH_STATISTICS
    SCIP_PRESOLDATA* presoldata;
 
    /* free presolver data */
@@ -930,10 +928,12 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    assert(presoldata != NULL);
 
    freeStatistics(scip, presoldata);
-#endif
 
    return SCIP_OKAY;
 }
+#else
+#define presolExitComponents NULL
+#endif
 
 /* define unused callbacks as NULL */
 #define presolInitpreComponents NULL

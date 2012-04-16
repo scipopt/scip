@@ -56,7 +56,7 @@ extern "C" {
 #define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__ ))
 #define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
-#define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call( (num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #else
 #define BMSallocMemoryArray(ptr,num)          ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
                                                 ? ( ASSIGN((ptr), NULL) )                          \
@@ -71,7 +71,7 @@ extern "C" {
 						:( BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ ) ) )
 #define BMSallocClearMemoryArray(ptr,num)     ( ( ((size_t)(num)) > (UINT_MAX / sizeof(**(ptr))) ) \
                                                 ? ( ASSIGN((ptr), NULL) )                          \
-                                                : ( ASSIGN((ptr), BMSallocClearMemory_call((num), sizeof(**(ptr)), __FILE__, __LINE__ )) ) )
+                                                : ( ASSIGN((ptr), BMSallocClearMemory_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ )) ) )
 #endif
 
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
