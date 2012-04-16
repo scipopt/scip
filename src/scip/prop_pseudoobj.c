@@ -746,7 +746,7 @@ SCIP_RETCODE collectMinactImplicVars(
    SCIP_CLIQUE* clique;
    SCIP_VAR** vars;
    SCIP_VAR* implvar;
-   SCIP_Real* bounds;
+   SCIP_BOUNDTYPE* boundtypes;
    SCIP_Bool* values;
    SCIP_Bool varfixing;
    int nbinvars;
@@ -813,7 +813,7 @@ SCIP_RETCODE collectMinactImplicVars(
                   useless = FALSE;
             }
          }
-         else if( values[v] == (SCIP_Bool)SCIPvarGetBestBoundType(var) )
+         else if( values[v] == (SCIP_Bool)SCIPvarGetBestBoundType(implvar) )
          {
             useless = FALSE;
             (*objchg) += collectMinactImplicVar(scip, implvar, binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
@@ -831,14 +831,14 @@ SCIP_RETCODE collectMinactImplicVars(
    /* collect implications */
    vars = SCIPvarGetImplVars(var, varfixing);
    nbinvars = SCIPvarGetNBinImpls(var, varfixing);
-   bounds = SCIPvarGetImplBounds(var, varfixing);
+   boundtypes = SCIPvarGetImplTypes(var, varfixing);
 
    /* loop over all implications */
    for( v = 0; v < nbinvars; ++v )
    {
       assert(vars[v] != NULL);
 
-      if( (bounds[v] < 0.5) == (SCIP_Bool)SCIPvarGetBestBoundType(var) )
+      if( boundtypes[v] == SCIPvarGetBestBoundType(vars[v]) )
       {
          (*objchg) += collectMinactImplicVar(scip, vars[v], binobjidxs, collectedvars, nbinobjvars, contributors, ncontributors);
       }
@@ -934,6 +934,9 @@ SCIP_RETCODE getMinactImplicObjchg(
             continue;
          }
       }
+
+      assert(SCIPvarGetObj(implvar) > 0.0 || SCIPvarsHaveCommonClique(var, (SCIP_Bool) bound, implvar, TRUE, TRUE));
+      assert(SCIPvarGetObj(implvar) < 0.0 || SCIPvarsHaveCommonClique(var, (SCIP_Bool) bound, implvar, FALSE, TRUE));
 
       /* add objective change */
       (*objchg) += REALABS(SCIPvarGetObj(implvar));
