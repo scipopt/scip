@@ -366,6 +366,19 @@ SCIP_RETCODE copyAndSolveComponent(
    assert(nbinvars >= SCIPgetNBinVars(subscip));
    assert(nintvars >= SCIPgetNIntVars(subscip));
 
+   /* In debug mode, we want to be informed if the number of variables was reduced during copying.
+    * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
+    * active representation, while SCIPgetConsCopy() might use SCIPgetProbvarLinearSum() and this might cancel out some
+    * of the active variables and cannot be avoided. However, we want to notice it and check whether the constraint
+    * handler could do something more clever.
+    */
+#ifndef NDEBUG
+   if( nvars > SCIPgetNVars(subscip) )
+   {
+      SCIPwarningMessage(scip, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
+   }
+#endif
+
    if( SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
    {
       /* solve the subproblem */
@@ -679,6 +692,17 @@ SCIP_RETCODE splitProblem(
       else
       {
          assert(ncompconss > 0);
+
+         /* in debug mode, we want to be informed about components with single constraints;
+          * this is only for noticing this case and possibly handling it within the constraint handler
+          */
+#ifndef NDEBUG
+         if( ncompconss == 1 )
+         {
+            SCIPwarningMessage(scip, "presol component detected component with a single constraint:\n");
+            SCIP_CALL( SCIPprintCons(scip, compconss[0], NULL) );
+         }
+#endif
 
          /* we do not want to solve the component, if it is the last unsolved one */
          if( ncompvars < SCIPgetNVars(scip) )
