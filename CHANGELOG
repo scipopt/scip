@@ -128,6 +128,8 @@ fixed bugs:
 - fixed bug w.r.t. adding a value to the objective offset of the transformed problem
 - fixed bug in solve.c, applied bounding for the initial lp was only done if root-lp-solution was valid but another
   solution could also have been added
+- fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
+  contributions separately, count their occurences in a constraint, and provide a relaxed activity value
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
