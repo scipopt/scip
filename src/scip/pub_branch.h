@@ -80,6 +80,12 @@ SCIP_Real SCIPbranchruleGetMaxbounddist(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** gets time in seconds used in this branching rule for setting up for next stages */
+extern
+SCIP_Real SCIPbranchruleGetSetupTime(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
 /** gets time in seconds used in this branching rule */
 extern
 SCIP_Real SCIPbranchruleGetTime(

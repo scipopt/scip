@@ -154,6 +154,7 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->propexec = propexec;
    (*prop)->propresprop = propresprop;
    (*prop)->propdata = propdata;
+   SCIP_CALL( SCIPclockCreate(&(*prop)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*prop)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -226,6 +227,7 @@ SCIP_RETCODE SCIPpropFree(
    SCIPclockFree(&(*prop)->presoltime);
    SCIPclockFree(&(*prop)->resproptime);
    SCIPclockFree(&(*prop)->proptime);
+   SCIPclockFree(&(*prop)->setuptime);
    BMSfreeMemoryArray(&(*prop)->desc);
    BMSfreeMemoryArray(&(*prop)->name);
    BMSfreeMemory(prop);
@@ -253,6 +255,7 @@ SCIP_RETCODE SCIPpropInit(
       SCIPclockReset(prop->proptime);
       SCIPclockReset(prop->resproptime);
       SCIPclockReset(prop->presoltime);
+      SCIPclockReset(prop->setuptime);
 
       prop->ncalls = 0;
       prop->nrespropcalls = 0;
@@ -284,7 +287,13 @@ SCIP_RETCODE SCIPpropInit(
 
    if( prop->propinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->setuptime, set);
+
       SCIP_CALL( prop->propinit(set->scip, prop) );
+
+      /* stop timing */
+      SCIPclockStop(prop->setuptime, set);
    }
    prop->initialized = TRUE;
 
@@ -308,7 +317,13 @@ SCIP_RETCODE SCIPpropExit(
 
    if( prop->propexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->setuptime, set);
+
       SCIP_CALL( prop->propexit(set->scip, prop) );
+
+      /* stop timing */
+      SCIPclockStop(prop->setuptime, set);
    }
    prop->initialized = FALSE;
 
@@ -347,12 +362,12 @@ SCIP_RETCODE SCIPpropInitpre(
    if( prop->propinitpre != NULL )
    {
       /* start timing */
-      SCIPclockStart(prop->presoltime, set);
+      SCIPclockStart(prop->setuptime, set);
 
       SCIP_CALL( prop->propinitpre(set->scip, prop, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(prop->presoltime, set);
+      SCIPclockStop(prop->setuptime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -387,12 +402,12 @@ SCIP_RETCODE SCIPpropExitpre(
    if( prop->propexitpre != NULL )
    {
       /* start timing */
-      SCIPclockStart(prop->presoltime, set);
+      SCIPclockStart(prop->setuptime, set);
 
       SCIP_CALL( prop->propexitpre(set->scip, prop, isunbounded, isinfeasible, result) );
 
       /* stop timing */
-      SCIPclockStop(prop->presoltime, set);
+      SCIPclockStop(prop->setuptime, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
@@ -420,7 +435,13 @@ SCIP_RETCODE SCIPpropInitsol(
    /* call solving process initialization method of propagator */
    if( prop->propinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->setuptime, set);
+
       SCIP_CALL( prop->propinitsol(set->scip, prop) );
+
+      /* stop timing */
+      SCIPclockStop(prop->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -438,7 +459,13 @@ SCIP_RETCODE SCIPpropExitsol(
    /* call solving process deinitialization method of propagator */
    if( prop->propexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(prop->setuptime, set);
+
       SCIP_CALL( prop->propexitsol(set->scip, prop) );
+
+      /* stop timing */
+      SCIPclockStop(prop->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -805,6 +832,16 @@ int SCIPpropGetFreq(
    assert(prop != NULL);
 
    return prop->freq;
+}
+
+/** gets time in seconds used for setting up this propagator for new stages */
+SCIP_Real SCIPpropGetSetupTime(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return SCIPclockGetTime(prop->setuptime);
 }
 
 /** gets time in seconds used in this propagator for propagation */

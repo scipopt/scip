@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->relaxexitsol = relaxexitsol;
    (*relax)->relaxexec = relaxexec;
    (*relax)->relaxdata = relaxdata;
+   SCIP_CALL( SCIPclockCreate(&(*relax)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*relax)->relaxclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*relax)->ncalls = 0;
    (*relax)->lastsolvednode = -1;
@@ -156,6 +157,7 @@ SCIP_RETCODE SCIPrelaxFree(
    }
 
    SCIPclockFree(&(*relax)->relaxclock);
+   SCIPclockFree(&(*relax)->setuptime);
    BMSfreeMemoryArray(&(*relax)->name);
    BMSfreeMemoryArray(&(*relax)->desc);
    BMSfreeMemory(relax);
@@ -180,6 +182,7 @@ SCIP_RETCODE SCIPrelaxInit(
 
    if( set->misc_resetstat )
    {
+      SCIPclockReset(relax->setuptime);
       SCIPclockReset(relax->relaxclock);
       relax->ncalls = 0;
       relax->lastsolvednode = -1;
@@ -187,7 +190,13 @@ SCIP_RETCODE SCIPrelaxInit(
    
    if( relax->relaxinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxinit(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
    relax->initialized = TRUE;
 
@@ -211,7 +220,13 @@ SCIP_RETCODE SCIPrelaxExit(
 
    if( relax->relaxexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxexit(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
    relax->initialized = FALSE;
 
@@ -230,7 +245,13 @@ SCIP_RETCODE SCIPrelaxInitsol(
    /* call solving process initialization method of relaxator */
    if( relax->relaxinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxinitsol(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -248,7 +269,13 @@ SCIP_RETCODE SCIPrelaxExitsol(
    /* call solving process deinitialization method of relaxator */
    if( relax->relaxexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxexitsol(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -390,6 +417,16 @@ int SCIPrelaxGetFreq(
    assert(relax != NULL);
 
    return relax->freq;
+}
+
+/** gets time in seconds used in this relaxator for setting up for next stages */
+SCIP_Real SCIPrelaxGetSetupTime(
+   SCIP_RELAX*           relax               /**< relaxator */
+   )
+{
+   assert(relax != NULL);
+
+   return SCIPclockGetTime(relax->setuptime);
 }
 
 /** gets time in seconds used in this relaxator */

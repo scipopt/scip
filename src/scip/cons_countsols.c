@@ -1759,7 +1759,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
@@ -1912,7 +1912,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
@@ -2166,12 +2166,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
       SCIPdialogMessage(scip, NULL, "the counting process was not started yet\n");
       break;
    case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_EXITSOLVE:
    {
       SCIP_CONSHDLR* conshdlr;
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -2363,7 +2365,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
             SCIPfreeBufferArray(scip, &filename);
          }
       }
+      break;
    }
+   case SCIP_STAGE_FREE:
+      SCIPerrorMessage("invalid call during SCIP_STAGE_FREE\n");
+      return SCIP_ERROR;
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);

@@ -196,12 +196,10 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
 
 /** initialize gateextraction presolver data */
 static
-SCIP_RETCODE presoldataInit(
-   SCIP*                 scip,               /**< SCIP data structure */
+void presoldataInit(
    SCIP_PRESOLDATA*      presoldata          /**< data object of presolver */
    )
 {
-   assert(scip != NULL);
    assert(presoldata != NULL);
 
    presoldata->usefullogicor = NULL;
@@ -216,6 +214,37 @@ SCIP_RETCODE presoldataInit(
    presoldata->newsetppchashdatas = FALSE;
    presoldata->initialized = FALSE;
 
+   presoldata->hashdatatable = NULL;
+   presoldata->setppchashtable = NULL;
+   presoldata->logicorhashtable = NULL;
+}
+
+/** initialize gateextraction hashtables */
+static
+SCIP_RETCODE presoldataInitHashtables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLDATA*      presoldata          /**< data object of presolver */
+   )
+{
+   assert(scip != NULL);
+   assert(presoldata != NULL);
+
+   assert(presoldata->nusefullogicor == 0);
+   assert(presoldata->susefullogicor == 0);
+   assert(presoldata->nsetppchashdatas == 0);
+   assert(presoldata->ssetppchashdatas == 0);
+   assert(presoldata->firstchangedlogicor == -1);
+   assert(presoldata->ngates == 0);
+   assert(presoldata->usefullogicorexist == FALSE);
+   assert(presoldata->usefulsetppcexist == FALSE);
+   assert(presoldata->newsetppchashdatas == FALSE);
+   assert(presoldata->initialized == FALSE);
+
+   assert(presoldata->hashdatatable == NULL);
+   assert(presoldata->setppchashtable == NULL);
+   assert(presoldata->logicorhashtable == NULL);
+
+   /* create hashtables */
    SCIP_CALL( SCIPhashtableCreate(&(presoldata->hashdatatable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, hashdataGetKeyCons, hashdataKeyEqCons, hashdataKeyValCons, (void*) scip) );
    SCIP_CALL( SCIPhashtableCreate(&(presoldata->setppchashtable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, hashGetKeyCons, hashKeyEqCons, hashKeyValCons, (void*) scip) );
    SCIP_CALL( SCIPhashtableCreate(&(presoldata->logicorhashtable), SCIPblkmem(scip), HASHSIZE_LOGICORCONS, hashGetKeyCons, hashKeyEqCons, hashKeyValCons, (void*) scip) );
@@ -691,9 +720,15 @@ SCIP_DECL_PRESOLFREE(presolFreeGateextraction)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPhashtableFree(&(presoldata->logicorhashtable));
-   SCIPhashtableFree(&(presoldata->setppchashtable));
-   SCIPhashtableFree(&(presoldata->hashdatatable));
+   if( presoldata->hashdatatable != NULL )
+   {
+      assert(presoldata->setppchashtable != NULL);
+      assert(presoldata->logicorhashtable != NULL);
+
+      SCIPhashtableFree(&(presoldata->logicorhashtable));
+      SCIPhashtableFree(&(presoldata->setppchashtable));
+      SCIPhashtableFree(&(presoldata->hashdatatable));
+   }
 
    SCIPfreeMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
@@ -756,6 +791,17 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
 
       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas);
       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas);
+   }
+
+   if( presoldata->hashdatatable != NULL )
+   {
+      assert(presoldata->setppchashtable != NULL);
+      assert(presoldata->logicorhashtable != NULL);
+
+      /* clear old hashtable entries */
+      SCIPhashtableClear(presoldata->hashdatatable);
+      SCIPhashtableClear(presoldata->setppchashtable);
+      SCIPhashtableClear(presoldata->logicorhashtable);
    }
 
    presoldata->nusefullogicor = 0;
@@ -849,6 +895,15 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
+
+   /* first we need to initialized the hashtables if not yet done */
+   if( presoldata->hashdatatable == NULL )
+   {
+      SCIP_CALL( presoldataInitHashtables(scip, presoldata) );
+   }
+   assert(presoldata->hashdatatable != NULL);
+   assert(presoldata->setppchashtable != NULL);
+   assert(presoldata->logicorhashtable != NULL);
 
    presoldata->newsetppchashdatas = FALSE;
 
@@ -1206,7 +1261,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* initialize gateextraction presolver data */
-   SCIP_CALL( presoldataInit(scip, presoldata) );
+   presoldataInit(presoldata);
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,

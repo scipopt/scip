@@ -8618,7 +8618,8 @@ SCIP_RETCODE propagateBounds(
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
       maxproprounds = conshdlrdata->maxproproundspresolve;
    else
       maxproprounds = conshdlrdata->maxproprounds;

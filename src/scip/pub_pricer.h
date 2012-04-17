@@ -80,10 +80,16 @@ int SCIPpricerGetNVarsFound(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
+/** gets time in seconds used in this pricer for setting up for next stages */
+extern
+SCIP_Real SCIPpricerGetSetupTime(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
 /** gets time in seconds used in this pricer */
 extern
 SCIP_Real SCIPpricerGetTime(
-   SCIP_PRICER*            pricer                /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** returns whether the given pricer is in use in the current problem */

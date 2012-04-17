@@ -48,6 +48,7 @@ struct SCIP_Heur
    SCIP_DECL_HEUREXITSOL ((*heurexitsol));   /**< solving process deinitialization method of primal heuristic */
    SCIP_DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata;           /**< primal heuristics local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this heuristic for the next stages */
    SCIP_CLOCK*           heurclock;          /**< heuristic execution time */
    int                   priority;           /**< priority of the primal heuristic */
    int                   freq;               /**< frequency for calling primal heuristic */

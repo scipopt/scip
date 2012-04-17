@@ -93,6 +93,12 @@ SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** gets time in seconds used in this separator for setting up for next stages */
+extern
+SCIP_Real SCIPsepaGetSetupTime(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 /** gets time in seconds used in this separator */
 extern
 SCIP_Real SCIPsepaGetTime(
