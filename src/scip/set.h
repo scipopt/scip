@@ -1408,6 +1408,20 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+extern
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   );
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
+extern
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1488,6 +1502,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsHugeValue(set, val) ( (val) >= (set)->num_hugeval )
+#define SCIPsetGetHugeValue(set) ( (set)->num_hugeval )
 
 #endif
 

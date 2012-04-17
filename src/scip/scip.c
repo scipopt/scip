@@ -23031,17 +23031,6 @@ SCIP_Real SCIPgetPresolvingTime(
  * numeric values and comparisons
  */
 
-/** returns value treated as infinity */
-SCIP_Real SCIPinfinity(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetInfinity(scip->set);
-}
-
 /** returns value treated as zero */
 SCIP_Real SCIPepsilon(
    SCIP*                 scip                /**< SCIP data structure */
@@ -23389,6 +23378,7 @@ void SCIPprintMemoryDiagnostic(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
+#undef SCIPinfinity
 #undef SCIPisInfinity
 #undef SCIPisEQ
 #undef SCIPisLT
@@ -23440,6 +23430,8 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisSumRelGT
 #undef SCIPisSumRelGE
 #undef SCIPisUpdateUnreliable
+#undef SCIPisHugeValue
+#undef SCIPgetHugeValue
 #undef SCIPcreateRealarray
 #undef SCIPfreeRealarray
 #undef SCIPextendRealarray
@@ -23568,6 +23560,17 @@ SCIP_Bool SCIPisGE(
       || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsGE(scip->set, val1, val2);
+}
+
+/** returns value treated as infinity */
+SCIP_Real SCIPinfinity(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetInfinity(scip->set);
 }
 
 /** checks, if value is (positive) infinite */
@@ -24271,11 +24274,35 @@ SCIP_Bool SCIPisUpdateUnreliable(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateRealarray", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPisUpdateUnreliable", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPsetIsUpdateUnreliable(scip->set, newvalue, oldvalue);
 }
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPisHugeValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPisHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPsetIsHugeValue(scip->set, val);
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPgetHugeValue(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetHugeValue", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPsetGetHugeValue(scip->set);
+}
 
 /** creates a dynamic array of real values */
 SCIP_RETCODE SCIPcreateRealarray(
