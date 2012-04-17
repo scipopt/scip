@@ -1205,10 +1205,10 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
-/** creates a presolver and includes it in SCIP.
+/** creates a presolver and includes it in SCIP
  *
- *  @deprecated Please use method <code>SCIPincludePresolBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludePresolBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
  */
 extern
 SCIP_RETCODE SCIPincludePresol(
@@ -1228,10 +1228,12 @@ SCIP_RETCODE SCIPincludePresol(
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    );
 
-/** Creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPpresolSetInit() in pub_presol.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludePresol</code>.
+/** Creates a presolver and includes it in SCIP with its fundamental callback. All non-fundamental (or optional)
+ *  callbacks as, e.g., init and exit callbacks, will be set to NULL. Optional callbacks can be set via specific setter
+ *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
+ *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
  */
 extern
 SCIP_RETCODE SCIPincludePresolBasic(
@@ -1244,6 +1246,14 @@ SCIP_RETCODE SCIPincludePresolBasic(
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
    SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   );
+
+/** sets copy method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** returns the presolver of the given name, or NULL if not existing */

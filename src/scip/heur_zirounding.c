@@ -851,7 +851,8 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
 
    assert(heur != NULL);
@@ -874,8 +875,8 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
          "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
          &heurdata->stoppercentage, TRUE, DEFAULT_STOPPERCENTAGE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls",
-         "determines the minimum number of calls before percentage-based deactivation of"
-         " Zirounding is applied", &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
+         "determines the minimum number of calls before percentage-based deactivation of Zirounding is applied",
+         &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

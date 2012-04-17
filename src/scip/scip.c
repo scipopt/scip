@@ -3699,8 +3699,8 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
 
 /** creates a primal heuristic and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludeHeurBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludeHeurBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
  */
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
