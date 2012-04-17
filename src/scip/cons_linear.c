@@ -1956,6 +1956,7 @@ void getMinActivity(
    SCIP_Real             delta,              /**< value to subtract from stored minactivity
                                               *   (contribution of the variable set to zero when getting residual activity) */
    SCIP_Bool             global,             /**< should the global or local minimal activity be returned? */
+   SCIP_Bool             goodrelax,          /**< should a good relaxation be computed or are relaxed acticities ignored, anyway? */
    SCIP_Real*            minactivity,        /**< pointer to store the minimal activity */
    SCIP_Bool*            isrelax,            /**< pointer to store whether the activity is a relaxation,
                                               *   i.e. is <= the exact minactivity (in case of huge contributing values) */
@@ -1988,6 +1989,13 @@ void getMinActivity(
    }
    /* if we have neg. huge contributions, we only know that -infty is a relaxation of the minactivity */
    else if( neghuge > 0 )
+   {
+      *minactivity = -SCIPinfinity(scip);
+      *issettoinfinity = TRUE;
+      *isrelax = TRUE;
+   }
+   /* we do not need a good relaxation and we have positve huge contributions, so we just return -infty as activity */
+   else if( !goodrelax && poshuge > 0 )
    {
       *minactivity = -SCIPinfinity(scip);
       *issettoinfinity = TRUE;
@@ -2050,6 +2058,7 @@ void getMaxActivity(
    SCIP_Real             delta,              /**< value to subtract from stored maxactivity
                                               *   (contribution of the variable set to zero when getting residual activity) */
    SCIP_Bool             global,             /**< should the global or local maximal activity be returned? */
+   SCIP_Bool             goodrelax,          /**< should a good relaxation be computed or are relaxed acticities ignored, anyway? */
    SCIP_Real*            maxactivity,        /**< pointer to store the maximal activity */
    SCIP_Bool*            isrelax,            /**< pointer to store whether the activity is a relaxation,
                                               *   i.e. is >= the exact maxactivity (in case of huge contributing values) */
@@ -2082,6 +2091,13 @@ void getMaxActivity(
    }
    /* if we have pos. huge contributions, we only know that +infty is a relaxation of the maxactivity */
    else if( poshuge > 0 )
+   {
+      *maxactivity = SCIPinfinity(scip);
+      *issettoinfinity = TRUE;
+      *isrelax = TRUE;
+   }
+   /* we do not need a good relaxation and we have positve huge contributions, so we just return +infty as activity */
+   else if( !goodrelax && neghuge > 0 )
    {
       *maxactivity = SCIPinfinity(scip);
       *issettoinfinity = TRUE;
@@ -2134,6 +2150,8 @@ static
 void consdataGetActivityBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint */
+   SCIP_Bool             goodrelax,          /**< if we have huge contributions, do we need a good relaxation or are
+                                              *   relaxed acticities ignored, anyway? */
    SCIP_Real*            minactivity,        /**< pointer to store the minimal activity */
    SCIP_Real*            maxactivity,        /**< pointer to store the maximal activity */
    SCIP_Bool*            minisrelax,         /**< pointer to store whether the returned minactivity is just a relaxation,
@@ -2166,11 +2184,11 @@ void consdataGetActivityBounds(
    assert(consdata->maxactivityposinf >= 0);
 
    getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
-      consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE,
+      consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE, goodrelax,
       minactivity, minisrelax, &issettoinfinity);
 
    getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
-      consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE,
+      consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
       maxactivity, maxisrelax, &issettoinfinity);
 }
 
@@ -2262,6 +2280,8 @@ void consdataGetActivityResiduals(
    SCIP_CONSDATA*        consdata,           /**< linear constraint */
    SCIP_VAR*             var,                /**< variable to calculate activity residual for */
    SCIP_Real             val,                /**< coefficient value of variable in linear constraint */
+   SCIP_Bool             goodrelax,          /**< if we have huge contributions, do we need a good relaxation or are
+                                              *   relaxed acticities ignored, anyway? */
    SCIP_Real*            minresactivity,     /**< pointer to store the minimal residual activity */
    SCIP_Real*            maxresactivity,     /**< pointer to store the maximal residual activity */
    SCIP_Bool*            minisrelax,         /**< pointer to store whether the returned residual minactivity is just a
@@ -2328,7 +2348,7 @@ void consdataGetActivityResiduals(
       assert(consdata->minactivityposinf >= 1);
 
       getMinActivity(scip, consdata, consdata->minactivityposinf - 1, consdata->minactivityneginf,
-         consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE,
+         consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
    else if( SCIPisInfinity(scip, -minactbound) )
@@ -2336,7 +2356,7 @@ void consdataGetActivityResiduals(
       assert(consdata->minactivityneginf >= 1);
 
       getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf - 1,
-         consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE,
+         consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
    else if( SCIPisHugeValue(scip, minactbound * absval) )
@@ -2344,7 +2364,7 @@ void consdataGetActivityResiduals(
       assert(consdata->minactivityposhuge >= 1);
 
       getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
-         consdata->minactivityposhuge - 1, consdata->minactivityneghuge, 0.0, FALSE,
+         consdata->minactivityposhuge - 1, consdata->minactivityneghuge, 0.0, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
    else if( SCIPisHugeValue(scip, -minactbound * absval) )
@@ -2352,13 +2372,13 @@ void consdataGetActivityResiduals(
       assert(consdata->minactivityneghuge >= 1);
 
       getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
-         consdata->minactivityposhuge, consdata->minactivityneghuge - 1, 0.0, FALSE,
+         consdata->minactivityposhuge, consdata->minactivityneghuge - 1, 0.0, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
    else
    {
       getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
-         consdata->minactivityposhuge, consdata->minactivityneghuge, absval * minactbound, FALSE,
+         consdata->minactivityposhuge, consdata->minactivityneghuge, absval * minactbound, FALSE, goodrelax,
          minresactivity, minisrelax, isminsettoinfinity);
    }
 
@@ -2370,7 +2390,7 @@ void consdataGetActivityResiduals(
       assert(consdata->maxactivityneginf >= 1);
 
       getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf - 1,
-         consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE,
+         consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
    else if( SCIPisInfinity(scip, maxactbound) )
@@ -2378,7 +2398,7 @@ void consdataGetActivityResiduals(
       assert(consdata->maxactivityposinf >= 1);
 
       getMaxActivity(scip, consdata, consdata->maxactivityposinf - 1, consdata->maxactivityneginf,
-         consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE,
+         consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
    else if( SCIPisHugeValue(scip, absval * maxactbound) )
@@ -2386,7 +2406,7 @@ void consdataGetActivityResiduals(
       assert(consdata->maxactivityposhuge >= 1);
 
       getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
-         consdata->maxactivityposhuge - 1, consdata->maxactivityneghuge, 0.0, FALSE,
+         consdata->maxactivityposhuge - 1, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
    else if( SCIPisHugeValue(scip, -absval * maxactbound) )
@@ -2394,13 +2414,13 @@ void consdataGetActivityResiduals(
       assert(consdata->maxactivityneghuge >= 1);
 
       getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
-         consdata->maxactivityposhuge, consdata->maxactivityneghuge - 1, 0.0, FALSE,
+         consdata->maxactivityposhuge, consdata->maxactivityneghuge - 1, 0.0, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
    else
    {
       getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
-         consdata->maxactivityposhuge, consdata->maxactivityneghuge, absval * maxactbound, FALSE,
+         consdata->maxactivityposhuge, consdata->maxactivityneghuge, absval * maxactbound, FALSE, goodrelax,
          maxresactivity, maxisrelax, ismaxsettoinfinity);
    }
 }
@@ -2410,6 +2430,8 @@ static
 void consdataGetGlbActivityBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint */
+   SCIP_Bool             goodrelax,          /**< if we have huge contributions, do we need a good relaxation or are
+                                              *   relaxed acticities ignored, anyway? */
    SCIP_Real*            glbminactivity,     /**< pointer to store the minimal activity, or NULL, if not needed */
    SCIP_Real*            glbmaxactivity,     /**< pointer to store the maximal activity, or NULL, if not needed */
    SCIP_Bool*            minisrelax,         /**< pointer to store whether the returned minactivity is just a relaxation,
@@ -2450,7 +2472,7 @@ void consdataGetGlbActivityBounds(
       assert(minisrelax != NULL);
 
       getMinActivity(scip, consdata, consdata->glbminactivityposinf, consdata->glbminactivityneginf,
-         consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE,
+         consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE, goodrelax,
          glbminactivity, minisrelax, isminsettoinfinity);
    }
 
@@ -2460,7 +2482,7 @@ void consdataGetGlbActivityBounds(
       assert(maxisrelax != NULL);
 
       getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf, consdata->glbmaxactivityneginf,
-         consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE,
+         consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE, goodrelax,
          glbmaxactivity, maxisrelax, ismaxsettoinfinity);
    }
 }
@@ -2472,6 +2494,8 @@ void consdataGetGlbActivityResiduals(
    SCIP_CONSDATA*        consdata,           /**< linear constraint */
    SCIP_VAR*             var,                /**< variable to calculate activity residual for */
    SCIP_Real             val,                /**< coefficient value of variable in linear constraint */
+   SCIP_Bool             goodrelax,          /**< if we have huge contributions, do we need a good relaxation or are
+                                              *   relaxed acticities ignored, anyway? */
    SCIP_Real*            minresactivity,     /**< pointer to store the minimal residual activity, or NULL, if not needed */
    SCIP_Real*            maxresactivity,     /**< pointer to store the maximal residual activity, or NULL, if not needed */
    SCIP_Bool*            minisrelax,         /**< pointer to store whether the returned residual minactivity is just a
@@ -2531,7 +2555,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbminactivityposinf >= 1);
 
          getMinActivity(scip, consdata, consdata->glbminactivityposinf - 1, consdata->glbminactivityneginf,
-            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE,
+            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE, goodrelax,
             minresactivity, minisrelax, isminsettoinfinity);
       }
       else if( SCIPisInfinity(scip, -minactbound) )
@@ -2539,7 +2563,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbminactivityneginf >= 1);
 
          getMinActivity(scip, consdata, consdata->glbminactivityposinf, consdata->glbminactivityneginf - 1,
-            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE,
+            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, 0.0, TRUE, goodrelax,
             minresactivity, minisrelax, isminsettoinfinity);
       }
       else if( SCIPisHugeValue(scip, minactbound * absval) )
@@ -2547,7 +2571,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbminactivityposhuge >= 1);
 
          getMinActivity(scip, consdata, consdata->glbminactivityposinf, consdata->glbminactivityneginf,
-            consdata->glbminactivityposhuge - 1, consdata->glbminactivityneghuge, 0.0, TRUE,
+            consdata->glbminactivityposhuge - 1, consdata->glbminactivityneghuge, 0.0, TRUE, goodrelax,
             minresactivity, minisrelax, isminsettoinfinity);
       }
       else if( SCIPisHugeValue(scip, -minactbound * absval) )
@@ -2555,14 +2579,14 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbminactivityneghuge >= 1);
 
          getMinActivity(scip, consdata, consdata->glbminactivityposinf, consdata->glbminactivityneginf,
-            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge - 1, 0.0, TRUE,
+            consdata->glbminactivityposhuge, consdata->glbminactivityneghuge - 1, 0.0, TRUE, goodrelax,
             minresactivity, minisrelax, isminsettoinfinity);
       }
       else
       {
          getMinActivity(scip, consdata, consdata->glbminactivityposinf, consdata->glbminactivityneginf,
             consdata->glbminactivityposhuge, consdata->glbminactivityneghuge, absval * minactbound, TRUE,
-            minresactivity, minisrelax, isminsettoinfinity);
+            goodrelax, minresactivity, minisrelax, isminsettoinfinity);
       }
    }
 
@@ -2579,7 +2603,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbmaxactivityneginf >= 1);
 
          getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf, consdata->glbmaxactivityneginf - 1,
-            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE,
+            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE, goodrelax,
             maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
       else if( SCIPisInfinity(scip, maxactbound) )
@@ -2587,7 +2611,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbmaxactivityposinf >= 1);
 
          getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf - 1, consdata->glbmaxactivityneginf,
-            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE,
+            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, 0.0, TRUE, goodrelax,
             maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
       else if( SCIPisHugeValue(scip, absval * maxactbound) )
@@ -2595,7 +2619,7 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbmaxactivityposhuge >= 1);
 
          getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf, consdata->glbmaxactivityneginf,
-            consdata->glbmaxactivityposhuge - 1, consdata->glbmaxactivityneghuge, 0.0, TRUE,
+            consdata->glbmaxactivityposhuge - 1, consdata->glbmaxactivityneghuge, 0.0, TRUE, goodrelax,
             maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
       else if( SCIPisHugeValue(scip, -absval * maxactbound) )
@@ -2603,14 +2627,14 @@ void consdataGetGlbActivityResiduals(
          assert(consdata->glbmaxactivityneghuge >= 1);
 
          getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf, consdata->glbmaxactivityneginf,
-            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge - 1, 0.0, TRUE,
+            consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge - 1, 0.0, TRUE, goodrelax,
             maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
       else
       {
          getMaxActivity(scip, consdata, consdata->glbmaxactivityposinf, consdata->glbmaxactivityneginf,
             consdata->glbmaxactivityposhuge, consdata->glbmaxactivityneghuge, absval * maxactbound, TRUE,
-            maxresactivity, maxisrelax, ismaxsettoinfinity);
+            goodrelax, maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
    }
 }
@@ -4259,23 +4283,23 @@ SCIP_RETCODE addConflictBounds(
       {
          assert(vals != NULL); /* for flexelint */
          if( reasonisrhs )
-            consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], &minresactivity, NULL,
+            consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], FALSE, &minresactivity, NULL,
                &minisrelax, NULL, &isminsettoinfinity, NULL);
          else
-            consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], NULL, &maxresactivity,
+            consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], FALSE, NULL, &maxresactivity,
                NULL, &maxisrelax, NULL, &ismaxsettoinfinity);
       }
       else
       {
          if( reasonisrhs )
-            consdataGetGlbActivityBounds(scip, consdata, &minresactivity, NULL,
+            consdataGetGlbActivityBounds(scip, consdata, FALSE, &minresactivity, NULL,
                &minisrelax, NULL, &isminsettoinfinity, NULL);
          else
-            consdataGetGlbActivityBounds(scip, consdata, NULL, &maxresactivity,
+            consdataGetGlbActivityBounds(scip, consdata, FALSE, NULL, &maxresactivity,
                NULL, &maxisrelax, NULL, &ismaxsettoinfinity);
       }
 
-      /* we can only do something clever, if the residual activity is finite */
+      /* we can only do something clever, if the residual activity is finite and not relaxed */
       if( (reasonisrhs && !isminsettoinfinity && !minisrelax) || (!reasonisrhs && !ismaxsettoinfinity && !maxisrelax) ) /*lint !e644*/
       {
          SCIP_Real rescap;
@@ -4539,7 +4563,7 @@ SCIP_RETCODE tightenVarBounds(
    val = consdata->vals[pos];
    lhs = consdata->lhs;
    rhs = consdata->rhs;
-   consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity,
+   consdataGetActivityResiduals(scip, consdata, var, val, FALSE, &minresactivity, &maxresactivity,
       &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
    assert(var != NULL);
    assert(!SCIPisZero(scip, val));
@@ -5115,7 +5139,7 @@ SCIP_RETCODE propagateCons(
       /* check constraint for infeasibility and redundancy */
       if( !(*cutoff) )
       {
-         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) )
          {
@@ -5363,7 +5387,7 @@ SCIP_RETCODE consdataTightenCoefs(
    }
 
    /* get the minimal and maximal activity of the constraint */
-   consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+   consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
    minleftactivity = 0.0;
    maxleftactivity = 0.0;
@@ -5443,7 +5467,7 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
                if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
                {
@@ -5549,7 +5573,7 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
                if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
                {
@@ -5676,7 +5700,7 @@ SCIP_RETCODE consdataTightenCoefs(
                i--;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
                /* we return above if the condition does not hold and deleting a variable cannot increase the number of
                 * huge contributions
@@ -5701,7 +5725,7 @@ SCIP_RETCODE consdataTightenCoefs(
                i--;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
 
                /* we return above if the condition does not hold and deleting a variable cannot increase the number of
                 * huge contributions
@@ -6107,7 +6131,7 @@ SCIP_RETCODE convertLongEquality(
             SCIP_Bool ismaxsettoinfinity;
 
             /* check if the constraint becomes redundant after multi-aggregation */
-            consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity,
+            consdataGetActivityResiduals(scip, consdata, var, val, FALSE, &minresactivity, &maxresactivity,
                &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
 
             /* do not perform the multi-aggregation due to numerics, if we have huge contributions in the residual
@@ -6872,13 +6896,15 @@ SCIP_RETCODE dualPresolve(
          SCIP_Bool ismaxsettoinfinity;
 
          /* calculate bounds for \sum_{j \neq i} a_j * x_j */
-         consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity,
+         consdataGetActivityResiduals(scip, consdata, var, val, FALSE, &minresactivity, &maxresactivity,
             &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
          assert(SCIPisLE(scip, minresactivity, maxresactivity));
 
-         /* we do not want to rely on relaxed finite resactivities, so we continue here */
-         if( (minisrelax && !isminsettoinfinity) || (maxisrelax && !ismaxsettoinfinity) )
-            continue;
+         /* We called consdataGetActivityResiduals() saying that we do not need a good relaxation,
+          * so whenever we have a relaxed activity, it should be relaxed to +/- infinity.
+          * This is needed, because we do not want to rely on relaxed finite resactivities.
+          */
+         assert((!minisrelax || isminsettoinfinity) && (!maxisrelax || ismaxsettoinfinity));
 
          if( agglhs )
          {
@@ -8967,20 +8993,14 @@ SCIP_RETCODE fullDualPresolve(
             else
             {
                /* calculate residual activity bounds if variable would be fixed to zero */
-               consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity,
+               consdataGetGlbActivityResiduals(scip, consdata, var, val, FALSE, &minresactivity, &maxresactivity,
                   &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
 
-               /* we do not want to rely on relaxed finite resactivities, so just set them to -/+infinity */
-               if( minisrelax )
-               {
-                  minresactivity = -SCIPinfinity(scip);
-                  isminsettoinfinity = TRUE;
-               }
-               if( maxisrelax )
-               {
-                  maxresactivity = SCIPinfinity(scip);
-                  ismaxsettoinfinity = TRUE;
-               }
+               /* We called consdataGetGlbActivityResiduals() saying that we do not need a good relaxation,
+                * so whenever we have a relaxed activity, it should be relaxed to +/- infinity.
+                * This is needed, because we do not want to rely on relaxed finite resactivities.
+                */
+               assert((!minisrelax || isminsettoinfinity) && (!maxisrelax || ismaxsettoinfinity));
 
                /* check minresactivity for reliability */
                if( !isminsettoinfinity && SCIPisUpdateUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
@@ -10336,7 +10356,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             break;
 
          /* check constraint for infeasibility and redundancy */
-         consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             SCIPdebugMessage("linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
