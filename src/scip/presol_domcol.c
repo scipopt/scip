@@ -949,14 +949,10 @@ SCIP_RETCODE calcVarBounds(
    SCIP_Real             valdominating,      /**< row coefficient of dominating variable */
    int                   coldominated,       /**< column index of dominated variable */
    SCIP_Real             valdominated,       /**< row coefficient of dominated variable */
-   SCIP_Bool*            lbCalculated,       /**< was a lower bound calculated? */
-   SCIP_Real*            calculatedLb,       /**< actual calculated lower bound */
-   SCIP_Bool*            ubCalculated,       /**< was a upper bound calculated? */
-   SCIP_Real*            calculatedUb,       /**< actual calculated upper bound */
-   SCIP_Bool*            lb2Calculated,      /**< was a lower worst case bound calculated? */
-   SCIP_Real*            calculatedLb2,      /**< actual calculated worst case lower bound */
-   SCIP_Bool*            ub2Calculated,      /**< was a worst case upper bound calculated? */
-   SCIP_Real*            calculatedUb2       /**< actual calculated worst case upper bound */
+   SCIP_Bool*            ubcalculated,       /**< was a upper bound calculated? */
+   SCIP_Real*            calculatedub,       /**< predicted upper bound */
+   SCIP_Bool*            wclbcalculated,     /**< was a lower worst case bound calculated? */
+   SCIP_Real*            calculatedwclb      /**< predicted worst case lower bound */
    )
 {
    SCIP_VAR* vardominating;
@@ -974,14 +970,10 @@ SCIP_RETCODE calcVarBounds(
    assert(0 <= coldominating && coldominating < matrix->ncols);
    assert(0 <= coldominated && coldominated < matrix->ncols);
 
-   assert(lbCalculated != NULL);
-   assert(calculatedLb != NULL);
-   assert(ubCalculated != NULL);
-   assert(calculatedUb != NULL);
-   assert(lb2Calculated != NULL);
-   assert(calculatedLb2 != NULL);
-   assert(ub2Calculated != NULL);
-   assert(calculatedUb2 != NULL);
+   assert(ubcalculated != NULL);
+   assert(calculatedub != NULL);
+   assert(wclbcalculated != NULL);
+   assert(calculatedwclb != NULL);
 
    assert(!SCIPisZero(scip, valdominating));
    assert(matrix->vars[coldominating] != NULL);
@@ -989,10 +981,8 @@ SCIP_RETCODE calcVarBounds(
    vardominating = matrix->vars[coldominating];
    vardominated = matrix->vars[coldominated];
 
-   *lbCalculated = FALSE;
-   *ubCalculated = FALSE;
-   *lb2Calculated = FALSE;
-   *ub2Calculated = FALSE;
+   *ubcalculated = FALSE;
+   *wclbcalculated = FALSE;
 
    /* no rowbound analysis for multiaggregated variables */
    if( SCIPvarGetStatus(vardominating) == SCIP_VARSTATUS_MULTAGGR ||
@@ -1015,10 +1005,8 @@ SCIP_RETCODE calcVarBounds(
    lbdominated = SCIPvarGetLbLocal(vardominated);
    ubdominated = SCIPvarGetUbLocal(vardominated);
 
-   *calculatedLb = -SCIPinfinity(scip);
-   *calculatedUb = SCIPinfinity(scip);
-   *calculatedLb2 = -SCIPinfinity(scip);
-   *calculatedUb2 = SCIPinfinity(scip);
+   *calculatedub = SCIPinfinity(scip);
+   *calculatedwclb = -SCIPinfinity(scip);
 
    /* predictive rowbound analysis */
 
@@ -1028,114 +1016,58 @@ SCIP_RETCODE calcVarBounds(
       if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
          /* <= */
-         *ubCalculated = TRUE;
+         *ubcalculated = TRUE;
          if( SCIPisZero(scip, valdominated) )
-            *calculatedUb = (rhs - minresactivity)/valdominating;
+            *calculatedub = (rhs - minresactivity)/valdominating;
          else
             if( valdominated < 0.0 )
-               *calculatedUb = (rhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
+               *calculatedub = (rhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
             else
-               *calculatedUb = (rhs - (minresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/))/valdominating;
-      }
-
-      /* worst case calculation for upper bound */
-      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, rhs) )
-      {
-         /* <= */
-         *ub2Calculated = TRUE;
-         if( SCIPisZero(scip, valdominated) )
-            *calculatedUb2 = (rhs - maxresactivity)/valdominating;
-         else
-            if( valdominating < 0.0 )
-               *calculatedUb2 = (rhs - maxresactivity)/valdominating;
-            else
-               *calculatedUb2 = (rhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
-      }
-
-      /* lower bound calculation */
-      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
-      {
-         /* >= */
-         *lbCalculated = TRUE;
-         if( SCIPisZero(scip, valdominated) )
-            *calculatedLb = (lhs - maxresactivity)/valdominating;
-         else
-            if( valdominated < 0.0 )
-               *calculatedLb = (lhs - (maxresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/ ))/valdominating;
-            else
-               *calculatedLb = (lhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
+               *calculatedub = (rhs - (minresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/))/valdominating;
       }
 
       /* worst case calculation for lower bound */
       if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
          /* >= */
-         *lb2Calculated = TRUE;
+         *wclbcalculated = TRUE;
          if( SCIPisZero(scip, valdominated) )
-            *calculatedLb2 = (lhs - minresactivity)/valdominating;
+            *calculatedwclb = (lhs - minresactivity)/valdominating;
          else
             if( valdominated < 0.0 )
-               *calculatedLb2 = (lhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
+               *calculatedwclb = (lhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
             else
-               *calculatedLb2 = (lhs - minresactivity)/valdominating;
+               *calculatedwclb = (lhs - minresactivity)/valdominating;
       }
    }
    else
    {
-      /* normal case for lower bound calculation */
-      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
-      {
-         /* <= */
-         *lbCalculated = TRUE;
-         if( SCIPisZero(scip, valdominated) )
-            *calculatedLb = (rhs - minresactivity)/valdominating;
-         else
-            if( valdominated < 0.0 )
-               *calculatedLb = (rhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
-            else
-               *calculatedLb = (rhs - (minresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/))/valdominating;
-      }
-
       /* worst case calculation for lower bound */
       if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, rhs) )
       {
          /* <= */
-         *lb2Calculated = TRUE;
+         *wclbcalculated = TRUE;
          if( SCIPisZero(scip, valdominated) )
-            *calculatedLb2 = (rhs - maxresactivity)/valdominating;
+            *calculatedwclb = (rhs - maxresactivity)/valdominating;
          else
             if( valdominated < 0.0 )
-               *calculatedLb2 = (rhs - maxresactivity)/valdominating;
+               *calculatedwclb = (rhs - maxresactivity)/valdominating;
             else
-               *calculatedLb2 = (rhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
+               *calculatedwclb = (rhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
       }
 
-      /* normal case for upper bound calculation */
+      /* upper bound calculation */
       if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
          /* >= */
-         *ubCalculated = TRUE;
+         *ubcalculated = TRUE;
          if( SCIPisZero(scip, valdominated) )
-            *calculatedUb = (lhs - maxresactivity)/valdominating;
+            *calculatedub = (lhs - maxresactivity)/valdominating;
          else
             if( valdominated < 0.0 )
-               *calculatedUb = (lhs - (maxresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/))/valdominating;
+               *calculatedub = (lhs - (maxresactivity /* - (valdominated * lbdominated) + (valdominated * lbdominated)*/))/valdominating;
             else
-               *calculatedUb = (lhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
-      }
-
-      /* worst case calculation for upper bound */
-      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, -lhs) )
-      {
-         /* >= */
-         *ub2Calculated = TRUE;
-         if( SCIPisZero(scip, valdominated) )
-            *calculatedUb2 = (lhs - minresactivity)/valdominating;
-         else
-            if( valdominated < 0.0 )
-               *calculatedUb2 = (lhs - (minresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
-            else
-               *calculatedUb2 = (lhs - minresactivity)/valdominating;
+               *calculatedub = (lhs - (maxresactivity - (valdominated * ubdominated) + (valdominated * lbdominated)))/valdominating;
       }
    }
 
@@ -1152,21 +1084,14 @@ SCIP_RETCODE updateBounds(
    SCIP_Real             val1,               /**< dominating variable coefficient */
    int                   col2,               /**< dominated variable index */
    SCIP_Real             val2,               /**< dominated variable coefficient */
-   SCIP_Real*            ubbound,            /**< current upper bound */
-   SCIP_Real*            lbbound,            /**< current lower bound */
-   SCIP_Real*            ub2bound,           /**< worstcase upper bound */
-   SCIP_Real*            lb2bound            /**< worstcase lower bound */
+   SCIP_Real*            upperbound,         /**< predicted upper bound */
+   SCIP_Real*            wclowerbound        /**< predicted worst case lower bound */
    )
 {
-   SCIP_Bool lbcalculated;
    SCIP_Bool ubcalculated;
-   SCIP_Bool lb2calculated;
-   SCIP_Bool ub2calculated;
-
-   SCIP_Real newlb;
+   SCIP_Bool wclbcalculated;
    SCIP_Real newub;
-   SCIP_Real newlb2;
-   SCIP_Real newub2;
+   SCIP_Real newwclb;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -1177,31 +1102,19 @@ SCIP_RETCODE updateBounds(
    /* do predictive rowbound analysis */
    SCIP_CALL( calcVarBounds(scip,matrix,row,
          col1,val1,col2,val2,
-         &lbcalculated,&newlb,
          &ubcalculated,&newub,
-         &lb2calculated,&newlb2,
-         &ub2calculated,&newub2) );
+         &wclbcalculated,&newwclb) );
 
    /* update bounds in case if they are better */
    if( ubcalculated )
    {
-      if( newub < *ubbound )
-         *ubbound = newub;
+      if( newub < *upperbound )
+         *upperbound = newub;
    }
-   if( lbcalculated )
+   if( wclbcalculated )
    {
-      if( newlb > *lbbound )
-         *lbbound = newlb;
-   }
-   if( ub2calculated )
-   {
-      if( newub2 < *ub2bound )
-         *ub2bound = newub2;
-   }
-   if( lb2calculated )
-   {
-      if( newlb2 > *lb2bound )
-         *lb2bound = newlb2;
+      if( newwclb > *wclowerbound )
+         *wclowerbound = newwclb;
    }
 
    return SCIP_OKAY;
@@ -1213,10 +1126,8 @@ void findFixings(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_VAR*             dominatingvar,      /**< dominating variable */
    int                   dominatingidx,      /**< column index of the dominating variable */
-   SCIP_Real             dominatingubbound,  /**< current upper bound of the dominating variable */
-   SCIP_Real             dominatinglbbound,  /**< current lower bound of the dominating variable */
-   SCIP_Real             dominatingub2bound, /**< current worst case upper bound of the dominating variable */
-   SCIP_Real             dominatinglb2bound, /**< current worst case lower bound of the dominating variable */
+   SCIP_Real             dominatingub,       /**< predicted upper bound of the dominating variable */
+   SCIP_Real             dominatingwclb,     /**< predicted worst case lower bound of the dominating variable */
    SCIP_VAR*             dominatedvar,       /**< dominated variable */
    int                   dominatedidx,       /**< column index of the dominated variable */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
@@ -1266,13 +1177,13 @@ void findFixings(
       if( SCIPvarGetObj(dominatingvar) > 0.0 )
       {
          assert(SCIPvarGetObj(dominatedvar) > 0.0);
-         if( !SCIPisInfinity(scip,-dominatinglb2bound) &&
-            SCIPisLE(scip,dominatinglb2bound,SCIPvarGetUbLocal(dominatingvar)) )
+         if( !SCIPisInfinity(scip,-dominatingwclb) &&
+            SCIPisLE(scip,dominatingwclb,SCIPvarGetUbLocal(dominatingvar)) )
          {
             /* we have a x->y dominance relation with a positive obj coefficient
              * of the dominating variable x, thus the obj coefficient of the
              * dominated variable y is positive too. we need to secure feasibility
-             * by testing if the lower worst case bound is less equal the current upper bound.
+             * by testing if the predicted lower worst case bound is less equal the current upper bound.
              */
             if( varstofix[dominatedidx] == NOFIX )
             {
@@ -1287,13 +1198,13 @@ void findFixings(
       }
       else if( SCIPvarGetObj(dominatingvar) < 0.0 /*&& SCIPvarGetObj(dominatedvar) > 0.0*/ )
       {
-         if( !SCIPisInfinity(scip,dominatingubbound) &&
-            SCIPisLE(scip,dominatingubbound,SCIPvarGetUbLocal(dominatingvar)) )
+         if( !SCIPisInfinity(scip,dominatingub) &&
+            SCIPisLE(scip,dominatingub,SCIPvarGetUbLocal(dominatingvar)) )
          {
             /* we have a x->y dominance relation with a negative obj coefficient
              * of the dominating variable x, thus the obj coefficient of the
              * dominated variable y is positive or negative. in both cases we have to look
-             * if the upper bound of the dominating variable is great enough.
+             * if the predicted upper bound of the dominating variable is great enough.
              */
             if( varstofix[dominatedidx] == NOFIX )
             {
@@ -1308,10 +1219,10 @@ void findFixings(
       }
       else
       {
-         if( !SCIPisInfinity(scip,-dominatinglb2bound) &&
-            SCIPisLE(scip,dominatinglb2bound,SCIPvarGetUbLocal(dominatingvar)) &&
-            !SCIPisInfinity(scip,dominatingubbound) &&
-            SCIPisLE(scip,dominatingubbound,SCIPvarGetUbLocal(dominatingvar)) )
+         if( !SCIPisInfinity(scip,-dominatingwclb) &&
+            SCIPisLE(scip,dominatingwclb,SCIPvarGetUbLocal(dominatingvar)) &&
+            !SCIPisInfinity(scip,dominatingub) &&
+            SCIPisLE(scip,dominatingub,SCIPvarGetUbLocal(dominatingvar)) )
          {
             /* we claim both cases from above */
             if( varstofix[dominatedidx] == NOFIX )
@@ -1357,14 +1268,10 @@ SCIP_RETCODE findDominancePairs(
    int r2;
    SCIP_Bool col1domcol2;
    SCIP_Bool col2domcol1;
-   SCIP_Real tmpUbBoundCol1;
-   SCIP_Real tmpLbBoundCol1;
-   SCIP_Real tmpUbBoundCol2;
-   SCIP_Real tmpLbBoundCol2;
-   SCIP_Real tmpUb2BoundCol1;
-   SCIP_Real tmpLb2BoundCol1;
-   SCIP_Real tmpUb2BoundCol2;
-   SCIP_Real tmpLb2BoundCol2;
+   SCIP_Real tmpupperboundcol1;
+   SCIP_Real tmpupperboundcol2;
+   SCIP_Real tmpwclowerboundcol1;
+   SCIP_Real tmpwclowerboundcol2;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -1418,14 +1325,10 @@ SCIP_RETCODE findDominancePairs(
          }
 
          /* initialize temporary bounds */
-         tmpUbBoundCol1 = SCIPinfinity(scip);
-         tmpLbBoundCol1 = -tmpUbBoundCol1;
-         tmpUbBoundCol2 = tmpUbBoundCol1;
-         tmpLbBoundCol2 = tmpLbBoundCol1;
-         tmpUb2BoundCol1 = SCIPinfinity(scip);
-         tmpLb2BoundCol1 = -tmpUb2BoundCol1;
-         tmpUb2BoundCol2 = tmpUb2BoundCol1;
-         tmpLb2BoundCol2 = tmpLb2BoundCol1;
+         tmpupperboundcol1 = SCIPinfinity(scip);
+         tmpupperboundcol2 = tmpupperboundcol1;
+         tmpwclowerboundcol1 = -SCIPinfinity(scip);
+         tmpwclowerboundcol2 = tmpwclowerboundcol1;
 
          /* compare rows of this column pair */
          while( (col1domcol2 || col2domcol1) && (r1 < nrows1 || r2 < nrows2))
@@ -1472,7 +1375,7 @@ SCIP_RETCODE findDominancePairs(
                if( col1domcol2 && !onlybinvars )
                {
                   SCIP_CALL( updateBounds(scip,matrix,rows1[r1],col1,vals1[r1],col2,0.0,
-                        &tmpUbBoundCol1,&tmpLbBoundCol1,&tmpUb2BoundCol1,&tmpLb2BoundCol1) );
+                        &tmpupperboundcol1,&tmpwclowerboundcol1) );
                }
 
                r1++;
@@ -1516,7 +1419,7 @@ SCIP_RETCODE findDominancePairs(
                if( col2domcol1 && !onlybinvars )
                {
                   SCIP_CALL( updateBounds(scip,matrix,rows2[r2],col2,vals2[r2],col1,0.0,
-                        &tmpUbBoundCol2,&tmpLbBoundCol2,&tmpUb2BoundCol2,&tmpLb2BoundCol2) );
+                        &tmpupperboundcol2,&tmpwclowerboundcol2) );
                }
                r2++;
             }
@@ -1531,7 +1434,7 @@ SCIP_RETCODE findDominancePairs(
                   !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* no dominance relation if coefficients differ for equations or ranged rows */
-                  if( vals1[r1] != vals2[r2] )
+                  if( !SCIPisEQ(scip,vals1[r1],vals2[r2]) )
                   {
                      col2domcol1 = FALSE;
                      col1domcol2 = FALSE;
@@ -1565,12 +1468,12 @@ SCIP_RETCODE findDominancePairs(
                if( col1domcol2 && !onlybinvars )
                {
                   SCIP_CALL( updateBounds(scip,matrix,rows1[r1],col1,vals1[r1],col2,vals2[r2],
-                        &tmpUbBoundCol1,&tmpLbBoundCol1,&tmpUb2BoundCol1,&tmpLb2BoundCol1) );
+                        &tmpupperboundcol1,&tmpwclowerboundcol1) );
                }
                else if( col2domcol1 && !onlybinvars )
                {
                   SCIP_CALL( updateBounds(scip,matrix,rows2[r2],col2,vals2[r2],col1,vals1[r1],
-                        &tmpUbBoundCol2,&tmpLbBoundCol2,&tmpUb2BoundCol2,&tmpLb2BoundCol2) );
+                        &tmpupperboundcol2,&tmpwclowerboundcol2) );
                }
 
                r1++;
@@ -1615,12 +1518,12 @@ SCIP_RETCODE findDominancePairs(
          /* use dominance relation and cliquen/bound-information to find variable fixings */
          if( col1domcol2 )
          {
-            findFixings(scip, matrix->vars[col1], col1, tmpUbBoundCol1, tmpLbBoundCol1, tmpUb2BoundCol1, tmpLb2BoundCol1,
+            findFixings(scip, matrix->vars[col1], col1, tmpupperboundcol1, tmpwclowerboundcol1,
                matrix->vars[col2], col2, varstofix, onlybinvars, npossiblefixings, ncliquepreventions, nboundpreventions);
          }
          else if( col2domcol1 )
          {
-            findFixings(scip,matrix->vars[col2],col2,tmpUbBoundCol2,tmpLbBoundCol2,tmpUb2BoundCol2,tmpLb2BoundCol2,
+            findFixings(scip,matrix->vars[col2],col2,tmpupperboundcol2, tmpwclowerboundcol2,
                matrix->vars[col1], col1, varstofix, onlybinvars, npossiblefixings, ncliquepreventions, nboundpreventions);
          }
       }
