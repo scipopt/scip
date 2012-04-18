@@ -358,11 +358,16 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
+   /* the following asserts are not true, because some aggregations in the original scip instance could not get sesolved
+    * inside some constraints, so the copy (subscip) will have also some inactive variables which were copied
+    */
+#if 0
    /* there might be less variables in the subscip, because variables might be cancelled out during copying constraint
     * when transferring variables to active variables
     */
    assert(nbinvars >= SCIPgetNBinVars(subscip));
    assert(nintvars >= SCIPgetNIntVars(subscip));
+#endif
 
    /* In debug mode, we want to be informed if the number of variables was reduced during copying.
     * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
