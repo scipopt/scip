@@ -1723,17 +1723,25 @@ SCIP_RETCODE SCIPincludeHeurTwoopt(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create twoopt primal heuristic data */
+   /* create Twoopt primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyTwoopt,
-         heurFreeTwoopt, heurInitTwoopt, heurExitTwoopt,
-         heurInitsolTwoopt, heurExitsolTwoopt, heurExecTwoopt,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTwoopt, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTwoopt) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTwoopt) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTwoopt) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitTwoopt) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolTwoopt) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolTwoopt) );
 
    /* include boolean flag intopt */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/twoopt/intopt", " Should Integer-2-Optimization be applied or not?",

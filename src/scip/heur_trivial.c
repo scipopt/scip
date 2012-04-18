@@ -234,13 +234,17 @@ SCIP_RETCODE SCIPincludeHeurTrivial(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_HEUR* heur;
+
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyTrivial,
-         heurFreeTrivial, heurInitTrivial, heurExitTrivial,
-         heurInitsolTrivial, heurExitsolTrivial, heurExecTrivial,
-         NULL) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivial, NULL) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivial) );
 
    return SCIP_OKAY;
 }

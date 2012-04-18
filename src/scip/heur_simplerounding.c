@@ -430,17 +430,24 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopySimplerounding,
-         heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding,
-         heurInitsolSimplerounding, heurExitsolSimplerounding, heurExecSimplerounding,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSimplerounding, heurdata) );
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySimplerounding) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSimplerounding) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitSimplerounding) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSimplerounding) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSimplerounding) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSimplerounding) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
          "should the heuristic only be called once per node?",

@@ -3315,6 +3315,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create undercover primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -3323,11 +3324,19 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    heurdata->globalbounds = FALSE;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyUndercover, heurFreeUndercover, heurInitUndercover, heurExitUndercover,
-         heurInitsolUndercover, heurExitsolUndercover, heurExecUndercover,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecUndercover, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 
    /* add string parameters */
    heurdata->fixingalts = NULL;

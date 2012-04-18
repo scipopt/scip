@@ -1816,18 +1816,23 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create shiftandpropagate primal heuristic data */
+   /* create Shiftandpropagate primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->randseed = DEFAULT_RANDSEED;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyShiftandpropagate,
-         heurFreeShiftandpropagate, heurInitShiftandpropagate, heurExitShiftandpropagate,
-         heurInitsolShiftandpropagate, heurExitsolShiftandpropagate, heurExecShiftandpropagate,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShiftandpropagate) );
 
    /* add shiftandpropagate primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nproprounds", "The number of propagation rounds used for each propagation",

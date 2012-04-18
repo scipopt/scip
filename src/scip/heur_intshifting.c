@@ -1010,13 +1010,21 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyIntshifting,
-         heurFreeIntshifting, heurInitIntshifting, heurExitIntshifting,
-         heurInitsolIntshifting, heurExitsolIntshifting, heurExecIntshifting,
-         NULL) );
+   SCIP_HEUR* heur;
+
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIntshifting) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIntshifting) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIntshifting) );
+
 
    return SCIP_OKAY;
 }
