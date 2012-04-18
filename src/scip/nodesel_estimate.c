@@ -362,8 +362,8 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
 
    assert(nodesel != NULL);
 
-   SCIPnodeselSetCopy(nodesel, nodeselCopyEstimate);
-   SCIPnodeselSetFree(nodesel, nodeselFreeEstimate);
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyEstimate) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeEstimate) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

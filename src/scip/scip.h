@@ -1717,8 +1717,8 @@ int SCIPgetNEventhdlrs(
 
 /** creates a node selector and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludeNodeselBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
 SCIP_RETCODE SCIPincludeNodesel(
@@ -1754,6 +1754,54 @@ SCIP_RETCODE SCIPincludeNodeselBasic(
    SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   );
+
+/** sets copy method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
+   );
+
+/** sets initialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
+   );
+
+/** sets deinitialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
+   );
+
+/** sets solving process initialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
+   );
+
+/** sets solving process deinitialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
    );
 
 /** returns the node selector of the given name, or NULL if not existing */

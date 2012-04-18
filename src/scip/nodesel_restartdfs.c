@@ -185,6 +185,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
@@ -194,11 +195,13 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    nodeseldata->countonlyleaves = COUNTONLYLEAVES;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyRestartdfs,
-         nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
-         nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectRestartdfs, nodeselCompRestartdfs, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyRestartdfs) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeRestartdfs) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

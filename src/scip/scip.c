@@ -4202,8 +4202,8 @@ int SCIPgetNEventhdlrs(
 
 /** creates a node selector and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludeNodeselBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4261,7 +4261,7 @@ SCIP_RETCODE SCIPincludeNodeselBasic(
 {
    SCIP_NODESEL* nodeselptr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeNodeselBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether node selector is already present */
    if( SCIPfindNodesel(scip, name) != NULL )
@@ -4278,6 +4278,102 @@ SCIP_RETCODE SCIPincludeNodeselBasic(
 
    if( nodesel != NULL )
       *nodesel = nodeselptr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of node selector */
+SCIP_RETCODE SCIPsetNodeselCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetCopy(nodesel, nodeselcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of node selector */
+SCIP_RETCODE SCIPsetNodeselFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetFree(nodesel, nodeselfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetInit(nodesel, nodeselinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetExit(nodesel, nodeselexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetInitsol(nodesel, nodeselinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetExitsol(nodesel, nodeselexitsol);
 
    return SCIP_OKAY;
 }
