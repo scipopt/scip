@@ -3495,7 +3495,12 @@ void SCIPconshdlrSetData(
    conshdlr->conshdlrdata = conshdlrdata;
 }
 
-/** gets array with active constraints of constraint handler */
+/** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
+ *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */
 SCIP_CONS** SCIPconshdlrGetConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -3555,7 +3560,11 @@ int SCIPconshdlrGetNCheckConss(
    return conshdlr->ncheckconss;
 }
 
-/** gets number of active constraints of constraint handler */
+/** gets number of active constraints of constraint handler
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */
 int SCIPconshdlrGetNActiveConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
