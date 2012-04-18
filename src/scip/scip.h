@@ -1330,7 +1330,7 @@ SCIP_RETCODE SCIPsetRelaxPriority(
 
 /** creates a separator and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludeSepaBasic()</code> instead and add
+ *  @deprecated Please use method SCIPincludeSepaBasic() instead and add
  *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
@@ -1358,7 +1358,7 @@ SCIP_RETCODE SCIPincludeSepa(
 /** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPSepaSetInit() in pub_sepa.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeSepa</code>.
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa.
  */
 extern
 SCIP_RETCODE SCIPincludeSepaBasic(
@@ -1375,6 +1375,54 @@ SCIP_RETCODE SCIPincludeSepaBasic(
    SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
    SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
+   );
+
+/** sets copy method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   );
+
+/** sets initialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   );
+
+/** sets deinitialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   );
+
+/** sets solving process initialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   );
+
+/** sets solving process deinitialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
 /** returns the separator of the given name, or NULL if not existing */

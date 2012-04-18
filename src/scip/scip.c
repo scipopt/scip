@@ -3449,7 +3449,7 @@ SCIP_RETCODE SCIPsetRelaxPriority(
 /** creates a separator and includes it in SCIP.
  *
  *  @deprecated Please use method <code>SCIPincludeSepaBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3494,8 +3494,10 @@ SCIP_RETCODE SCIPincludeSepa(
 
 /** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPSepaSetInit() in pub_sepa.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeSepa</code>.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaInit(), SCIPsetSepaFree(),
+ *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy, SCIPsetExit().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
  */
 SCIP_RETCODE SCIPincludeSepaBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3515,7 +3517,7 @@ SCIP_RETCODE SCIPincludeSepaBasic(
 {
    SCIP_SEPA* sepaptr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepaBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether separator is already present */
    if( SCIPfindSepa(scip, name) != NULL )
@@ -3534,6 +3536,102 @@ SCIP_RETCODE SCIPincludeSepaBasic(
 
    if( sepa != NULL)
       *sepa = sepaptr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of separator */
+SCIP_RETCODE SCIPsetSepaCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetCopy(sepa, sepacopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of separator */
+SCIP_RETCODE SCIPsetSepaFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetFree(sepa, sepafree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of separator */
+SCIP_RETCODE SCIPsetSepaInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetInit(sepa, sepainit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of separator */
+SCIP_RETCODE SCIPsetSepaExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetExit(sepa, sepaexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of separator */
+SCIP_RETCODE SCIPsetSepaInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+    SCIPsepaSetInitsol(sepa, sepainitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of separator */
+SCIP_RETCODE SCIPsetSepaExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetExitsol(sepa, sepaexitsol);
 
    return SCIP_OKAY;
 }

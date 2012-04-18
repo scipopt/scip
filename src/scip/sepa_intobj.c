@@ -458,17 +458,24 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
 {
    SCIP_SEPADATA* sepadata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_SEPA* sepa;
 
    /* create intobj separator data */
    SCIP_CALL( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyIntobj, sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
-         sepaInitsolIntobj, sepaExitsolIntobj, 
          sepaExeclpIntobj, sepaExecsolIntobj,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyIntobj) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeIntobj) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitIntobj) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolIntobj) );
 
    /* include event handler for objective change events */
    eventhdlrdata = (SCIP_EVENTHDLRDATA*)sepadata;

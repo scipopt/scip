@@ -1468,9 +1468,9 @@ SCIP_RETCODE SCIPincludeSepaClique(
    assert(sepa != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIPsepaSetCopy(sepa, sepaCopyClique);
-   SCIPsepaSetFree(sepa, sepaFreeClique);
-   SCIPsepaSetExitsol(sepa, sepaExitsolClique);
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyClique) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeClique) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolClique) );
 
    /* add clique separator parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
