@@ -181,16 +181,19 @@ SCIP_RETCODE SCIPincludePresolInttobinary(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create inttobinary presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyInttobinary,
-         presolFreeInttobinary, presolInitInttobinary, presolExitInttobinary, 
-         presolInitpreInttobinary, presolExitpreInttobinary, presolExecInttobinary,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecInttobinary,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyInttobinary) );
 
    return SCIP_OKAY;
 }

@@ -3232,8 +3232,8 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
 
 /** creates a presolver and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludePresolBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludePresolBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3254,7 +3254,7 @@ SCIP_RETCODE SCIPincludePresol(
 {
    SCIP_PRESOL* presol;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePresolBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether presolver is already present */
    if( SCIPfindPresol(scip, name) != NULL )
@@ -3310,6 +3310,101 @@ SCIP_RETCODE SCIPincludePresolBasic(
    return SCIP_OKAY;
 }
 
+/** sets copy method of presolver */
+SCIP_RETCODE SCIPsetPresolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetCopy(presol, presolcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of presolver */
+SCIP_RETCODE SCIPsetPresolFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))      /**< destructor of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetFree(presol, presolfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of presolver */
+SCIP_RETCODE SCIPsetPresolInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetInit(presol, presolinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of presolver */
+SCIP_RETCODE SCIPsetPresolExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetExit(presol, presolexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of presolver */
+SCIP_RETCODE SCIPsetPresolInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetInitpre(presol, presolinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of presolver */
+SCIP_RETCODE SCIPsetPresolExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetExitpre(presol, presolexitpre);
+
+   return SCIP_OKAY;
+}
 
 /** returns the presolver of the given name, or NULL if not existing */
 SCIP_PRESOL* SCIPfindPresol(

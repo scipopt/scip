@@ -310,6 +310,7 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create convertinttobin presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
@@ -318,11 +319,13 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
    presoldata->onlypoweroftwo = DEFAULT_ONLYPOWERSOFTWO;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-	 presolCopyConvertinttobin,
-         presolFreeConvertinttobin, presolInitConvertinttobin, presolExitConvertinttobin,
-         presolInitpreConvertinttobin, presolExitpreConvertinttobin, presolExecConvertinttobin,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecConvertinttobin,
          presoldata) );
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyConvertinttobin) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presolptr, presolFreeConvertinttobin) );
 
    /* add convertinttobin presolver parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,

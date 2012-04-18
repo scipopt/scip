@@ -227,7 +227,7 @@ SCIP_RETCODE SCIPincludePresolDualfix(
 
    assert(presolptr != NULL);
 
-   SCIPpresolSetCopy(presolptr, presolCopyDualfix);
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyDualfix) );
 
    return SCIP_OKAY;
 }
