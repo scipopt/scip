@@ -81,6 +81,8 @@ interface
   SCIPrespropCons(), SCIPenfopsCons(), SCIPenfolpCons()
 - added new stages SCIP_STAGE_INITPRESOLVE, SCIP_STAGE_EXITPRESOLVE, and SCIP_STAGE_FREE; renamed SCIP_STAGE_FREESOLVE
   to SCIP_STAGE_EXITSOLVE
+- new method SCIPisHugeValue() to check whether a value is huge and should be handled separately from other values
+  (e.g., in activity computations), and SCIPgetHugeValue() to get the smallest value counting as huge
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
@@ -140,6 +142,8 @@ fixed bugs:
 - fixed bug w.r.t. adding a value to the objective offset of the transformed problem
 - fixed bug in solve.c, applied bounding for the initial lp was only done if root-lp-solution was valid but another
   solution could also have been added
+- fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
+  contributions separately, count their occurences in a constraint, and provide a relaxed activity value
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -157,13 +161,14 @@ parameters:
 - new parameter constraints/and/upgraderesultant to upgrade resultants of and constraints from binry to implicit binary
   variables, default is TRUE
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
-- new parameter misc/num_recompfac which denotes the factor, by which the absolute of an iteratively updated value has
+- new parameter numerics/recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
 - new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
   separating/cgmip/nodelimit.
 - new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
   only extract set-partitioning and no and-constraints
 - new parameter oncepernode in Rounding and Simple Rounding heuristic
+- new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

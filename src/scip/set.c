@@ -1292,6 +1292,11 @@ SCIP_RETCODE SCIPsetCreate(
          "minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update",
          &(*set)->num_recompfac, TRUE, SCIP_DEFAULT_RECOMPFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "numerics/hugeval",
+         "values larger than this are considered huge and should be handled separately (e.g., in activity computation)",
+         &(*set)->num_hugeval, TRUE, SCIP_DEFAULT_HUGEVAL, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
 
    /* presolving parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -3906,6 +3911,9 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsSumRelLE
 #undef SCIPsetIsSumRelGT
 #undef SCIPsetIsSumRelGE
+#undef SCIPsetIsUpdateUnreliable
+#undef SCIPsetIsHugeValue
+#undef SCIPsetGetHugeValue
 
 /** returns value treated as zero */
 SCIP_Real SCIPsetEpsilon(
@@ -4755,4 +4763,25 @@ SCIP_Bool SCIPsetIsUpdateUnreliable(
    quotient = ABS(oldvalue) / MAX(ABS(newvalue), 1.0);
 
    return quotient >= set->num_recompfac;
+}
+
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   )
+{
+   assert(set != NULL);
+
+   return (val >= set->num_hugeval);
+}
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_hugeval;
 }

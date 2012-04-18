@@ -287,6 +287,8 @@ struct SCIP_Set
    SCIP_Real             num_pseudocostdelta;/**< minimal objective distance value to use for pseudo cost updates */
    SCIP_Real             num_recompfac;      /**< minimal decrease factor that causes the recomputation of a value
                                               *   (e.g., pseudo objective) instead of an update */
+   SCIP_Real             num_hugeval;        /**< values larger than this are considered huge and should be handled
+                                              *   separately (e.g., in activity computation) */
 
    /* presolving settings */
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
