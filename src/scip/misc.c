@@ -4345,22 +4345,26 @@ int SCIPdigraphGetNComponents(
    return digraph->ncomponents;
 }
 
-/** Returns the number of previously computed undirected components for the given directed graph.
+/** Returns the previously computed undirected component of the given number for the given directed graph.
  *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
  */
 void SCIPdigraphGetComponent(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the component to return */
-   int**                 nodes,              /**< pointer to store the nodes in the component */
-   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component;
+                                              *   or NULL, if not needed */
    )
 {
    assert(digraph != NULL);
    assert(compidx >= 0);
    assert(compidx < digraph->ncomponents);
+   assert(nodes != NULL || nnodes != NULL);
 
-   (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
-   (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+   if( nodes != NULL )
+      (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
+   if( nnodes != NULL )
+      (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
 }
 
 /** frees the component information for the given directed graph */
