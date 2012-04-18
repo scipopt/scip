@@ -1517,6 +1517,54 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    );
 
+/** sets copy method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   );
+
+/** sets initialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   );
+
+/** sets deinitialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   );
+
+/** sets solving process initialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   );
+
+/** sets solving process deinitialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   );
+
 /** returns the primal heuristic of the given name, or NULL if not existing */
 extern
 SCIP_HEUR* SCIPfindHeur(

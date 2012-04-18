@@ -858,11 +858,11 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    assert(heur != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIPheurSetCopy(heur, heurCopyZirounding);
-   SCIPheurSetFree(heur, heurFreeZirounding);
-   SCIPheurSetInit(heur, heurInitZirounding);
-   SCIPheurSetExit(heur, heurExitZirounding);
-   SCIPheurSetInitsol(heur, heurInitsolZirounding);
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZirounding) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeZirounding) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitZirounding) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitZirounding) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolZirounding) );
 
    /* add zirounding primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",

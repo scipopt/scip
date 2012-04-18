@@ -3791,6 +3791,104 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    return SCIP_OKAY;
 }
 
+/* new callback/method setter methods */
+
+/** sets copy method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetCopy(heur, heurcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetFree(heur, heurfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetInit(heur, heurinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetExit(heur, heurexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetInitsol(heur, heurinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetExitsol(heur, heurexitsol);
+
+   return SCIP_OKAY;
+}
+
 /** returns the primal heuristic of the given name, or NULL if not existing */
 SCIP_HEUR* SCIPfindHeur(
    SCIP*                 scip,               /**< SCIP data structure */
