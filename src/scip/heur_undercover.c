@@ -609,8 +609,8 @@ SCIP_RETCODE createCoveringProblem(
    hessiandata.nvars = 0;
 
    /* create covering variable for each variable in the original problem (fix it or not?) in the same order as in the
-      original problem
-   */
+    * original problem
+    */
    for( i = 0; i < nvars; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPvarGetName(vars[i]));
@@ -635,11 +635,11 @@ SCIP_RETCODE createCoveringProblem(
 
          /* calculate size of hash map */
          conshdlr = SCIPfindConshdlr(scip, "and");
-         mapsize = SCIPconshdlrGetNConss(conshdlr);
+         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
-         mapsize += SCIPconshdlrGetNConss(conshdlr);
+         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
-         mapsize += SCIPconshdlrGetNConss(conshdlr);
+         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
          mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
@@ -656,7 +656,7 @@ SCIP_RETCODE createCoveringProblem(
    {
       int c;
 
-      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      for( c = SCIPconshdlrGetNActiveConss(conshdlr)-1; c >= 0; c-- )
       {
          SCIP_CONS* andcons;
          SCIP_CONS* coveringcons;
@@ -669,7 +669,7 @@ SCIP_RETCODE createCoveringProblem(
          int ntofix;
          int v;
 
-         /* get original constraint and variables */
+         /* get constraint and variables */
          andcons = SCIPconshdlrGetConss(conshdlr)[c];
          assert(andcons != NULL);
          andvars = SCIPgetVarsAnd(scip, andcons);
@@ -859,7 +859,7 @@ SCIP_RETCODE createCoveringProblem(
    {
       int c;
 
-      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      for( c = SCIPconshdlrGetNActiveConss(conshdlr)-1; c >= 0; c-- )
       {
          SCIP_CONS* bdcons;
          SCIP_CONS* coveringcons;
@@ -871,7 +871,7 @@ SCIP_RETCODE createCoveringProblem(
          int ntofix;
          int v;
 
-         /* get original constraint and variables */
+         /* get constraint and variables */
          bdcons = SCIPconshdlrGetConss(conshdlr)[c];
          assert(bdcons != NULL);
          bdvars = SCIPgetVarsBounddisjunction(scip, bdcons);
@@ -990,14 +990,14 @@ SCIP_RETCODE createCoveringProblem(
    {
       int c;
 
-      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      for( c = SCIPconshdlrGetNActiveConss(conshdlr)-1; c >= 0; c-- )
       {
          SCIP_CONS* indcons;
          SCIP_VAR* binvar;
          SCIP_VAR* coveringvar;
          SCIP_Bool negated;
 
-         /* get original constraint and variables */
+         /* get constraint and variables */
          indcons = SCIPconshdlrGetConss(conshdlr)[c];
          assert(indcons != NULL);
          binvar = SCIPgetBinaryVarIndicator(indcons);
@@ -1063,12 +1063,12 @@ SCIP_RETCODE createCoveringProblem(
    {
       int c;
 
-      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      for( c = SCIPconshdlrGetNActiveConss(conshdlr)-1; c >= 0; c-- )
       {
          SCIP_CONS* quadcons;
          SCIP_NLROW* nlrow;
 
-         /* get original constraint */
+         /* get constraint */
          quadcons = SCIPconshdlrGetConss(conshdlr)[c];
          assert(quadcons != NULL);
 
@@ -1103,7 +1103,7 @@ SCIP_RETCODE createCoveringProblem(
    {
       int c;
 
-      for( c = SCIPconshdlrGetNConss(conshdlr)-1; c >= 0; c-- )
+      for( c = SCIPconshdlrGetNActiveConss(conshdlr)-1; c >= 0; c-- )
       {
          SCIP_CONS* soccons;
          SCIP_CONS* coveringcons;
@@ -1115,7 +1115,7 @@ SCIP_RETCODE createCoveringProblem(
          int ntofix;
          int v;
 
-         /* get original constraints and variables */
+         /* get constraints and variables */
          soccons = SCIPconshdlrGetConss(conshdlr)[c];
          assert(soccons != NULL);
          socrhsvar = SCIPgetRhsVarSOC(scip, soccons);
@@ -2703,7 +2703,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* get number of nonlinear constraints */
    nnlconss = 0;
    for( i = 0; i < heurdata->nnlconshdlrs; ++i )
-      nnlconss += SCIPconshdlrGetNConss(heurdata->nlconshdlrs[i]);
+      nnlconss += SCIPconshdlrGetNActiveConss(heurdata->nlconshdlrs[i]);
    assert(nnlconss >= 0);
    assert(nnlconss <= SCIPgetNConss(scip));
 
@@ -3263,7 +3263,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    run = FALSE;
    for( h = heurdata->nnlconshdlrs-1; h >= 0 && !run; h-- )
    {
-      run = SCIPconshdlrGetNConss(heurdata->nlconshdlrs[h]) > 0;
+      run = (SCIPconshdlrGetNActiveConss(heurdata->nlconshdlrs[h]) > 0);
    }
 
    /* go through all nlrows and check for general nonlinearities */

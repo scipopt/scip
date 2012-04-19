@@ -405,9 +405,6 @@ SCIP_RETCODE isSolutionInNode(
          {
             SCIP_Real varsol;
 
-            if( SCIPboundchgIsRedundant(&boundchgs[i]) )
-               continue;
-
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(set, boundchgs[i].var, &varsol) );
 
@@ -418,6 +415,7 @@ SCIP_RETCODE isSolutionInNode(
                   *solcontained = SCIPsetIsFeasGE(set, varsol, boundchgs[i].newbound);
                else
                   *solcontained = SCIPsetIsFeasLE(set, varsol, boundchgs[i].newbound);
+
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
@@ -723,8 +721,8 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       /* wrong node will be cutoff */
       if( solisinnode )
       {
-         SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d\n",
-            node, SCIPnodeGetDepth(node));
+         SCIPerrorMessage("debugging solution was cut off in local node #%"SCIP_LONGINT_FORMAT" (%p) at depth %d\n",
+            node->number, node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
@@ -851,6 +849,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    )
 {
@@ -883,13 +882,15 @@ SCIP_RETCODE SCIPdebugCheckConflict(
       SCIP_Real newbound;
 
       var = SCIPbdchginfoGetVar(bdchginfos[i]);
-      newbound = SCIPbdchginfoGetNewbound(bdchginfos[i]);
+      newbound = relaxedbds[i];
 
       SCIP_CALL( getSolutionValue(set, var, &solval) );
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_OKAY;
       if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
       {
+         assert(SCIPsetIsLE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
+
          if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          {
             if( SCIPsetIsLE(set, solval, newbound) )
@@ -903,6 +904,8 @@ SCIP_RETCODE SCIPdebugCheckConflict(
       }
       else
       {
+         assert(SCIPsetIsGE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
+
          if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          {
             if( SCIPsetIsGE(set, solval, newbound) )
@@ -920,9 +923,9 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    for( i = 0; i < nbdchginfos; ++i )
    {
       SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
-      printf(" <%s>[%.15g] %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
+      printf(" <%s>[%.15g] %s %g(%g)", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
          SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(bdchginfos[i]));
+         SCIPbdchginfoGetNewbound(bdchginfos[i]), relaxedbds[i]);
    }
    printf("\n");
    SCIPABORT();

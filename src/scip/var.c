@@ -1821,6 +1821,8 @@ SCIP_RETCODE varCreate(
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->conflictlb = SCIP_REAL_MIN;
    (*var)->conflictub = SCIP_REAL_MAX;
+   (*var)->conflictrelaxedlb = (*var)->conflictlb;
+   (*var)->conflictrelaxedub = (*var)->conflictub;
    (*var)->lazylb = -SCIPsetInfinity(set);
    (*var)->lazyub = SCIPsetInfinity(set);
    (*var)->glbdom.holelist = NULL;
@@ -15395,6 +15397,15 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
 
    return (SCIP_BOUNDTYPE)(bdchginfo->inferboundtype);
 }
+
+/** returns the relaxed bound change type */
+SCIP_Real SCIPbdchginfoGetRelaxedBound(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
+   )
+{
+   return bdchginfo->boundtype == SCIP_BOUNDTYPE_LOWER ? bdchginfo->var->conflictrelaxedlb : bdchginfo->var->conflictrelaxedub;
+}
+
 
 /** returns whether the bound change information belongs to a redundant bound change */
 SCIP_Bool SCIPbdchginfoIsRedundant(

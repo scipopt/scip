@@ -120,6 +120,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - node            : node to add resulting conflict constraint to (with SCIPaddConsNode())
  *  - validnode       : node at which the conflict constraint is valid (should be passed to SCIPaddConsNode())
  *  - bdchginfos      : array with bound changes that lead to a conflict
+ *  - relaxedbds      : array with relaxed bounds which are efficient to create a valid conflict
  *  - nbdchginfos     : number of bound changes in the conflict set
  *  - separate        : should the conflict constraint be separated?
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
@@ -134,7 +135,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
 #define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, \
-      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
+      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, SCIP_Real* relaxedbds, int nbdchginfos, \
       SCIP_Bool separate, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
 #ifdef __cplusplus

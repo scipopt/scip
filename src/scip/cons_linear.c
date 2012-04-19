@@ -6585,6 +6585,9 @@ SCIP_RETCODE checkParallelObjective(
 
             primalbound = (consdata->rhs - offset) / scale;
 
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a cutoff bound <%g>\n",
+               SCIPconsGetName(cons), primalbound);
+
             SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
          }
 
@@ -6594,7 +6597,7 @@ SCIP_RETCODE checkParallelObjective(
 
             dualbound = (consdata->lhs - offset) / scale;
 
-            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a dual bound <%g>\n",
                SCIPconsGetName(cons), dualbound);
 
             SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
@@ -6608,7 +6611,7 @@ SCIP_RETCODE checkParallelObjective(
 
             dualbound = (consdata->rhs - offset) / scale;
 
-            SCIPdebugMessage("constraint <%s> is parallel to objective function and provids a dual bound <%g>\n",
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a dual bound <%g>\n",
                SCIPconsGetName(cons), dualbound);
 
             SCIP_CALL( SCIPupdateLocalDualbound(scip, dualbound) );
@@ -6619,6 +6622,9 @@ SCIP_RETCODE checkParallelObjective(
             SCIP_Real primalbound;
 
             primalbound = (consdata->lhs - offset) / scale;
+
+            SCIPdebugMessage("constraint <%s> is parallel to objective function and provides a cutoff bound <%g>\n",
+               SCIPconsGetName(cons), primalbound);
 
             SCIP_CALL( updateCutoffbound(scip, cons, primalbound) );
          }

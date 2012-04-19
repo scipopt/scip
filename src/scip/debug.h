@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    );
 
@@ -158,7 +159,7 @@ SCIP_RETCODE SCIPdebugGetSolVal(
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
-#define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
+#define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
 #define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
 #define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY

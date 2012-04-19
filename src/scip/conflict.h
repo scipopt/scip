@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_NODE*            node,               /**< node to add conflict constraint to */
    SCIP_NODE*            validnode,          /**< node at which the constraint is valid */
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change resembling the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos,        /**< number of bound changes in the conflict set */
    SCIP_Bool             resolved,           /**< was the conflict set already used to create a constraint? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
@@ -177,9 +178,71 @@ SCIP_RETCODE SCIPconflictAddBound(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
    );
 
-/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  updates statistics for propagation conflict analysis
+/** adds variable's bound to conflict candidate queue with the additional information of a relaxed bound */
+extern
+SCIP_RETCODE SCIPconflictAddRelaxedBound(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_Real             relaxedbd           /**< the relaxed bound */
+   );
+
+/** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
+ *  even stronger bound
+ */
+extern
+SCIP_RETCODE SCIPconflictIsVarUsed(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_Bool*            used                /**< pointer to store if the variable is already used */
+   );
+
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+extern
+SCIP_Real SCIPconflictGetVarLb(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
+ *  SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPconflictGetVarUb(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
+ *  SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPconflictGetVarRelaxedLb(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
+ *  minus SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPconflictGetVarRelaxedUb(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
+ *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
+ *  the resulting conflict set; updates statistics for propagation conflict analysis
  */
 extern
 SCIP_RETCODE SCIPconflictAnalyze(

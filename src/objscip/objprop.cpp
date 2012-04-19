@@ -251,7 +251,7 @@ SCIP_DECL_PROPRESPROP(propRespropObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
    return SCIP_OKAY;
 }

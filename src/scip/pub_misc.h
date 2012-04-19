@@ -326,6 +326,10 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  * Sorting algorithms
  */
 
+/** default comparer for integers */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt);
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
@@ -3507,21 +3511,220 @@ int SCIPdigraphGetNComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
-/** Returns the previously computed undirected components of the given number for the given directed graph.
+/** Returns the previously computed undirected component of the given number for the given directed graph.
  *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
  */
 extern
 void SCIPdigraphGetComponent(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the component to return */
-   int**                 nodes,              /**< pointer to store the nodes in the component */
-   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component;
+                                              *   or NULL, if not needed */
    );
 
 /** frees the component information for the given directed graph */
 extern
 void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/*
+ * Binary search tree
+ */
+
+/** creates a search tree node with sorting value and user data */
+extern
+SCIP_RETCODE SCIPbstnodeCreate(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
+   void*                 key,                /**< sorting key */
+   void*                 dataptr             /**< user node data pointer, or NULL */
+   );
+
+/** frees the search node including the rooted subtree
+ *
+ *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
+ */
+extern
+void SCIPbstnodeFree(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< search node to be freed */
+   );
+
+/** returns whether the search node is a leaf */
+extern
+SCIP_Bool SCIPbstnodeIsLeaf(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the user data pointer stored in that search node */
+extern
+void* SCIPbstnodeGetData(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the key of the search node */
+extern
+void* SCIPbstnodeGetKey(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the parent which can be NULL if the given node is the root */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetParent(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns left child which can be NULL if the given node is a leaf */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns right child which can be NULL if the given node is a leaf */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetRightchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** sets the give node data
+ *
+ *  @note The old user pointer is not freed.
+ */
+extern
+void SCIPbstnodeSetData(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 dataptr             /**< node user data pointer */
+   );
+
+/** sets the key to the search node
+ *
+ *  @note The old key pointer is not freed.
+ */
+extern
+void SCIPbstnodeSetKey(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 key                 /**< key value */
+   );
+
+/** sets parent node
+ *
+ *  @note The old parent including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetParent(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
+   );
+
+/** sets left child
+ *
+ *  @note The old left child including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetLeftchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         left                /**< new left child, or NULL */
+   );
+
+/** sets right child
+ *
+ *  @note The old right child including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetRightchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         right               /**< new right child, or NULL */
+   );
+
+/** creates an binary search tree */
+extern
+SCIP_RETCODE SCIPbstCreate(
+   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
+   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
+   );
+
+/** frees binary search tree
+ *
+ *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
+ */
+extern
+void SCIPbstFree(
+   SCIP_BST**            tree                /**< pointer to binary search tree */
+   );
+
+/** returns whether the binary search tree is empty (has no nodes) */
+extern
+SCIP_Bool SCIPbstIsEmpty(
+   SCIP_BST*             tree                /**< binary search tree */
+   );
+
+/** returns the the root node of the binary search or NULL if the binary search tree is empty */
+extern
+SCIP_BSTNODE* SCIPbstGetRoot(
+   SCIP_BST*             tree                 /**< tree to be evaluated */
+   );
+
+/** sets root node
+ *
+ *  @note The old root including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstSetRoot(
+   SCIP_BST*             tree,                /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                 /**< new root, or NULL */
+   );
+
+/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method */
+extern
+SCIP_RETCODE SCIPbstInsert(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
+   );
+
+/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
+extern
+SCIP_RETCODE SCIPbstDelete(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
+   );
+
+/** compares to search nodes using the search tree comparer */
+extern
+int SCIPbstComp(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node1,              /**< search node 1 */
+   SCIP_BSTNODE*         node2               /**< search node 2 */
+   );
+
+/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
+ *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
+ *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
+ *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
+ */
+extern
+SCIP_BSTNODE* SCIPbstFindInsertNode(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node to find */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   );
+
+/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
+ *  return. If a search node with the same key exists, the method returns the last search node and sets the found
+ *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
+ *  which is smaller than the given one and sets the found pointer to FALSE.
+ */
+extern
+SCIP_BSTNODE* SCIPbstFindKey(
+   SCIP_BST*             tree,               /**< binary search tree */
+   void*                 key,                /**< key value */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
    );
 
 /*

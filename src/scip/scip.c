@@ -13491,9 +13491,9 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
    return (SCIPgetDepth(scip) > 0 && SCIPconflictApplicable(scip->set));
 }
 
-/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
- *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
- *  or SCIPaddConflictBinvar();
+/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before you
+ *  enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
  */
 SCIP_RETCODE SCIPinitConflictAnalysis(
    SCIP*                 scip                /**< SCIP data structure */
@@ -13527,12 +13527,36 @@ SCIP_RETCODE SCIPaddConflictLb(
    return SCIP_OKAY;
 }
 
+/** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed lower bound; this relaxed lower bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed) lower bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be called
+ *      for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedlb           /**< the relaxed lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx, relaxedlb) );
+
+   return SCIP_OKAY;
+}
+
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
- *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound that
+ *      lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called for
+ *      each upper bound, whose current assignment lead to the deduction of the given conflict bound.
  */
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13544,6 +13568,31 @@ SCIP_RETCODE SCIPaddConflictUb(
    SCIP_CALL( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each (relaxed) upper
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
+ *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
+ *      bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedub           /**< the relaxed upper bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx, relaxedub) );
 
    return SCIP_OKAY;
 }
@@ -13566,6 +13615,31 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, boundtype, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis'
+ *  candidate storage; with the additional information of a relaxed upper bound; this relaxed upper bound is the one
+ *  which would be enough to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedBd() should be called for each (relaxed)
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
+ *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedBd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedbd           /**< the relaxed bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedBd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, boundtype, bdchgidx, relaxedbd) );
 
    return SCIP_OKAY;
 }
@@ -13597,13 +13671,81 @@ SCIP_RETCODE SCIPaddConflictBinvar(
    return SCIP_OKAY;
 }
 
+/** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
+ *  even stronger bound
+ */
+SCIP_RETCODE SCIPisConflictVarUsed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool*            used                /**< pointer to store if the variable is already used */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisConflictVarUsed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
+}
+
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+SCIP_Real SCIPgetConflictVarLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarLb(scip->conflict, scip->set, var);
+}
+
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
+ *  SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarUb(scip->conflict, scip->set, var);
+}
+
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
+ *  SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarRelaxedLb(scip->conflict, scip->set, var);
+}
+
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
+ *  minus SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarRelaxedUb(scip->conflict, scip->set, var);
+}
+
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
- *  SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(), or SCIPaddConflictBinvar();
- *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
- *  SCIPaddConflictUb(), SCIPconflictAddBd(), and SCIPaddConflictBinvar() is valid for the whole subtree;
- *  if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict()
- *  to make sure, that the correct valid depth is used
+ *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+ *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
+ *  handlers to create a conflict constraint out of the resulting conflict set; the given valid depth must be a depth
+ *  level, at which the conflict set defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar() is
+ *  valid for the whole subtree; if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons()
+ *  instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
  */
 SCIP_RETCODE SCIPanalyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13619,12 +13761,13 @@ SCIP_RETCODE SCIPanalyzeConflict(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(),
- *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
- *  resulting conflict set;
- *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
- *  SCIPconflictAddBd(), and SCIPaddConflictBinvar())
+/** analyzes conflict bounds that were added with calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
+ *  SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or
+ *  SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set; the given constraint must be the constraint that detected the conflict, i.e. the constraint
+ *  that is infeasible in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(),
+ *  SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(),
+ *  SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar())
  */
 SCIP_RETCODE SCIPanalyzeConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14387,6 +14530,7 @@ SCIP_RETCODE SCIPrespropCons(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -14398,7 +14542,7 @@ SCIP_RETCODE SCIPrespropCons(
 
    SCIP_CALL( checkStage(scip, "SCIPrespropCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
    return SCIP_OKAY;
 }
@@ -18798,6 +18942,24 @@ SCIP_RETCODE SCIPbranchVar(
 
    SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->lp,
          scip->branchcand, scip->eventqueue, var, SCIP_INVALID, downchild, eqchild, upchild) );
+
+   return SCIP_OKAY;
+}
+
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+SCIP_RETCODE SCIPbranchVarHole(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child (x <= left), or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPbranchVarHole", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeBranchVarHole(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->lp,
+         scip->branchcand, scip->eventqueue, var, left, right, downchild, upchild) );
 
    return SCIP_OKAY;
 }

@@ -2,7 +2,7 @@
 
 OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
 
--include make/local/make.$(OPTHOST)
+-include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
 .PHONY: testcluster
 testcluster:

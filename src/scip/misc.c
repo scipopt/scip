@@ -2724,6 +2724,24 @@ int SCIPptrarrayGetMaxIdx(
  * Sorting algorithms
  */
 
+/** default comparer for integers */
+SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt)
+{
+   int value1;
+   int value2;
+
+   value1 = (int)(size_t)elem1;
+   value2 = (int)(size_t)elem2;
+
+   if( value1 < value2 )
+      return -1;
+
+   if( value2 < value1 )
+      return 1;
+
+   return 0;
+}
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
@@ -4364,22 +4382,26 @@ int SCIPdigraphGetNComponents(
    return digraph->ncomponents;
 }
 
-/** Returns the number of previously computed undirected components for the given directed graph.
+/** Returns the previously computed undirected component of the given number for the given directed graph.
  *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
  */
 void SCIPdigraphGetComponent(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the component to return */
-   int**                 nodes,              /**< pointer to store the nodes in the component */
-   int*                  nnodes              /**< pointer to store the number of nodes in the component */
+   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component;
+                                              *   or NULL, if not needed */
    )
 {
    assert(digraph != NULL);
    assert(compidx >= 0);
    assert(compidx < digraph->ncomponents);
+   assert(nodes != NULL || nnodes != NULL);
 
-   (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
-   (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+   if( nodes != NULL )
+      (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
+   if( nnodes != NULL )
+      (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
 }
 
 /** frees the component information for the given directed graph */
@@ -4399,6 +4421,434 @@ void SCIPdigraphFreeComponents(
    digraph->componentstartsize = 0;
 }
 
+
+/*
+ * Binary search tree
+ */
+
+/** creates a search node for a binary search tree */
+static
+SCIP_RETCODE bstnodeCreateEmpty(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< pointer to store the created search node */
+   )
+{
+   SCIP_ALLOC( BMSallocBlockMemory(tree->blkmem, node) );
+
+   (*node)->parent = NULL;
+   (*node)->left = NULL;
+   (*node)->right = NULL;
+   (*node)->key = NULL;
+   (*node)->dataptr = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** creates a search tree node with (optinal) sorting value and user data */
+SCIP_RETCODE SCIPbstnodeCreate(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
+   void*                 key,                /**< sorting key, or NULL */
+   void*                 dataptr             /**< user node data pointer, or NULL */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+
+   SCIP_CALL( bstnodeCreateEmpty(tree, node) );
+
+   assert((*node)->parent == NULL);
+   assert((*node)->left == NULL);
+   assert((*node)->right == NULL);
+
+   /* initialize search key and user data */
+   (*node)->key = key;
+   (*node)->dataptr = dataptr;
+
+   return SCIP_OKAY;
+}
+
+/** frees a search tree leaf */
+static
+void bstnodeFreeLeaf(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< pointer to search node which has to be freed */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
+
+   assert((*node)->left == NULL);
+   assert((*node)->right == NULL);
+
+   /* remove reference from parent node */
+   if( (*node)->parent != NULL )
+   {
+      assert((*node)->parent->left == *node || ((*node)->parent->right == *node));
+
+      if( (*node)->parent->left == *node )
+         (*node)->parent->left = NULL;
+      else
+      {
+         assert((*node)->parent->right == *node);
+         (*node)->parent->right = NULL;
+      }
+   }
+
+   BMSfreeBlockMemory(tree->blkmem, node);
+   assert(*node == NULL);
+}
+
+/** frees the search node including the rooted subtree
+ *
+ *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
+ */
+void SCIPbstnodeFree(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< search node to be freed */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
+
+   if( (*node)->left != NULL )
+   {
+      SCIPbstnodeFree(tree, &(*node)->left);
+      assert((*node)->left == NULL);
+   }
+
+   if( (*node)->right != NULL )
+   {
+      SCIPbstnodeFree(tree, &(*node)->right);
+      assert((*node)->right == NULL);
+   }
+
+   bstnodeFreeLeaf(tree, node);
+   assert(*node == NULL);
+}
+
+/** returns whether the search node is a leaf */
+SCIP_Bool SCIPbstnodeIsLeaf(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->left == NULL && node->right == NULL);
+}
+
+/** returns the user data pointer stored in that search node */
+void* SCIPbstnodeGetData(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->dataptr;
+}
+
+/** returns the key of the search node */
+void* SCIPbstnodeGetKey(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->key;
+}
+
+/** returns the parent which can be NULL if the given node is the root */
+SCIP_BSTNODE* SCIPbstnodeGetParent(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->parent;
+}
+
+/** returns left child which can be NULL if the given node is a leaf */
+SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->left;
+}
+
+/** returns right child which can be NULL if the given node is a leaf */
+SCIP_BSTNODE* SCIPbstnodeGetRightchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->right;
+}
+
+/** sets the give node data
+ *
+ *  @note The old user pointer is not freed.
+ */
+void SCIPbstnodeSetData(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 dataptr             /**< node user data pointer */
+   )
+{
+   assert(node != NULL);
+
+   node->dataptr = dataptr;
+}
+
+/** sets the key to the search node
+ *
+ *  @note The old key pointer is not freed.
+ */
+void SCIPbstnodeSetKey(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 key                 /**< key value */
+   )
+{
+   assert(node != NULL);
+
+   node->key = key;
+}
+
+/** sets parent node
+ *
+ *  @note The old parent including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetParent(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->parent = parent;
+}
+
+/** sets left child
+ *
+ *  @note The old left child including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetLeftchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         left                /**< new left child, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->left = left;
+}
+
+/** sets right child
+ *
+ *  @note The old right child including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetRightchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         right               /**< new right child, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->right = right;
+}
+
+/** creates an binary search tree */
+SCIP_RETCODE SCIPbstCreate(
+   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
+   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
+   )
+{
+   assert(tree != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(tree) );
+   (*tree)->blkmem = blkmem;
+   (*tree)->root = NULL;
+   (*tree)->inserter = inserter;
+   (*tree)->deleter = deleter;
+   (*tree)->comparer = comparer;
+
+   return SCIP_OKAY;
+}
+
+/** frees binary search tree
+ *
+ *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
+ */
+void SCIPbstFree(
+   SCIP_BST**            tree                /**< pointer to binary search tree */
+   )
+{
+   assert(tree != NULL);
+
+   if( (*tree)->root != NULL )
+   {
+      SCIPbstnodeFree(*tree, &((*tree)->root));
+   }
+
+   BMSfreeMemory(tree);
+}
+
+/** returns whether the binary search tree is empty (has no nodes) */
+SCIP_Bool SCIPbstIsEmpty(
+   SCIP_BST*             tree                /**< binary search tree */
+   )
+{
+   assert(tree != NULL);
+
+   return (tree->root == NULL);
+}
+
+/** returns the the root node of the binary search or NULL if the binary search tree is empty */
+SCIP_BSTNODE* SCIPbstGetRoot(
+   SCIP_BST*             tree                 /**< tree to be evaluated */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->root;
+}
+
+/** sets root node
+ *
+ *  @note The old root including the rooted subtree is not delete.
+ */
+void SCIPbstSetRoot(
+   SCIP_BST*             tree,                /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                 /**< new root, or NULL */
+   )
+{
+   assert(tree != NULL);
+
+   tree->root = root;
+}
+
+/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method; */
+SCIP_RETCODE SCIPbstInsert(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(node->key != NULL);
+   assert(inserted != NULL);
+
+   (*inserted) = FALSE;
+
+   if( tree->inserter != NULL )
+   {
+      SCIP_CALL( (*tree->inserter)(tree, node, inserted) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
+SCIP_RETCODE SCIPbstDelete(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(deleted != NULL);
+
+   (*deleted) = FALSE;
+
+   if( tree->deleter != NULL )
+   {
+      SCIP_CALL( (*tree->deleter)(tree, node, deleted) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** compares to search nodes using the search tree comparer */
+int SCIPbstComp(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node1,              /**< search node 1 */
+   SCIP_BSTNODE*         node2               /**< search node 2 */
+   )
+{
+   assert(tree != NULL);
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   assert(tree->comparer != NULL);
+
+   return (*tree->comparer)(node1, node2);
+}
+
+/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
+ *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
+ *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
+ *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
+ */
+SCIP_BSTNODE* SCIPbstFindInsertNode(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node to find */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   )
+{
+   return SCIPbstFindKey(tree, node->key, found);
+}
+
+/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
+ *  return. If a search node with the same key exists, the method returns the last search node and sets the found
+ *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
+ *  which is smaller than the given one and sets the found pointer to FALSE.
+ */
+SCIP_BSTNODE* SCIPbstFindKey(
+   SCIP_BST*             tree,               /**< binary search tree */
+   void*                 key,                /**< key value */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   )
+{
+   SCIP_BSTNODE* node;
+
+   assert(tree != NULL);
+   assert(key != NULL);
+   assert(found != NULL);
+
+   (*found) = FALSE;
+
+   if(!SCIPbstIsEmpty(tree) )
+      return NULL;
+
+   node = tree->root;
+
+   while( !SCIPbstnodeIsLeaf(node) )
+   {
+      if( (*tree->comparer)(key, node->key) < 0 )
+      {
+         if( node->left == NULL )
+            break;
+
+         node = node->left;
+      }
+      else
+      {
+         if( node->right == NULL )
+            break;
+
+         node = node->right;
+      }
+   }
+
+   return node;
+}
 
 /*
  * Numerical methods

@@ -83,6 +83,19 @@ interface
   to SCIP_STAGE_EXITSOLVE
 - new method SCIPisHugeValue() to check whether a value is huge and should be handled separately from other values
   (e.g., in activity computations), and SCIPgetHugeValue() to get the smallest value counting as huge
+- new methods SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), and SCIPaddConflictRelaxedBd(); these methods
+  can be used to give for a bound change which is part of an explanation a relaxed bound; this means the relaxed bound
+  is already efficient to be part of a valid explanation
+- new method SCIPisConflictVarUsed() returns TRUE if the given bound change is already part of the conflict set;
+  that is the bound change is redundant;
+- new methods SCIPgetConflictVarLb(), SCIPgetConflictVarUb(), SCIPgetConflictVarRelaxedLb(), and
+  SCIPgetConflictVarRelaxedUb() returning the (relaxed) lower/upper bound of the given variable within the current
+  active conflict set
+- the resolve propagation methods for the constraint handler and propagator getting a new parameter called relaxedbd;
+  explaining/resolving this relaxed bound is sufficient
+- new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
+- default integer comparer SCIPsortCompInt() (see pub_misc.h)
+- data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),

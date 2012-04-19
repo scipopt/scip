@@ -189,8 +189,11 @@ void SCIPbdchginfoFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-
-
+/** returns the relaxed bound change type */
+extern
+SCIP_Real SCIPbdchginfoGetRelaxedBound(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
+   );
 
 /*
  * methods for variables 

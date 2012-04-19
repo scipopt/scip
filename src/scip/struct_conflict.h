@@ -58,6 +58,7 @@ struct SCIP_Conflicthdlr
 struct SCIP_ConflictSet
 {
    SCIP_BDCHGINFO**      bdchginfos;         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds;         /**< array of relaxed bounds which are efficient for a valid conflict */
    int*                  sortvals;           /**< aggregated var index/bound type values for sorting */
    int                   bdchginfossize;     /**< size of bdchginfos array */
    int                   nbdchginfos;        /**< number of bound change informations in the conflict set */

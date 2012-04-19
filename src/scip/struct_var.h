@@ -206,6 +206,8 @@ struct SCIP_Var
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */
+   SCIP_Real             conflictrelaxedlb;  /**< minimal relaxed lower bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
+   SCIP_Real             conflictrelaxedub;  /**< minimal release upper bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
    SCIP_Real             lazylb;             /**< global lower bound that is ensured by constraints and has not to be added to the LP */
    SCIP_Real             lazyub;             /**< global upper bound that is ensured by constraints and has not to be added to the LP */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */

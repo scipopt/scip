@@ -622,6 +622,7 @@ SCIP_RETCODE SCIPconsResprop(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -928,7 +929,10 @@ SCIP_RETCODE SCIPconsResetAge(
    );
 
 /** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
  */
 extern
 SCIP_RETCODE SCIPconsResolvePropagation(
@@ -938,6 +942,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    int                   inferinfo,          /**< user inference information attached to the bound change */
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

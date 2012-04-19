@@ -151,6 +151,25 @@ struct SCIP_Digraph
    int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
 };
 
+/** binary search node data structure */
+struct SCIP_BstNode
+{
+   SCIP_BSTNODE*         parent;             /**< pointer to the parent node */
+   SCIP_BSTNODE*         left;               /**< pointer to the left child node */
+   SCIP_BSTNODE*         right;              /**< pointer to the right child node */
+   void*                 key;                /**< key according to which the tree is ordered */
+   void*                 dataptr;            /**< user pointer */
+};
+
+/** binary search tree data structure */
+struct SCIP_Bst
+{
+   SCIP_BSTNODE*         root;               /**< pointer to the dummy root node; root is left child */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store tree nodes */
+   SCIP_DECL_BSTINSERT   ((*inserter));      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter));       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer));      /**< comparer used to compares two search keys */
+};
 
 #ifdef __cplusplus
 }

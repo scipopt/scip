@@ -19,7 +19,6 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
- * TODO: sort components by size?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -359,11 +358,16 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
+   /* the following asserts are not true, because some aggregations in the original scip instance could not get sesolved
+    * inside some constraints, so the copy (subscip) will have also some inactive variables which were copied
+    */
+#if 0
    /* there might be less variables in the subscip, because variables might be cancelled out during copying constraint
     * when transferring variables to active variables
     */
    assert(nbinvars >= SCIPgetNBinVars(subscip));
    assert(nintvars >= SCIPgetNIntVars(subscip));
+#endif
 
    /* In debug mode, we want to be informed if the number of variables was reduced during copying.
     * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
@@ -474,6 +478,12 @@ SCIP_RETCODE copyAndSolveComponent(
 
          SCIPdebugMessage("-> tightened %d bounds of variables due to global bounds in the sub-SCIP for component %d\n", ntightened, compnr);
       }
+   }
+   else
+   {
+      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+         compnr, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
+         SCIPgetNContVars(subscip), nconss);
    }
 
  TERMINATE:
@@ -826,12 +836,49 @@ SCIP_RETCODE presolComponents(
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
 
-         /* create subproblems from independent components and solve them in dependence of their size */
-         SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
-               &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
+         /* We want to sort the components in increasing size (number of variables).
+          * Therefore, we now get the number of variables for each component, and rename the components
+          * such that for i < j, component i has no more variables than component j.
+          * @todo Perhaps sort the components by the number of binary/integer variables?
+          */
+         if( ncomponents > 0 )
+         {
+            int* ncompvars;
+            int* permu;
 
-         (*nfixedvars) += ndeletedvars;
-         (*ndelconss) += ndeletedconss;
+            SCIP_CALL( SCIPallocBufferArray(scip, &ncompvars, ncomponents) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &permu, ncomponents) );
+
+            /* get number of variables in the components */
+            for( c = 0; c < ncomponents; ++c )
+            {
+               SCIPdigraphGetComponent(digraph, c, NULL, &ncompvars[c]);
+               permu[c] = c;
+            }
+
+            /* get permutation of component numbers such that the size of the components is increasing */
+            SCIPsortIntInt(ncompvars, permu, ncomponents);
+
+            /* now, we need the reverse direction, i.e., for each component number, we store its new number
+             * such that the components are sorted; for this, we abuse the ncompvars array
+             */
+            for( c = 0; c < ncomponents; ++c )
+               ncompvars[permu[c]] = c;
+
+            /* for each variable, replace the old component number by the new one */
+            for( c = 0; c < nvars; ++c )
+               components[c] = ncompvars[components[c]];
+
+            /* create subproblems from independent components and solve them in dependence of their size */
+            SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
+                  &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
+
+            (*nfixedvars) += ndeletedvars;
+            (*ndelconss) += ndeletedconss;
+
+            SCIPfreeBufferArray(scip, &permu);
+            SCIPfreeBufferArray(scip, &ncompvars);
+         }
 
          SCIPfreeBufferArray(scip, &components);
       }
