@@ -13166,7 +13166,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fastmip = 0;
                goto SOLVEAGAIN;
@@ -13177,7 +13177,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * tolerance
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter feasibility tolerance\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                tightfeastol = TRUE;
                goto SOLVEAGAIN;
@@ -13186,7 +13186,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fromscratch = TRUE;
                goto SOLVEAGAIN;
@@ -13197,7 +13197,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * forget about the LP at this node and mark it to be unsolved
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
+                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -13343,7 +13343,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                         !SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) )
                   {
                      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
+                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -13390,7 +13390,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                       * with tighter feasibility tolerance and from scratch
                       */
                      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
+                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;

@@ -3607,7 +3607,7 @@ SCIP_RETCODE focusnodeToFork(
    if( lperror || lp->resolvelperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
+         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %"SCIP_LONGINT_FORMAT" not optimal -- convert node into junction instead of fork\n",
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -3728,7 +3728,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
+         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %"SCIP_LONGINT_FORMAT" not optimal -- convert node into junction instead of subroot\n",
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -5997,7 +5997,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
+               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %"SCIP_LONGINT_FORMAT" after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
          }
