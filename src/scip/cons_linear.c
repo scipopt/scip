@@ -6424,7 +6424,7 @@ SCIP_Bool checkEqualObjective(
          }
          else if( v == 0 )
          {
-            /* the first variable define the scale */
+            /* the first variable defines the scale */
             (*scale) = val / objval;
          }
          else if( !SCIPisEQ(scip, objval * (*scale), val) )
@@ -6466,7 +6466,7 @@ SCIP_RETCODE checkPartialObjective(
    offset = consdata->rhs;
    scale = 1.0;
 
-   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
 
    if( applicable )
@@ -6508,7 +6508,7 @@ SCIP_RETCODE updateCutoffbound(
       SCIPconsGetName(cons), primalbound);
 
    /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are still
-    * excepted
+    * accepted
     */
    cutoffbound = primalbound + SCIPcutoffbounddelta(scip);
 
@@ -6565,7 +6565,7 @@ SCIP_RETCODE checkParallelObjective(
    offset = 0.0;
    scale = 1.0;
 
-   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
 
    if( applicable )
