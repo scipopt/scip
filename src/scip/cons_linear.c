@@ -6427,7 +6427,7 @@ SCIP_Bool checkEqualObjective(
          }
          else if( v == 0 )
          {
-            /* the first variable define the scale */
+            /* the first variable defines the scale */
             (*scale) = val / objval;
          }
          else if( !SCIPisEQ(scip, objval * (*scale), val) )
@@ -6469,7 +6469,7 @@ SCIP_RETCODE checkPartialObjective(
    offset = consdata->rhs;
    scale = 1.0;
 
-   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
 
    if( applicable )
@@ -6511,7 +6511,7 @@ SCIP_RETCODE updateCutoffbound(
       SCIPconsGetName(cons), primalbound);
 
    /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are still
-    * excepted
+    * accepted
     */
    cutoffbound = primalbound + SCIPcutoffbounddelta(scip);
 
@@ -6568,7 +6568,7 @@ SCIP_RETCODE checkParallelObjective(
    offset = 0.0;
    scale = 1.0;
 
-   /* checks if the variables and their coefficient are equal (w.r.t. scaling factor) to the objective function */
+   /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
 
    if( applicable )
@@ -10425,38 +10425,41 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
       }
 
-      /* convert special equalities */
-      if( !cutoff && SCIPconsIsActive(cons) )
+      if( !SCIPisStopped(scip) )
       {
-         SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 /* convert special equalities */
+	 if( !cutoff && SCIPconsIsActive(cons) )
+	 {
+	    SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 }
+
+	 /* apply dual presolving for variables that appear in only one constraint */
+	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
+	 {
+	    SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 }
+
+	 /* check if an inequality is parallel to the objective function */
+	 if( !cutoff && SCIPconsIsActive(cons) )
+	 {
+	    SCIP_CALL( checkParallelObjective(scip, cons) );
+	 }
+
+	 /* remember the first changed constraint to begin the next aggregation round with */
+	 if( firstchange == INT_MAX && consdata->changed )
+	    firstchange = c;
+
+	 /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+	 if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+	    firstupgradetry = c;
       }
-
-      /* apply dual presolving for variables that appear in only one constraint */
-      if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
-      {
-         SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
-      }
-
-      /* check if an inequality is parallel to the objective function */
-      if( !cutoff && SCIPconsIsActive(cons) )
-      {
-         SCIP_CALL( checkParallelObjective(scip, cons) );
-      }
-
-      /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == INT_MAX && consdata->changed )
-         firstchange = c;
-
-      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
-      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
-         firstupgradetry = c;
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) )
+   if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) && !SCIPisStopped(scip) )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
          && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
@@ -10542,7 +10545,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving )
+      if( conshdlrdata->dualpresolving && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }
