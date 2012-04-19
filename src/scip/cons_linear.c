@@ -10422,38 +10422,41 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
       }
 
-      /* convert special equalities */
-      if( !cutoff && SCIPconsIsActive(cons) )
+      if( !SCIPisStopped(scip) )
       {
-         SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 /* convert special equalities */
+	 if( !cutoff && SCIPconsIsActive(cons) )
+	 {
+	    SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 }
+
+	 /* apply dual presolving for variables that appear in only one constraint */
+	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
+	 {
+	    SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+	 }
+
+	 /* check if an inequality is parallel to the objective function */
+	 if( !cutoff && SCIPconsIsActive(cons) )
+	 {
+	    SCIP_CALL( checkParallelObjective(scip, cons) );
+	 }
+
+	 /* remember the first changed constraint to begin the next aggregation round with */
+	 if( firstchange == INT_MAX && consdata->changed )
+	    firstchange = c;
+
+	 /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+	 if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+	    firstupgradetry = c;
       }
-
-      /* apply dual presolving for variables that appear in only one constraint */
-      if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
-      {
-         SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
-      }
-
-      /* check if an inequality is parallel to the objective function */
-      if( !cutoff && SCIPconsIsActive(cons) )
-      {
-         SCIP_CALL( checkParallelObjective(scip, cons) );
-      }
-
-      /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == INT_MAX && consdata->changed )
-         firstchange = c;
-
-      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
-      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
-         firstupgradetry = c;
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) )
+   if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) && !SCIPisStopped(scip) )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
          && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
@@ -10539,7 +10542,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving )
+      if( conshdlrdata->dualpresolving && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }
