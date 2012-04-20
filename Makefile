@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.1.1.4
+VERSION		:=	2.1.1.5
 
 TIME     	=  	3600
 NODES           =       2100000000
