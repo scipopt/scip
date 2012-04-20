@@ -766,6 +766,12 @@ SCIP_RETCODE getLinVarsAndAndRess(
 
       hashmapentryexists = SCIPhashmapExists(conshdlrdata->hashmap, (void*)(vars[v]));
 
+      /* if and resultant is not a resultant anymore, correct the flag and count this variable as normal linear variable */
+      if( hashmapentryexists )
+      {
+	 hashmapentryexists = !(((CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)(vars[v])))->deleted);
+      }
+
       if( !hashmapentryexists && linvars != NULL )
       {
          linvars[*nlinvars] = vars[v];
