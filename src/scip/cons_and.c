@@ -1869,7 +1869,7 @@ SCIP_RETCODE resolvePropagation(
  *  2. check if one operand is in a clique with the negation of all other operands, this means we can aggregate this
  *     operand to the resultant
  *
- *     r == AND(x,y,z) and clique(x,~y) and clique(x,~z) => r == x and delete the constraint
+ *     r == AND(x,y,z) and clique(x,~y) and clique(x,~z) => r == x
  *
  *  3. check if the resultant and the negations of all operands are in a clique
  *
@@ -2410,10 +2410,7 @@ SCIP_RETCODE cliquePresolve(
 	 if( aggregated )
 	    ++(*naggrvars);
 
-	 SCIP_CALL( SCIPdelCons(scip, cons) );
-	 ++(*ndelconss);
-
-	 break;
+	 return SCIP_OKAY;
       }
    }
 

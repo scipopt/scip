@@ -4620,28 +4620,13 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
          /* put remaining bound changes into conflict candidate queue */
          if( lbchginfoposs[v] >= 0 )
          {
-            assert(!SCIPbdchginfoIsRedundant(&var->lbchginfos[lbchginfoposs[v]]));
-            SCIPdebugMessage("   queue: <%s> >= %g [status: %d, type: %d, depth: %d, pos:%d, chgtype: %d]\n",
-               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]]),
-               SCIPvarGetStatus(var), SCIPvarGetType(var),
-               SCIPbdchginfoGetDepth(&var->lbchginfos[lbchginfoposs[v]]),
-               SCIPbdchginfoGetPos(&var->lbchginfos[lbchginfoposs[v]]),
-               SCIPbdchginfoGetChgtype(&var->lbchginfos[lbchginfoposs[v]]));
-            SCIP_CALL( conflictQueueBound(conflict, set, &var->lbchginfos[lbchginfoposs[v]], SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]])) );
-            SCIP_CALL( incVSIDS(var, stat, SCIP_BOUNDTYPE_LOWER) );
+            SCIP_CALL( conflictAddBound(conflict, set, stat, var, SCIP_BOUNDTYPE_LOWER, &var->lbchginfos[lbchginfoposs[v]], SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]])) );
             nbdchgs++;
          }
          if( ubchginfoposs[v] >= 0 )
          {
             assert(!SCIPbdchginfoIsRedundant(&var->ubchginfos[ubchginfoposs[v]]));
-            SCIPdebugMessage("   queue: <%s> <= %g [status: %d, type: %d, depth: %d, pos:%d, chgtype: %d]\n",
-               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]]),
-               SCIPvarGetStatus(var), SCIPvarGetType(var),
-               SCIPbdchginfoGetDepth(&var->ubchginfos[ubchginfoposs[v]]),
-               SCIPbdchginfoGetPos(&var->ubchginfos[ubchginfoposs[v]]),
-               SCIPbdchginfoGetChgtype(&var->ubchginfos[ubchginfoposs[v]]));
-            SCIP_CALL( conflictQueueBound(conflict, set, &var->ubchginfos[ubchginfoposs[v]], SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]])) );
-            SCIP_CALL( incVSIDS(var, stat, SCIP_BOUNDTYPE_UPPER) );
+            SCIP_CALL( conflictAddBound(conflict, set, stat, var, SCIP_BOUNDTYPE_UPPER, &var->ubchginfos[ubchginfoposs[v]], SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]])) );
             nbdchgs++;
          }
       }

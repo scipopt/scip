@@ -76,7 +76,7 @@ SCIP_Bool SCIPsolveIsStopped(
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
     */
    if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
-      return FALSE;
+      return TRUE;
 
    /* if some limit has been changed since the last call, we reset the status */
    if( set->limitchanged )
