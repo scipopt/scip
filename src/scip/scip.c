@@ -3780,7 +3780,11 @@ SCIP_RETCODE SCIPsetSepaPriority(
    return SCIP_OKAY;
 }
 
-/** creates a propagator and includes it in SCIP */
+/** creates a propagator and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludePropBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of propagator */
@@ -3823,6 +3827,197 @@ SCIP_RETCODE SCIPincludeProp(
          propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
          proppresol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
+ *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
+ *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ */
+SCIP_RETCODE SCIPincludePropBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP**           propptr,            /**< reference to a propagator pointer, or NULL */
+   const char*           name,               /**< name of propagator */
+   const char*           desc,               /**< description of propagator */
+   int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling propagator */
+   SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_PROP* prop;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePropBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether propagator is already present */
+   if( SCIPfindProp(scip, name) != NULL )
+   {
+      SCIPerrorMessage("propagator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoldelay,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, propexec, propresprop, propdata) );
+   SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
+
+   if( propptr != NULL )
+      *propptr = prop;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of propagator */
+SCIP_RETCODE SCIPsetPropCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetCopy(prop, propcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of propagator */
+SCIP_RETCODE SCIPsetPropFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetFree(prop, propfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInit(prop, propinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExit(prop, propexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInitsol(prop, propinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExitsol(prop, propexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInitpre(prop, propinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExitpre(prop, propexitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving method of propagator */
+SCIP_RETCODE SCIPsetPropPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetPresol(prop, proppresol);
 
    return SCIP_OKAY;
 }
