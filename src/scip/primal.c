@@ -348,10 +348,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
 {
    SCIP_Real upperbound;
    SCIP_Real inf;
-#ifndef NDEBUG
    int i;
-#endif
-#if 0
+#if 1
    SCIP_SOL* sol;
    SCIP_Real objval;
    int j;
@@ -365,7 +363,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    inf = SCIPsetInfinity(set);
    upperbound = MIN(upperbound, inf);
 
-#if 0
+#if 1 /* check if the resorting is necessary */
    /* resort current primal solutions */
    for( i = 1; i < primal->nsols; ++i )
    {
@@ -383,7 +381,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    for( i = 1; i < primal->nsols; ++i )
    {
       assert(SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ORIGINAL);
-      assert(SCIPsetIsLE(set, SCIPsolGetOrigObj(primal->sols[i-1]), SCIPsolGetOrigObj(primal->sols[i])));
       assert(SCIPsetIsLE(set, SCIPsolGetObj(primal->sols[i-1], set, transprob, origprob), SCIPsolGetObj(primal->sols[i], set, transprob, origprob)));
    }
 #endif
