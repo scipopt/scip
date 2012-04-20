@@ -202,6 +202,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
 
    SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyRestartdfs) );
    SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeRestartdfs) );
+   SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolRestartdfs) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

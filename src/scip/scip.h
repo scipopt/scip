@@ -1845,7 +1845,11 @@ SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a branching rule and includes it in SCIP */
+/** creates a branching rule and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1866,6 +1870,98 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   );
+
+/** creates a branching rule and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
+ *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
+ *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ */
+SCIP_RETCODE SCIPincludeBranchruleBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   );
+
+/** sets copy method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
+   );
+
+/** sets initialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
+   );
+
+/** sets deinitialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
+   );
+
+/** sets solving process initialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
+   );
+
+/** sets solving process deinitialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
+   );
+
+/** sets branching execution method for fractional LP solutions */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecLp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
+   );
+
+/** sets branching execution method for external candidates  */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
+   );
+
+/** sets branching execution method for not completely fixed pseudo solutions */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecPs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
    );
 
 /** returns the branching rule of the given name, or NULL if not existing */

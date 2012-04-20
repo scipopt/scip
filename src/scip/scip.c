@@ -4449,7 +4449,11 @@ SCIP_NODESEL* SCIPgetNodesel(
    return SCIPsetGetNodesel(scip->set, scip->stat);
 }
 
-/** creates a branching rule and includes it in SCIP */
+/** creates a branching rule and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of branching rule */
@@ -4487,6 +4491,195 @@ SCIP_RETCODE SCIPincludeBranchrule(
          maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
          branchexeclp, branchexecext, branchexecps, branchruledata) );
    SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a branching rule and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
+ *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
+ *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ */
+SCIP_RETCODE SCIPincludeBranchruleBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   SCIP_BRANCHRULE* branchrule;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeBranchruleBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether branching rule is already present */
+   if( SCIPfindBranchrule(scip, name) != NULL )
+   {
+      SCIPerrorMessage("branching rule <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority, maxdepth,
+         maxbounddist, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, branchruledata) );
+
+   SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
+
+   if( branchruleptr != NULL )
+      *branchruleptr = branchrule;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetCopy(branchrule, branchcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetFree(branchrule, branchfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetInit(branchrule, branchinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExit(branchrule, branchexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetInitsol(branchrule, branchinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExitsol(branchrule, branchexitsol);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** sets branching execution method for fractional LP solutions */
+SCIP_RETCODE SCIPsetBranchruleExecLp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecLp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecLp(branchrule, branchexeclp);
+
+   return SCIP_OKAY;
+}
+
+/** sets branching execution method for external candidates  */
+SCIP_RETCODE SCIPsetBranchruleExecExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecExt", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecExt(branchrule, branchexecext);
+
+   return SCIP_OKAY;
+}
+
+/** sets branching execution method for not completely fixed pseudo solutions */
+SCIP_RETCODE SCIPsetBranchruleExecPs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecPs", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecPs(branchrule, branchexecps);
 
    return SCIP_OKAY;
 }

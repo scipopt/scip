@@ -328,18 +328,25 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create random branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->seed = 0;
 
-   /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyRandom,
-         branchFreeRandom, branchInitRandom, branchExitRandom, branchInitsolRandom, branchExitsolRandom, 
-         branchExeclpRandom, branchExecextRandom, branchExecpsRandom,
-         branchruledata) );
+   /* include allfullstrong branching rule */
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyRandom) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeRandom) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitRandom) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRandom) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextRandom) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsRandom) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/seed", "initial random seed value",
          &branchruledata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
