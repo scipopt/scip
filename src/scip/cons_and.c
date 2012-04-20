@@ -817,6 +817,41 @@ SCIP_RETCODE applyFixings(
       }
    }
 
+   /* check, if the resultant should be replaced with the active representative */
+   if( !SCIPvarIsActive(consdata->resvar) )
+   {
+      SCIP_VAR* repvar;
+      SCIP_Bool negated;
+
+      /* get binary representative of variable */
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, consdata->resvar, &repvar, &negated) );
+      assert(SCIPvarIsBinary(repvar));
+
+      /* check, if the variable should be replaced with the representative */
+      if( repvar != consdata->resvar )
+      {
+	 if( SCIPconsIsTransformed(cons) )
+	 {
+	    /* drop bound change events of old resultant */
+	    SCIP_CALL( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
+		  eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+
+	    /* catch bound change events of new resultant */
+	    SCIP_CALL( SCIPcatchVarEvent(scip, repvar, SCIP_EVENTTYPE_BOUNDCHANGED,
+		  eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+	 }
+
+	 /* release old resultant */
+	 SCIP_CALL( SCIPreleaseVar(scip, &(consdata->resvar)) );
+
+	 /* capture new resultant */
+	 SCIP_CALL( SCIPcaptureVar(scip, repvar) );
+
+	 consdata->resvar = repvar;
+	 consdata->changed = TRUE;
+      }
+   }
+
    /* sort the variables in the constraint */
    SCIP_CALL( consdataSort(scip, consdata) );
 
@@ -1572,6 +1607,10 @@ SCIP_RETCODE resolvePropagation(
  *
  *     r == AND(x,y,z) and clique(x,~y) and clique(x,~z) => r == x and delete the constraint
  *
+ *  3. check if the resultant and the negations of all operands are in a clique
+ *
+ *     r == AND(x,y) and clique(r, ~x,~y) => upgrade the constraint to a set-partitioning constraint r + ~x + ~y = 1
+ *
  *  @note We removed also fixed variables and propagate them, and if only one operand is remaining due to removal, we
  *        will aggregate the resultant with this operand
  */
@@ -1602,6 +1641,7 @@ SCIP_RETCODE cliquePresolve(
    SCIP_Bool value2;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
+   SCIP_Bool allnegoperandsexist;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -1662,7 +1702,7 @@ SCIP_RETCODE cliquePresolve(
       }
    }
 
-   /* if we deleted some operands */
+   /* if we deleted some operands constraint might be redundant */
    if( consdata->nvars < nvars )
    {
       assert(vars == consdata->vars);
@@ -1709,6 +1749,7 @@ SCIP_RETCODE cliquePresolve(
       nvars = consdata->nvars;
    }
 
+   /* case 1 first part */
    /* check if two operands are in a clique */
    for( v = nvars - 1; v > 0; --v )
    {
@@ -1847,6 +1888,7 @@ SCIP_RETCODE cliquePresolve(
    else
       value1 = TRUE;
 
+   /* case 1 second part */
    /* check if one operands is in a clique with the resultant */
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -2001,9 +2043,12 @@ SCIP_RETCODE cliquePresolve(
       }
    }
 
+   allnegoperandsexist = FALSE;
+
    /* all operands have a negated variable, so we will check for all possible negated ciques */
    if( v2 == -1 )
    {
+      allnegoperandsexist = TRUE;
       vstart = nvars - 1;
       vend = 0;
    }
@@ -2020,6 +2065,7 @@ SCIP_RETCODE cliquePresolve(
       vend = 0;
    }
 
+   /* case 2 */
    /* check for negated cliques in the operands */
    for( v = vstart; v >= vend; --v )
    {
@@ -2105,6 +2151,100 @@ SCIP_RETCODE cliquePresolve(
 
 	 break;
       }
+   }
+
+   /* case 3 */
+   /* check if the resultant and the negations of the operands are in a clique, then we can upgrade this constraint to a
+    * set-partitioning constraint
+    */
+   if( allnegoperandsexist && SCIPconsIsActive(cons) )
+   {
+      SCIP_VAR** newvars;
+      SCIP_Bool* negations;
+      SCIP_Bool upgrade;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nvars + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &negations, nvars + 1) );
+      BMSclearMemoryArray(negations, nvars + 1);
+
+      var1 = consdata->resvar;
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negations[nvars]) );
+      assert(var1 != NULL);
+      assert(SCIPvarGetStatus(var1) != SCIP_VARSTATUS_FIXED);
+
+      newvars[nvars] = var1;
+
+      /* get active variables */
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 var1 = vars[v];
+	 SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negations[v]) );
+	 assert(var1 != NULL);
+	 assert(SCIPvarGetStatus(var1) != SCIP_VARSTATUS_FIXED);
+
+	 newvars[v] = var1;
+
+	 /* there should be no variable left that is equal or negated to the resultant */
+	 assert(newvars[v] != newvars[nvars]);
+      }
+
+      upgrade = TRUE;
+
+      /* the resultant is in a clique with the negations of all operands, due to this and-constraint */
+      /* only check if the negations of all operands are in a clique */
+      for( v = nvars - 1; v >= 0 && upgrade; --v )
+      {
+	 for( v2 = v - 1; v2 >= 0; --v2 )
+	 {
+	    /* the resultant need to be in a clique with the negations of all operands */
+	    if( !SCIPvarsHaveCommonClique(newvars[v], negations[v], newvars[v2], negations[v2], TRUE) )
+	    {
+	       upgrade = FALSE;
+	       break;
+	    }
+	 }
+      }
+
+      /* all variables are in a clique, so upgrade thi and-constraint */
+      if( upgrade )
+      {
+	 SCIP_CONS* cliquecons;
+	 char name[SCIP_MAXSTRLEN];
+
+	 /* get new constraint variables */
+	 if( negations[nvars] )
+	    newvars[nvars] = SCIPvarGetNegatedVar(newvars[nvars]);
+	 assert(newvars[nvars] != NULL);
+
+	 for( v = nvars - 1; v >= 0; --v )
+	 {
+	    if( !negations[v] )
+	    {
+	       newvars[v] = SCIPvarGetNegatedVar(newvars[v]);
+	       assert(newvars[v] != NULL);
+	    }
+	 }
+
+	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clqeq", SCIPconsGetName(cons));
+
+	 SCIP_CALL( SCIPcreateConsSetpart(scip, &cliquecons, name, nvars + 1, newvars,
+	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+	       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+	       SCIPconsIsStickingAtNode(cons)) );
+	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+	 SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+	 ++(*naddconss);
+
+	 /* delete old constraint */
+	 SCIP_CALL( SCIPdelCons(scip, cons) );
+	 ++(*ndelconss);
+      }
+
+      SCIPfreeBufferArray(scip, &negations);
+      SCIPfreeBufferArray(scip, &newvars);
    }
 
    return SCIP_OKAY;
