@@ -7836,6 +7836,10 @@ SCIP_RETCODE SCIPsolve(
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   /* if the stage is already SCIP_STAGE_SOLVED do nothing */
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
+
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
    {
@@ -7874,7 +7878,7 @@ SCIP_RETCODE SCIPsolve(
       }
       restart = FALSE;
       scip->stat->userrestart = FALSE;
-      
+
       switch( scip->set->stage )
       {
       case SCIP_STAGE_PROBLEM:
