@@ -204,6 +204,7 @@ fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
   segmentation fault
 - fixed bug in cons_xor.c which did not copy the artificial integer variable (used for the lp relaxation)
+- fixed bug in sepa_rapidlearning, carrying on the optimization process, when already solved
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

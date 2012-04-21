@@ -407,9 +407,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in rapid learning separator; sub-SCIP terminated with code <%d>\n",retcode);
    }
- 
+
+   /* if problem was already solved do not increase limits to run again */
+   if( SCIPgetStage(subscip) == SCIP_STAGE_SOLVED )
+   {
+      SCIPdebugMessage("Subscip was completely solved, status %d.\n", SCIPgetStatus(subscip));
+   }
    /* abort solving, if limit of applied conflicts is reached */
-   if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
+   else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
    {
       SCIPdebugMessage("finish after %lld successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip)); 
    }
