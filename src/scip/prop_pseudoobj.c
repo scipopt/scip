@@ -2814,18 +2814,18 @@ SCIP_RETCODE propagateLowerboundBinvar(
    /* if the maximum activity of the objective function without the contribution of the given variable shrinks below the
     * global lower bound, the contribution of the variable is need; hence, we can fix it to corresponding bound globally
     */
-   if( maxpseudoobjact + lbobjchg < lowerbound && maxpseudoobjact + ubobjchg < lowerbound )
+   if( SCIPisLT(scip, maxpseudoobjact + lbobjchg, lowerbound) && SCIPisLT(scip, maxpseudoobjact + ubobjchg, lowerbound) )
    {
       /* fixing the variable to zero or one leads to decreases of the maximum activity below the lower bound, hence, we
        * detected an cutoff
        */
       (*infeasible) = TRUE;
    }
-   else if( maxpseudoobjact + lbobjchg < lowerbound )
+   else if( SCIPisLT(scip, maxpseudoobjact + lbobjchg, lowerbound) )
    {
       SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, 1.0, FALSE, infeasible, tightened) );
    }
-   else if( maxpseudoobjact + ubobjchg < lowerbound )
+      else if( SCIPisLT(scip, maxpseudoobjact + ubobjchg, lowerbound) )
    {
       SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, 0.0, FALSE, infeasible, tightened) );
    }
