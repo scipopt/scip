@@ -5763,7 +5763,7 @@ SCIP_Bool SCIPstrToRealValue(
    }
    *endptr = (char*)str;
 
-   SCIPdebugMessage("failed parseing real value <%s>\n", str);
+   SCIPdebugMessage("failed parsing real value <%s>\n", str);
 
    return FALSE;
 }
