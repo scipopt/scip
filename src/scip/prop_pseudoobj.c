@@ -2112,8 +2112,12 @@ SCIP_RETCODE propagateCutoffboundBinvar(
 
    /* if the lbobjchg and ubobjchg are both able to fix the variable to its upper (1.0) or lower (0.0) bound,
     * respectively, we detected an cutoff
+    *
+    * @note There is no need to use SCIPisFeasLT() in case the objective is integral since the cutoff bound in that case
+    *       is the upper bound minus 1 plus the SCIPcutoffbounddelta() (which is MIN(100.0 * feastol, 0.0001)). However,
+    *       if the objective is not integral we have to check w.r.t. an epsilon to avoid numerical problems.
     */
-   if( cutoffbound < pseudoobjval + ubobjchg && cutoffbound < pseudoobjval + lbobjchg )
+   if( SCIPisFeasLT(scip, cutoffbound, pseudoobjval + ubobjchg) && SCIPisFeasLT(scip, cutoffbound, pseudoobjval + lbobjchg) )
    {
       /* check if conflict analysis is applicable */
       if( local && SCIPisConflictAnalysisApplicable(scip) )
@@ -2825,7 +2829,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
    {
       SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, 1.0, FALSE, infeasible, tightened) );
    }
-      else if( SCIPisFeasLT(scip, maxpseudoobjact + ubobjchg, lowerbound) )
+   else if( SCIPisFeasLT(scip, maxpseudoobjact + ubobjchg, lowerbound) )
    {
       SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, 0.0, FALSE, infeasible, tightened) );
    }
