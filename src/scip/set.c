@@ -393,7 +393,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 {  /*lint --e{715}*/
-   /* automatically select the now active display columns */
+   /* automatically select the new active display columns */
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;
