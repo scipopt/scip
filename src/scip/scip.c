@@ -12326,6 +12326,24 @@ SCIP_RETCODE analyzeStrongbranch(
       }
    }
 
+   /* the strong branching results can be used to strength the root reduced cost information which is used for example
+    * to propagate against the cutoff bound
+    *
+    * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
+    *       theory but can arise due to numerical issues.
+    */
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   {
+      SCIP_Real lpobjval;
+
+      lpobjval =  SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
+
+      if( col->sbdownvalid && lpobjval < col->sbdown )
+         SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetUbGlobal(var), -(col->sbdown - lpobjval), lpobjval);
+      if( col->sbupvalid && lpobjval < col->sbup )
+         SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetLbGlobal(var), col->sbup - lpobjval,  lpobjval);
+   }
+
    return SCIP_OKAY;
 }
 
