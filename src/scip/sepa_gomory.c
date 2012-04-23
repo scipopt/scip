@@ -397,7 +397,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
-                  /* only take cuts that have been successfully transformed, except the force flag is TRUE */
+                  /* only take cuts which were successfully transformed to integral coefficients except the force flag
+                   * is set to TRUE
+                   */
                   if( (SCIPisInfinity(scip, -SCIProwGetLhs(cut)) && SCIPisInfinity(scip, SCIProwGetRhs(cut))) ||
                      (!sepadata->forcecuts && !success) )
                   {
