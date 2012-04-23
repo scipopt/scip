@@ -2243,7 +2243,12 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+
+         /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
+          *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
+          */
+         if( conshdlr->conss[c]->addarraypos >= 0 && !conshdlr->conss[c]->deleted &&
+            conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
             SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
          }
