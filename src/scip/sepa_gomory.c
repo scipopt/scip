@@ -398,7 +398,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
                   /* only take cuts that have been successfully transformed, except the force flag is TRUE */
-                  if( !sepadata->forcecuts && !success )
+                  if( (SCIPisInfinity(scip, -SCIProwGetLhs(cut)) && SCIPisInfinity(scip, SCIProwGetRhs(cut))) ||
+                     (!sepadata->forcecuts && !success) )
                   {
                      SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
                         cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
