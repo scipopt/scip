@@ -119,45 +119,6 @@ if test  "$QUEUETYPE" = "qsub"
 then
     HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 fi
-    MYMINUTES=0
-    MYHOURS=0
-    MYDAYS=0
-    #calculate seconds, minutes, hours and days
-    MYSECONDS=`expr $HARDTIMELIMIT % 60`
-    TMP=`expr $HARDTIMELIMIT / 60`
-    if test "$TMP" != "0"
-    then
-	MYMINUTES=`expr $TMP % 60`
-	TMP=`expr $TMP / 60`
-	if test "$TMP" != "0"
-	then
-	    MYHOURS=`expr $TMP % 24`
-	    MYDAYS=`expr $TMP / 24`
-	fi
-   fi
-    #format seconds to have two characters
-    if test ${MYSECONDS} -lt 10
-    then
-	MYSECONDS=0${MYSECONDS}
-    fi
-    #format minutes to have two characters
-    if test ${MYMINUTES} -lt 10
-    then
-	MYMINUTES=0${MYMINUTES}
-    fi
-    #format hours to have two characters
-    if test ${MYHOURS} -lt 10
-    then
-	MYHOURS=0${MYHOURS}
-    fi
-    #format HARDTIMELIMT
-    if test ${MYDAYS} = "0"
-    then
-	HARDTIMELIMIT=${MYHOURS}:${MYMINUTES}:${MYSECONDS}
-    else
-	HARDTIMELIMIT=${MYDAYS}-${MYHOURS}:${MYMINUTES}:${MYSECONDS}
-    fi
-fi
 
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
 echo > $EVALFILE
@@ -267,8 +228,6 @@ do
 	  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N CPLEX$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
       fi
   else
-      echo "input file "$SCIPPATH/$i" not found!"
-  fi
       echo "input file "$SCIPPATH/$i" not found!"
   fi
 done
