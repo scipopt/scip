@@ -78,6 +78,7 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
+   SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
 };
 
@@ -307,24 +308,40 @@ public:
 /** A particular Ipopt::Journal implementation that uses the SCIP message routines for output.
  */
 class ScipJournal : public Ipopt::Journal {
+private:
+   /** reference to message handler pointer in NLPI data */
+   SCIP_MESSAGEHDLR*& messagehdlr;
+
 public:
-   ScipJournal(const char* name, Ipopt::EJournalLevel default_level)
-      : Ipopt::Journal(name, default_level)
+   ScipJournal(
+      const char*          name,             /**< name of journal */
+      Ipopt::EJournalLevel default_level,    /**< default verbosity level */
+      SCIP_MESSAGEHDLR*&   messagehdlr_      /**< pointer where to get message handler from */
+      )
+      : Ipopt::Journal(name, default_level),
+        messagehdlr(messagehdlr_)
    { }
 
    ~ScipJournal() { }
 
 protected:
-   void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+   void PrintImpl(
+      Ipopt::EJournalCategory category,      /**< category of message */
+      Ipopt::EJournalLevel    level,         /**< verbosity level of message */
+      const char*             str            /**< message to print */
+      )
    {
-      //SCIPmessagePrintInfo(str);
-      printf(str);
+      SCIPmessagePrintInfo(messagehdlr, str);
    }
 
-   void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
+   void PrintfImpl(
+      Ipopt::EJournalCategory category,      /**< category of message */
+      Ipopt::EJournalLevel    level,         /**< verbosity level of message */
+      const char*             pformat,       /**< message printing format */
+      va_list                 ap             /**< arguments of message */
+      )
    {
-      //SCIPmessageVPrintInfo(pformat, ap);
-      vprintf(pformat, ap);
+      SCIPmessageVPrintInfo(messagehdlr, pformat, ap);
    }
 
    void FlushBufferImpl() { }
@@ -446,7 +463,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
          throw std::bad_alloc();
 
       /* plugin our journal to get output through SCIP message handler */
-      SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY);
+      SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY, data->messagehdlr);
       if( IsNull(jrnl) )
          throw std::bad_alloc();
       jrnl->SetPrintLevel(J_DBG, J_NONE);
@@ -921,10 +938,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   //#ifdef SCIP_DEBUG
-   //   SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, NULL) );
-   //#endif
-
    assert(IsValid(problem->ipopt));
    assert(IsValid(problem->nlp));
 
@@ -1260,7 +1273,12 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
    {
       if( ival == 0 || ival == 1 )
       {
-         printf("from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
+         SCIP_NLPIDATA* data;
+
+         data = SCIPnlpiGetData(nlpi);
+         assert(data != NULL);
+
+         SCIPmessagePrintWarning(data->messagehdlr, "from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
       }
       else
       {
@@ -1510,7 +1528,12 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      printf("Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
+      SCIP_NLPIDATA* data;
+
+      data = SCIPnlpiGetData(nlpi);
+      assert(data != NULL);
+
+      SCIPmessagePrintWarning(data->messagehdlr, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
       break;
    }
 
@@ -1748,6 +1771,27 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
    return SCIP_OKAY;
 }
 
+/** sets message handler for message output
+ *
+ * input:
+ *  - nlpi NLP interface structure
+ *  - messagehdlr SCIP message handler, or NULL to suppress all output
+ */
+static
+SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrIpopt )
+{
+   SCIP_NLPIDATA* nlpidata;
+
+   assert(nlpi != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
+
+   nlpidata->messagehdlr = messagehdlr;
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
 /** create solver interface for Ipopt solver */
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -1763,6 +1807,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    if( BMSallocMemory(&nlpidata) == NULL )
       return SCIP_NOMEMORY;
    nlpidata->blkmem = blkmem;
+   nlpidata->messagehdlr = NULL;
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
 
    SCIP_CALL( SCIPnlpiCreate(nlpi,
@@ -1776,7 +1821,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
          nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
          nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
          nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
-         nlpiGetStringParIpopt, nlpiSetStringParIpopt,
+         nlpiGetStringParIpopt, nlpiSetStringParIpopt, nlpiSetMessageHdlrIpopt,
          nlpidata) );
 
    return SCIP_OKAY;

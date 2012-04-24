@@ -962,11 +962,23 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
 
    scip->messagehdlr = messagehdlr;
+
+   /* update message handler in NLP solver interfaces */
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      assert(scip->set->nlpis[i] != NULL);
+
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -979,9 +991,21 @@ SCIP_RETCODE SCIPsetMessagehdlrFree(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
+
+   /* update message handler in NLP solver interfaces */
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      assert(scip->set->nlpis[i] != NULL);
+
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
+   }
 
    /* free previously installed message handler */
    SCIP_CALL( SCIPmessagehdlrFree(&scip->messagehdlr) );
@@ -4093,6 +4117,9 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
          NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
          paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
+
+   /* pass message handler (may be NULL) */
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, scip->messagehdlr) );
 
    return SCIP_OKAY;
 }
