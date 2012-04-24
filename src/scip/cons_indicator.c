@@ -3017,7 +3017,7 @@ SCIP_RETCODE createVarUbs(
             SCIPdebugMessage("Removing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]));
             assert( ! SCIPconsIsModifiable(conss[c]) );
 
-	    /* mark linear constraint to be update-able */
+	    /* mark linear constraint to be upgrade-able */
 	    if ( SCIPconsIsActive(consdata->lincons) )
 	    {
 	       SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
@@ -3204,7 +3204,7 @@ SCIP_RETCODE presolRoundIndicator(
 
       SCIPdebugMessage("Presolving <%s>: Slack variable fixed to zero, delete redundant indicator constraint.\n", SCIPconsGetName(cons));
 
-      /* mark linear constraint to be update-able */
+      /* mark linear constraint to be upgrade-able */
       if ( SCIPconsIsActive(consdata->lincons) )
       {
          SCIP_CALL( SCIPsetUpgradeConsLinear(scip, consdata->lincons, TRUE) );
@@ -3263,7 +3263,7 @@ SCIP_RETCODE propIndicator(
       assert( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) );
 
       /* check if conflict analysis is turned on */
-      if( !SCIPisConflictAnalysisApplicable(scip) )
+      if ( ! SCIPisConflictAnalysisApplicable(scip) )
          return SCIP_OKAY;
 
       /* conflict analysis can only be applied in solving stage */
@@ -4607,7 +4607,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          SCIP_CONS* cons;
          SCIP_Bool success;
          SCIP_Bool cutoff;
-         
+
          assert( conss != NULL );
          assert( conss[c] != NULL );
          cons = conss[c];
