@@ -312,7 +312,8 @@ void transformVariable(
    colpos = SCIPcolGetLPPos(col);
 
    assert(0 <= colpos && colpos < matrix->ncols);
-   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE);
+   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE
+      || matrix->transformstatus[colpos] == TRANSFORMSTATUS_FREE);
 
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
@@ -1041,6 +1042,28 @@ void updateTransformation(
 
       if( !SCIPisInfinity(scip, -lb) )
          matrix->upperbounds[varindex] = ub - lb;
+   }
+
+   if( status == TRANSFORMSTATUS_FREE )
+   {
+      /* in case of a free transform status, if one of the bounds has become finite, we want
+       * to transform this variable to a variable with a lowerbound or a negated transform status */
+      if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
+      {
+         SCIP_COL** lpcols;
+         SCIP_VAR* var;
+
+         lpcols = SCIPgetLPCols(scip);
+
+         assert(lpcols != NULL);
+         var = SCIPcolGetVar(lpcols[varindex]);
+
+         assert(SCIPvarIsIntegral(var));
+         transformVariable(scip, var, matrix);
+
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
+         assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+      }
    }
 
    /* if the bound, by which the variable was shifted, has changed, deltashift is larger than zero, which requires
