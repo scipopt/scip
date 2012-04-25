@@ -1347,6 +1347,7 @@ SCIP_RETCODE cliquePresolve(
    int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
    int*                  nchgcoefs,          /**< pointer to add up the number of deleted entries */
    int*                  ndelconss,          /**< pointer to add up the number of deleted constraints */
+   int*                  naddconss,          /**< pointer to add up the number of added constraints */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if the node can be cut off */
    )
 {
@@ -1365,6 +1366,7 @@ SCIP_RETCODE cliquePresolve(
    assert(nfixedvars != NULL);
    assert(nchgcoefs != NULL);
    assert(ndelconss != NULL);
+   assert(naddconss != NULL);
    assert(cutoff != NULL);
 
    /* propagation can only be applied, if we know all operator variables */
@@ -1410,12 +1412,12 @@ SCIP_RETCODE cliquePresolve(
     *                                                        delete old xor constraint)
     */
 
-   posnotinclq1 = -1;
-   posnotinclq2 = -1;
+   posnotinclq1 = -1; /* index of variable that is possible not in the clique */
+   posnotinclq2 = -1; /* index of variable that is possible not in the clique */
    breaked = FALSE;
    restart = FALSE;
 
-   v =  nvars - 2;
+   v = nvars - 2;
    while( v >= 0 )
    {
       assert(SCIPvarIsActive(vars[v]));
@@ -1444,13 +1446,13 @@ SCIP_RETCODE cliquePresolve(
 	    else
 	    {
 	       /* no clique with exactly nvars-1 variables */
-	       if( restart )
+	       if( restart || (posnotinclq2 != v && posnotinclq2 != v1) )
 	       {
 		  breaked = TRUE;
 		  break;
 	       }
 
-	       /* check the second variables for not fitting */
+	       /* check the second variables for not fitting into the clique of (nvars - 1) variables */
 	       posnotinclq1 = posnotinclq2;
 	       restart = TRUE;
 	       v = nvars - 1;
@@ -1458,6 +1460,8 @@ SCIP_RETCODE cliquePresolve(
 
 	    break;
 	 }
+	 else
+	    assert(vars[v] != vars[v1]);
       }
 
       if( breaked )
@@ -1490,6 +1494,7 @@ SCIP_RETCODE cliquePresolve(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+	       ++(*naddconss);
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 	 }
@@ -1527,9 +1532,6 @@ SCIP_RETCODE cliquePresolve(
 	 SCIP_CONS* newcons;
 	 char consname[SCIP_MAXSTRLEN];
 
-	 assert(restart == TRUE);
-	 assert(posnotinclq1 == posnotinclq2);
-
 	 (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
 
 	 /* complete clique by creating a set partioning constraint over all variables */
@@ -1545,18 +1547,18 @@ SCIP_RETCODE cliquePresolve(
 
 	    for( v = 0; v < nvars; ++v )
 	    {
-	       if( v ==  posnotinclq1 )
+	       if( v == posnotinclq1 )
 	       {
 		  SCIP_VAR* var;
 
 		  SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
 		  assert(var != NULL);
 
-		  SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
+		  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, var) );
 	       }
 	       else
 	       {
-		  SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[v]) );
+		  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, vars[v]) );
 	       }
 	    }
 	 }
@@ -1573,6 +1575,7 @@ SCIP_RETCODE cliquePresolve(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+	 ++(*naddconss);
 
 	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
@@ -2515,8 +2518,10 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
          }
 	 else
 	 {
-	    /* try to use clique information to delete a part of the xor constraint or even fix variables */
-	    SCIP_CALL( cliquePresolve(scip, cons, nfixedvars, nchgcoefs, ndelconss, &cutoff) );
+	    /* try to use clique information to upgrade the constraint to a set-partitioning constraint or fix
+	     * variables
+	     */
+	    SCIP_CALL( cliquePresolve(scip, cons, nfixedvars, nchgcoefs, ndelconss, naddconss, &cutoff) );
 	 }
       }
    }

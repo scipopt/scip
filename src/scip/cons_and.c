@@ -785,7 +785,7 @@ SCIP_RETCODE consdataSort(
    return SCIP_OKAY;
 }
 
-/** deletes all one-fixed variables and removes multiple entries */
+/** deletes all one-fixed variables */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -823,7 +823,7 @@ SCIP_RETCODE applyFixings(
       {
          SCIP_VAR* repvar;
          SCIP_Bool negated;
-         
+
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
@@ -1471,7 +1471,7 @@ SCIP_RETCODE mergeMultiples(
    int nvars;
    int v;
    SCIP_VAR* var;
-   SCIP_Bool* contained;
+   int* contained;
    int nprobvars;
 
    assert(scip != NULL);
@@ -1484,9 +1484,9 @@ SCIP_RETCODE mergeMultiples(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* first merge nonlinear parts */ 
+   /* nothing to merge */
    if( consdata->nvars <= 1 )
-   { 
+   {
       consdata->merged = TRUE;
       return SCIP_OKAY;
    }
@@ -1497,18 +1497,34 @@ SCIP_RETCODE mergeMultiples(
    assert(vars != NULL);
    assert(nvars >= 2);
 
-   /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
-    * variables, 
-    * @note don't reorder variables because we would loose the watched variables and filter position inforamtion
-    */
    nprobvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &contained, nprobvars) );
    BMSclearMemoryArray(contained, nprobvars);
-   var = NULL;
+
+   /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
+    * variables
+    * @note don't reorder variables because we would loose the watched variables and filter position inforamtion
+    */
    for( v = nvars - 1; v >= 0; --v )
    {
-      assert(vars[v] != NULL);
-      if( vars[v] == var )
+      SCIP_VAR* probvar;
+      int probidx;
+
+      var = vars[v];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var) || (SCIPvarIsNegated(var) && SCIPvarIsActive(SCIPvarGetNegatedVar(var))));
+
+      probvar = (SCIPvarIsActive(var) ? var : SCIPvarGetNegatedVar(var));
+      assert(probvar != NULL);
+
+      probidx = SCIPvarGetProbindex(probvar);
+      assert(0 <= probidx && probidx < nprobvars);
+
+      if( contained[probidx] == 0 )
+      {
+	 contained[probidx] = (SCIPvarIsActive(var) ? 1 : -1);
+      }
+      else if( (contained[probidx] == 1 && SCIPvarIsActive(var)) || (contained[probidx] == -1 && !SCIPvarIsActive(var)) )
       {
          /* delete the multiple variable */
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
@@ -1516,40 +1532,31 @@ SCIP_RETCODE mergeMultiples(
       }
       else
       {
-         SCIP_VAR* probvar;
-         int probidx;
- 
-         /* we found a new variable */
-         var = vars[v];
-         probvar = SCIPvarGetProbvar(var);
-         probidx = SCIPvarGetProbindex(probvar);
-         assert(0 <= probidx && probidx < nprobvars);
-         if( contained[probidx] )
-         {
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
- 
-            SCIPdebugMessage("and constraint <%s>: variable <%s> and its negation are present -> fix <%s> = 0\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(consdata->resvar));
- 
-            /* negation of the variable is already present in the constraint: fix resultant to zero */
+	 SCIP_Bool infeasible;
+	 SCIP_Bool fixed;
+
+	 assert((contained[probidx] == 1 && !SCIPvarIsActive(var)) || (contained[probidx] == -1 && SCIPvarIsActive(var)));
+
+	 SCIPdebugMessage("and constraint <%s>: variable <%s> and its negation are present -> fix resultant <%s> = 0\n",
+	    SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(consdata->resvar));
+
+	 /* negation of the variable is already present in the constraint: fix resultant to zero */
 #ifndef NDEBUG
-            {
-               int i;
-               for( i = consdata->nvars - 1; i > v && var != SCIPvarGetNegatedVar(vars[i]); --i )
-               {}
-               assert(i > v);
-            }
+	 {
+	    int i;
+	    for( i = consdata->nvars - 1; i > v && var != SCIPvarGetNegatedVar(vars[i]); --i )
+	    {}
+	    assert(i > v);
+	 }
 #endif
-            SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
-            assert(!infeasible);
-            if( fixed )
-	       ++(*nfixedvars);
- 
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            break;
-         }
-         contained[probidx] = TRUE;
+
+	 SCIP_CALL( SCIPfixVar(scip, consdata->resvar, 0.0, &infeasible, &fixed) );
+	 assert(!infeasible);
+	 if( fixed )
+	    ++(*nfixedvars);
+
+	 SCIP_CALL( SCIPdelCons(scip, cons) );
+	 break;
       }
    }
    SCIPfreeBufferArray(scip, &contained);
