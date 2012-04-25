@@ -4892,14 +4892,19 @@ SCIP_RETCODE SCIPincludeReaderFzn(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create fzn reader data */
    SCIP_CALL( readerdataCreate(scip, &readerdata) );
 
-   /* include fzn reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFzn, readerFreeFzn, readerReadFzn, readerWriteFzn,
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyFzn) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeFzn) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadFzn) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteFzn) );
 
    return SCIP_OKAY;
 }

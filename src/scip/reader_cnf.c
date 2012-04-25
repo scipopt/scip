@@ -425,15 +425,17 @@ SCIP_RETCODE SCIPincludeReaderCnf(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create cnf reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include cnf reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCnf,
-         readerFreeCnf, readerReadCnf, readerWriteCnf, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCnf) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCnf) );
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

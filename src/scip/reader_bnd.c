@@ -245,14 +245,19 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create bnd reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include bnd reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyBnd, readerFreeBnd, readerReadBnd, readerWriteBnd,
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyBnd) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeBnd) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBnd) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteBnd) );
 
    return SCIP_OKAY;
 }
