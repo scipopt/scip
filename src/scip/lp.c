@@ -4725,6 +4725,7 @@ SCIP_RETCODE rowScale(
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
     * to not destroy feasibility due to rounding
     */
+   /**@todo ensure that returned cut does not have infinite lhs and rhs */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
       if( mindeltainf )
@@ -17326,7 +17327,7 @@ void SCIPlpMarkDivingObjChanged(
  *        \max & y &\\
  *             & <A_i, x> - y ||A_i|| - \alpha a_i \geq 0 \\
  *             & <B_i, x> + y ||B_i|| - \alpha b_i \leq 0 \\
- *             & D x & = d\\
+ *             & D x - \alpha d & = 0\\
  *             & 0 \leq y & \leq 1\\
  *             & \alpha & \geq 1.
  *     \end{array}
@@ -17443,7 +17444,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    }
    else
    {
-      /* for one-norm, we need one for every inequality */
+      /* for one-norm, we need one slack variable for every inequality */
 
       /* create slacks for rows */
       for( i = 0; i < lp->nrows; ++i )
@@ -17505,6 +17506,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
          col = lp->cols[j];
          assert( col != NULL );
+
+         /* no slacks for fixed variables */
+         if( SCIPsetIsEQ(set, col->lb, col->ub) )
+            continue;
 
          /* add slacks for each bound if necessary */
          if( !SCIPsetIsInfinity(set, ABS(col->lb)) )
@@ -17718,6 +17723,19 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       /* set up index of column */
       colinds[0] = j;
       colvals[0] = 1.0;
+
+      /* fixed variable */
+      if( SCIPsetIsEQ(set, col->lb, col->ub) )
+      {
+         /* add artificial variable */
+         colinds[1] = lp->ncols;
+         colvals[1] = -col->lb;
+
+         /* add row */
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, 2, &beg, colinds, colvals) );
+
+         continue;
+      }
 
       /* lower bound */
       if( !SCIPsetIsInfinity(set, ABS(col->lb)) )

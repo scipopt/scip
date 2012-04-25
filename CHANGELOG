@@ -62,6 +62,7 @@ interface
 - method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
 - since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
   changes; see pub_message.h and type_message.h.
+- new NLPI callback SCIP_DECL_NLPISETMESSAGEHDLR() to set message handler in NLP solver interfaces
 - removed SCIPparamSetBool(), please use SCIPchgBoolParam()
 - removed SCIPparamSetInt(), please use SCIPchgIntParam()
 - removed SCIPparamSetLongint(), please use SCIPchgLongintParam()
@@ -223,6 +224,7 @@ fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
   segmentation fault
 - fixed bug in cons_xor.c which did not copy the artificial integer variable (used for the lp relaxation)
+- fixed bug in sepa_rapidlearning, carrying on the optimization process, when already solved
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

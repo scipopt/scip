@@ -3187,6 +3187,22 @@ SCIP_RETCODE propAndSolve(
    return SCIP_OKAY;
 }
 
+/** check if a restart can be performed */
+#ifndef NDEBUG
+static
+SCIP_Bool restartAllowed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+)
+{
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   return (set->nactivepricers == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts));
+}
+#else
+#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts))
+#endif
 
 /** solves the focus node */
 static
@@ -3650,11 +3666,9 @@ SCIP_RETCODE solveNode(
       }
 
       /* check for immediate restart */
-      *restart = *restart 
-         || (actdepth == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-            && (stat->userrestart 
-               || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
-                  && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+      *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
+	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
       SCIPdebugMessage("node solving iteration %d finished: cutoff=%u, propagateagain=%u, solverelaxagain=%u, solvelpagain=%u, nlperrors=%d, restart=%u\n",
          nloops, *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -3676,11 +3690,9 @@ SCIP_RETCODE solveNode(
    restartfac = set->presol_subrestartfac;
    if( actdepth == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
-   *restart = *restart
-      || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-         && (stat->userrestart || 
-            (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-               && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+   *restart = *restart || (restartAllowed(set, stat) && (stat->userrestart
+	 || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
+	    && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
@@ -3696,9 +3708,8 @@ SCIP_RETCODE solveNode(
       SCIPdebugMessage("node is cut off\n");
       SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
       *infeasible = TRUE;
-      *restart = FALSE;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3830,10 +3841,9 @@ SCIP_RETCODE SCIPsolveCIP(
    restartfac = set->presol_subrestartfac;
    if( SCIPtreeGetCurrentDepth(tree) == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
-   *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-      && (stat->userrestart
-         || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-            && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
+   *restart = restartAllowed(set, stat) && (stat->userrestart
+      || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
+	 && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
 
    /* calculate the number of successful conflict analysis calls that should trigger a restart */
    if( set->conf_restartnum > 0 )
@@ -4050,19 +4060,27 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
       }
-         
-      /* trigger restart due to conflicts */
+
+      /* compute number of successfully applied conflicts */
       nsuccessconflicts = SCIPconflictGetNPropSuccess(conflict) + SCIPconflictGetNInfeasibleLPSuccess(conflict)
          + SCIPconflictGetNBoundexceedingLPSuccess(conflict) + SCIPconflictGetNStrongbranchSuccess(conflict)
          + SCIPconflictGetNPseudoSuccess(conflict);
-      if( nsuccessconflicts >= restartconfnum && set->nactivepricers == 0 )
+
+      /* trigger restart due to conflicts and the restart parameters allow another restart */
+      if( nsuccessconflicts >= restartconfnum && restartAllowed(set, stat) )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %"SCIP_LONGINT_FORMAT" successful conflict analysis calls\n",
             stat->nruns, stat->nnodes, nsuccessconflicts);
          *restart = TRUE;
+
          stat->nconfrestarts++;
       }
+
+      /* restart if the userrestart was set to true, we have still some nodes left and the restart parameters allow
+       * another restart
+       */
+      *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
 
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
@@ -4073,7 +4091,7 @@ SCIP_RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   SCIPdebugMessage("Problem solving finished with status %u (restart=%u)\n", stat->status, *restart);
+   SCIPdebugMessage("Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit

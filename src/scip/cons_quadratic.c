@@ -11009,12 +11009,54 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    return SCIP_OKAY;
 }
 
-
 /** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsQuadratic NULL
+static
+SCIP_DECL_CONSGETVARS(consGetVarsQuadratic)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nlinvars + consdata->nquadvars )
+      (*success) = FALSE;
+   else
+   {
+      int i;
+
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->linvars, consdata->nlinvars);
+
+      for( i = 0; i < consdata->nquadvars; ++i )
+         vars[consdata->nlinvars+i] = consdata->quadvarterms[i].var;
+
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsQuadratic NULL
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsQuadratic)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nlinvars + consdata->nquadvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*

@@ -10183,11 +10183,14 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    return SCIP_OKAY;
 }
 
-/** counts how often variables are used in a subtree of the expression graph */
+/** counts how often expression graph variables are used in a subtree of the expression graph
+ *
+ * @note The function does not clear the array first, but only increases already existing counts.
+ */
 static
 void exprgraphNodeGetVarsUsage(
    SCIP_EXPRGRAPHNODE*   node,               /**< root node of expression graph subtree */
-   int*                  varsusage           /**< array where to count usage of variables */
+   int*                  varsusage           /**< array where to count usage of variables, length must be at least the number of variables in the graph */
    )
 {
    int i;
@@ -14635,6 +14638,22 @@ SCIP_RETCODE SCIPexprgraphGetSeparableTrees(
    *nexprtrees = ncomponents;
 
    return SCIP_OKAY;
+}
+
+/** returns how often expression graph variables are used in a subtree of the expression graph */
+void SCIPexprgraphGetSubtreeVarsUsage(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< root node of expression graph subtree */
+   int*                  varsusage           /**< array where to count usage of variables, length must be at least the number of variables in the graph */
+   )
+{
+   assert(exprgraph != NULL);
+   assert(node != NULL);
+   assert(varsusage != NULL);
+
+   BMSclearMemoryArray(varsusage, exprgraph->nvars);
+
+   exprgraphNodeGetVarsUsage(node, varsusage);
 }
 
 /** gives the number of summands which the expression of an expression graph node consists of */

@@ -421,7 +421,7 @@ SCIP_RETCODE addLinearConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss  = SCIPconshdlrGetConss(conshdlr);
 
    if( nconss == 0 )
@@ -492,7 +492,7 @@ SCIP_RETCODE addVarboundConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss  = SCIPconshdlrGetConss(conshdlr);
 
    if( nconss == 0 )
@@ -547,7 +547,7 @@ SCIP_RETCODE addLogicOrConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    if( !nconss )
       return SCIP_OKAY;
 
@@ -616,7 +616,7 @@ SCIP_RETCODE addSetppcConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    if( !nconss )
       return SCIP_OKAY;
 
@@ -705,7 +705,7 @@ SCIP_RETCODE addKnapsackConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    if( !nconss )
       return SCIP_OKAY;
 

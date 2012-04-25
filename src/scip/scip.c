@@ -962,11 +962,23 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
 
    scip->messagehdlr = messagehdlr;
+
+   /* update message handler in NLP solver interfaces */
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      assert(scip->set->nlpis[i] != NULL);
+
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -979,9 +991,21 @@ SCIP_RETCODE SCIPsetMessagehdlrFree(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
+
+   /* update message handler in NLP solver interfaces */
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      assert(scip->set->nlpis[i] != NULL);
+
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
+   }
 
    /* free previously installed message handler */
    SCIP_CALL( SCIPmessagehdlrFree(&scip->messagehdlr) );
@@ -4093,6 +4117,9 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
          NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
          paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
+
+   /* pass message handler (may be NULL) */
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, scip->messagehdlr) );
 
    return SCIP_OKAY;
 }
@@ -7850,6 +7877,10 @@ SCIP_RETCODE SCIPsolve(
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   /* if the stage is already SCIP_STAGE_SOLVED do nothing */
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
+
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
    {
@@ -7888,7 +7919,7 @@ SCIP_RETCODE SCIPsolve(
       }
       restart = FALSE;
       scip->stat->userrestart = FALSE;
-      
+
       switch( scip->set->stage )
       {
       case SCIP_STAGE_PROBLEM:
@@ -14424,14 +14455,18 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14442,17 +14477,21 @@ SCIP_RETCODE SCIPenfopsCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfopsCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
 
    SCIP_CALL( SCIPconsEnfops(cons, scip->set, solinfeasible, objinfeasible, result) );
 
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14462,6 +14501,7 @@ SCIP_RETCODE SCIPenfolpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfolpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -14471,7 +14511,11 @@ SCIP_RETCODE SCIPenfolpCons(
    return SCIP_OKAY;
 }
 
-/** calls LP initialization method for single */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
@@ -14479,6 +14523,7 @@ SCIP_RETCODE SCIPinitlpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14487,7 +14532,10 @@ SCIP_RETCODE SCIPinitlpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14505,7 +14553,10 @@ SCIP_RETCODE SCIPsepalpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14525,7 +14576,10 @@ SCIP_RETCODE SCIPsepasolCons(
    return SCIP_OKAY;
 }
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
@@ -14544,7 +14598,11 @@ SCIP_RETCODE SCIPpropCons(
    return SCIP_OKAY;
 }
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
@@ -14558,6 +14616,7 @@ SCIP_RETCODE SCIPrespropCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(infervar != NULL);
    assert(bdchgidx != NULL);
    assert(result != NULL);
@@ -14569,7 +14628,10 @@ SCIP_RETCODE SCIPrespropCons(
    return SCIP_OKAY;
 }
 
-/** presolves of single constraint */
+/** presolves of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to presolve */
@@ -14620,7 +14682,11 @@ SCIP_RETCODE SCIPpresolCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14628,6 +14694,7 @@ SCIP_RETCODE SCIPactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14636,7 +14703,11 @@ SCIP_RETCODE SCIPactiveCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14644,6 +14715,7 @@ SCIP_RETCODE SCIPdeactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPdeactiveCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 

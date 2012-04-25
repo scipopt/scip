@@ -7894,10 +7894,97 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 }
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsNonlinear NULL
+static
+SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nlinvars )
+   {
+      (*success) = FALSE;
+      return SCIP_OKAY;
+   }
+
+   (*success) = TRUE;
+
+   BMScopyMemoryArray(vars, consdata->linvars, consdata->nlinvars);
+
+   if( consdata->exprgraphnode != NULL )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int* varsusage;
+      int i;
+      int cnt;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, SCIPexprgraphGetNVars(conshdlrdata->exprgraph)) );
+
+      SCIPexprgraphGetSubtreeVarsUsage(conshdlrdata->exprgraph, consdata->exprgraphnode, varsusage);
+
+      cnt = consdata->nlinvars;
+      for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
+      {
+         if( varsusage[i] == 0 )
+            continue;
+
+         if( cnt >= varssize )
+         {
+            (*success) = FALSE;
+            break;
+         }
+
+         vars[cnt] = SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
+         ++cnt;
+      }
+
+      SCIPfreeBufferArray(scip, &varsusage);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsNonlinear NULL
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nlinvars;
+
+   if( consdata->exprgraphnode != NULL )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int* varsusage;
+      int i;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, SCIPexprgraphGetNVars(conshdlrdata->exprgraph)) );
+
+      SCIPexprgraphGetSubtreeVarsUsage(conshdlrdata->exprgraph, consdata->exprgraphnode, varsusage);
+
+      for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
+         if( varsusage[i] > 0 )
+            ++(*nvars);
+   }
+
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * constraint specific interface methods
  */

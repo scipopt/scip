@@ -74,6 +74,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
+   SCIP_DECL_NLPISETMESSAGEHDLR    ((*nlpisetmessagehdlr)),     /**< set message handler */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
@@ -401,6 +402,13 @@ SCIP_RETCODE SCIPnlpiSetStringPar(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */
+   );
+
+/** sets message handler for message output */
+extern
+SCIP_RETCODE SCIPnlpiSetMessageHdlr(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< pointer to message handler, or NULL to suppress all output */
    );
 
 /** gets data of an NLPI */

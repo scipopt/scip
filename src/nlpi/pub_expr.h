@@ -1408,6 +1408,14 @@ SCIP_RETCODE SCIPexprgraphGetSeparableTrees(
    SCIP_Real*            exprtreecoefs       /**< array where to store coefficients of expression trees */
    );
 
+/** returns how often expression graph variables are used in a subtree of the expression graph */
+extern
+void SCIPexprgraphGetSubtreeVarsUsage(
+   SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
+   SCIP_EXPRGRAPHNODE*   node,               /**< root node of expression graph subtree */
+   int*                  varsusage           /**< array where to count usage of variables, length must be at least the number of variables in the graph */
+   );
+
 /** gives the number of summands which the expression of an expression graph node consists of */
 extern
 int SCIPexprgraphGetSumTreesNSummands(

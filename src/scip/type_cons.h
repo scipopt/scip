@@ -755,7 +755,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the variables which are
- *  involved in that particular constraint. If this not possible, the variables should be copyied into the variables
+ *  involved in that particular constraint. If this is possible, the variables should be copyied into the variables
  *  array and the success pointers has to be set to TRUE. Otherwise the success has to be set FALSE or the callback
  *  should not be implemented.
  *
@@ -775,7 +775,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the number of variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the number variable which are
- *  involved in that particular constraint. If this not possible, the success pointers has to be set to FALSE or the
+ *  involved in that particular constraint. If this is not possible, the success pointers has to be set to FALSE or the
  *  callback should not be implemented.
  *
  *  input:

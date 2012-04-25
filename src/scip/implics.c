@@ -934,7 +934,6 @@ SCIP_RETCODE SCIPimplicsDel(
    SCIP_BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    )
 {
-   int i;
    int poslower;
    int posupper; 
    int posadd;
@@ -965,13 +964,16 @@ SCIP_RETCODE SCIPimplicsDel(
    assert((*implics)->types[varfixing][posadd] == impltype);
 
    /* removes y from implications of x */
-   for( i = posadd; i < (*implics)->nimpls[varfixing] - 1; i++ )
+   if( (*implics)->nimpls[varfixing] - posadd > 1 )
    {
-      (*implics)->vars[varfixing][i] = (*implics)->vars[varfixing][i+1];
-      (*implics)->types[varfixing][i] = (*implics)->types[varfixing][i+1];
-      (*implics)->bounds[varfixing][i] = (*implics)->bounds[varfixing][i+1];
+      int amount = ((*implics)->nimpls[varfixing] - posadd - 1);
+
+      BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd]), &((*implics)->types[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd]), &((*implics)->vars[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd]), &((*implics)->bounds[varfixing][posadd+1]), amount); /*lint !e866*/
    }
    (*implics)->nimpls[varfixing]--;
+
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       assert(posadd < (*implics)->nbinimpls[varfixing]);
