@@ -4475,11 +4475,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   if ( isinfeasible || isunbounded )
+   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
    SCIPdebugMessage("Initpre method for indicator constraints.\n");

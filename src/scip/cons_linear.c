@@ -4010,7 +4010,9 @@ static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected */
+   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected; or NULL if this
+                                              *   information is not needed; in this case, we apply all fixings
+                                              *   instead of stopping after the first infeasible one */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4026,9 +4028,9 @@ SCIP_RETCODE applyFixings(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(infeasible != NULL);
 
-   *infeasible = FALSE;
+   if( infeasible != NULL )
+      *infeasible = FALSE;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4076,9 +4078,16 @@ SCIP_RETCODE applyFixings(
                   }
                   else
                   {
-                     /* if lhs gets infinity it means that the problem is infeasible */
-                     *infeasible = TRUE;
-                     return SCIP_OKAY;
+                     if( infeasible != NULL )
+                     {
+                        /* if lhs gets infinity it means that the problem is infeasible */
+                        *infeasible = TRUE;
+                        return SCIP_OKAY;
+                     }
+                     else
+                     {
+                        SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+                     }
                   }
                }
                else
@@ -4090,9 +4099,16 @@ SCIP_RETCODE applyFixings(
                {
                   if( val * fixedval > 0.0 )
                   {
-                     /* if rhs gets -infinity it means that the problem is infeasible */
-                     *infeasible = TRUE;
-                     return SCIP_OKAY;
+                     if( infeasible != NULL )
+                     {
+                        /* if rhs gets -infinity it means that the problem is infeasible */
+                        *infeasible = TRUE;
+                        return SCIP_OKAY;
+                     }
+                     else
+                     {
+                        SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+                     }
                   }
                   else
                   {
@@ -4168,7 +4184,7 @@ SCIP_RETCODE applyFixings(
          }
       }
       
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->lhs) )
       {
          /** for large numbers that are relatively equal, substraction can lead to cancellation,
           *  causing wrong fixings of other variables --> better use a real zero here;
@@ -4184,7 +4200,7 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
          }
       }
-      if( !SCIPisInfinity(scip, consdata->rhs) )
+      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->rhs))
       {
 
          /** for large numbers that are relatively equal, substraction can lead to cancellation,
@@ -9770,32 +9786,25 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
     * make sure, only active variables remain in the remaining constraints
     */
    assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
-      SCIP_Bool infeasible;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       if( consdata->upgraded )
       {
+         /* this is no problem reduction, because the upgraded constraint was added to the problem before, and the
+          * (redundant) linear constraint was only kept in order to support presolving the the linear constriant handler
+          */
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
       }
       else
       {
-         SCIP_CALL( applyFixings(scip, conss[c], &infeasible) );
-
-         if( infeasible )
-         {
-            SCIPdebugMessage(" -> infeasible fixing\n");
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
+         /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
+         SCIP_CALL( applyFixings(scip, conss[c], NULL) );
       }
    }
 

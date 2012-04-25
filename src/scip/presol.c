@@ -270,17 +270,11 @@ SCIP_RETCODE SCIPpresolExit(
 /** informs presolver that the presolving process is being started */
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    presol->lastnfixedvars = 0;
    presol->lastnaggrvars = 0;
@@ -300,20 +294,10 @@ SCIP_RETCODE SCIPpresolInitpre(
       /* start timing */
       SCIPclockStart(presol->setuptime, set);
 
-      SCIP_CALL( presol->presolinitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+      SCIP_CALL( presol->presolinitpre(set->scip, presol) );
 
       /* stop timing */
       SCIPclockStop(presol->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving initialization method of presolver <%s> returned invalid result <%d>\n", 
-            presol->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;
@@ -322,17 +306,11 @@ SCIP_RETCODE SCIPpresolInitpre(
 /** informs presolver that the presolving process is finished */
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
@@ -340,18 +318,10 @@ SCIP_RETCODE SCIPpresolExitpre(
       /* start timing */
       SCIPclockStart(presol->setuptime, set);
 
-      SCIP_CALL( presol->presolexitpre(set->scip, presol, isunbounded, isinfeasible, result) );
+      SCIP_CALL( presol->presolexitpre(set->scip, presol) );
 
       /* stop timing */
       SCIPclockStop(presol->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF && *result != SCIP_UNBOUNDED && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
-            presol->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;

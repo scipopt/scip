@@ -1256,7 +1256,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
 
-   /* free row - if still necessary */
+   /* free row */
    if ( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );

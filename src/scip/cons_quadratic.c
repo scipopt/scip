@@ -9121,8 +9121,6 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
-
    return SCIP_OKAY;
 }
 #endif
@@ -9140,8 +9138,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-   *result = SCIP_FEASIBLE;
 
    for( c = 0; c < nconss; ++c )
    {

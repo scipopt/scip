@@ -18,6 +18,8 @@
  * @author Stefan Vigerske
  */
 
+/**@todo do not add varbounds to cutpool but create varbound constraints with appropriate flags */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -5040,9 +5042,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* tell SCIP that we have something nonlinear, and whether we are nonlinear in a continuous variable */
    for( c = 0; c < nconss; ++c )
@@ -6745,7 +6744,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addvarbounds",
          "should variable bounds be added to the cutpool?",
-         &conshdlrdata->addvarbounds, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->addvarbounds, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting the linear variable z",

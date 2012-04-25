@@ -340,17 +340,11 @@ SCIP_RETCODE SCIPpropExit(
 /** informs propagator that the presolving process is being started */
 SCIP_RETCODE SCIPpropInitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prop != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    prop->lastnfixedvars = 0;
    prop->lastnaggrvars = 0;
@@ -371,20 +365,10 @@ SCIP_RETCODE SCIPpropInitpre(
       /* start timing */
       SCIPclockStart(prop->setuptime, set);
 
-      SCIP_CALL( prop->propinitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+      SCIP_CALL( prop->propinitpre(set->scip, prop) );
 
       /* stop timing */
       SCIPclockStop(prop->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving initialization method of propagator <%s> returned invalid result <%d>\n", 
-            prop->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;
@@ -393,17 +377,11 @@ SCIP_RETCODE SCIPpropInitpre(
 /** informs propagator that the presolving process is finished */
 SCIP_RETCODE SCIPpropExitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(prop != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* call presolving deinitialization method of propagator */
    if( prop->propexitpre != NULL )
@@ -411,20 +389,10 @@ SCIP_RETCODE SCIPpropExitpre(
       /* start timing */
       SCIPclockStart(prop->setuptime, set);
 
-      SCIP_CALL( prop->propexitpre(set->scip, prop, isunbounded, isinfeasible, result) );
+      SCIP_CALL( prop->propexitpre(set->scip, prop) );
 
       /* stop timing */
       SCIPclockStop(prop->setuptime, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving deinitialization method of propagator <%s> returned invalid result <%d>\n", 
-            prop->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    return SCIP_OKAY;
@@ -457,7 +425,8 @@ SCIP_RETCODE SCIPpropInitsol(
 /** informs propagator that the prop and bound process data is being freed */
 SCIP_RETCODE SCIPpropExitsol(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
 {
    assert(prop != NULL);
@@ -469,7 +438,7 @@ SCIP_RETCODE SCIPpropExitsol(
       /* start timing */
       SCIPclockStart(prop->setuptime, set);
 
-      SCIP_CALL( prop->propexitsol(set->scip, prop) );
+      SCIP_CALL( prop->propexitsol(set->scip, prop, restart) );
 
       /* stop timing */
       SCIPclockStop(prop->setuptime, set);

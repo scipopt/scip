@@ -5601,12 +5601,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    if( !conshdlrdata->isremovedfixings )
    {

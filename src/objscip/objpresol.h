@@ -126,10 +126,6 @@ public:
     */
    virtual SCIP_DECL_PRESOLINITPRE(scip_initpre)
    {  /*lint --e{715}*/
-      assert(result != NULL);
-
-      *result = SCIP_FEASIBLE;
-
       return SCIP_OKAY;
    }
 
@@ -139,10 +135,6 @@ public:
     */
    virtual SCIP_DECL_PRESOLEXITPRE(scip_exitpre)
    {  /*lint --e{715}*/
-      assert(result != NULL);
-
-      *result = SCIP_FEASIBLE;
-
       return SCIP_OKAY;
    }
 

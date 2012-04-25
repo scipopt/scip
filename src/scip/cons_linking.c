@@ -1641,18 +1641,20 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
-   
    /* disable all linking constraints which contain at most one binary variable */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      
+
+      /* skip constraints which are not added */
+      if( !SCIPconsIsAdded(conss[c]) )
+         continue;
+
       if( consdata->nbinvars <= 1 )
       {
          SCIP_CALL( SCIPdisableCons(scip, conss[c]) );
@@ -1662,9 +1664,9 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
       {
          SCIP_CALL( consdataLinearize(scip, conss[c], consdata) );
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-      } 
+      }
    }
-   
+
    return SCIP_OKAY;
 }
 

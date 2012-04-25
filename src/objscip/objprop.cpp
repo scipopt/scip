@@ -145,7 +145,7 @@ SCIP_DECL_PROPINITPRE(propInitpreObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop, isunbounded, isinfeasible, result) );
+   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -162,7 +162,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop, isunbounded, isinfeasible, result) );
+   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -196,7 +196,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop, restart) );
 
    return SCIP_OKAY;
 }

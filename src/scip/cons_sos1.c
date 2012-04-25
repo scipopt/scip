@@ -1163,7 +1163,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       /* free row */
       if ( consdata->row != NULL )
+      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -1204,7 +1206,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
    {
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
-   /* free row - if still necessary */
+
+   /* free row */
    if ( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
@@ -1991,6 +1994,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
 
    return SCIP_OKAY;
 }
+
 
 /* ---------------- Callback methods of event handler ---------------- */
 

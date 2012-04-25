@@ -95,62 +95,59 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** presolving initialization method of constraint handler (called when presolving is about to begin)
  *
  *  This method is called when the presolving process is about to begin, even if presolving is turned off.
- *  The constraint handler may use this call to initialize its presolving data, or to modify its constraints
- *  before the presolving process begins.
- *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
- *  or in the presolving deinitialization call.
+ *  The constraint handler may use this call to initialize its data structures.
+ *
+ *  Necessary modifications that have to be performed even if presolving is turned off should be done here or in the
+ *  presolving deinitialization call (SCIP_DECL_CONSEXITPRE()).
+ *
+ *  @note Note that the constraint array might contain constraints that were created but not added to the problem.
+ *        Constraints that are not added, i.e., for which SCIPconsIsAdded() returns FALSE, cannot be used for problem
+ *        reductions.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
-      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished)
  *
  *  This method is called after the presolving has been finished, even if presolving is turned off.
- *  The constraint handler may use this call e.g. to clean up its presolving data, or to finally modify its constraints
- *  before the branch and bound process begins.
- *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
- *  or in the presolving initialization call.
- *  Besides necessary modifications and clean up, no time consuming operations should be done.
+ *  The constraint handler may use this call e.g. to clean up or modify its data structures.
+ *
+ *  Necessary modifications that have to be performed even if presolving is turned off should be done here or in the
+ *  presolving initialization call (SCIP_DECL_CONSINITPRE()).
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
+ *
+ *  @note Note that the constraint array might contain constraints that were created but not added to the problem.
+ *        Constraints that are not added, i.e., for which SCIPconsIsAdded() returns FALSE, cannot be used for problem
+ *        reductions.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - conss           : final array of constraints in transformed problem
  *  - nconss          : final number of constraints in transformed problem
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, \
-      SCIP_Bool isunbounded, SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
  *  The constraint handler may use this call to initialize its branch and bound specific data.
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
+ *
+ *  @note Note that the constraint array might contain constraints that were created but not added to the problem.
+ *        Constraints that are not added, i.e., for which SCIPconsIsAdded() returns FALSE, cannot be used for problem
+ *        reductions.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -177,8 +174,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** frees specific constraint data
  *
- *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
- *  the corresponding bound change event was not yet processed.
+ *  @warning There may exist unprocessed events. For example, a variable's bound may have been already changed, but the
+ *           corresponding bound change event was not yet processed.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -454,6 +451,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nupgdconss      : pointer to count total number of upgraded constraints of all presolvers
  *  - nchgcoefs       : pointer to count total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to count total number of changed left/right hand sides of all presolvers
+ *
+ *  @todo: implement a final round of presolving after SCIPisPresolveFinished(),
+ *         therefore, duplicate counters to a "relevant for finishing presolve" version
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call

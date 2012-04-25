@@ -2502,8 +2502,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
-
    /* decompose all pseudo boolean constraints into a "linear" constraint and "and" constraints */
    if( conshdlrdata->decompose )
    {
@@ -2526,6 +2524,10 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
          cons = conss[c];
          assert(cons != NULL);
+
+	 /* only added constraints can be upgraded */
+	 if( !SCIPconsIsAdded(cons) )
+	    continue;
 
          consdata = SCIPconsGetData(cons);
          assert(consdata != NULL);

@@ -10445,12 +10445,9 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int nvars;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( nconss == 0 || conss != NULL );
-   assert( result != NULL );
-
-   *result = SCIP_FEASIBLE;
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(nconss == 0 || conss != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10494,9 +10491,9 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10518,8 +10515,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    conshdlrdata->bools2size = 0;
    conshdlrdata->bools3size = 0;
    conshdlrdata->bools4size = 0;
-
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }

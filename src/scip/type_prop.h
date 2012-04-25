@@ -75,50 +75,38 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  This method is called when the presolving process is about to begin, even if presolving is turned off.  The
  *  propagator may use this call to initialize its presolving data, before the presolving process begins.
  *
+ *  Necessary modifications that have to be performed even if presolving is turned off should be done here or in the
+ *  presolving deinitialization call (SCIP_DECL_PROPEXITPRE()).
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool isunbounded, \
-      SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_PROPINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** presolving deinitialization method of propagator (called after presolving has been finished)
  *
  *  This method is called after the presolving has been finished, even if presolving is turned off.
- *  The propagator may use this call e.g. to clean up its presolving data, before the branch and bound process begins.
- *  Besides necessary modifications and clean up, no time consuming operations should be done.
+ *  The propagator may use this call e.g. to clean up its presolving data.
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
- *  - isunbounded     : was the problem already declared to be unbounded
- *  - isinfeasible    : was the problem already declared to be infeasible
- *
- *  output:
- *  - result          : pointer to store the result of the call
- *
- *  possible return values for *result:
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundedness could be found
  */
-#define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool isunbounded, \
-      SCIP_Bool isinfeasible, SCIP_RESULT* result)
+#define SCIP_DECL_PROPEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
  *  The propagator may use this call to initialize its branch and bound specific data.
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -134,8 +122,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  input:
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
+ *  - restart         : was this exit solve call triggered by a restart?
  */
-#define SCIP_DECL_PROPEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
+#define SCIP_DECL_PROPEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_Bool restart)
 
 /** presolving method of propagator
  *

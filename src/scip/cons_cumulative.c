@@ -7128,8 +7128,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreCumulative NULL
 #endif
 
 

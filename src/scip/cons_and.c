@@ -3383,13 +3383,10 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( nconss == 0 || conss != NULL );
-   assert( result != NULL );
-
-   *result = SCIP_FEASIBLE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   
+
    if( conshdlrdata->linearize )
    {
       /* linearize all "and" constraints  and remove the "and" constraints */
@@ -3397,53 +3394,58 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       char consname[SCIP_MAXSTRLEN];
-      
+
       SCIP_VAR** vars;
       SCIP_Real* vals;
-      
+
       int nvars;
       int c, v;
-      
-      /* alloc buffer array */
+
+      /* allocate buffer array */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
-      
+
       for( c = 0; c < nconss; ++c )
       {
          cons = conss[c];
          assert( cons != NULL );
-         
+
+	 /* only added constraints can be upgraded */
+	 if( !SCIPconsIsAdded(cons) )
+	    continue;
+
          consdata = SCIPconsGetData(cons);
          assert( consdata != NULL );
          assert( consdata->resvar != NULL );
-         
+
          nvars = consdata->nvars;
-         
+
          if( !conshdlrdata->aggrlinearization )
          {
             vars[0] = consdata->resvar;
             vals[0] = 1.0;
             vals[1] = -1.0;
-         
+
             /* create operator linear constraints */
             for( v = 0; v < nvars; ++v )
             {
                (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), v);
                vars[1] = consdata->vars[v];
-            
+
                SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
-               
+
+
                /* add constraint */
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
          }
-         
-         /* realloc  buffer array */
+
+         /* reallocate buffer array */
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvars + 1) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvars + 1) );
 
@@ -3452,7 +3454,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
             vars[v] = consdata->vars[v];
             vals[v] = -1.0;
          }
-         
+
          vars[nvars] = consdata->resvar;
 
          if( conshdlrdata->aggrlinearization )
@@ -3483,20 +3485,20 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                SCIPconsIsStickingAtNode(cons)) );
-         
+
          /* add constraint */
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         
+
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
       }
-      
+
       /* free buffer array */
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals);
    }
-   
+
    return SCIP_OKAY;
 }
 

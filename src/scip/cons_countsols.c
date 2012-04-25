@@ -1493,8 +1493,6 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING );
-
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 

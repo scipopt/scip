@@ -136,6 +136,7 @@ interface
 - removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
 - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
 - new method SCIPhaveVarsCommonClique() in scip.{h,c}, to check for common clique information on two given variables
+- forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

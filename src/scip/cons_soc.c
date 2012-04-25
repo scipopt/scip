@@ -3084,9 +3084,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* tell SCIP that we have something nonlinear */
    for( c = 0; c < nconss; ++c )

@@ -1753,16 +1753,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
-   SCIP_CONSDATA* consdata;
    SCIP_Bool redundant;
    int c;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1772,8 +1768,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    {
       cons = conss[c];
       assert(cons != NULL);
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       SCIPdebugMessage("exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -1786,18 +1780,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
          SCIP_CALL( removeFixedVariables(scip, cons, conshdlrdata->eventhdlr, &redundant) );
       }
 
-      if( redundant )
+      if( redundant && SCIPconsIsAdded(cons) )
       {
          SCIPdebugMessage("bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
-         continue;
-      }
-      else if( !SCIPconsIsModifiable(cons) && consdata->nvars == 0 )
-      {
-         /* if unmodifiable constraint has no variables, it is infeasible */
-         SCIPdebugMessage("bound disjunction constraint <%s> is infeasible\n", SCIPconsGetName(cons));
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
       }
    }
 
