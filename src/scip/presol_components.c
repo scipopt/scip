@@ -542,11 +542,40 @@ SCIP_RETCODE fillDigraph(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nvars) );
       }
 
+#ifndef NDEBUG
+      /* clearing variables array to check for consistency */
+      if( nconsvars == nvars )
+      {
+	 BMSclearMemoryArray(consvars, nconsvars);
+      }
+      else
+      {
+	 assert(nconsvars < nvars);
+	 BMSclearMemoryArray(consvars, nconsvars + 1);
+      }
+#endif
+
       /* get variables for this constraint */
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, success) );
 
       if( !(*success) )
+      {
+#ifndef NDEBUG
+	 /* it looks strange if returning the number of variables was successful but not returning the variables */
+	 SCIPwarningMessage(scip, "constraint <%> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
+#endif
          break;
+      }
+
+#ifndef NDEBUG
+      /* check if returned variables are consistent with the number of variables that were returned */
+      for( v = nconsvars - 1; v >= 0; --v )
+	 assert(consvars[v] != NULL);
+      if( nconsvars < nvars )
+      {
+	 assert(consvars[nconsvars] == NULL);
+      }
+#endif
 
       /* transform given variables to active variables */
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
