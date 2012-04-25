@@ -1599,6 +1599,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
    
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
@@ -1607,11 +1608,17 @@ SCIP_RETCODE SCIPincludePropVbounds(
    resetPropdata(propdata);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyVbounds,
-         propFreeVbounds, propInitVbounds, propExitVbounds, propInitpreVbounds, propExitpreVbounds, 
-         propInitsolVbounds, propExitsolVbounds, propPresolVbounds, propExecVbounds, propRespropVbounds,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecVbounds, propRespropVbounds,
          propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyVbounds) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeVbounds) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolVbounds) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
 
    /* include event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,

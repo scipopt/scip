@@ -317,17 +317,22 @@ SCIP_RETCODE SCIPincludePropRedcost(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create redcost propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyRedcost,
-         propFreeRedcost, propInitRedcost, propExitRedcost, propInitpreRedcost, propExitpreRedcost,
-         propInitsolRedcost, propExitsolRedcost, propPresolRedcost, propExecRedcost, propRespropRedcost,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecRedcost, propRespropRedcost,
          propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyRedcost) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeRedcost) );
 
    /* add redcost propagator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
