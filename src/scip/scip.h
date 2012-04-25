@@ -4814,9 +4814,9 @@ SCIP_RETCODE SCIPrespropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** presolves of single constraint
+/** presolves a single constraint
  *
- *@note This is an advanced method and should be used with caution.
+ *  @note This is an advanced method and should be used with caution.
  */
 extern
 SCIP_RETCODE SCIPpresolCons(

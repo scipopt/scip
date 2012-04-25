@@ -3358,56 +3358,56 @@ void SCIPstairmapPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** insert a core into stair map; if core is non-empty the stair map will be updated otherwise nothing happens */
+/** insert a stair into stair map; if stair is non-empty the stair map will be updated otherwise nothing happens */
 extern
-void SCIPstairmapInsertCore(
+void SCIPstairmapInsertStair(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the core  */
-   int                   right,              /**< right side of the core */
-   int                   height,             /**< height of the core */
-   SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer to store if the stair does not fit due to capacity */
    );
 
-/** subtracts the height from the stair map during core time */
+/** subtracts the height from the stair map during stair time */
 extern
-void SCIPstairmapDeleteCore(
+void SCIPstairmapDeleteStair(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the core  */
-   int                   right,              /**< right side of the core */
-   int                   height              /**< height of the core */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height              /**< height of the stair */
    );
 
-/** returns the time point at the given position */   
+/** returns the time point at the given position */
 extern
 int SCIPstairmapGetTimepoint(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
    int                   pos                 /**< position */
    );
 
-/** returns TRUE if the core  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
+/** returns TRUE if the stair  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
 extern
 SCIP_Bool SCIPstairmapIsFeasibleStart(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
    int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   int*                  pos                 /**< pointer to store the earliest position where the stair does not fit */
    );
 
-/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
+/** return the earliest possible starting point within the time interval [lb,ub] for a given stair (given by its height
  *  and duration)
  */
 extern
 int SCIPstairmapGetEarliestFeasibleStart(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest starting time of the given core */
-   int                   ub,                 /**< latest starting time of the given core */
-   int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
+   int                   lb,                 /**< earliest starting time of the given stair */
+   int                   ub,                 /**< latest starting time of the given stair */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
    );
 
-/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
+/** return the latest possible starting point within the time interval [lb,ub] for a given stair (given by its height and
  *  duration)
  */
 extern
@@ -3415,9 +3415,9 @@ int SCIPstairmapGetLatestFeasibleStart(
    SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
    int                   lb,                 /**< earliest possible start point */
    int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
    );
 
 /*

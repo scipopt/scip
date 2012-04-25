@@ -97,6 +97,7 @@ interface
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
 - data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
+- renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 
 internal methods
 - changed prob to transprob/origprob and added origprob/transprob parameter to SCIPprimalUpdateObjlimit(),
