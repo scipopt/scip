@@ -562,7 +562,7 @@ SCIP_RETCODE fillDigraph(
       {
 #ifndef NDEBUG
 	 /* it looks strange if returning the number of variables was successful but not returning the variables */
-	 SCIPwarningMessage(scip, "constraint <%> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
+	 SCIPwarningMessage(scip, "constraint <%s> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
 #endif
          break;
       }
