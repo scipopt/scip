@@ -442,6 +442,50 @@ void SCIPreaderSetData(
    reader->readerdata = readerdata;
 }
 
+/**< sets copy method of reader */
+void SCIPreaderSetCopy(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readercopy = readercopy;
+}
+
+/**< sets destructor of reader */
+void SCIPreaderSetFree(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readerfree = readerfree;
+}
+
+/**< sets read method of reader */
+void SCIPreaderSetRead(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readerread = readerread;
+}
+
+/**< sets write method of reader */
+void SCIPreaderSetWrite(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method */
+   )
+{
+   assert(reader != NULL);
+
+   reader->readerwrite = readerwrite;
+}
+
 /** gets name of reader */
 const char* SCIPreaderGetName(
    SCIP_READER*          reader              /**< reader */

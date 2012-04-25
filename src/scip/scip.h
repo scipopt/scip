@@ -979,7 +979,11 @@ int SCIPgetNParams(
 /**@name SCIP User Functionality Methods: Managing Plugins */
 /**@{ */
 
-/** creates a reader and includes it in SCIP */
+/** creates a reader and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -991,6 +995,54 @@ SCIP_RETCODE SCIPincludeReader(
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
+   );
+
+/** creates a reader and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see
+ *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ */
+extern
+SCIP_RETCODE SCIPincludeReaderBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   );
+
+/**< set copy method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/**< set deinitialization method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   );
+
+/**< set read method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderRead(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method of reader */
+   );
+
+/**< set write method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderWrite(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method of reader */
    );
 
 /** returns the reader of the given name, or NULL if not existing */
@@ -1525,7 +1577,7 @@ SCIP_RETCODE SCIPincludeProp(
 /** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
  *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
- *  SCIPsetPropInitpre(), and SCIPsetPropExitpre().
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
  */

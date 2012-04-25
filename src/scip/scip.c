@@ -2838,7 +2838,11 @@ int SCIPgetNParams(
  * SCIP user functionality methods: managing plugins
  */
 
-/** creates a reader and includes it in SCIP */
+/** creates a reader and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of reader */
@@ -2864,6 +2868,105 @@ SCIP_RETCODE SCIPincludeReader(
 
    SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a reader and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see
+ *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ */
+SCIP_RETCODE SCIPincludeReaderBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   )
+{
+   SCIP_READER* reader;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeReaderBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether reader is already present */
+   if( SCIPfindReader(scip, name) != NULL )
+   {
+      SCIPerrorMessage("reader <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
+   SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
+
+   if( readerptr != NULL )
+      *readerptr = reader;
+
+   return SCIP_OKAY;
+}
+
+/**< set copy method of reader */
+SCIP_RETCODE SCIPsetReaderCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetCopy(reader, readercopy);
+
+   return SCIP_OKAY;
+}
+
+/**< set deinitialization method of reader */
+SCIP_RETCODE SCIPsetReaderFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetFree(reader, readerfree);
+
+   return SCIP_OKAY;
+}
+
+/**< set read method of reader */
+SCIP_RETCODE SCIPsetReaderRead(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderRead", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetRead(reader, readerread);
+
+   return SCIP_OKAY;
+}
+
+/**< set write method of reader */
+SCIP_RETCODE SCIPsetReaderWrite(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderWrite", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetWrite(reader, readerwrite);
 
    return SCIP_OKAY;
 }
@@ -3832,11 +3935,11 @@ SCIP_RETCODE SCIPincludeProp(
 }
 
 /** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
- *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
- *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
+ *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
  */
 SCIP_RETCODE SCIPincludePropBasic(
    SCIP*                 scip,               /**< SCIP data structure */
