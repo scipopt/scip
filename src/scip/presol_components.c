@@ -719,6 +719,12 @@ SCIP_RETCODE splitProblem(
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetUbGlobal(compvars[0]);
 
+#ifndef NDEBUG
+	 SCIPwarningMessage(scip, "strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#else
+	 SCIPdebugMessage("strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#endif
+
          SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
          assert(!infeasible);
          assert(fixed);
