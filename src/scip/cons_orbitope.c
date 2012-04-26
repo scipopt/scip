@@ -631,7 +631,6 @@ SCIP_RETCODE propagateCons(
    int* lastones;
    int* frontiersteps;
    int lastoneprevrow;
-   int noldfixedvars;
    int nspcons;
    int nblocks;
    int nsteps;
@@ -706,7 +705,6 @@ SCIP_RETCODE propagateCons(
 #endif
 
    /* propagate */
-   noldfixedvars = *nfixedvars;
    lastoneprevrow = 0;
    lastones[0] = 0;
 
