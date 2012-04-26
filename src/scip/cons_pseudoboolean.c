@@ -8396,25 +8396,19 @@ SCIP_DECL_CONSGETVARS(consGetVarsPseudoboolean)
 	 goto TERMINATE;
       }
 
-      /* only add the resultant */
-      if( SCIPconsIsDeleted(consanddata->cons) )
-      {
-	 vars[nvars] = andress[r];
-	 ++nvars;
-      }
+      /* add the resultant */
+      vars[nvars] = andress[r];
+      ++nvars;
+
       /* add all and-operands and the resultant */
-      else
+      if( !SCIPconsIsDeleted(consanddata->cons) )
       {
 	 int noperands = SCIPgetNVarsAnd(scip, consanddata->cons);
-
-	 /* add the resultant */
-	 vars[nvars] = andress[r];
-	 ++nvars;
 
 	 assert(noperands >= 0);
 
 	 /* not enough space for all variables */
-	 if( varssize <= nvars + noperands )
+	 if( varssize < nvars + noperands )
 	 {
 	    (*success) = FALSE;
 
