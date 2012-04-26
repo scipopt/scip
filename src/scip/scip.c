@@ -7694,6 +7694,62 @@ SCIP_RETCODE freeTransform(
    return SCIP_OKAY;
 }
 
+/** displays most relevant statistics after problem was solved */
+static
+SCIP_RETCODE displayRelevantStats(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* display most relevant statistics */
+   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   {
+      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+      SCIPmessagePrintInfo(scip->messagehdlr, "SCIP Status        : ");
+      SCIP_CALL( SCIPprintStage(scip, NULL) );
+      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+      SCIPmessagePrintInfo(scip->messagehdlr, "Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      if( scip->stat->nruns > 1 )
+         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT" (total of %"SCIP_LONGINT_FORMAT" nodes in %d runs)\n",
+            scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
+      else
+         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
+         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
+            getPrimalbound(scip), scip->primal->nsolsfound);
+      if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
+      {
+         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
+         SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
+         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
+            SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
+         else
+            SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
+      }
+
+      /* check solution for feasibility in original problem */
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+      {
+         SCIP_SOL* sol;
+
+         sol = SCIPgetBestSol(scip);
+         if( sol != NULL )
+         {
+            SCIP_Bool feasible;
+            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+
+            if( !feasible )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, "best solution is not feasible in original problem\n");
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** transforms and presolves problem */
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7850,6 +7906,12 @@ SCIP_RETCODE SCIPpresolve(
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
 
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+   {
+      /* display most relevant statistics */
+      displayRelevantStats(scip);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -7859,6 +7921,7 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -7913,6 +7976,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PRESOLVING:
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
+
+	 /* remember that we already printed the relevant statistics */
+	 if( scip->set->stage == SCIP_STAGE_SOLVED )
+	    statsprinted = TRUE;
+
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
@@ -7972,49 +8040,10 @@ SCIP_RETCODE SCIPsolve(
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
 
-   /* display most relevant statistics */
-   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   if( !statsprinted )
    {
-      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
-      SCIPmessagePrintInfo(scip->messagehdlr, "SCIP Status        : ");
-      SCIP_CALL( SCIPprintStage(scip, NULL) );
-      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
-      SCIPmessagePrintInfo(scip->messagehdlr, "Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-      if( scip->stat->nruns > 1 )
-         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT" (total of %"SCIP_LONGINT_FORMAT" nodes in %d runs)\n",
-            scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
-      else
-         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
-      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
-         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
-            getPrimalbound(scip), scip->primal->nsolsfound);
-      if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
-      {
-         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
-         SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
-         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
-            SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
-         else
-            SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
-      }
-
-      /* check solution for feasibility in original problem */
-      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
-      {
-         SCIP_SOL* sol;
-
-         sol = SCIPgetBestSol(scip);
-         if( sol != NULL )
-         {
-            SCIP_Bool feasible;
-            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
-            
-            if( !feasible )
-            {
-               SCIPmessagePrintInfo(scip->messagehdlr, "best solution is not feasible in original problem\n");
-            }
-         }
-      }
+      /* display most relevant statistics */
+      displayRelevantStats(scip);
    }
 
    return SCIP_OKAY;
