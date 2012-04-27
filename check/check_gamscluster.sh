@@ -275,6 +275,8 @@ do
 
     echo $BASENAME >> $EVALFILE
 
+    COUNT=`expr $COUNT + 1`
+
     # in case we want to continue we check if the job was already performed 
     if test "$CONTINUE" != "false"
       then
@@ -284,8 +286,6 @@ do
         continue
       fi
     fi
-
-    COUNT=`expr $COUNT + 1`
 
     GMSFILE=`basename $i`
     INPUTDIR=`pwd`/`dirname $i`
