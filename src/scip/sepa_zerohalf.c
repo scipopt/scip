@@ -5036,10 +5036,10 @@ SCIP_RETCODE createSubscip(
    success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
    SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
   

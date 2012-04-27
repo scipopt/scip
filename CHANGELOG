@@ -45,22 +45,25 @@ interface
   of variables statistics which is used for example for branching
 - allowed to start diving mode even if LP is not flushed, not solved, or not solved to optimality
 - changed the message handler system within SCIP heavily such that it is thread save
-- the follwing methods need additionally the SCIP pointer as parameter to make the output thread save:
+- the follwing methods additionally need the SCIP pointer as parameter to make the output thread save:
   SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr(), and SCIPwarningMessage()
 - the following methods additionally need a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
   handler methods (see pub_message.h), SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
-- new method SCIPsetMessagehdlrFree() which frees the current instance message handler and adds the given one
+- new method SCIPmessagehdlrCapture() which captures a given message handler (increases number of uses)
+- new method SCIPmessagehdlrRelease() which releases and possibly frees a given message handler (decreases number of uses)
 - new method SCIPsetMessagehdlrLogfile() which can be used to write into a log file
 - new method SCIPsetMessagehdlrQuiet() which can be used to turn the screen output on and off
 - removed method SCIPcreateMesshdlr(), please use SCIPmessagehdlrCreate() (see pub_message.c)
-- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrFree() (see pub_message.c)
+- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrRelease() (see pub_message.c)
 - the error messages are not handled via the message handler anymore; per default the error message a written to stderr
 - the error printing method can be replaced using the method SCIPmessageSetErrorPrinting(); the default error message
-  printing can be recoverd via SCIPmessageSetErrorPrintingDefault(), (see pub_message.h)
+  printing can be recoverd via SCIPmessageSetErrorPrintingDefault() (see pub_message.h)
 - method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
 - since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
   changes; see pub_message.h and type_message.h.
 - new NLPI callback SCIP_DECL_NLPISETMESSAGEHDLR() to set message handler in NLP solver interfaces
+- new parameter in SCIPcopyPlugins() to indicate whether the message handler from the source SCIP should be passed to the
+  target SCIP (only the pointer is copied and the usage counter of the message handler is increased)
 - removed SCIPparamSetBool(), please use SCIPchgBoolParam()
 - removed SCIPparamSetInt(), please use SCIPchgIntParam()
 - removed SCIPparamSetLongint(), please use SCIPchgLongintParam()

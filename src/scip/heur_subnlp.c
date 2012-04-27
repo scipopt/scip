@@ -151,6 +151,7 @@ SCIP_RETCODE createSubSCIP(
          copydisplays, /* displays */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
+         TRUE,  /* message handler */
          &success) );
    if( !success )
    {

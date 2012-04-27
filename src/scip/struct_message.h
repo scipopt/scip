@@ -47,6 +47,7 @@ struct SCIP_Messagehdlr
    int                   warningbufferlen;   /**< currently used space in the warning buffer */
    int                   dialogbufferlen;    /**< currently used space in the dialog buffer */
    int                   infobufferlen;      /**< currently used space in the info buffer */
+   int                   nuses;              /**< number of message handler uses */
 };
 
 #ifdef __cplusplus

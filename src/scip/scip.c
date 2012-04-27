@@ -583,9 +583,9 @@ void SCIPprintError(
 
 /** creates and initializes SCIP data structures
  *
- *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
- *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
- *        file and turn off/on the display output.
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
+ *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output, respectively.
  */
 SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
@@ -660,8 +660,8 @@ SCIP_RETCODE SCIPfree(
    SCIPinterruptFree(&(*scip)->interrupt);
    SCIP_CALL( SCIPmemFree(&(*scip)->mem) );
 
-   /* free message handler */
-   SCIP_CALL( SCIPmessagehdlrFree(&(*scip)->messagehdlr) );
+   /* release message handler */
+   SCIP_CALL( SCIPmessagehdlrRelease(&(*scip)->messagehdlr) );
 
    BMSfreeMemory(scip);
 
@@ -957,8 +957,7 @@ SCIP_Bool SCIPisStopped(
 /** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets not freed. That has to be done by the user using
- *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
+ *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -973,8 +972,6 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    assert(scip->set != NULL);
    assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
 
-   scip->messagehdlr = messagehdlr;
-
    /* update message handler in NLP solver interfaces */
    for( i = 0; i < scip->set->nnlpis; ++i )
    {
@@ -983,35 +980,10 @@ SCIP_RETCODE SCIPsetMessagehdlr(
       SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
    }
 
-   return SCIP_OKAY;
-}
+   SCIPmessagehdlrCapture(messagehdlr);
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
- *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
- */
-SCIP_RETCODE SCIPsetMessagehdlrFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   )
-{
-   int i;
-
-   SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
-
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
-
-   /* update message handler in NLP solver interfaces */
-   for( i = 0; i < scip->set->nnlpis; ++i )
-   {
-      assert(scip->set->nlpis[i] != NULL);
-
-      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
-   }
-
-   /* free previously installed message handler */
-   SCIP_CALL( SCIPmessagehdlrFree(&scip->messagehdlr) );
+   SCIP_CALL( SCIPmessagehdlrRelease(&scip->messagehdlr) );
+   assert(scip->messagehdlr == NULL);
 
    scip->messagehdlr = messagehdlr;
 
@@ -1029,7 +1001,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
 /** sets the log file name for the currently installed message handler */
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of log file, or NULL (stdout) */
+   const char*           filename            /**< name of log file, or NULL (no log) */
    )
 {
    if( scip->messagehdlr != NULL )
@@ -1161,6 +1133,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
    )
@@ -1170,12 +1143,15 @@ SCIP_RETCODE SCIPcopyPlugins(
    assert(sourcescip->set != NULL);
    assert(targetscip->set != NULL);
 
-   /* sets the message handler of the target SCIP to be quiet if the source message handler is quiet */
-   SCIPsetMessagehdlrQuiet(targetscip, SCIPmessagehdlrIsQuiet(sourcescip->messagehdlr));
-
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* passes the message handler of the source SCIP to the target SCIP, also if NULL */
+   if( passmessagehdlr )
+   {
+      SCIP_CALL( SCIPsetMessagehdlr(targetscip, SCIPgetMessagehdlr(sourcescip)) );
+   }
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
@@ -2145,7 +2121,7 @@ SCIP_RETCODE SCIPcopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
 
    SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
 
