@@ -168,6 +168,8 @@ parameters:
   only extract set-partitioning and no and-constraints
 - new parameter oncepernode in Rounding and Simple Rounding heuristic
 - new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
+- new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
+  SCIP_STATUS_TOTALNODELIMIT is added
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

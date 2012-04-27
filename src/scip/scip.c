@@ -794,6 +794,9 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_NODELIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "node limit reached");
       break;
+   case SCIP_STATUS_TOTALNODELIMIT:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "total node limit reached");
+      break;
    case SCIP_STATUS_STALLNODELIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "stall node limit reached");
       break;
