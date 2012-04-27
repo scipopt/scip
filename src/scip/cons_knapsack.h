@@ -200,6 +200,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
+   SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
