@@ -87,7 +87,7 @@ extern
 void SCIPrelaxSetInitsol(
    SCIP_RELAX*           relax,              /**< relaxator  */
    SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
-   )
+   );
 
 /** set solving process deinitialization method of relaxation handler */
 extern

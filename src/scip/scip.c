@@ -4056,7 +4056,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
 {
    SCIP_RELAX* relax;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeRelaxBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeRelaxBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether relaxation handler is already present */
    if( SCIPfindRelax(scip, name) != NULL )
@@ -4065,7 +4065,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
+   SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq,
          NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
@@ -4083,7 +4083,7 @@ SCIP_RETCODE SCIPsetRelaxCopy(
    SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
@@ -4099,7 +4099,7 @@ SCIP_RETCODE SCIPsetRelaxFree(
    SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxator */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
@@ -4115,7 +4115,7 @@ SCIP_RETCODE SCIPsetRelaxInit(
    SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxator */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
@@ -4131,7 +4131,7 @@ SCIP_RETCODE SCIPsetRelaxExit(
    SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxator */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
@@ -4147,7 +4147,7 @@ SCIP_RETCODE SCIPsetRelaxInitsol(
    SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxator */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
@@ -4163,7 +4163,7 @@ SCIP_RETCODE SCIPsetRelaxExitsol(
    SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxator */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(relax != NULL);
 
