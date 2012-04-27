@@ -4729,8 +4729,6 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_RESULT replaceresult;
-   int dummy;
    int c;
 
    assert(scip  != NULL);
@@ -4739,30 +4737,26 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 
    *result = SCIP_FEASIBLE;
 
+   /* tell SCIP that we have something nonlinear, and whether we are nonlinear in a continuous variable */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
-      /* ensure that there are no fixed variables in the constraint (except for multiaggregated) */
-      replaceresult = SCIP_DIDNOTFIND;
-      SCIP_CALL( checkFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &replaceresult) );  /*lint !e613*/
-      if( replaceresult == SCIP_CUTOFF )
+      if( SCIPconsIsEnabled(conss[c]) )
       {
-         *result = SCIP_CUTOFF;
-         break;
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         if( SCIPvarGetType(consdata->x) >= SCIP_VARTYPE_CONTINUOUS )
+         {
+            SCIPmarkContinuousNonlinearitiesPresent(scip);
+            break;
+         }
+         else
+         {
+            SCIPmarkNonlinearitiesPresent(scip);
+         }
       }
-
-      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
-         continue;
-
-      /* tell SCIP that we have something nonlinear, and whether we are nonlinear in a continuous variable */
-      if( SCIPvarGetType(consdata->x) >= SCIP_VARTYPE_CONTINUOUS )
-         SCIPmarkContinuousNonlinearitiesPresent(scip);
-      else
-         SCIPmarkNonlinearitiesPresent(scip);
    }
 
    return SCIP_OKAY;
@@ -4857,7 +4851,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) )
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
       {
          if( consdata->nlrow == NULL )
          {
@@ -5816,6 +5810,10 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          }
       }
    }
+
+   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
+   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }

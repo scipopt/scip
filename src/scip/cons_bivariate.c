@@ -20,11 +20,6 @@
  * @author Stefan Vigerske
  */
 
-/** @todo check whether the constraint handler correctly distinguishes between constraints added to SCIP and those that
- *        were only created; if the latter are automatically added to the expressiongraph, they might be enforced although not
- *        valid
- */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -533,9 +528,15 @@ SCIP_RETCODE removeFixedVariables(
       SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
       SCIPvarGetProbvar(vars[0]) == SCIPvarGetProbvar(vars[1]) )
    {
-      /* if number of variable reduces, then upgrade to nonlinear constraint */
+      /* if number of variable reduces, then upgrade to nonlinear constraint
+       * except if we are in the exit-presolving stage, where upgrading is not allowed
+       * in the latter case, we just do nothing, which may not be most efficient, but should still work
+       */
       SCIP_EXPRTREE* tree;
       SCIP_CONS* nlcons;
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_EXITPRESOLVE )
+         return SCIP_OKAY;
 
       SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &tree, consdata->f) );
 
@@ -5580,19 +5581,11 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
 static
 SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 {  /*lint --e{715}*/
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA*     consdata;
    int                c;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5647,23 +5640,20 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 
       /* make sure variable fixations have been resolved */
       SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
-      if( upgraded )
-      {
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
-         continue;
-      }
+      assert(!upgraded);
 
       assert(consdata->f != NULL);
       assert(SCIPexprtreeGetNVars(consdata->f) == 2);
-      assert(SCIPvarIsActive(SCIPexprtreeGetVars(consdata->f)[0]) || SCIPvarGetStatus(SCIPexprtreeGetVars(consdata->f)[0]) == SCIP_VARSTATUS_MULTAGGR);
-      assert(SCIPvarIsActive(SCIPexprtreeGetVars(consdata->f)[1]) || SCIPvarGetStatus(SCIPexprtreeGetVars(consdata->f)[1]) == SCIP_VARSTATUS_MULTAGGR);
       assert(consdata->z == NULL || SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
 
       /* tell SCIP that we have something nonlinear */
-      SCIPmarkNonlinearitiesPresent(scip);
-      if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-         SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
-         SCIPmarkContinuousNonlinearitiesPresent(scip);
+      if( SCIPconsIsEnabled(conss[c]) )
+      {
+         SCIPmarkNonlinearitiesPresent(scip);
+         if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
+            SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
+            SCIPmarkContinuousNonlinearitiesPresent(scip);
+      }
    }
 
    return SCIP_OKAY;
@@ -5737,7 +5727,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )  /*lint !e613*/
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
       {
          SCIP_NLROW* nlrow;
 
@@ -6638,6 +6628,10 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
    default:
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
+
+   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
+   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
