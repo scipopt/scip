@@ -698,7 +698,6 @@ void checkViolations(
    assert(violatedrows != NULL);
    assert(violatedrowpos != NULL);
    assert(nviolatedrows != NULL);
-   assert(nredundantrows != NULL);
 
    /* get RHS, LHS and number of the problem rows */
    rhs = matrix->rhs;
@@ -707,7 +706,8 @@ void checkViolations(
 
    SCIPdebugMessage("Entering violation check for %d rows! \n", nrows);
    *nviolatedrows = 0;
-   *nredundantrows = 0;
+   if( nredundantrows != NULL )
+      *nredundantrows = 0;
 
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
@@ -725,7 +725,7 @@ void checkViolations(
       assert((violatedrowpos[i] == -1 && SCIPisFeasGE(scip, rhs[i], 0.0) && SCIPisFeasGE(scip, -lhs[i], 0.0))
          || (violatedrowpos[i] >= 0 &&(SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0))));
 
-      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) )
+      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) && nredundantrows != NULL)
          ++(*nredundantrows);
    }
 }
@@ -1060,6 +1060,12 @@ void updateTransformation(
 
          assert(SCIPvarIsIntegral(var));
          transformVariable(scip, var, matrix);
+
+         /* violations have to be rechecked for all rows
+          * todo : change this and only update violations of rows in which this variable
+          *        appears
+          */
+         checkViolations(scip, matrix, violatedrows, violatedrowpos, nviolatedrows, NULL);
 
          assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
          assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
