@@ -1194,6 +1194,236 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
+/** creates a constraint handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetConshdlrInit(), SCIPsetConshdlrExit(),
+ *  SCIPsetConshdlrCopy(), SCIPsetConshdlrFree(), SCIPsetConshdlrInitsol(), SCIPsetConshdlrExitsol(),
+ *  SCIPsetConshdlrInitpre(), SCIPsetConshdlrExitpre(), SCIPsetConshdlrPresol(), SCIPsetConshdlrDelete(),
+ *  SCIPsetConshdlrDelvars(), SCIPsetConshdlrInitlp(), SCIPsetConshdlrActive(), SCIPsetConshdlrDeactive(),
+ *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
+ *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ */
+extern
+SCIP_RETCODE SCIPincludeConshdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   );
+
+/* sets all separation related callbacks of the constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   );
+
+/* sets both the propagation callback and the propagation frequency of the constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   );
+
+/** sets copy method of both the constraint handler and each associated constraint */
+extern
+SCIP_RETCODE SCIPsetConshdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSCOPY    ((*conscopy))       /**< constraint copying method */
+   );
+
+/** sets destructor method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
+   );
+
+/** sets initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   );
+
+/** sets deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
+   );
+
+/** sets solving process initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
+   );
+
+/** sets solving process deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   );
+
+/** sets preprocessing initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
+   );
+
+/** sets preprocessing deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
+   );
+
+/** sets presolving method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   );
+
+/** sets method of constraint handler to free specific constraint data */
+extern
+SCIP_RETCODE SCIPsetConshdlrDelete(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
+   );
+
+/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
+extern
+SCIP_RETCODE SCIPsetConshdlrTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
+   );
+
+/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
+   );
+
+/** sets propagation conflict resolving method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
+   );
+
+/** sets activation notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrActive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
+   );
+
+/** sets deactivation notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDeactive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
+   );
+
+/** sets enabling notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrEnable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
+   );
+
+/** sets disabling notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDisable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
+   );
+
+/** sets variable deletion method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDelvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
+   );
+
+/** sets constraint display method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
+   );
+
+/** sets constraint parsing method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrParse(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
+   );
+
+/** sets constraint variable getter method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrGetVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
+   );
+
+/** sets constraint variable number getter method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrGetNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
+   );
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
 SCIP_CONSHDLR* SCIPfindConshdlr(

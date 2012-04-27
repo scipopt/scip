@@ -3139,7 +3139,11 @@ SCIP_RETCODE SCIPdeactivatePricer(
    return SCIP_OKAY;
 }
 
-/** creates a constraint handler and includes it in SCIP */
+/** creates a constraint handler and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeConshdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of constraint handler */
@@ -3211,6 +3215,441 @@ SCIP_RETCODE SCIPincludeConshdlr(
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
          conscopy, consparse, consgetvars, consgetnvars, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a constraint handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetConshdlrInit(), SCIPsetConshdlrExit(),
+ *  SCIPsetConshdlrCopy(), SCIPsetConshdlrFree(), SCIPsetConshdlrInitsol(), SCIPsetConshdlrExitsol(),
+ *  SCIPsetConshdlrInitpre(), SCIPsetConshdlrExitpre(), SCIPsetConshdlrPresol(), SCIPsetConshdlrDelete(),
+ *  SCIPsetConshdlrDelvars(), SCIPsetConshdlrInitlp(), SCIPsetConshdlrActive(), SCIPsetConshdlrDeactive(),
+ *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
+ *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ */
+SCIP_RETCODE SCIPincludeConshdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether constraint handler is already present */
+   if( SCIPfindConshdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("constraint handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, sepapriority, enfopriority, chckpriority, -1, -1, eagerfreq, maxprerounds,
+         delaysepa, delayprop, delaypresol, needscons,
+         timingmask,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL, consenfolp, consenfops, conscheck, NULL,
+         NULL, NULL, conslock, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, conshdlrdata) );
+   SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
+
+   if( conshdlrptr != NULL )
+      *conshdlrptr = conshdlr;
+
+   return SCIP_OKAY;
+}
+
+/* sets all separation related callbacks of the constraint handler */
+SCIP_RETCODE SCIPsetConshdlrSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetSepa(conshdlr, conssepalp, conssepasol, sepafreq);
+
+   return SCIP_OKAY;
+}
+
+/* sets both the propagation callback and the propagation frequency of the constraint handler */
+SCIP_RETCODE SCIPsetConshdlrProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetProp(conshdlr, consprop, propfreq);
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of both the constraint handler and each associated constraint */
+SCIP_RETCODE SCIPsetConshdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSCOPY    ((*conscopy))       /**< constraint copying method */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetCopy(conshdlr, conshdlrcopy, conscopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetFree(conshdlr, consfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInit(conshdlr, consinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExit(conshdlr, consexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInitsol(conshdlr, consinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExitsol(conshdlr, consexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInitpre(conshdlr, consinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExitpre(conshdlr, consexitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetPresol(conshdlr, conspresol);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to free specific constraint data */
+SCIP_RETCODE SCIPsetConshdlrDelete(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDelete(conshdlr, consdelete);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
+SCIP_RETCODE SCIPsetConshdlrTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrTrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetTrans(conshdlr, constrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
+SCIP_RETCODE SCIPsetConshdlrInitlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitlp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetInitlp(conshdlr, consinitlp);
+
+   return SCIP_OKAY;
+}
+
+/** sets propagation conflict resolving method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrResprop", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetResprop(conshdlr, consresprop);
+
+   return SCIP_OKAY;
+}
+
+/** sets activation notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrActive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrActive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetActive(conshdlr, consactive);
+
+   return SCIP_OKAY;
+}
+
+/** sets deactivation notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDeactive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDeactive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDeactive(conshdlr, consdeactive);
+
+   return SCIP_OKAY;
+}
+
+/** sets enabling notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrEnable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrEnable", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetEnable(conshdlr, consenable);
+
+   return SCIP_OKAY;
+}
+
+/** sets disabling notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDisable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDisable", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDisable(conshdlr, consdisable);
+
+   return SCIP_OKAY;
+}
+
+/** sets variable deletion method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDelvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDelvars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDelvars(conshdlr, consdelvars);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint display method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPrint", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetPrint(conshdlr, consprint);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint parsing method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrParse(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrParse", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetParse(conshdlr, consparse);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint variable getter method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrGetVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrGetVars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetVars(conshdlr, consgetvars);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint variable number getter method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrGetNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrGetNVars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetNVars(conshdlr, consgetnvars);
 
    return SCIP_OKAY;
 }
@@ -4238,7 +4677,7 @@ SCIP_RETCODE SCIPincludeHeur(
 /** Creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPheurSetInit() in pub_heur.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeHeur</code>.
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
  */
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
