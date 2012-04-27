@@ -2245,27 +2245,37 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create orbitope constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyOrbitope,
-         consFreeOrbitope, consInitOrbitope, consExitOrbitope,
-         consInitpreOrbitope, consExitpreOrbitope, consInitsolOrbitope, consExitsolOrbitope,
-         consDeleteOrbitope, consTransOrbitope, consInitlpOrbitope,
-         consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
-         consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
-         consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope,
-         consGetVarsOrbitope, consGetNVarsOrbitope, conshdlrdata) );
+         consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope, consLockOrbitope,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
 
-   /* add orbitope constraint handler parameters */
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbitope, consCopyOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitope, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbitope, consSepasolOrbitope, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitope) );
 
    return SCIP_OKAY;
 }

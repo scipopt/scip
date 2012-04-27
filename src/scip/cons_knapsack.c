@@ -9241,6 +9241,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
@@ -9261,21 +9262,36 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    }
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyKnapsack,
-         consFreeKnapsack, consInitKnapsack, consExitKnapsack,
-         consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
-         consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
-         consSepalpKnapsack, consSepasolKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack,
-         consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
-         consActiveKnapsack, consDeactiveKnapsack,
-         consEnableKnapsack, consDisableKnapsack, consDelvarsKnapsack,
-         consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
-         consGetVarsKnapsack, consGetNVarsKnapsack, conshdlrdata) );
+         consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, consLockKnapsack,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropKnapsack, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpKnapsack, consSepasolKnapsack, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

@@ -8034,6 +8034,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -8043,21 +8044,31 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyCumulative,
-         consFreeCumulative, consInitCumulative, consExitCumulative,
-         consInitpreCumulative, consExitpreCumulative, consInitsolCumulative, consExitsolCumulative,
-         consDeleteCumulative, consTransCumulative, consInitlpCumulative,
-         consSepalpCumulative, consSepasolCumulative, consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative,
-         consPropCumulative, consPresolCumulative, consRespropCumulative, consLockCumulative,
-         consActiveCumulative, consDeactiveCumulative,
-         consEnableCumulative, consDisableCumulative, consDelvarsCumulative,
-         consPrintCumulative, consCopyCumulative, consParseCumulative,
-         consGetVarsCumulative, consGetNVarsCumulative, conshdlrdata) );
+         consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative, consLockCumulative,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCumulative, consCopyCumulative) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteCumulative) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCumulative) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCumulative) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsCumulative) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsCumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreCumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCumulative) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCumulative) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropCumulative) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCumulative, consSepasolCumulative, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCumulative) );
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

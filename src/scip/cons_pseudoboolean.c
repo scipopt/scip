@@ -3431,26 +3431,30 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create pseudoboolean constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyPseudoboolean,
-         consFreePseudoboolean, consInitPseudoboolean, consExitPseudoboolean,
-         consInitprePseudoboolean, consExitprePseudoboolean, consInitsolPseudoboolean, consExitsolPseudoboolean,
-         consDeletePseudoboolean, consTransPseudoboolean, consInitlpPseudoboolean,
-         consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean,
-         consPropPseudoboolean, consPresolPseudoboolean, consRespropPseudoboolean, consLockPseudoboolean,
-         consActivePseudoboolean, consDeactivePseudoboolean,
-         consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
-         consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
-         consGetVarsPseudoboolean, consGetNVarsPseudoboolean, conshdlrdata) );
+         consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean, consLockPseudoboolean,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyPseudoboolean, consCopyPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeletePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitprePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

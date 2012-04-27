@@ -11057,27 +11057,41 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create quadratic constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyQuadratic,
-         consFreeQuadratic, consInitQuadratic, consExitQuadratic,
-         consInitpreQuadratic, consExitpreQuadratic, consInitsolQuadratic, consExitsolQuadratic,
-         consDeleteQuadratic, consTransQuadratic, consInitlpQuadratic,
-         consSepalpQuadratic, consSepasolQuadratic, consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic,
-         consPropQuadratic, consPresolQuadratic, consRespropQuadratic, consLockQuadratic,
-         consActiveQuadratic, consDeactiveQuadratic,
-         consEnableQuadratic, consDisableQuadratic, consDelvarsQuadratic,
-         consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
-         consGetVarsQuadratic, consGetNVarsQuadratic, conshdlrdata) );
+         consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic, consLockQuadratic,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropQuadratic, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpQuadratic, consSepasolQuadratic, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransQuadratic) );
 
    /* add quadratic constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/replacebinaryprod",

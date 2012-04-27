@@ -11283,6 +11283,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
 
@@ -11297,22 +11298,37 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* include constraint handler in SCIP */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyLinear,
-         consFreeLinear, consInitLinear, consExitLinear,
-         consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
-         consDeleteLinear, consTransLinear, consInitlpLinear,
-         consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear,
-         consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
-         consActiveLinear, consDeactiveLinear,
-         consEnableLinear, consDisableLinear, consDelvarsLinear,
-         consPrintLinear, consCopyLinear, consParseLinear,
-         consGetVarsLinear, consGetNVarsLinear, conshdlrdata) );
+         consEnfolpLinear, consEnfopsLinear, consCheckLinear, consLockLinear,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinear) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitLinear) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinear) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinear) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinear) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinear) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinear, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinear) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {

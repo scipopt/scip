@@ -2165,6 +2165,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -2182,19 +2183,32 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    }
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySOS2, consFreeSOS2, consInitSOS2, consExitSOS2,
-         consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
-         consDeleteSOS2, consTransSOS2, consInitlpSOS2,
-         consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
-         consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
-         consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
-         consDelvarsSOS2, consPrintSOS2, consCopySOS2, consParseSOS2,
-         consGetVarsSOS2, consGetNVarsSOS2, conshdlrdata) );
+         consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2, consLockSOS2,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS2, consCopySOS2) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS2) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOS2) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS2) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS2) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS2) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOS2) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOS2, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS2) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
 
    return SCIP_OKAY;
 }

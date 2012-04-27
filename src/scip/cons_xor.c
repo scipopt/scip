@@ -2624,6 +2624,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -2635,21 +2636,30 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyXor,
-         consFreeXor, consInitXor, consExitXor,
-         consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
-         consDeleteXor, consTransXor, consInitlpXor,
-         consSepalpXor, consSepasolXor, consEnfolpXor, consEnfopsXor, consCheckXor,
-         consPropXor, consPresolXor, consRespropXor, consLockXor,
-         consActiveXor, consDeactiveXor,
-         consEnableXor, consDisableXor, consDelvarsXor,
-         consPrintXor, consCopyXor, consParseXor,
-         consGetVarsXor, consGetNVarsXor, conshdlrdata) );
+         consEnfolpXor, consEnfopsXor, consCheckXor, consLockXor,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyXor, consCopyXor) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteXor) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolXor) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeXor) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsXor) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXor) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXor) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXor) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXor) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXor, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXor) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXor) );
 
    /* add xor constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

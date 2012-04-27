@@ -5652,6 +5652,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 {
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data (used in conflicthdlrdata) */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -5716,19 +5717,37 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyIndicator, consFreeIndicator, consInitIndicator, consExitIndicator,
-         consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
-         consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,
-         consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
-         consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
-         consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator,
-         consGetVarsIndicator, consGetNVarsIndicator, conshdlrdata) );
+         consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator, consLockIndicator,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIndicator, consCopyIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreIndicator) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpIndicator) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseIndicator) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintIndicator) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropIndicator, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropIndicator) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpIndicator, consSepasolIndicator, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransIndicator) );
 
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );

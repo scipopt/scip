@@ -2020,6 +2020,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -2031,21 +2032,31 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyOr,
-         consFreeOr, consInitOr, consExitOr,
-         consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
-         consDeleteOr, consTransOr, consInitlpOr,
-         consSepalpOr, consSepasolOr, consEnfolpOr, consEnfopsOr, consCheckOr,
-         consPropOr, consPresolOr, consRespropOr, consLockOr,
-         consActiveOr, consDeactiveOr,
-         consEnableOr, consDisableOr, consDelvarsOr,
-         consPrintOr, consCopyOr, consParseOr,
-         consGetVarsOr, consGetNVarsOr, conshdlrdata) );
+         consEnfolpOr, consEnfopsOr, consCheckOr, consLockOr,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOr, consCopyOr) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOr) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolOr) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOr) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOr) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOr) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOr) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOr) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOr) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOr) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOr, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOr) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOr, consSepasolOr, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOr) );
+
 
    return SCIP_OKAY;
 }

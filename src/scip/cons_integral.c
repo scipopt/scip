@@ -278,26 +278,24 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create integral constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyIntegral,
-         consFreeIntegral, consInitIntegral, consExitIntegral,
-         consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
-         consDeleteIntegral, consTransIntegral, consInitlpIntegral,
-         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral,
-         consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
-         consActiveIntegral, consDeactiveIntegral,
-         consEnableIntegral, consDisableIntegral, consDelvarsIntegral,
-         consPrintIntegral, consCopyIntegral, consParseIntegral,
-         consGetVarsIntegral, consGetNVarsIntegral, conshdlrdata) );
+         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
 
    return SCIP_OKAY;
 }

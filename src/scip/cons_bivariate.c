@@ -7467,27 +7467,45 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create bivariate constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyBivariate,
-         consFreeBivariate, consInitBivariate, consExitBivariate,
-         consInitpreBivariate, consExitpreBivariate, consInitsolBivariate, consExitsolBivariate,
-         consDeleteBivariate, consTransBivariate, consInitlpBivariate,
-         consSepalpBivariate, consSepasolBivariate, consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate,
-         consPropBivariate, consPresolBivariate, consRespropBivariate, consLockBivariate,
-         consActiveBivariate, consDeactiveBivariate,
-         consEnableBivariate, consDisableBivariate, consDelvarsBivariate,
-         consPrintBivariate, consCopyBivariate, consParseBivariate,
-         consGetVarsBivariate, consGetNVarsBivariate, conshdlrdata) );
+         consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate, consLockBivariate,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBivariate, consCopyBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBivariate) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBivariate) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBivariate) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdBivariate, QUADCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );

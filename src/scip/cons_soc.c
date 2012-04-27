@@ -4244,7 +4244,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
-SCIP_DECL_CONSGETVARS(consGetVarsSoc)
+SCIP_DECL_CONSGETVARS(consGetVarsSOC)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
@@ -4265,7 +4265,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsSoc)
 
 /** constraint method of constraint handler which returns the number of variable (if possible) */
 static
-SCIP_DECL_CONSGETNVARS(consGetNVarsSoc)
+SCIP_DECL_CONSGETNVARS(consGetNVarsSOC)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
@@ -4290,6 +4290,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
@@ -4306,20 +4307,32 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySOC, consFreeSOC, consInitSOC, consExitSOC,
-         consInitpreSOC, consExitpreSOC, consInitsolSOC, consExitsolSOC,
-         consDeleteSOC, consTransSOC, consInitlpSOC,
-         consSepalpSOC, consSepasolSOC, consEnfolpSOC, consEnfopsSOC, consCheckSOC,
-         consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
-         consActiveSOC, consDeactiveSOC,
-         consEnableSOC, consDisableSOC, consDelvarsSOC,
-         consPrintSOC, consCopySOC, consParseSOC,
-         consGetVarsSoc, consGetNVarsSoc, conshdlrdata) );
+         consEnfolpSOC, consEnfopsSOC, consCheckSOC, consLockSOC,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOC, consCopySOC) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOC) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitSOC) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOC) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOC) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOC) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOC) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOC) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSOC) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOC) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOC) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOC) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOC) );   /* include constraint handler */
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )
    {

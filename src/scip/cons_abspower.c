@@ -6355,28 +6355,47 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create absolute power constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyAbspower,
-         consFreeAbspower, consInitAbspower, consExitAbspower,
-         consInitpreAbspower, consExitpreAbspower, consInitsolAbspower, consExitsolAbspower,
-         consDeleteAbspower, consTransAbspower, consInitlpAbspower,
-         consSepalpAbspower, consSepasolAbspower, consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower,
-         consPropAbspower, consPresolAbspower, consRespropAbspower, consLockAbspower,
-         consActiveAbspower, consDeactiveAbspower,
-         consEnableAbspower, consDisableAbspower, consDelvarsAbspower,
-         consPrintAbspower, consCopyAbspower, consParseAbspower,
-         consGetVarsAbspower, consGetNVarsAbspower,
+         consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower, consLockAbspower,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveAbspower) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAbspower, consCopyAbspower) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAbspower) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableAbspower) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAbspower) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAbspower) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAbspower) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAbspower) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAbspower) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAbspower, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropAbspower) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAbspower, consSepasolAbspower, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAbspower) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdAbspower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );

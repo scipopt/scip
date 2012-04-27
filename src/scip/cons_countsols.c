@@ -1724,8 +1724,6 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 /** constraint method of constraint handler which returns the number of variable (if possible) */
 #define consGetNVarsCountsols NULL
 
-
-
 /*
  * Callback methods and local method for dialogs
  */
@@ -2526,6 +2524,7 @@ SCIP_RETCODE includeConshdlrCountsols(
 {
    /* create countsol constraint handler data */
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
 #ifdef WITH_GMP
    char gmpversion[20];
@@ -2535,22 +2534,23 @@ SCIP_RETCODE includeConshdlrCountsols(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyCountsols,
-         consFreeCountsols, consInitCountsols, consExitCountsols,
-         consInitpreCountsols, consExitpreCountsols, consInitsolCountsols, consExitsolCountsols,
-         consDeleteCountsols, consTransCountsols, consInitlpCountsols,
-         consSepalpCountsols, consSepasolCountsols, consEnfolpCountsols, consEnfopsCountsols, consCheckCountsols,
-         consPropCountsols, consPresolCountsols, consRespropCountsols, consLockCountsols,
-         consActiveCountsols, consDeactiveCountsols,
-         consEnableCountsols, consDisableCountsols, consDelvarsCountsols,
-         consPrintCountsols, consCopyCountsols, consParseCountsols,
-         consGetVarsCountsols, consGetNVarsCountsols,
+         consEnfolpCountsols, consEnfopsCountsols, consCheckCountsols, consLockCountsols,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCountsols, consCopyCountsols) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitCountsols) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCountsols) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCountsols) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitCountsols) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCountsols) );
 
    /* add countsols constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

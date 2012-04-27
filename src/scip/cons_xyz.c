@@ -563,27 +563,47 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create xyz constraint handler data */
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyXyz,
-         consFreeXyz, consInitXyz, consExitXyz,
-         consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
-         consDeleteXyz, consTransXyz, consInitlpXyz,
-         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
-         consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
-         consActiveXyz, consDeactiveXyz,
-         consEnableXyz, consDisableXyz, consDelvarsXyz,
-         consPrintXyz, consCopyXyz, consParseXyz,
-         consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
+         consEnfolpXyz, consEnfopsXyz, consCheckXyz, consLockXyz,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveXyz) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyXyz, consCopyXyz) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveXyz) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteXyz) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableXyz) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableXyz) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitXyz) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreXyz) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolXyz) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeXyz) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXyz) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolXyz) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXyz) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXyz) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXyz) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXyz) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXyz, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXyz) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXyz, consSepasolXyz, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXyz) );
 
 #ifdef LINCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip,"linear") != NULL )

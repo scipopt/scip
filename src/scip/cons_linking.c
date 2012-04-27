@@ -2983,6 +2983,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -2992,21 +2993,33 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyLinking,
-         consFreeLinking, consInitLinking, consExitLinking,
-         consInitpreLinking, consExitpreLinking, consInitsolLinking, consExitsolLinking,
-         consDeleteLinking, consTransLinking, consInitlpLinking,
-         consSepalpLinking, consSepasolLinking, consEnfolpLinking, consEnfopsLinking, consCheckLinking,
-         consPropLinking, consPresolLinking, consRespropLinking, consLockLinking,
-         consActiveLinking, consDeactiveLinking,
-         consEnableLinking, consDisableLinking, consDelvarsLinking,
-         consPrintLinking, consCopyLinking, consParseLinking,
-         consGetVarsLinking, consGetNVarsLinking, conshdlrdata) );
+         consEnfolpLinking, consEnfopsLinking, consCheckLinking, consLockLinking,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinking, consCopyLinking) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinking) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableLinking) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinking) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinking) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinking) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinking) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinking) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinking) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinking) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinking) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
+
 
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */

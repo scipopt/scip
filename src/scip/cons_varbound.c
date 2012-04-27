@@ -3590,26 +3590,36 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create variable bound constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyVarbound,
-         consFreeVarbound, consInitVarbound, consExitVarbound,
-         consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
-         consDeleteVarbound, consTransVarbound, consInitlpVarbound,
-         consSepalpVarbound, consSepasolVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound,
-         consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
-         consActiveVarbound, consDeactiveVarbound,
-         consEnableVarbound, consDisableVarbound, consDelvarsVarbound,
-         consPrintVarbound, consCopyVarbound, consParseVarbound,
-         consGetVarsVarbound, consGetNVarsVarbound, conshdlrdata) );
+         consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, consLockVarbound,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyVarbound, consCopyVarbound) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteVarbound) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolVarbound) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsVarbound) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpVarbound) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseVarbound) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintVarbound) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropVarbound, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropVarbound) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpVarbound, consSepasolVarbound, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

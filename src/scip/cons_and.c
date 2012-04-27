@@ -4405,6 +4405,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -4414,23 +4415,32 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
-
-   /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyAnd,
-         consFreeAnd, consInitAnd, consExitAnd,
-         consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
-         consDeleteAnd, consTransAnd, consInitlpAnd,
-         consSepalpAnd, consSepasolAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd,
-         consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
-         consActiveAnd, consDeactiveAnd,
-         consEnableAnd, consDisableAnd,
-         consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
-         consGetVarsAnd, consGetNVarsAnd, conshdlrdata) );
+         consEnfolpAnd, consEnfopsAnd, consCheckAnd, consLockAnd,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsAnd) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAnd) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAnd) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAnd) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAnd) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAnd, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropAnd) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
 
    /* add and constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

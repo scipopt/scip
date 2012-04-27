@@ -2813,6 +2813,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -2834,23 +2835,31 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyBounddisjunction,
-         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction,
-         consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
-         consDeleteBounddisjunction, consTransBounddisjunction,
-         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction,
-         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction,
-         consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
-         consActiveBounddisjunction, consDeactiveBounddisjunction,
-         consEnableBounddisjunction, consDisableBounddisjunction, consDelvarsBounddisjunction,
-         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
-         consGetVarsBounddisjunction, consGetNVarsBounddisjunction,
+         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, consLockBounddisjunction,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBounddisjunction, consCopyBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBounddisjunction, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
 
    /* register upgrade of quadratic complementarity constraints in cons_quadratic */
    if( SCIPfindConshdlr(scip, "quadratic") )
