@@ -99,6 +99,7 @@ interface
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
 - data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
+- tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
