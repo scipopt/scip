@@ -276,10 +276,10 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+/** Installs the given message handler, such that all messages are passed to this handler. A message handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
+ *  @note The currently installed message handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 extern
 SCIP_RETCODE SCIPsetMessagehdlr(
