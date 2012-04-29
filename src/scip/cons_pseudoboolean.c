@@ -825,7 +825,16 @@ SCIP_RETCODE getLinVarsAndAndRess(
        */
       if( hashmapentryexists )
       {
-	 hashmapentryexists = !(((CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)(vars[v])))->deleted);
+	 if( !SCIPconsIsOriginal(cons) )
+	 {
+	    hashmapentryexists = !(((CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)(vars[v])))->deleted);
+
+	    if( hashmapentryexists )
+	    {
+	       assert(((CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)(vars[v])))->cons != NULL);
+	       hashmapentryexists = !SCIPconsIsDeleted(((CONSANDDATA*) SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)(vars[v])))->cons);
+	    }
+	 }
       }
 
       if( !hashmapentryexists && linvars != NULL )
@@ -1234,6 +1243,13 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
    assert(nvars == 0 || (vars != NULL && coefs != NULL));
 
+   /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
+    * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
+    * afterwards
+    */
+   SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, &nandress) );
+   assert(consdata->nconsanddatas == nandress);
+
    /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
     * have to be equal to the number of variables in the linear constraint
     */
@@ -1245,36 +1261,6 @@ SCIP_RETCODE consdataPrint(
       && !SCIPisEQ(scip, lhs, rhs) )
       SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
-   nlinvars = 0;
-
-   conshdlr = SCIPconsGetHdlr(cons);
-   assert(conshdlr != NULL);
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->hashmap != NULL);
-   
-   nandress = 0;
-
-   /* split variables into original and artificial variables */
-   for( v = 0; v < nvars; ++v )
-   { 
-      assert(vars[v] != NULL);
-
-      if( !SCIPhashmapExists(conshdlrdata->hashmap, (void*)(vars[v])) )
-      {
-         linvars[nlinvars] = vars[v];
-         lincoefs[nlinvars] = coefs[v];
-         ++nlinvars;
-      }
-      else
-      {
-         andress[nandress] = vars[v];
-         andcoefs[nandress] = coefs[v];
-         ++nandress;
-      }
-   }
-   assert(nandress == consdata->nconsanddatas);
-
    printed = FALSE;
 
    /* print coefficients and variables */
@@ -1285,6 +1271,12 @@ SCIP_RETCODE consdataPrint(
       /* print linear part of constraint */
       SCIP_CALL( SCIPwriteVarsLinearsum(scip, file, linvars, lincoefs, nlinvars, TRUE) );
    }
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->hashmap != NULL);
 
    /* print all non-linear terms */
    for( v = nandress - 1; v >= 0; --v )
@@ -3369,6 +3361,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    CONSANDDATA** consanddatas;
    int nconsanddatas;
    SCIP_CONSDATA* consdata;
+   int oldnvars;
    int c;
    int c1;
 
@@ -3470,6 +3463,15 @@ SCIP_RETCODE correctLocksAndCaptures(
          consdata->upgradetried = FALSE;
          continue;
       }
+      else if( SCIPconsIsDeleted(andcons) )
+      {
+         /* remove rounding locks, because the and constraint was deleted  */
+         SCIP_CALL( unlockRoundingAndCons(scip, cons, consanddatas[c], oldandcoefs[c], consdata->lhs, consdata->rhs) );
+         ++c;
+         consdata->changed = TRUE;
+         consdata->upgradetried = FALSE;
+         continue;
+      }
 #else
       if( andcons == NULL )
       {
@@ -3513,6 +3515,8 @@ SCIP_RETCODE correctLocksAndCaptures(
          ++c;
          consdata->changed = TRUE;
          consdata->upgradetried = FALSE;
+	 consdata->propagated = FALSE;
+	 consdata->presolved = FALSE;
       }
       else if( SCIPvarGetIndex(res1) > SCIPvarGetIndex(res2) )
       {
@@ -3525,6 +3529,10 @@ SCIP_RETCODE correctLocksAndCaptures(
          ++c1;
          consdata->changed = TRUE;
          consdata->upgradetried = FALSE;
+         consdata->cliquesadded = FALSE;
+	 consdata->propagated = FALSE;
+	 consdata->presolved = FALSE;
+
          ++nnewconsanddatas;
       }
       else
@@ -3559,6 +3567,9 @@ SCIP_RETCODE correctLocksAndCaptures(
                SCIP_CALL( addNewLocks(scip, cons, newconsanddatas[nnewconsanddatas], newandcoefs[nnewconsanddatas], newlhs, newrhs) );
                consdata->changed = TRUE;
                consdata->upgradetried = FALSE;
+	       consdata->cliquesadded = FALSE;
+	       consdata->propagated = FALSE;
+	       consdata->presolved = FALSE;
             }
          }
          else
@@ -3568,13 +3579,16 @@ SCIP_RETCODE correctLocksAndCaptures(
             SCIP_CALL( addNewLocks(scip, cons, newconsanddatas[nnewconsanddatas], newandcoefs[nnewconsanddatas], newlhs, newrhs) );
             consdata->changed = TRUE;
             consdata->upgradetried = FALSE;
+	    consdata->cliquesadded = FALSE;
+	    consdata->propagated = FALSE;
+	    consdata->presolved = FALSE;
          }
 
          ++c;
          ++c1;
          ++nnewconsanddatas;
       }
-   }      
+   }
 
    /* add all remaining consanddatas and update locks and captures */
    if( c < nconsanddatas )
@@ -3612,6 +3626,8 @@ SCIP_RETCODE correctLocksAndCaptures(
          SCIP_CALL( removeOldLocks(scip, cons, consanddatas[c], oldandcoefs[c], consdata->lhs, consdata->rhs) );
          consdata->changed = TRUE;
          consdata->upgradetried = FALSE;
+	 consdata->propagated = FALSE;
+	 consdata->presolved = FALSE;
       }
    }
    else if( c1 < nandress )
@@ -3634,6 +3650,9 @@ SCIP_RETCODE correctLocksAndCaptures(
          ++nnewconsanddatas;
          consdata->changed = TRUE;
          consdata->upgradetried = FALSE;
+	 consdata->cliquesadded = FALSE;
+	 consdata->propagated = FALSE;
+	 consdata->presolved = FALSE;
       }
    }
    assert(c == nconsanddatas && c1 == nandress);
@@ -3654,9 +3673,19 @@ SCIP_RETCODE correctLocksAndCaptures(
    consdata->nconsanddatas = nnewconsanddatas;
    consdata->sconsanddatas = snewconsanddatas;
 
+   oldnvars = consdata->nlinvars;
    /* update number of linear variables without and-resultants */
    SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &(consdata->nlinvars)) );
    consdata->nlinvars -= nnewconsanddatas;
+
+   if( oldnvars != consdata->nlinvars )
+   {
+      consdata->changed = TRUE;
+      consdata->upgradetried = FALSE;
+      consdata->cliquesadded = FALSE;
+      consdata->propagated = FALSE;
+      consdata->presolved = FALSE;
+   }
 
 #ifndef NDEBUG
    consanddatas = consdata->consanddatas;
@@ -3840,7 +3869,7 @@ SCIP_RETCODE addCliques(
                SCIP_CONS* newcons;
                SCIP_VAR* clqvars[2];
                char consname[SCIP_MAXSTRLEN];
-               
+
                clqvars[0] = andress[c];
                clqvars[1] = values[1] ? var2 : SCIPvarGetNegatedVar(var2);
                assert(clqvars[1] != NULL);
@@ -3864,7 +3893,7 @@ SCIP_RETCODE addCliques(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-               
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
             /* if a variable in an and-constraint is in a clique with another normal linear variable, we can add the
@@ -3878,7 +3907,7 @@ SCIP_RETCODE addCliques(
              *    1 +    0 <= 1   ==>  1 or 0    >   ==>    r_1 + var2 <= 1
              *    0 +    0 <= 1             0   /
              */
-            if( SCIPvarsHaveCommonClique(var1, values[0], var2, values[1], TRUE) && (var1 != var2) )
+            if( (var1 != var2) && SCIPvarsHaveCommonClique(var1, values[0], var2, values[1], TRUE) )
             {
                SCIP_CONS* newcons;
                SCIP_VAR* clqvars[2];
@@ -3907,7 +3936,7 @@ SCIP_RETCODE addCliques(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-               
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
          }
@@ -3923,12 +3952,12 @@ SCIP_RETCODE addCliques(
       int nandvars1;
       SCIP_VAR** andvars2;
       int nandvars2;
-      
+
       consanddata1 = consdata->consanddatas[c];
       assert(consanddata1 != NULL);
       consanddata2 = consdata->consanddatas[c - 1];
       assert(consanddata2 != NULL);
-      
+
       assert(SCIPgetResultantAnd(scip, consanddata1->cons) == andress[c]);
       assert(SCIPgetResultantAnd(scip, consanddata2->cons) == andress[c - 1]);
 
@@ -3982,7 +4011,7 @@ SCIP_RETCODE addCliques(
             var2 = andvars2[v2];
             if( !SCIPvarIsActive(var2) && (!SCIPvarIsNegated(var2) || !SCIPvarIsActive(SCIPvarGetNegationVar(var2))) )
                continue;
-            
+
             /* get active counterpart to check for common cliques */
             if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
             {
@@ -4010,7 +4039,7 @@ SCIP_RETCODE addCliques(
                SCIP_CONS* newcons;
                SCIP_VAR* clqvars[2];
                char consname[SCIP_MAXSTRLEN];
-               
+
                clqvars[0] = andress[c];
                clqvars[1] = andress[c - 1];
 
@@ -4033,7 +4062,7 @@ SCIP_RETCODE addCliques(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-               
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
             /* if a variable in an and-constraint is in a clique with a variable in another and-constraint, we can add
@@ -4077,7 +4106,7 @@ SCIP_RETCODE addCliques(
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugMessage("added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-               
+
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
          }
@@ -4286,7 +4315,7 @@ SCIP_RETCODE correctConshdlrdata(
 	  */
 	 if( looseorcolumn )
 	 {
-	    SCIP_Bool delete = TRUE;
+	    SCIP_Bool del = TRUE;
 	    const int nfixedvars = SCIPgetNFixedVars(scip);
 
 	    if( nfixedvars > 0 )
@@ -4316,12 +4345,12 @@ SCIP_RETCODE correctConshdlrdata(
 	       SCIPsortPtr((void**)fixedvars, SCIPvarComp, nfixedvars);
 
 	       if( SCIPsortedvecFindPtr((void**)fixedvars, SCIPvarComp, SCIPgetResultantAnd(scip, consanddata->cons), nfixedvars, &pos) )
-		  delete = FALSE;
+		  del = FALSE;
 
 	       SCIPfreeBufferArray(scip, &fixedvars);
 	    }
 
-	    if( delete )
+	    if( del )
 	    {
 	       SCIP_CALL( SCIPdelCons(scip, consanddata->cons) );
 	    }
@@ -7951,13 +7980,12 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       {
          /* mark constraint being presolved and propagated */
          consdata->presolved = TRUE;
-         consdata->propagated = TRUE;
 
          /* add cliques to the clique table */
          SCIP_CALL( addCliques(scip, cons, &cutoff, naggrvars, nchgbds) );
          if( cutoff )
             break;
-         
+
          /* propagate constraint */
          SCIP_CALL( propagateCons(scip, cons, &cutoff, ndelconss) );
          if( cutoff )
