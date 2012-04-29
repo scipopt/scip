@@ -31,7 +31,7 @@ namespace tsp
 /** C++ wrapper object for event handlers */
 class EventhdlrNewSol : public scip::ObjEventhdlr
 {
-public:     
+public:
    /** default constructor */
    EventhdlrNewSol(
       SCIP* scip
@@ -46,50 +46,31 @@ public:
    }
 
    /** destructor of event handler to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-      );
-   
+   virtual SCIP_DECL_EVENTFREE(scip_free);
+
    /** initialization method of event handler (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-      );
-   
+   virtual SCIP_DECL_EVENTINIT(scip_init);
+
    /** deinitialization method of event handler (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-      );
-   
+   virtual SCIP_DECL_EVENTEXIT(scip_exit);
+
    /** solving process initialization method of event handler (called when branch and bound process is about to begin)
     *
     *  This method is called when the presolving was finished and the branch and bound process is about to begin.
     *  The event handler may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-      );
-   
+   virtual SCIP_DECL_EVENTINITSOL(scip_initsol);
+
    /** solving process deinitialization method of event handler (called before branch and bound process data is freed)
     *
     *  This method is called before the branch and bound process is freed.
     *  The event handler should use this call to clean up its branch and bound data.
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-      );
-   
+   virtual SCIP_DECL_EVENTEXITSOL(scip_exitsol);
+
    /** frees specific constraint data */
-   virtual SCIP_RETCODE scip_delete(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
-      );
+   virtual SCIP_DECL_EVENTDELETE(scip_delete);
 
    /** execution method of event handler
     *
@@ -98,12 +79,7 @@ public:
     *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
     *  given event handler and event data.
     */
-   virtual SCIP_RETCODE scip_exec(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      SCIP_EVENT*        event,              /**< event to process */
-      SCIP_EVENTDATA*    eventdata           /**< user data for the event */
-      );
+   virtual SCIP_DECL_EVENTEXEC(scip_exec);
 };
 
 } /* namespace tsp */
