@@ -2210,16 +2210,26 @@ SCIP_RETCODE cliquePresolve(
 
 	 /* get new constraint variables */
 	 if( negations[nvars] )
-	    newvars[nvars] = SCIPvarGetNegatedVar(newvars[nvars]);
+	 {
+	    /* negation does not need to be existing, so SCIPvarGetNegatedVar() cannot be called
+	     * (e.g. resultant = ~x = 1 - x and x = y = newvars[nvars] and negations[nvars] = TRUE,
+	     *  then y does not need to have a negated variable, yet)
+	     */
+	    SCIP_CALL( SCIPgetNegatedVar(scip, newvars[nvars], &(newvars[nvars])) );
+	 }
 	 assert(newvars[nvars] != NULL);
 
 	 for( v = nvars - 1; v >= 0; --v )
 	 {
 	    if( !negations[v] )
 	    {
-	       newvars[v] = SCIPvarGetNegatedVar(newvars[v]);
-	       assert(newvars[v] != NULL);
+	       /* negation does not need to be existing, so SCIPvarGetNegatedVar() cannot be called
+		* (e.g. vars[v] = ~x = 1 - x and x = y = newvars[v] and negations[v] = TRUE,
+		*  then y does not need to have a negated variable, yet)
+		*/
+	       SCIP_CALL( SCIPgetNegatedVar(scip, newvars[v], &(newvars[v])) );
 	    }
+	    assert(newvars[v] != NULL);
 	 }
 
 	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clqeq", SCIPconsGetName(cons));
