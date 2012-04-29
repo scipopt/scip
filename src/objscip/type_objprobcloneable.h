@@ -8,53 +8,40 @@
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   objprobcloneable.h
- * @brief Definition of base class for all clonable classes which define problem data
- * @author Tobias Achterberg
- * @author Timo Berthold
- * @author Ambros Gleixner
- * @author Stefan Heinz
- * @author Stefan Vigerske
+/**@file   type_objprobcloneable.h
+ * @ingroup TYPEDEFINITIONS
+ * @brief  function type definitions for clonable classes which define problem data
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_OBJPROBCLONEABLE_H__
-#define __SCIP_OBJPROBCLONEABLE_H__
+#ifndef __SCIP_TYPE_OBJPROBCLONEABLE_H__
+#define __SCIP_TYPE_OBJPROBCLONEABLE_H__
 
-#include "scip/def.h"
-#include "scip/scip.h"
-#include "objscip/type_objprobcloneable.h"
+/** clone method which will be used to copy constraint handler and variable pricer objects
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *
+ *  output:
+ *  - valid           : pointer to store whether to copy is valid w.r.t. copying dual reductions
+ */
+#define SCIP_DECL_OBJPROBCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
+#define SCIP_DECL_CONSHDLRCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
+#define SCIP_DECL_PRICERCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
 
-
-
-namespace scip
-{
-   /** @brief Definition of base class for all clonable classes which define problem data
-    *
-    *  Constraint handler and variable pricer C++ wrapper object plugins should extend this class
-    */
-   struct ObjProbCloneable
-   {
-      virtual ~ObjProbCloneable() {}
-
-      /** clone method which will be used to copy constraint handler and variable pricer objects */
-      virtual SCIP_DECL_OBJPROBCLONE(ObjProbCloneable* clone)
-      {
-         return 0;
-      }
-
-      /** returns whether the plugin object is copyable */
-      virtual SCIP_DECL_OBJPROBISCLONEABLE(iscloneable)
-      {
-         return FALSE;
-      }
-   };
-}
+/** returns whether the plugin object is copyable
+ *
+ *  return value      : whether object is copyable
+ */
+#define SCIP_DECL_OBJPROBISCLONEABLE(x) SCIP_Bool x (void) const
+#define SCIP_DECL_CONSHDLRISCLONEABLE(x) SCIP_Bool x (void) const
+#define SCIP_DECL_PRICERISCLONEABLE(x) SCIP_Bool x (void) const
 
 #endif
