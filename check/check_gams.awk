@@ -48,16 +48,13 @@ BEGIN  {
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    useshortnames = 1;        # should problem name be truncated to fit into column?
+   namelength = 18;          # maximal length of instance names (can be increased)
    writesolufile = 0;        # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = 1e+20;
 
    if (solver == "") solver="SCIP";
    if (penaltytime == "") penaltytime=3600.0;
-
-   printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
-   printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
-   printf("------------------+------+-------+-------+---------------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    nprobs = 0;
    sbab = 0;
@@ -119,7 +116,7 @@ BEGIN  {
     solstat[nprobs] = $12;
     dualbnd[nprobs] = $14;
     primalbnd[nprobs] = $13;
-    time[nprobs] = max($15,$16);  # we take max of solver reported time and wallclock time here
+    time[nprobs] = $15; # use max($15,$16) for max of solver reported time and wallclock time
     iters[nprobs] = $17;
     nodes[nprobs] = $18;
     nprobs++;
@@ -127,7 +124,27 @@ BEGIN  {
 }
 
 END {
-  #initialize paver input file
+  # prepare header
+  hyphenstr = "";
+  for (i = 0; i < namelength; ++i)
+     hyphenstr = sprintf("%s-", hyphenstr);
+
+  # first part: name of given length
+  tablehead1 = hyphenstr;
+  tablehead2 = sprintf("Name%*s", namelength-4, " ");
+  tablehead3 = hyphenstr;
+
+  # append rest of header
+  tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+-------\n";
+  tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |       \n";
+  tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+-------\n";
+
+  # print header
+  printf(tablehead1);
+  printf(tablehead2);
+  printf(tablehead3);
+
+  # initialize paver input file
   printf("* Trace Record Definition\n") > PAVFILE;
   printf("* InputFileName,ModelType,SolverName,Direction,ModelStatus,SolverStatus,ObjectiveValue,ObjectiveValueEstimate,SolverTime\n") > PAVFILE;
   printf("* NumberOfNodes,NumberOfIterations,NumberOfEquations,NumberOfVariables\n") > PAVFILE;
@@ -135,8 +152,8 @@ END {
   for (m = 0; m < nprobs; m++)
   {
      prob = model[m];
-     if( useshortnames && length(prob) > 18 )
-       shortprob = substr(prob, length(prob)-17, 18);
+     if( useshortnames && length(prob) > namelength )
+       shortprob = substr(prob, length(prob)-namelength-1, namelength);
      else
        shortprob = prob;
 
@@ -208,7 +225,7 @@ END {
        probtype = type[m];
 
        tottime = time[m];
-       if( time[m] > timelimit && timelimit > 0.0 )
+       if( time[m] >= timelimit && timelimit > 0.0 )
          timeout = 1;
        else if( gapreached || nodelimreached )
          timeout = 0;
@@ -389,12 +406,13 @@ END {
        }
 
        #write output to both the tex file and the console depending on whether printsoltimes is activated or not
-       printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-              pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m]) > TEXFILE;
+       printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+              namelength, pprob, cons[m], vars[m], db, pb, gapstr, markersym, nodes[m], markersym, time[m]) > TEXFILE;
        printf("\\\\\n") > TEXFILE;
 
-       printf("%-19s %-5s %7d %7d      ??      ?? %16.9g %16.9g %6s %8d %7d %7.1f %s (%2d - %2d)\n",
-              shortprob, probtype, cons[m], vars[m], db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
+       # note: probtype has length 5, but field width is 6
+       printf("%-*s  %-5s %7d %7d      ??      ?? %16.9g %16.9g %6s %9d %8d %7.1f %s (%2d - %2d)\n",
+              namelength, shortprob, probtype, cons[m], vars[m], db, pb, gapstr, iters[m], nodes[m], time[m], status, modstat[m], solstat[m]);
 
        #PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
        if( status == "abort" ) {

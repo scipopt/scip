@@ -156,7 +156,7 @@ SCIP_RETCODE preprocessGraph(
 
    /* compute maximum clique */
    tcliqueMaxClique(NULL, NULL, NULL, NULL, currgraph, NULL, NULL, maxcliquenodes,
-      &nmaxcliquenodes, &maxcliqueweight, 0, 0, 50000, 0, INT_MAX, -1, &status);
+      &nmaxcliquenodes, &maxcliqueweight, 0, 0, 50000, 0, INT_MAX, -1, NULL, &status);
    opt = ( status == TCLIQUE_OPTIMAL ? ' ' : '*' );
    printf("size of the maximum clique: %d%c \n", nmaxcliquenodes, opt);
 

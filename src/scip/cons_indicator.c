@@ -5549,12 +5549,97 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 #define consExitpreIndicator NULL
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsIndicator NULL
+static
+SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(vars != NULL);
+   assert(varssize >= 0);
+   assert(success != NULL);
+
+   if( varssize < 0 )
+      return SCIP_INVALIDDATA;
+
+   (*success) = TRUE;
+
+   /* indicator constraint is already deleted */
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
+   nvars = 0;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+
+   if( consdata->binvar != NULL )
+   {
+      assert(varssize > 0);
+      vars[nvars] = consdata->binvar;
+      ++nvars;
+   }
+   if( consdata->slackvar != NULL )
+   {
+      assert(varssize > nvars);
+      vars[nvars] = consdata->slackvar;
+      ++nvars;
+   }
+
+   /* linear constraint of indicator already deleted */
+   if( SCIPconsIsDeleted(consdata->lincons) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetConsVars(scip, consdata->lincons, &(vars[nvars]), varssize - nvars, success) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsIndicator NULL
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   int nlinvars;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nvars != NULL);
+   assert(success != NULL);
 
+   (*success) = TRUE;
+   *nvars = 0;
+
+   /* indicator constraint is already deleted */
+   if( SCIPconsIsDeleted(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+
+   if( consdata->binvar != NULL )
+      ++(*nvars);
+   if( consdata->slackvar != NULL )
+      ++(*nvars);
+
+   /* linear constraint of indicator is already deleted */
+   if( SCIPconsIsDeleted(consdata->lincons) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetConsNVars(scip, consdata->lincons, &nlinvars, success) );
+
+   if( *success )
+   {
+      assert(nlinvars >= 0);
+      *nvars += nlinvars;
+   }
+
+   return SCIP_OKAY;
+}
 
 /* ---------------- Constraint specific interface methods ---------------- */
 

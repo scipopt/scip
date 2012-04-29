@@ -2428,8 +2428,14 @@ SCIP_RETCODE SCIPconshdlrInitLP(
        */
       conshdlrDelayUpdates(conshdlr);
       
+      /* start timing */
+      SCIPclockStart(conshdlr->sepatime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->initconss, conshdlr->ninitconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->sepatime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -6098,7 +6104,9 @@ SCIP_RETCODE SCIPconsInitlp(
 
    /* call external method */
    if( conshdlr->consinitlp != NULL )
-   SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   {
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   }
 
    return SCIP_OKAY;
 }

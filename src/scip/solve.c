@@ -107,6 +107,8 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
    else if( checknodelimits && set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
       stat->status = SCIP_STATUS_NODELIMIT;
+   else if( checknodelimits && set->limit_totalnodes >= 0 && stat->ntotalnodes >= set->limit_totalnodes )
+      stat->status = SCIP_STATUS_TOTALNODELIMIT;
    else if( checknodelimits && set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
       stat->status = SCIP_STATUS_STALLNODELIMIT;
 
@@ -114,7 +116,7 @@ SCIP_Bool SCIPsolveIsStopped(
     * in the case of checknodelimits == FALSE, we do not want to report here that the solve will be stopped due to a nodelimit.
     */
    if( !checknodelimits )
-      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
+      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_TOTALNODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
    else
       return (stat->status != SCIP_STATUS_UNKNOWN);
 }

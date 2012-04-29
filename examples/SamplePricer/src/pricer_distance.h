@@ -45,7 +45,8 @@ using namespace std;
 using namespace scip;
 
 
-class ObjPricerDistance : public ObjPricer {
+class ObjPricerDistance : public ObjPricer
+{
 public:
   inline ObjPricerDistance(SCIP* scip) : 
      ObjPricer(scip, "Distance_Pricer", 
@@ -59,7 +60,8 @@ public:
 		   const int num_centers,
 		   const vector<SCIP_CONS*>& setpart_consptr_vector,
 		   const vector<SCIP_CONS*>& setpack_consptr_vector,
-		   SCIP_CONS*                card_consptr) {
+		   SCIP_CONS*                card_consptr)
+  {
     _num_points                = num_points;
     _num_centers               = num_centers;
     _setpart_consptr_vector    = setpart_consptr_vector;
@@ -83,11 +85,8 @@ public:
   }
 
 
-  virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer              /**< the variable pricer itself */
-      )
-   {
+  virtual SCIP_DECL_PRICERINIT(scip_init)
+  {
      cout << "Transformed Problem" << endl;
      SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
      
@@ -104,8 +103,8 @@ public:
      return SCIP_OKAY;
    }
 
-   virtual SCIP_RETCODE scip_redcost(SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result) {
-    
+  virtual SCIP_DECL_PRICERREDCOST(scip_redcost)
+  {  
     // find variable.
 
 #ifdef SCIP_DEBUG
@@ -242,7 +241,8 @@ public:
     return SCIP_OKAY;
   }
   
-  virtual SCIP_RETCODE scip_farkas(SCIP* scip, SCIP_PRICER* pricer) {
+  virtual SCIP_DECL_PRICERFARKAS(scip_farkas)
+  {
 
 #ifdef SCIP_DEBUG
     cout << "Here is scip_farkas(SCIP* scip, SCIP_PRICER* pricer)" << endl;

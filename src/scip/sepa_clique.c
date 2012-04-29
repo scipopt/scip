@@ -1303,7 +1303,7 @@ SCIP_RETCODE separateCuts(
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
       cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
-      maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, &tcliquestatus);
+      maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, NULL, &tcliquestatus);
 
    SCIPdebugMessage("finished searching clique cuts: found %d cuts\n", sepadata->ncuts);
 
