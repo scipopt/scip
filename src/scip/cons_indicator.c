@@ -4104,9 +4104,11 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       }
 
       /* add nlrow representation to NLP, if NLP had been constructed
-       * note, that we did not tell SCIP in exitpre that we have something to add to the NLP, thus indicators are only available in the NLP for MINLPs, but not for MIPs with indicators
+       *
+       * Note, that we did not tell SCIP in exitpre that we have something to add to the NLP, thus
+       * indicators are only available in the NLP for MINLPs, but not for MIPs with indicators.
        */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
+      if ( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
          SCIP_NLROW* nlrow;
          SCIP_VAR* quadvars[2];
@@ -4178,7 +4180,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
       /* store number of initial constraints */
       conshdlrdata->ninitconss = SCIPconshdlrGetNActiveConss(conshdlr);
-      
+
       /* reset number of fixed binary variables */
       conshdlrdata->nbinvarszero = 0;
 
@@ -4219,14 +4221,14 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          else
             probindex = SCIPvarGetProbindex(consdata->binvar);
 
-         /* if presolving detected infeasibility it might be that the binary variables are non active */
+         /* if presolving detected infeasibility it might be that the binary variables are not active */
          if ( probindex < 0 )
             continue;
 
          assert( 0 <= probindex && probindex < nvars );
          covered[probindex] = TRUE;
       }
-         
+
       /* check all variables */
       for (j = 0; j < nvars; ++j)
       {
@@ -4239,8 +4241,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
                break;
             if ( ! SCIPisIntegral(scip, obj) )
                break;
-            if ( obj < conshdlrdata->minabsobj )
-               conshdlrdata->minabsobj = obj;
+            if ( REALABS(obj) < conshdlrdata->minabsobj )
+               conshdlrdata->minabsobj = REALABS(obj);
          }
       }
 

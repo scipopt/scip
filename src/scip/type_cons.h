@@ -657,15 +657,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSDELVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
-
 /** constraint display method of constraint handler
  *
  *  The constraint handler can store a representation of the constraint into the given text file. Use the method
  *  SCIPinfoMessage() to push a string into the file stream.
-
  *
- * @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
- *       SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
+ *  @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
+ *        SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
  *
  *  input: - scip : SCIP main data structure - conshdlr : the constraint handler itself - cons : the constraint that
  *  should be displayed - file : the text file to store the information into
