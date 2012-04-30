@@ -682,7 +682,10 @@ SCIP_RETCODE SCIPpropExec(
 }
 
 /** resolves the given conflicting bound, that was deduced by the given propagator, by putting all "reason" bounds
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
  */
 SCIP_RETCODE SCIPpropResolvePropagation(
    SCIP_PROP*            prop,               /**< propagator */
@@ -691,6 +694,7 @@ SCIP_RETCODE SCIPpropResolvePropagation(
    int                   inferinfo,          /**< user inference information attached to the bound change */
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -710,7 +714,7 @@ SCIP_RETCODE SCIPpropResolvePropagation(
       SCIPclockStart(prop->resproptime, set);
 
       SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx,
-            result) );
+            relaxedbd, result) );
       
       /* stop timing */
       SCIPclockStop(prop->resproptime, set);

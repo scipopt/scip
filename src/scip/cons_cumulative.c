@@ -5878,6 +5878,7 @@ SCIP_RETCODE dualPresolving(
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_BESTSOLLIMIT:
+      case SCIP_STATUS_TOTALNODELIMIT:
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
          return SCIP_INVALIDDATA;
       }

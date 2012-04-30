@@ -4725,6 +4725,7 @@ SCIP_RETCODE rowScale(
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
     * to not destroy feasibility due to rounding
     */
+   /**@todo ensure that returned cut does not have infinite lhs and rhs */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
       if( mindeltainf )
@@ -13166,7 +13167,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fastmip = 0;
                goto SOLVEAGAIN;
@@ -13177,7 +13178,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * tolerance
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter feasibility tolerance\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                tightfeastol = TRUE;
                goto SOLVEAGAIN;
@@ -13186,7 +13187,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %d not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
+                  "(node %"SCIP_LONGINT_FORMAT") solution of unbounded LP %"SCIP_LONGINT_FORMAT" not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fromscratch = TRUE;
                goto SOLVEAGAIN;
@@ -13197,7 +13198,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * forget about the LP at this node and mark it to be unsolved
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
+                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -13343,7 +13344,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                         !SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) )
                   {
                      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
+                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -13390,7 +13391,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                       * with tighter feasibility tolerance and from scratch
                       */
                      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %d\n", stat->nnodes, stat->nlps);
+                        "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in unbounded LP %"SCIP_LONGINT_FORMAT"\n", stat->nnodes, stat->nlps);
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -17333,7 +17334,7 @@ void SCIPlpMarkDivingObjChanged(
  *        \max & y &\\
  *             & <A_i, x> - y ||A_i|| - \alpha a_i \geq 0 \\
  *             & <B_i, x> + y ||B_i|| - \alpha b_i \leq 0 \\
- *             & D x & = d\\
+ *             & D x - \alpha d & = 0\\
  *             & 0 \leq y & \leq 1\\
  *             & \alpha & \geq 1.
  *     \end{array}
@@ -17450,7 +17451,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    }
    else
    {
-      /* for one-norm, we need one for every inequality */
+      /* for one-norm, we need one slack variable for every inequality */
 
       /* create slacks for rows */
       for( i = 0; i < lp->nrows; ++i )
@@ -17512,6 +17513,10 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
          col = lp->cols[j];
          assert( col != NULL );
+
+         /* no slacks for fixed variables */
+         if( SCIPsetIsEQ(set, col->lb, col->ub) )
+            continue;
 
          /* add slacks for each bound if necessary */
          if( !SCIPsetIsInfinity(set, ABS(col->lb)) )
@@ -17725,6 +17730,19 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       /* set up index of column */
       colinds[0] = j;
       colvals[0] = 1.0;
+
+      /* fixed variable */
+      if( SCIPsetIsEQ(set, col->lb, col->ub) )
+      {
+         /* add artificial variable */
+         colinds[1] = lp->ncols;
+         colvals[1] = -col->lb;
+
+         /* add row */
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, 2, &beg, colinds, colvals) );
+
+         continue;
+      }
 
       /* lower bound */
       if( !SCIPsetIsInfinity(set, ABS(col->lb)) )

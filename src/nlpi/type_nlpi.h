@@ -26,6 +26,7 @@
 #define __SCIP_TYPE_NLPI_H__
 
 #include "scip/def.h"
+#include "scip/type_message.h"
 #include "blockmemshell/memory.h"
 #include "nlpi/type_expr.h"
 
@@ -495,6 +496,14 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - sval parameter value
  */
 #define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char* sval)
+
+/** sets message handler for message output
+ *
+ * input:
+ *  - nlpi NLP interface structure
+ *  - messagehdlr SCIP message handler, or NULL to suppress all output
+ */
+#define SCIP_DECL_NLPISETMESSAGEHDLR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_MESSAGEHDLR* messagehdlr)
 
 /**@} */
 #ifdef __cplusplus

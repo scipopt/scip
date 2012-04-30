@@ -82,7 +82,7 @@ extern
 SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
-   const char*           filename,           /**< name of log file, or NULL (stdout) */
+   const char*           filename,           /**< name of log file, or NULL for no log */
    SCIP_Bool             quiet,              /**< should screen messages be suppressed? */
    SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
    SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
@@ -91,9 +91,15 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
    );
 
-/** frees message handler */
+/** captures message handler */
 extern
-SCIP_RETCODE SCIPmessagehdlrFree(
+void SCIPmessagehdlrCapture(
+   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   );
+
+/** releases message handler */
+extern
+SCIP_RETCODE SCIPmessagehdlrRelease(
    SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
    );
 

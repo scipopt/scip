@@ -20,7 +20,6 @@
  * @author Gerald Gamrath
  *
  * TODO: simulation of presolving without solve
- * TODO: sort components by size?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +32,7 @@
 #define PRESOL_NAME            "components"
 #define PRESOL_DESC            "components presolver"
 #define PRESOL_PRIORITY        -9200000      /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS              0      /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS             -1      /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               TRUE      /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .lp-file? */
@@ -284,7 +283,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
       success = TRUE;
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, &success) );
 
       /* abort if the plugins were not successfully copied */
       if( !success )
@@ -360,11 +359,16 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
+   /* the following asserts are not true, because some aggregations in the original scip instance could not get sesolved
+    * inside some constraints, so the copy (subscip) will have also some inactive variables which were copied
+    */
+#if 0
    /* there might be less variables in the subscip, because variables might be cancelled out during copying constraint
     * when transferring variables to active variables
     */
    assert(nbinvars >= SCIPgetNBinVars(subscip));
    assert(nintvars >= SCIPgetNIntVars(subscip));
+#endif
 
    /* In debug mode, we want to be informed if the number of variables was reduced during copying.
     * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
@@ -476,6 +480,12 @@ SCIP_RETCODE copyAndSolveComponent(
          SCIPdebugMessage("-> tightened %d bounds of variables due to global bounds in the sub-SCIP for component %d\n", ntightened, compnr);
       }
    }
+   else
+   {
+      SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d not solved: %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+         compnr, nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
+         SCIPgetNContVars(subscip), nconss);
+   }
 
  TERMINATE:
    SCIPhashmapFree(&varmap);
@@ -533,11 +543,40 @@ SCIP_RETCODE fillDigraph(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nvars) );
       }
 
+#ifndef NDEBUG
+      /* clearing variables array to check for consistency */
+      if( nconsvars == nvars )
+      {
+	 BMSclearMemoryArray(consvars, nconsvars);
+      }
+      else
+      {
+	 assert(nconsvars < nvars);
+	 BMSclearMemoryArray(consvars, nconsvars + 1);
+      }
+#endif
+
       /* get variables for this constraint */
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, success) );
 
       if( !(*success) )
+      {
+#ifndef NDEBUG
+	 /* it looks strange if returning the number of variables was successful but not returning the variables */
+	 SCIPwarningMessage(scip, "constraint <%s> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
+#endif
          break;
+      }
+
+#ifndef NDEBUG
+      /* check if returned variables are consistent with the number of variables that were returned */
+      for( v = nconsvars - 1; v >= 0; --v )
+	 assert(consvars[v] != NULL);
+      if( nconsvars < nvars )
+      {
+	 assert(consvars[nconsvars] == NULL);
+      }
+#endif
 
       /* transform given variables to active variables */
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
@@ -681,6 +720,12 @@ SCIP_RETCODE splitProblem(
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetUbGlobal(compvars[0]);
 
+#ifndef NDEBUG
+	 SCIPwarningMessage(scip, "strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#else
+	 SCIPdebugMessage("strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#endif
+
          SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
          assert(!infeasible);
          assert(fixed);
@@ -767,6 +812,7 @@ SCIP_RETCODE presolComponents(
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
+   /* do not run, if not all variables are explicitly known */
    if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
@@ -827,12 +873,49 @@ SCIP_RETCODE presolComponents(
          /* compute independent components */
          SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
 
-         /* create subproblems from independent components and solve them in dependence of their size */
-         SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
-               &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
+         /* We want to sort the components in increasing size (number of variables).
+          * Therefore, we now get the number of variables for each component, and rename the components
+          * such that for i < j, component i has no more variables than component j.
+          * @todo Perhaps sort the components by the number of binary/integer variables?
+          */
+         if( ncomponents > 0 )
+         {
+            int* ncompvars;
+            int* permu;
 
-         (*nfixedvars) += ndeletedvars;
-         (*ndelconss) += ndeletedconss;
+            SCIP_CALL( SCIPallocBufferArray(scip, &ncompvars, ncomponents) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &permu, ncomponents) );
+
+            /* get number of variables in the components */
+            for( c = 0; c < ncomponents; ++c )
+            {
+               SCIPdigraphGetComponent(digraph, c, NULL, &ncompvars[c]);
+               permu[c] = c;
+            }
+
+            /* get permutation of component numbers such that the size of the components is increasing */
+            SCIPsortIntInt(ncompvars, permu, ncomponents);
+
+            /* now, we need the reverse direction, i.e., for each component number, we store its new number
+             * such that the components are sorted; for this, we abuse the ncompvars array
+             */
+            for( c = 0; c < ncomponents; ++c )
+               ncompvars[permu[c]] = c;
+
+            /* for each variable, replace the old component number by the new one */
+            for( c = 0; c < nvars; ++c )
+               components[c] = ncompvars[components[c]];
+
+            /* create subproblems from independent components and solve them in dependence of their size */
+            SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
+                  &nsolvedprobs, &ndeletedvars, &ndeletedconss, result) );
+
+            (*nfixedvars) += ndeletedvars;
+            (*ndelconss) += ndeletedconss;
+
+            SCIPfreeBufferArray(scip, &permu);
+            SCIPfreeBufferArray(scip, &ncompvars);
+         }
 
          SCIPfreeBufferArray(scip, &components);
       }

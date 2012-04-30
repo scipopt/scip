@@ -179,9 +179,9 @@ void SCIPprintError(
 
 /** creates and initializes SCIP data structures
  *
- *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
- *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
- *        file and turn off/on the display output.
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
+ *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output, respectively.
  */
 extern
 SCIP_RETCODE SCIPcreate(
@@ -276,23 +276,13 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+/** Installs the given message handler, such that all messages are passed to this handler. A message handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets not freed. That has to be done by the user using
- *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
+ *  @note The currently installed message handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 extern
 SCIP_RETCODE SCIPsetMessagehdlr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   );
-
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
- *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
- */
-extern
-SCIP_RETCODE SCIPsetMessagehdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
@@ -307,7 +297,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
 extern
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of log file, or NULL (stdout) */
+   const char*           filename            /**< name of log file, or NULL (no log) */
    );
 
 /** sets the currently installed message handler to be quiet (or not) */
@@ -399,6 +389,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
    );
@@ -4163,9 +4154,9 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
- *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
- *  or SCIPaddConflictBinvar();
+/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before you
+ *  enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
  */
 extern
 SCIP_RETCODE SCIPinitConflictAnalysis(
@@ -4187,6 +4178,25 @@ SCIP_RETCODE SCIPaddConflictLb(
                                               *   conflicting bound was valid, NULL for current local bound */
    );
 
+/** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed lower bound; this relaxed lower bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed)
+ *      lower bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be
+ *      called for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict
+ *      bound.
+ */
+extern
+SCIP_RETCODE SCIPaddConflictRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedlb           /**< the relaxed lower bound */
+   );
+
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound
@@ -4200,6 +4210,25 @@ SCIP_RETCODE SCIPaddConflictUb(
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
                                               *   conflicting bound was valid, NULL for current local bound */
+   );
+
+/** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedUb() should be called for each (relaxed)
+ *      upper bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
+ *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
+ *      bound.
+ */
+extern
+SCIP_RETCODE SCIPaddConflictRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedub           /**< the relaxed upper bound */
    );
 
 /** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis' candidate
@@ -4218,6 +4247,25 @@ SCIP_RETCODE SCIPaddConflictBd(
                                               *   conflicting bound was valid, NULL for current local bound */
    );
 
+/** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis'
+ *  candidate storage; with the additional information of a relaxed upper bound; this relaxed upper bound is the one
+ *  which would be enough to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedBd() should be called for each (relaxed)
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
+ *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+extern
+SCIP_RETCODE SCIPaddConflictRelaxedBd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedbd           /**< the relaxed bound */
+   );
+
 /** adds changed bound of fixed binary variable to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBinvar() should be called for each fixed binary
@@ -4231,13 +4279,61 @@ SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP_VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
    );
 
+/** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
+ *  even stronger bound
+ */
+extern
+SCIP_RETCODE SCIPisConflictVarUsed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool*            used                /**< pointer to store if the variable is already used */
+   );
+
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+extern
+SCIP_Real SCIPgetConflictVarLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
+ *  SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPgetConflictVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
+ *  SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPgetConflictVarRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
+ *  minus SCIP_INFINITY
+ */
+extern
+SCIP_Real SCIPgetConflictVarRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
- *  SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(), or SCIPaddConflictBinvar();
- *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
- *  SCIPaddConflictUb(), SCIPconflictAddBd(), and SCIPaddConflictBinvar() is valid for the whole subtree;
- *  if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict()
- *  to make sure, that the correct valid depth is used
+ *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+ *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
+ *  handlers to create a conflict constraint out of the resulting conflict set; the given valid depth must be a depth
+ *  level, at which the conflict set defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar() is
+ *  valid for the whole subtree; if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons()
+ *  instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
  */
 extern
 SCIP_RETCODE SCIPanalyzeConflict(
@@ -4246,12 +4342,13 @@ SCIP_RETCODE SCIPanalyzeConflict(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(),
- *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
- *  resulting conflict set;
- *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), 
- *  SCIPconflictAddBd(), and SCIPaddConflictBinvar())
+/** analyzes conflict bounds that were added with calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
+ *  SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or
+ *  SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set; the given constraint must be the constraint that detected the conflict, i.e. the constraint
+ *  that is infeasible in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(),
+ *  SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(),
+ *  SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar())
  */
 extern
 SCIP_RETCODE SCIPanalyzeConflictCons(
@@ -4611,7 +4708,11 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4621,7 +4722,11 @@ SCIP_RETCODE SCIPenfopsCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4630,14 +4735,21 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls LP initialization method for single constraint */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
    );
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4645,7 +4757,10 @@ SCIP_RETCODE SCIPsepalpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4654,7 +4769,10 @@ SCIP_RETCODE SCIPsepasolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4663,7 +4781,11 @@ SCIP_RETCODE SCIPpropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4672,10 +4794,14 @@ SCIP_RETCODE SCIPrespropCons(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** presolves of single constraint */
+/** presolves a single constraint
+ *
+ *  @note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4704,14 +4830,22 @@ SCIP_RETCODE SCIPpresolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
    );
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6700,6 +6834,17 @@ SCIP_RETCODE SCIPbranchVar(
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+extern
+SCIP_RETCODE SCIPbranchVarHole(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child (x <= left), or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
    );
 
 /** branches on a variable x using a given value x'; 

@@ -393,7 +393,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 {  /*lint --e{715}*/
-   /* automatically select the now active display columns */
+   /* automatically select the new active display columns */
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;
@@ -942,6 +942,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
          &(*set)->limit_nodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "limits/totalnodes",
+         "maximal number of total nodes (incl. restarts) to process (-1: no limit)",
+         &(*set)->limit_totalnodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/stallnodes",

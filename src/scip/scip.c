@@ -583,9 +583,9 @@ void SCIPprintError(
 
 /** creates and initializes SCIP data structures
  *
- *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
- *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
- *        file and turn off/on the display output.
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
+ *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output, respectively.
  */
 SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
@@ -660,8 +660,8 @@ SCIP_RETCODE SCIPfree(
    SCIPinterruptFree(&(*scip)->interrupt);
    SCIP_CALL( SCIPmemFree(&(*scip)->mem) );
 
-   /* free message handler */
-   SCIP_CALL( SCIPmessagehdlrFree(&(*scip)->messagehdlr) );
+   /* release message handler */
+   SCIP_CALL( SCIPmessagehdlrRelease(&(*scip)->messagehdlr) );
 
    BMSfreeMemory(scip);
 
@@ -793,6 +793,9 @@ SCIP_RETCODE SCIPprintStatus(
       break;
    case SCIP_STATUS_NODELIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "node limit reached");
+      break;
+   case SCIP_STATUS_TOTALNODELIMIT:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "total node limit reached");
       break;
    case SCIP_STATUS_STALLNODELIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "stall node limit reached");
@@ -954,37 +957,33 @@ SCIP_Bool SCIPisStopped(
 /** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets not freed. That has to be done by the user using
- *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
+ *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
+   int i;
+
    SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
 
-   scip->messagehdlr = messagehdlr;
+   /* update message handler in NLP solver interfaces */
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      assert(scip->set->nlpis[i] != NULL);
 
-   return SCIP_OKAY;
-}
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
+   }
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
- *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
- */
-SCIP_RETCODE SCIPsetMessagehdlrFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIPmessagehdlrCapture(messagehdlr);
 
-   assert(scip != NULL);
-
-   /* free previously installed message handler */
-   SCIP_CALL( SCIPmessagehdlrFree(&scip->messagehdlr) );
+   SCIP_CALL( SCIPmessagehdlrRelease(&scip->messagehdlr) );
+   assert(scip->messagehdlr == NULL);
 
    scip->messagehdlr = messagehdlr;
 
@@ -1002,7 +1001,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
 /** sets the log file name for the currently installed message handler */
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of log file, or NULL (stdout) */
+   const char*           filename            /**< name of log file, or NULL (no log) */
    )
 {
    if( scip->messagehdlr != NULL )
@@ -1134,6 +1133,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
    )
@@ -1143,12 +1143,15 @@ SCIP_RETCODE SCIPcopyPlugins(
    assert(sourcescip->set != NULL);
    assert(targetscip->set != NULL);
 
-   /* sets the message handler of the target SCIP to be quiet if the source message handler is quiet */
-   SCIPsetMessagehdlrQuiet(targetscip, SCIPmessagehdlrIsQuiet(sourcescip->messagehdlr));
-
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+   /* passes the message handler of the source SCIP to the target SCIP, also if NULL */
+   if( passmessagehdlr )
+   {
+      SCIP_CALL( SCIPsetMessagehdlr(targetscip, SCIPgetMessagehdlr(sourcescip)) );
+   }
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
@@ -2089,6 +2092,8 @@ SCIP_RETCODE SCIPcopy(
 {
    SCIP_HASHMAP* localvarmap;
    SCIP_HASHMAP* localconsmap;
+   SCIP_Real startcopytime;
+   SCIP_Real copytime;
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    SCIP_Bool consscopyvalid;
@@ -2103,6 +2108,12 @@ SCIP_RETCODE SCIPcopy(
    SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
+   /* get time before start of copy procedure */
+   startcopytime = SCIPclockGetTime(sourcescip->stat->copyclock);
+
+   /* start time measuring */
+   SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
+
    /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
     * SCIP 
     */
@@ -2110,7 +2121,7 @@ SCIP_RETCODE SCIPcopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
 
    SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
 
@@ -2162,6 +2173,20 @@ SCIP_RETCODE SCIPcopy(
       /* free hash map */
       SCIPhashmapFree(&localconsmap);
    }
+
+   /* stop time measuring */
+   SCIPclockStop(sourcescip->stat->copyclock, sourcescip->set);
+
+   /* get time after copying procedure */
+   copytime = SCIPclockGetTime(sourcescip->stat->copyclock) - startcopytime;
+
+   if( copytime > sourcescip->stat->maxcopytime )
+      sourcescip->stat->maxcopytime = copytime;
+   if( copytime < sourcescip->stat->mincopytime )
+      sourcescip->stat->mincopytime = copytime;
+
+   /* increase copy counter */
+   ++(sourcescip->stat->ncopies);
 
    return SCIP_OKAY;
 }
@@ -4071,6 +4096,9 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
          NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
          paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
+
+   /* pass message handler (may be NULL) */
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, scip->messagehdlr) );
 
    return SCIP_OKAY;
 }
@@ -7645,6 +7673,62 @@ SCIP_RETCODE freeTransform(
    return SCIP_OKAY;
 }
 
+/** displays most relevant statistics after problem was solved */
+static
+SCIP_RETCODE displayRelevantStats(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* display most relevant statistics */
+   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   {
+      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+      SCIPmessagePrintInfo(scip->messagehdlr, "SCIP Status        : ");
+      SCIP_CALL( SCIPprintStage(scip, NULL) );
+      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+      SCIPmessagePrintInfo(scip->messagehdlr, "Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      if( scip->stat->nruns > 1 )
+         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT" (total of %"SCIP_LONGINT_FORMAT" nodes in %d runs)\n",
+            scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
+      else
+         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
+         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
+            getPrimalbound(scip), scip->primal->nsolsfound);
+      if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
+      {
+         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
+         SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
+         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
+            SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
+         else
+            SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
+      }
+
+      /* check solution for feasibility in original problem */
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+      {
+         SCIP_SOL* sol;
+
+         sol = SCIPgetBestSol(scip);
+         if( sol != NULL )
+         {
+            SCIP_Bool feasible;
+            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+
+            if( !feasible )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, "best solution is not feasible in original problem\n");
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** transforms and presolves problem */
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7801,6 +7885,12 @@ SCIP_RETCODE SCIPpresolve(
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
 
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+   {
+      /* display most relevant statistics */
+      displayRelevantStats(scip);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -7810,9 +7900,14 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
 
    SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the stage is already SCIP_STAGE_SOLVED do nothing */
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
 
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
@@ -7852,7 +7947,7 @@ SCIP_RETCODE SCIPsolve(
       }
       restart = FALSE;
       scip->stat->userrestart = FALSE;
-      
+
       switch( scip->set->stage )
       {
       case SCIP_STAGE_PROBLEM:
@@ -7860,6 +7955,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PRESOLVING:
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
+
+	 /* remember that we already printed the relevant statistics */
+	 if( scip->set->stage == SCIP_STAGE_SOLVED )
+	    statsprinted = TRUE;
+
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
@@ -7919,49 +8019,10 @@ SCIP_RETCODE SCIPsolve(
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
 
-   /* display most relevant statistics */
-   if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
+   if( !statsprinted )
    {
-      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
-      SCIPmessagePrintInfo(scip->messagehdlr, "SCIP Status        : ");
-      SCIP_CALL( SCIPprintStage(scip, NULL) );
-      SCIPmessagePrintInfo(scip->messagehdlr, "\n");
-      SCIPmessagePrintInfo(scip->messagehdlr, "Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-      if( scip->stat->nruns > 1 )
-         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT" (total of %"SCIP_LONGINT_FORMAT" nodes in %d runs)\n",
-            scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
-      else
-         SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
-      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
-         SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
-            getPrimalbound(scip), scip->primal->nsolsfound);
-      if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
-      {
-         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", getDualbound(scip));
-         SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
-         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
-            SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
-         else
-            SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
-      }
-
-      /* check solution for feasibility in original problem */
-      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
-      {
-         SCIP_SOL* sol;
-
-         sol = SCIPgetBestSol(scip);
-         if( sol != NULL )
-         {
-            SCIP_Bool feasible;
-            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-            
-            if( !feasible )
-            {
-               SCIPmessagePrintInfo(scip->messagehdlr, "best solution is not feasible in original problem\n");
-            }
-         }
-      }
+      /* display most relevant statistics */
+      displayRelevantStats(scip);
    }
 
    return SCIP_OKAY;
@@ -13430,9 +13491,9 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
    return (SCIPgetDepth(scip) > 0 && SCIPconflictApplicable(scip->set));
 }
 
-/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
- *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
- *  or SCIPaddConflictBinvar();
+/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before you
+ *  enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
  */
 SCIP_RETCODE SCIPinitConflictAnalysis(
    SCIP*                 scip                /**< SCIP data structure */
@@ -13466,12 +13527,36 @@ SCIP_RETCODE SCIPaddConflictLb(
    return SCIP_OKAY;
 }
 
+/** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed lower bound; this relaxed lower bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedLb() should be called for each (relaxed) lower bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelexedLb() should be called
+ *      for each (relaxed) lower bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedlb           /**< the relaxed lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx, relaxedlb) );
+
+   return SCIP_OKAY;
+}
+
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound
- *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
- *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound that
+ *      lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called for
+ *      each upper bound, whose current assignment lead to the deduction of the given conflict bound.
  */
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13483,6 +13568,31 @@ SCIP_RETCODE SCIPaddConflictUb(
    SCIP_CALL( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage
+ *  with the additional information of a relaxed upper bound; this relaxed upper bound is the one which would be enough
+ *  to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each (relaxed) upper
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedUb() should be
+ *      called for each (relaxed) upper bound, whose current assignment lead to the deduction of the given conflict
+ *      bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedub           /**< the relaxed upper bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx, relaxedub) );
 
    return SCIP_OKAY;
 }
@@ -13505,6 +13615,31 @@ SCIP_RETCODE SCIPaddConflictBd(
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, boundtype, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis'
+ *  candidate storage; with the additional information of a relaxed upper bound; this relaxed upper bound is the one
+ *  which would be enough to explain a certain bound change;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictRelaxedBd() should be called for each (relaxed)
+ *      bound that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictRelaxedBd() should be
+ *      called for each (relaxed) bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+SCIP_RETCODE SCIPaddConflictRelaxedBd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Real             relaxedbd           /**< the relaxed bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConflictRelaxedBd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictAddRelaxedBound(scip->conflict, scip->set, scip->stat, var, boundtype, bdchgidx, relaxedbd) );
 
    return SCIP_OKAY;
 }
@@ -13536,13 +13671,81 @@ SCIP_RETCODE SCIPaddConflictBinvar(
    return SCIP_OKAY;
 }
 
+/** checks if the given variable is already part of the current conflict set or queued for resolving with the same or
+ *  even stronger bound
+ */
+SCIP_RETCODE SCIPisConflictVarUsed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node, when the
+                                              *   conflicting bound was valid, NULL for current local bound */
+   SCIP_Bool*            used                /**< pointer to store if the variable is already used */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisConflictVarUsed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
+}
+
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+SCIP_Real SCIPgetConflictVarLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarLb(scip->conflict, scip->set, var);
+}
+
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
+ *  SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarUb(scip->conflict, scip->set, var);
+}
+
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
+ *  SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarRelaxedLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarRelaxedLb(scip->conflict, scip->set, var);
+}
+
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
+ *  minus SCIP_INFINITY
+ */
+SCIP_Real SCIPgetConflictVarRelaxedUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPconflictGetVarRelaxedUb(scip->conflict, scip->set, var);
+}
+
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
- *  SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(), or SCIPaddConflictBinvar();
- *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
- *  SCIPaddConflictUb(), SCIPconflictAddBd(), and SCIPaddConflictBinvar() is valid for the whole subtree;
- *  if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict()
- *  to make sure, that the correct valid depth is used
+ *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+ *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
+ *  handlers to create a conflict constraint out of the resulting conflict set; the given valid depth must be a depth
+ *  level, at which the conflict set defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar() is
+ *  valid for the whole subtree; if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons()
+ *  instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
  */
 SCIP_RETCODE SCIPanalyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13558,12 +13761,13 @@ SCIP_RETCODE SCIPanalyzeConflict(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(),
- *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
- *  resulting conflict set;
- *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
- *  SCIPconflictAddBd(), and SCIPaddConflictBinvar())
+/** analyzes conflict bounds that were added with calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
+ *  SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or
+ *  SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set; the given constraint must be the constraint that detected the conflict, i.e. the constraint
+ *  that is infeasible in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(),
+ *  SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(),
+ *  SCIPaddConflictRelaxedBd(), and SCIPaddConflictBinvar())
  */
 SCIP_RETCODE SCIPanalyzeConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14198,14 +14402,18 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14216,17 +14424,21 @@ SCIP_RETCODE SCIPenfopsCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfopsCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
 
    SCIP_CALL( SCIPconsEnfops(cons, scip->set, solinfeasible, objinfeasible, result) );
 
    return SCIP_OKAY;
 }
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -14236,6 +14448,7 @@ SCIP_RETCODE SCIPenfolpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPenfolpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -14245,7 +14458,11 @@ SCIP_RETCODE SCIPenfolpCons(
    return SCIP_OKAY;
 }
 
-/** calls LP initialization method for single */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
@@ -14253,6 +14470,7 @@ SCIP_RETCODE SCIPinitlpCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14261,7 +14479,10 @@ SCIP_RETCODE SCIPinitlpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14279,7 +14500,10 @@ SCIP_RETCODE SCIPsepalpCons(
    return SCIP_OKAY;
 }
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -14299,7 +14523,10 @@ SCIP_RETCODE SCIPsepasolCons(
    return SCIP_OKAY;
 }
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
@@ -14318,7 +14545,11 @@ SCIP_RETCODE SCIPpropCons(
    return SCIP_OKAY;
 }
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
@@ -14326,23 +14557,28 @@ SCIP_RETCODE SCIPrespropCons(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
    assert(infervar != NULL);
    assert(bdchgidx != NULL);
    assert(result != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPrespropCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( SCIPconsResprop(cons, scip->set, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
    return SCIP_OKAY;
 }
 
-/** presolves of single constraint */
+/** presolves of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to presolve */
@@ -14393,7 +14629,11 @@ SCIP_RETCODE SCIPpresolCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14401,6 +14641,7 @@ SCIP_RETCODE SCIPactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -14409,7 +14650,11 @@ SCIP_RETCODE SCIPactiveCons(
    return SCIP_OKAY;
 }
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -14417,6 +14662,7 @@ SCIP_RETCODE SCIPdeactiveCons(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(!SCIPconsIsAdded(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPdeactiveCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -18741,6 +18987,24 @@ SCIP_RETCODE SCIPbranchVar(
    return SCIP_OKAY;
 }
 
+/** branches a variable x using a given domain hole; two child nodes (x <= left, x >= right) are created */
+SCIP_RETCODE SCIPbranchVarHole(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child (x <= left), or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child (x >= right), or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPbranchVarHole", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeBranchVarHole(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->lp,
+         scip->branchcand, scip->eventqueue, var, left, right, downchild, upchild) );
+
+   return SCIP_OKAY;
+}
+
 /** branches on a variable x using a given value x'; 
  *  for continuous variables with relative domain width larger epsilon, x' must not be one of the bounds;
  *  two child nodes (x <= x', x >= x') are created;
@@ -22508,18 +22772,30 @@ void printTimingStatistics(
    {
       SCIP_Real totaltime;
       SCIP_Real solvingtime;
-      
+
       solvingtime  = SCIPclockGetTime(scip->stat->solvingtime);
 
-      if( scip->set->time_reading ) 
+      if( scip->set->time_reading )
          totaltime = solvingtime;
       else
          totaltime = solvingtime + readingtime;
-   
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Total Time         : %10.2f\n", totaltime);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solvingtime);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", SCIPclockGetTime(scip->stat->presolvingtime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  reading          : %10.2f%s\n", readingtime, scip->set->time_reading ? " (included in solving)" : "");
+
+      if( scip->stat->ncopies > 0 )
+      {
+	 SCIP_Real copytime;
+
+	 copytime = SCIPclockGetTime(scip->stat->copyclock);
+
+	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f (%d #copies) (minimal %.2f, maximal %.2f, average %.2f)\n",
+	    copytime, scip->stat->ncopies, scip->stat->mincopytime, scip->stat->maxcopytime, copytime / scip->stat->ncopies);
+      }
+      else
+	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
    }
 }
 

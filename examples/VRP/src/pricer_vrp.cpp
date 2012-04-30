@@ -71,10 +71,7 @@ ObjPricerVRP::~ObjPricerVRP()
  *  the variables and constraints in the transformed problem from the references in the original
  *  problem.
  */
-SCIP_RETCODE ObjPricerVRP::scip_init(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer              /**< the variable pricer itself */
-   )
+SCIP_DECL_PRICERINIT(ObjPricerVRP::scip_init)
 {
    for (int i = 0; i < num_nodes(); ++i)
    {
@@ -204,12 +201,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
  *  - SCIP_SUCCESS    : at least one improving variable was found, or it is ensured that no such variable exists
  *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP solution is optimal
  */
-SCIP_RETCODE ObjPricerVRP::scip_redcost(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< the variable pricer itself */
-   SCIP_Real*            lowerbound,         /**< a lowerbound computed by the pricer */
-   SCIP_RESULT*          result              /**< the result of the pricer call */
-   )
+SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
 {
    SCIPdebugMessage("call scip_redcost ...\n");
 
@@ -230,10 +222,7 @@ SCIP_RETCODE ObjPricerVRP::scip_redcost(
  *  - find the shortest admissible tour with respect to these lengths
  *  - if this tour has negative reduced cost, add it to the LP
  */
-SCIP_RETCODE ObjPricerVRP::scip_farkas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer              /**< the variable pricer itself */
-   )
+SCIP_DECL_PRICERFARKAS(ObjPricerVRP::scip_farkas)
 {
    SCIPdebugMessage("call scip_farkas ...\n");
 

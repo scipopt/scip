@@ -368,55 +368,9 @@ void messagehdlrOpenLogfile(
       messagehdlr->logfile = NULL;
 }
 
-
-/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
- *
- *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
- */
-SCIP_RETCODE SCIPmessagehdlrCreate(
-   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
-   SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
-   const char*           filename,           /**< name of log file, or NULL (stdout) */
-   SCIP_Bool             quiet,              /**< should screen messages be suppressed? */
-   SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
-   SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
-   SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
-   SCIP_DECL_MESSAGEHDLRFREE((*messagehdlrfree)), /**< destructor of message handler to free message handler data */
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
-   )
-{
-   SCIP_ALLOC( BMSallocMemory(messagehdlr) );
-   (*messagehdlr)->messagewarning = messagewarning;
-   (*messagehdlr)->messagedialog = messagedialog;
-   (*messagehdlr)->messageinfo = messageinfo;
-   (*messagehdlr)->messagehdlrfree = messagehdlrfree;
-   (*messagehdlr)->messagehdlrdata = messagehdlrdata;
-   (*messagehdlr)->warningbuffer = NULL;
-   (*messagehdlr)->dialogbuffer = NULL;
-   (*messagehdlr)->infobuffer = NULL;
-   (*messagehdlr)->warningbufferlen = 0;
-   (*messagehdlr)->dialogbufferlen = 0;
-   (*messagehdlr)->infobufferlen = 0;
-
-   (*messagehdlr)->quiet = quiet;
-   messagehdlrOpenLogfile(*messagehdlr, filename);
-
-   /* allocate buffer for buffered output */
-   if( bufferedoutput )
-   {
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
-      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
-      (*messagehdlr)->warningbuffer[0] = '\0';
-      (*messagehdlr)->dialogbuffer[0] = '\0';
-      (*messagehdlr)->infobuffer[0] = '\0';
-   }
-
-   return SCIP_OKAY;
-}
-
 /** frees message handler */
-SCIP_RETCODE SCIPmessagehdlrFree(
+static
+SCIP_RETCODE messagehdlrFree(
    SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
    )
 {
@@ -446,6 +400,92 @@ SCIP_RETCODE SCIPmessagehdlrFree(
       BMSfreeMemoryArrayNull(&(*messagehdlr)->dialogbuffer);
       BMSfreeMemoryArrayNull(&(*messagehdlr)->infobuffer);
       BMSfreeMemory(messagehdlr);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
+ *
+ *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
+ *  @note Creating a message handler automatically captures it.
+ */
+SCIP_RETCODE SCIPmessagehdlrCreate(
+   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   const char*           filename,           /**< name of log file, or NULL for no log */
+   SCIP_Bool             quiet,              /**< should screen messages be suppressed? */
+   SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
+   SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
+   SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
+   SCIP_DECL_MESSAGEHDLRFREE((*messagehdlrfree)), /**< destructor of message handler to free message handler data */
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
+   )
+{
+   SCIP_ALLOC( BMSallocMemory(messagehdlr) );
+   (*messagehdlr)->messagewarning = messagewarning;
+   (*messagehdlr)->messagedialog = messagedialog;
+   (*messagehdlr)->messageinfo = messageinfo;
+   (*messagehdlr)->messagehdlrfree = messagehdlrfree;
+   (*messagehdlr)->messagehdlrdata = messagehdlrdata;
+   (*messagehdlr)->warningbuffer = NULL;
+   (*messagehdlr)->dialogbuffer = NULL;
+   (*messagehdlr)->infobuffer = NULL;
+   (*messagehdlr)->warningbufferlen = 0;
+   (*messagehdlr)->dialogbufferlen = 0;
+   (*messagehdlr)->infobufferlen = 0;
+   (*messagehdlr)->nuses = 1;
+
+   (*messagehdlr)->quiet = quiet;
+   messagehdlrOpenLogfile(*messagehdlr, filename);
+
+   /* allocate buffer for buffered output */
+   if( bufferedoutput )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) ); /*lint !e506*/
+      (*messagehdlr)->warningbuffer[0] = '\0';
+      (*messagehdlr)->dialogbuffer[0] = '\0';
+      (*messagehdlr)->infobuffer[0] = '\0';
+   }
+
+   return SCIP_OKAY;
+}
+
+/** captures message handler */
+void SCIPmessagehdlrCapture(
+   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   )
+{
+   if( messagehdlr != NULL )
+      ++messagehdlr->nuses;
+}
+
+/** releases message handler */
+SCIP_RETCODE SCIPmessagehdlrRelease(
+   SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+   )
+{
+   assert(messagehdlr != NULL);
+
+   if( *messagehdlr == NULL )
+      return SCIP_OKAY;
+
+   assert((*messagehdlr)->nuses >= 1);
+
+   /* decrement usage counter */
+   --(*messagehdlr)->nuses;
+
+   /* the last one turns the light off */
+   if( (*messagehdlr)->nuses == 0 )
+   {
+      SCIP_CALL( messagehdlrFree(messagehdlr) );
+      assert(*messagehdlr == NULL);
+   }
+   else
+   {
+      *messagehdlr = NULL;
    }
 
    return SCIP_OKAY;

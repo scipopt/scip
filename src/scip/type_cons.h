@@ -479,11 +479,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  SCIPchgVarUb() in order to deduce bound changes on variables.
  *  In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint, that deduced the
  *  variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
- *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
+ *  The propagation conflict resolving method can then be implemented, to provide a "reasons" for the bound
  *  changes, i.e. the bounds of variables at the time of the propagation, that forced the constraint to set the
  *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
  *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
- *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ *  by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+ *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and/or SCIPaddConflictBinvar() in the propagation conflict
+ *  resolving method.
  *
  *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e. changes the lower bound of z
  *  to 1.0), if both, x and y, are assigned to FALSE (i.e. if the upper bounds of these variables are 0.0). It uses
@@ -491,7 +493,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of 
+ *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
  *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.
@@ -504,6 +506,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call
  *  - boundtype       : the type of the changed bound (lower or upper bound)
  *  - bdchgidx        : the index of the bound change, representing the point of time where the change took place
+ *  - relaxedbd       : the relaxed bound which is sufficient to be explained
  *
  *  output:
  *  - result          : pointer to store the result of the propagation conflict resolving call
@@ -511,9 +514,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  possible return values for *result:
  *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
  *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
+ *
+ *  @note it is sufficient to explain/resolve the relaxed bound
  */
 #define SCIP_DECL_CONSRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
-      SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
+      SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, \
+      SCIP_RESULT* result)
 
 /** variable rounding lock method of constraint handler
  *
@@ -651,15 +657,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSDELVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
-
 /** constraint display method of constraint handler
  *
  *  The constraint handler can store a representation of the constraint into the given text file. Use the method
  *  SCIPinfoMessage() to push a string into the file stream.
-
  *
- * @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
- *       SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
+ *  @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
+ *        SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
  *
  *  input: - scip : SCIP main data structure - conshdlr : the constraint handler itself - cons : the constraint that
  *  should be displayed - file : the text file to store the information into
@@ -749,7 +753,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the variables which are
- *  involved in that particular constraint. If this not possible, the variables should be copyied into the variables
+ *  involved in that particular constraint. If this is possible, the variables should be copyied into the variables
  *  array and the success pointers has to be set to TRUE. Otherwise the success has to be set FALSE or the callback
  *  should not be implemented.
  *
@@ -769,7 +773,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the number of variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the number variable which are
- *  involved in that particular constraint. If this not possible, the success pointers has to be set to FALSE or the
+ *  involved in that particular constraint. If this is not possible, the success pointers has to be set to FALSE or the
  *  callback should not be implemented.
  *
  *  input:

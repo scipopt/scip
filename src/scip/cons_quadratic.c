@@ -8613,13 +8613,14 @@ SCIP_RETCODE propagateBounds(
    assert(result != NULL);
    assert(nchgbds != NULL);
 
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
-   /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
       maxproprounds = conshdlrdata->maxproproundspresolve;
    else
       maxproprounds = conshdlrdata->maxproprounds;
@@ -9179,7 +9180,6 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                i;
    int                c;
@@ -9187,9 +9187,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_FEASIBLE;
 
@@ -9221,10 +9218,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
          assert(SCIPvarIsActive(consdata->quadvarterms[i].var));
 #endif
 
-      SCIP_CALL( boundUnboundedVars(scip, conss[c], conshdlrdata->defaultbound, NULL) );
-
       /* tell SCIP that we have something nonlinear */
-      if( consdata->nquadvars > 0 )
+      if( SCIPconsIsEnabled(conss[c]) && consdata->nquadvars > 0 )
       {
          SCIPmarkNonlinearitiesPresent(scip);
          if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
@@ -9275,7 +9270,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* add nlrow representation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
       {
          if( consdata->nlrow == NULL )
          {
@@ -9685,7 +9680,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
       {
          /* NLP is not solved yet, so we might want to do this
           * but first check whether there is a violated constraint side which corresponds to a convex function
-          * @todo put this check into initsol and update via consenable/consdisable
           */
          for( c = 0; c < nconss; ++c )
          {
@@ -11009,12 +11003,54 @@ SCIP_DECL_CONSPARSE(consParseQuadratic)
    return SCIP_OKAY;
 }
 
-
 /** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsQuadratic NULL
+static
+SCIP_DECL_CONSGETVARS(consGetVarsQuadratic)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( varssize < consdata->nlinvars + consdata->nquadvars )
+      (*success) = FALSE;
+   else
+   {
+      int i;
+
+      assert(vars != NULL);
+
+      BMScopyMemoryArray(vars, consdata->linvars, consdata->nlinvars);
+
+      for( i = 0; i < consdata->nquadvars; ++i )
+         vars[consdata->nlinvars+i] = consdata->quadvarterms[i].var;
+
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsQuadratic NULL
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsQuadratic)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*nvars) = consdata->nlinvars + consdata->nquadvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*

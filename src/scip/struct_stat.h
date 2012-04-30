@@ -88,6 +88,8 @@ struct SCIP_Stat
    SCIP_Real             primalzeroittime;   /**< time used in primal simplex calls without iterations */
    SCIP_Real             dualzeroittime;     /**< time used in dual simplex calls without iterations */
    SCIP_Real             barrierzeroittime;  /**< time used in barrier calls without iterations */
+   SCIP_Real             maxcopytime;        /**< maxmimal time needed for copying a problem */
+   SCIP_Real             mincopytime;        /**< minimal time needed for copying a problem */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
@@ -101,6 +103,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
+   SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
@@ -175,6 +178,7 @@ struct SCIP_Stat
    int                   solindex;           /**< consecutively numbered solution index */
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
+   int                   ncopies;            /**< counter how often SCIPcopy() was performed */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

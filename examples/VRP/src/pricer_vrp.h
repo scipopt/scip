@@ -54,24 +54,13 @@ public:
    virtual ~ObjPricerVRP();
 
    /** initialization method of variable pricer (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer              /**< the variable pricer itself */
-      );
+   virtual SCIP_DECL_PRICERINIT(scip_init);
 
    /** reduced cost pricing method of variable pricer for feasible LPs */
-   virtual SCIP_RETCODE scip_redcost(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer,             /**< the variable pricer itself */
-      SCIP_Real*         lowerbound,         /**< pointer to store a lower bound found by the pricer */
-      SCIP_RESULT*       result              /**< pointer to store the result of the pricer call */
-      );
+   virtual SCIP_DECL_PRICERREDCOST(scip_redcost);
 
    /** farkas pricing method of variable pricer for infeasible LPs */
-   virtual SCIP_RETCODE scip_farkas(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer              /**< the variable pricer itself */
-      );
+   virtual SCIP_DECL_PRICERFARKAS(scip_farkas);
 
    /** perform pricing */
    SCIP_RETCODE pricing(

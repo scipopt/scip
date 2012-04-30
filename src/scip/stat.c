@@ -64,6 +64,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -106,6 +107,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
+   SCIPclockFree(&(*stat)->copyclock);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -170,6 +172,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->nodeactivationtime);
+   SCIPclockReset(stat->copyclock);
 
    SCIPhistoryReset(stat->glbhistory);
 
@@ -239,6 +242,9 @@ void SCIPstatReset(
    stat->primalzeroittime = 0.0;
    stat->dualzeroittime = 0.0;
    stat->barrierzeroittime = 0.0;
+   stat->maxcopytime = SCIP_REAL_MIN;
+   stat->mincopytime = SCIP_REAL_MAX;
+   stat->ncopies = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

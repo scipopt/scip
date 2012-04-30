@@ -2243,14 +2243,19 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+
+         /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
+          *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
+          */
+         if( conshdlr->conss[c]->addarraypos >= 0 && !conshdlr->conss[c]->deleted &&
+            conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
             SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
          }
       }
    }
 
-#ifndef NDEBUG
+#if 0
    /* check if all initial constraints are included in the initconss array */
    {
       int c;
@@ -2423,8 +2428,14 @@ SCIP_RETCODE SCIPconshdlrInitLP(
        */
       conshdlrDelayUpdates(conshdlr);
       
+      /* start timing */
+      SCIPclockStart(conshdlr->sepatime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->initconss, conshdlr->ninitconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->sepatime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -3495,7 +3506,12 @@ void SCIPconshdlrSetData(
    conshdlr->conshdlrdata = conshdlrdata;
 }
 
-/** gets array with active constraints of constraint handler */
+/** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
+ *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */
 SCIP_CONS** SCIPconshdlrGetConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -3555,7 +3571,11 @@ int SCIPconshdlrGetNCheckConss(
    return conshdlr->ncheckconss;
 }
 
-/** gets number of active constraints of constraint handler */
+/** gets number of active constraints of constraint handler
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */
 int SCIPconshdlrGetNActiveConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -5841,7 +5861,10 @@ SCIP_RETCODE SCIPconsResetAge(
 }
 
 /** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
  */
 SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_CONS*            cons,               /**< constraint that deduced the assignment */
@@ -5850,6 +5873,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    int                   inferinfo,          /**< user inference information attached to the bound change */
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -5873,7 +5897,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
       SCIPclockStart(conshdlr->resproptime, set);
 
       SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
-            result) );
+            relaxedbd, result) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->resproptime, set);
@@ -6001,8 +6025,6 @@ SCIP_RETCODE SCIPconsEnfops(
    SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, &cons, 1, 1, solinfeasible, objinfeasible, result) );
    SCIPdebugMessage(" -> enfops returned result <%d>\n", *result);
 
-
-
    if( *result != SCIP_CUTOFF
       && *result != SCIP_CONSADDED
       && *result != SCIP_REDUCEDDOM
@@ -6080,7 +6102,9 @@ SCIP_RETCODE SCIPconsInitlp(
 
    /* call external method */
    if( conshdlr->consinitlp != NULL )
-   SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   {
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   }
 
    return SCIP_OKAY;
 }
@@ -6214,6 +6238,7 @@ SCIP_RETCODE SCIPconsResprop(
    int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -6231,7 +6256,7 @@ SCIP_RETCODE SCIPconsResprop(
    /* call external method */
    if( conshdlr->consresprop != NULL )
    {
-      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
       SCIPdebugMessage(" -> resprop returned result <%d>\n", *result);
 
       if( *result != SCIP_SUCCESS

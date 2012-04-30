@@ -76,7 +76,7 @@ SCIP_Bool SCIPsolveIsStopped(
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
     */
    if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
-      return FALSE;
+      return TRUE;
 
    /* if some limit has been changed since the last call, we reset the status */
    if( set->limitchanged )
@@ -107,6 +107,8 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
    else if( checknodelimits && set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
       stat->status = SCIP_STATUS_NODELIMIT;
+   else if( checknodelimits && set->limit_totalnodes >= 0 && stat->ntotalnodes >= set->limit_totalnodes )
+      stat->status = SCIP_STATUS_TOTALNODELIMIT;
    else if( checknodelimits && set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
       stat->status = SCIP_STATUS_STALLNODELIMIT;
 
@@ -114,7 +116,7 @@ SCIP_Bool SCIPsolveIsStopped(
     * in the case of checknodelimits == FALSE, we do not want to report here that the solve will be stopped due to a nodelimit.
     */
    if( !checknodelimits )
-      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
+      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_TOTALNODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
    else
       return (stat->status != SCIP_STATUS_UNKNOWN);
 }
@@ -1252,20 +1254,18 @@ SCIP_RETCODE separationRoundResolveLP(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
    SCIP_Bool*            mustprice           /**< pointer to store TRUE if additional pricing rounds should be performed */
    )
 {
    assert(lp != NULL);
-   assert(cutoff != NULL);
    assert(lperror != NULL);
    assert(mustsepa != NULL);
    assert(mustprice != NULL);
 
    /* if bound changes were applied in the separation round, we have to resolve the LP */
-   if( !(*cutoff) && !lp->flushed )
+   if( !lp->flushed )
    {
       /* solve LP (with dual simplex) */
       SCIPdebugMessage("separation: resolve LP\n");
@@ -1325,7 +1325,7 @@ SCIP_RETCODE separationRoundLP(
    *enoughcuts = (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
    *lperror = FALSE;
    consadded = FALSE;
-   
+
    SCIPdebugMessage("calling separators on LP solution in depth %d (onlydelayed: %u)\n", actdepth, onlydelayed);
 
    /* sort separators by priority */
@@ -1349,13 +1349,16 @@ SCIP_RETCODE separationRoundLP(
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
-      if( *cutoff )
+
+      if( !(*cutoff) )
+      {
+         /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+         SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
+      }
+      else
       {
          SCIPdebugMessage(" -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
       }
-
-      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
-      SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, cutoff, lperror, mustsepa, mustprice) );
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
@@ -1382,14 +1385,16 @@ SCIP_RETCODE separationRoundLP(
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
-      if( *cutoff )
-      {
-         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in separation\n",
-            SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-      }
 
-      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
-      SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, cutoff, lperror, mustsepa, mustprice) );
+      if( !(*cutoff) )
+      {
+         /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+         SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
+      }
+      else
+      {
+         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
+      }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
@@ -1419,13 +1424,16 @@ SCIP_RETCODE separationRoundLP(
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
       *delayed = *delayed || (result == SCIP_DELAYED);
-      if( *cutoff )
+
+      if( !(*cutoff) )
+      {
+         /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+         SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
+      }
+      else
       {
          SCIPdebugMessage(" -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
       }
-
-      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
-      SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, cutoff, lperror, mustsepa, mustprice) );
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
@@ -1454,14 +1462,16 @@ SCIP_RETCODE separationRoundLP(
          consadded = consadded || (result == SCIP_CONSADDED);
          *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
          *delayed = *delayed || (result == SCIP_DELAYED);
-         if( *cutoff )
-         {
-            SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in separation\n",
-               SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-         }
 
-         /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
-         SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, cutoff, lperror, mustsepa, mustprice) );
+         if( !(*cutoff) )
+         {
+            /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+            SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
+         }
+         else
+         {
+            SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
+         }
       }
    }
 
@@ -3107,14 +3117,14 @@ SCIP_RETCODE propAndSolve(
       {
          if( forcedlpsolve )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d cannot be dealt with\n",
+            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
                stat->nnodes, stat->nlps);
             return SCIP_LPERROR;
          }
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          ++(*nlperrors);
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
+            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, *nlperrors);
       }
 
@@ -3124,14 +3134,14 @@ SCIP_RETCODE propAndSolve(
          *forcedenforcement = TRUE;
 
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") LP solver hit %s limit in LP %d -- using pseudo solution instead\n",
-            stat->nnodes, stat->nlps,  SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT ? "time" : "iteration");
+            "(node %"SCIP_LONGINT_FORMAT") LP solver hit %s limit in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead\n",
+            stat->nnodes, SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT ? "time" : "iteration", stat->nlps);
       }
 
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") LP relaxation is unbounded (LP %d)\n", stat->nnodes, stat->nlps);
+            "(node %"SCIP_LONGINT_FORMAT") LP relaxation is unbounded (LP %"SCIP_LONGINT_FORMAT")\n", stat->nnodes, stat->nlps);
       }
 
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
@@ -3142,7 +3152,7 @@ SCIP_RETCODE propAndSolve(
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
+            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT", all variables are fixed, %d continuous vars\n",
                stat->nnodes, stat->nlps, transprob->ncontvars);
             SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
             /**@todo call PerPlex */
@@ -3152,7 +3162,7 @@ SCIP_RETCODE propAndSolve(
          {
             SCIPtreeSetFocusNodeLP(tree, FALSE);
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n",
+               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution (%d unfixed vars) instead\n",
                stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
@@ -3184,6 +3194,22 @@ SCIP_RETCODE propAndSolve(
    return SCIP_OKAY;
 }
 
+/** check if a restart can be performed */
+#ifndef NDEBUG
+static
+SCIP_Bool restartAllowed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+)
+{
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   return (set->nactivepricers == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts));
+}
+#else
+#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts))
+#endif
 
 /** solves the focus node */
 static
@@ -3387,14 +3413,14 @@ SCIP_RETCODE solveNode(
       {
          if( forcedlpsolve )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d cannot be dealt with\n",
+            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
                stat->nnodes, stat->nlps);
             return SCIP_LPERROR;
          }
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          nlperrors++;
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
+            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, nlperrors);
       }
     
@@ -3615,7 +3641,7 @@ SCIP_RETCODE solveNode(
                   }
 
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "(node %"SCIP_LONGINT_FORMAT") forcing the solution of an LP ...\n", stat->nnodes, stat->nlps);
+                     "(node %"SCIP_LONGINT_FORMAT") forcing the solution of an LP (last LP %"SCIP_LONGINT_FORMAT")...\n", stat->nnodes, stat->nlps);
 
                   /* solve the LP in the next loop */
                   SCIPtreeSetFocusNodeLP(tree, TRUE);
@@ -3647,11 +3673,9 @@ SCIP_RETCODE solveNode(
       }
 
       /* check for immediate restart */
-      *restart = *restart 
-         || (actdepth == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-            && (stat->userrestart 
-               || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
-                  && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+      *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
+	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
       SCIPdebugMessage("node solving iteration %d finished: cutoff=%u, propagateagain=%u, solverelaxagain=%u, solvelpagain=%u, nlperrors=%d, restart=%u\n",
          nloops, *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -3665,7 +3689,7 @@ SCIP_RETCODE solveNode(
    /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )
    {
-      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- aborting\n", stat->nnodes, stat->nlps);
+      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- aborting\n", stat->nnodes, stat->nlps);
       return SCIP_LPERROR;
    }
 
@@ -3673,11 +3697,9 @@ SCIP_RETCODE solveNode(
    restartfac = set->presol_subrestartfac;
    if( actdepth == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
-   *restart = *restart
-      || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-         && (stat->userrestart || 
-            (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-               && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+   *restart = *restart || (restartAllowed(set, stat) && (stat->userrestart
+	 || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
+	    && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
@@ -3693,9 +3715,8 @@ SCIP_RETCODE solveNode(
       SCIPdebugMessage("node is cut off\n");
       SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
       *infeasible = TRUE;
-      *restart = FALSE;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3827,10 +3848,9 @@ SCIP_RETCODE SCIPsolveCIP(
    restartfac = set->presol_subrestartfac;
    if( SCIPtreeGetCurrentDepth(tree) == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
-   *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
-      && (stat->userrestart
-         || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-            && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
+   *restart = restartAllowed(set, stat) && (stat->userrestart
+      || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
+	 && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
 
    /* calculate the number of successful conflict analysis calls that should trigger a restart */
    if( set->conf_restartnum > 0 )
@@ -4047,19 +4067,27 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
                eventqueue, eventfilter, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
       }
-         
-      /* trigger restart due to conflicts */
+
+      /* compute number of successfully applied conflicts */
       nsuccessconflicts = SCIPconflictGetNPropSuccess(conflict) + SCIPconflictGetNInfeasibleLPSuccess(conflict)
          + SCIPconflictGetNBoundexceedingLPSuccess(conflict) + SCIPconflictGetNStrongbranchSuccess(conflict)
          + SCIPconflictGetNPseudoSuccess(conflict);
-      if( nsuccessconflicts >= restartconfnum && set->nactivepricers == 0 )
+
+      /* trigger restart due to conflicts and the restart parameters allow another restart */
+      if( nsuccessconflicts >= restartconfnum && restartAllowed(set, stat) )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %"SCIP_LONGINT_FORMAT" successful conflict analysis calls\n",
             stat->nruns, stat->nnodes, nsuccessconflicts);
          *restart = TRUE;
+
          stat->nconfrestarts++;
       }
+
+      /* restart if the userrestart was set to true, we have still some nodes left and the restart parameters allow
+       * another restart
+       */
+      *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
 
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
@@ -4070,7 +4098,7 @@ SCIP_RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   SCIPdebugMessage("Problem solving finished with status %u (restart=%u)\n", stat->status, *restart);
+   SCIPdebugMessage("Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit

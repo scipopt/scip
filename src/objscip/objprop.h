@@ -303,11 +303,13 @@ public:
     *  SCIPchgVarUb() in order to deduce bound changes on variables.
     *  In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the propagator provides a pointer to itself
     *  and an integer value "inferinfo" that can be arbitrarily chosen.
-    *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
+    *  The propagation conflict resolving method can then be implemented, to provide a "reasons" for the bound
     *  changes, i.e. the bounds of variables at the time of the propagation, that forced the propagator to set the
     *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
     *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
-    *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+    *  by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+    *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and/or SCIPaddConflictBinvar() in the propagation conflict
+    *  resolving method.
     *
     *  See the description of the propagation conflict resulving method of constraint handlers for further details.
     *
@@ -318,6 +320,7 @@ public:
     *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLbProp() or SCIPinferVarUbProp() call
     *  - boundtype       : the type of the changed bound (lower or upper bound)
     *  - bdchgidx        : the index of the bound change, representing the point of time where the change took place
+    *  - relaxedbd       : the relaxed bound which is sufficient to be explained
     *
     *  output:
     *  - result          : pointer to store the result of the propagation conflict resolving call
@@ -325,6 +328,8 @@ public:
     *  possible return values for *result:
     *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
     *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
+    *
+    *  @note it is sufficient to explain/resolve the relaxed bound
     */
    virtual SCIP_RETCODE scip_resprop(
       SCIP*              scip,               /**< SCIP data structure */
@@ -335,6 +340,7 @@ public:
       SCIP_BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
       SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
                                               *   change took place */
+      SCIP_Real          relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {  /*lint --e{715}*/

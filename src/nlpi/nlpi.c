@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
+   SCIP_DECL_NLPISETMESSAGEHDLR    ((*nlpisetmessagehdlr)),     /**< set message handler */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {  /*lint --e{715}*/
@@ -114,6 +115,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpisetrealpar != NULL);
    assert(nlpigetstringpar != NULL);
    assert(nlpisetstringpar != NULL);
+   assert(nlpisetmessagehdlr != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nlpi) );
 
@@ -153,6 +155,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpisetrealpar = nlpisetrealpar;
    (*nlpi)->nlpigetstringpar = nlpigetstringpar;
    (*nlpi)->nlpisetstringpar = nlpisetstringpar;
+   (*nlpi)->nlpisetmessagehdlr = nlpisetmessagehdlr;
    (*nlpi)->nlpidata = nlpidata;
 
    return SCIP_OKAY;
@@ -706,6 +709,20 @@ SCIP_RETCODE SCIPnlpiSetStringPar(
    assert(problem != NULL);
 
    SCIP_CALL( (*nlpi->nlpisetstringpar)(nlpi, problem, type, sval) );
+
+   return SCIP_OKAY;
+}
+
+/** sets message handler for message output */
+SCIP_RETCODE SCIPnlpiSetMessageHdlr(
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< pointer to message handler, or NULL to suppress all output */
+   )
+{
+   assert(nlpi        != NULL);
+   assert(messagehdlr != NULL);
+
+   SCIP_CALL( (*nlpi->nlpisetmessagehdlr)(nlpi, messagehdlr) );
 
    return SCIP_OKAY;
 }

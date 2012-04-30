@@ -45,21 +45,25 @@ interface
   of variables statistics which is used for example for branching
 - allowed to start diving mode even if LP is not flushed, not solved, or not solved to optimality
 - changed the message handler system within SCIP heavily such that it is thread save
-- the follwing methods need additionally the SCIP pointer as parameter to make the output thread save:
+- the follwing methods additionally need the SCIP pointer as parameter to make the output thread save:
   SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr(), and SCIPwarningMessage()
 - the following methods additionally need a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
   handler methods (see pub_message.h), SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
-- new method SCIPsetMessagehdlrFree() which frees the current instance message handler and adds the given one
+- new method SCIPmessagehdlrCapture() which captures a given message handler (increases number of uses)
+- new method SCIPmessagehdlrRelease() which releases and possibly frees a given message handler (decreases number of uses)
 - new method SCIPsetMessagehdlrLogfile() which can be used to write into a log file
 - new method SCIPsetMessagehdlrQuiet() which can be used to turn the screen output on and off
 - removed method SCIPcreateMesshdlr(), please use SCIPmessagehdlrCreate() (see pub_message.c)
-- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrFree() (see pub_message.c)
+- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrRelease() (see pub_message.c)
 - the error messages are not handled via the message handler anymore; per default the error message a written to stderr
 - the error printing method can be replaced using the method SCIPmessageSetErrorPrinting(); the default error message
-  printing can be recoverd via SCIPmessageSetErrorPrintingDefault(), (see pub_message.h)
+  printing can be recoverd via SCIPmessageSetErrorPrintingDefault() (see pub_message.h)
 - method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
 - since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
   changes; see pub_message.h and type_message.h.
+- new NLPI callback SCIP_DECL_NLPISETMESSAGEHDLR() to set message handler in NLP solver interfaces
+- new parameter in SCIPcopyPlugins() to indicate whether the message handler from the source SCIP should be passed to the
+  target SCIP (only the pointer is copied and the usage counter of the message handler is increased)
 - removed SCIPparamSetBool(), please use SCIPchgBoolParam()
 - removed SCIPparamSetInt(), please use SCIPchgIntParam()
 - removed SCIPparamSetLongint(), please use SCIPchgLongintParam()
@@ -81,6 +85,21 @@ interface
   to SCIP_STAGE_EXITSOLVE
 - new method SCIPisHugeValue() to check whether a value is huge and should be handled separately from other values
   (e.g., in activity computations), and SCIPgetHugeValue() to get the smallest value counting as huge
+- new methods SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), and SCIPaddConflictRelaxedBd(); these methods
+  can be used to give for a bound change which is part of an explanation a relaxed bound; this means the relaxed bound
+  is already efficient to be part of a valid explanation
+- new method SCIPisConflictVarUsed() returns TRUE if the given bound change is already part of the conflict set;
+  that is the bound change is redundant;
+- new methods SCIPgetConflictVarLb(), SCIPgetConflictVarUb(), SCIPgetConflictVarRelaxedLb(), and
+  SCIPgetConflictVarRelaxedUb() returning the (relaxed) lower/upper bound of the given variable within the current
+  active conflict set
+- the resolve propagation methods for the constraint handler and propagator getting a new parameter called relaxedbd;
+  explaining/resolving this relaxed bound is sufficient
+- new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
+- default integer comparer SCIPsortCompInt() (see pub_misc.h)
+- data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
+- renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
+- tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -153,6 +172,8 @@ parameters:
   only extract set-partitioning and no and-constraints
 - new parameter oncepernode in Rounding and Simple Rounding heuristic
 - new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
+- new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
+  SCIP_STATUS_TOTALNODELIMIT is added
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -166,6 +187,7 @@ features:
 - SCIP does now print an info message when the root LP could not be solved or is unbounded
 - added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
+- added counter and clock for SCIPcopy() calls
 
 SCIP version 2.1.2
 ==================
@@ -190,6 +212,7 @@ fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
   segmentation fault
 - fixed bug in cons_xor.c which did not copy the artificial integer variable (used for the lp relaxation)
+- fixed bug in sepa_rapidlearning, carrying on the optimization process, when already solved
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead

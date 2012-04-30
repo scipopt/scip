@@ -563,16 +563,18 @@ public:
 
    /** propagation conflict resolving method of constraint handler
     *
-    *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
+    *  This method is called during conflict analysis. If the constraint handler wants to support conflict analysis,
     *  it should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
     *  SCIPchgVarUb() in order to deduce bound changes on variables.
     *  In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint, that deduced the
     *  variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
-    *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
+    *  The propagation conflict resolving method can then be implemented, to provide a "reasons" for the bound
     *  changes, i.e. the bounds of variables at the time of the propagation, that forced the constraint to set the
     *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
     *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
-    *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+    *  by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+    *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and/or SCIPaddConflictBinvar() in the propagation conflict
+    *  resolving method.
     *
     *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e. changes the lower bound of z
     *  to 1.0), if both, x and y, are assigned to FALSE (i.e. if the upper bounds of these variables are 0.0). It uses
@@ -580,14 +582,16 @@ public:
     *  constraint handler and is set to 0).
     *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
     *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
-    *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable z was
-    *  set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
+    *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
+    *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
     *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
     *  the reason for the deduction of the lower bound of z.
     *
     *  possible return values for *result:
     *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
     *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
+    *
+    *  @note it is sufficient to explain/resolve the relaxed bound
     */
    virtual SCIP_RETCODE scip_resprop(
       SCIP*              scip,               /**< SCIP data structure */
@@ -599,6 +603,7 @@ public:
       SCIP_BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
       SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
                                               *   change took place */
+      SCIP_Real          relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation conflict resolving resolving
                                               *   call */
       )
