@@ -25,6 +25,8 @@
 
 #include "scip/def.h"
 #include "scip/scip.h"
+#include "objscip/type_objcloneable.h"
+
 
 namespace scip
 {
@@ -38,17 +40,13 @@ namespace scip
       virtual ~ObjCloneable() {}
 
       /** clone method, used to copy plugins which are not constraint handlers or variable pricer plugins */
-      virtual ObjCloneable* clone(
-         SCIP*           scip                /**< SCIP data structure */
-         ) const
+      virtual SCIP_DECL_OBJCLONEABLECLONE(ObjCloneable* clone)
       {
          return 0;
       }
 
-      /** returns whether the objective plugin is copyable */
-      virtual SCIP_Bool iscloneable(
-         void
-         ) const
+      /** returns whether the plugin object is copyable */
+      virtual SCIP_DECL_OBJCLONEABLEISCLONEABLE(iscloneable)
       {
          return false;
       }

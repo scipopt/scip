@@ -81,19 +81,13 @@ void updateDistances(
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-SCIP_RETCODE HeurFarthestInsert::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURFREE(HeurFarthestInsert::scip_free)
 {
    return SCIP_OKAY;
 }
    
 /** initialization method of primal heuristic (called after problem was transformed) */
-SCIP_RETCODE HeurFarthestInsert::scip_init(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINIT(HeurFarthestInsert::scip_init)
 {
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    graph_ = probdata->getGraph();
@@ -102,10 +96,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_init(
 }
    
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-SCIP_RETCODE HeurFarthestInsert::scip_exit(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXIT(HeurFarthestInsert::scip_exit)
 {
    release_graph(&graph_);
 
@@ -118,10 +109,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exit(
  *  The primal heuristic may use this call to initialize its branch and bound specific data.
  *
  */
-SCIP_RETCODE HeurFarthestInsert::scip_initsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINITSOL(HeurFarthestInsert::scip_initsol)
 {
    return SCIP_OKAY;
 }
@@ -131,10 +119,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
-SCIP_RETCODE HeurFarthestInsert::scip_exitsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXITSOL(HeurFarthestInsert::scip_exitsol)
 {
    return SCIP_OKAY;
 }
@@ -150,12 +135,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exitsol(
  *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
  *                      its frequency
  */
-SCIP_RETCODE HeurFarthestInsert::scip_exec(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur,               /**< the primal heuristic itself */
-   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
-   SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
-   )
+SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
 {   
    int nnodes = graph_->nnodes;
    int nedges = graph_->nedges;
@@ -378,9 +358,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exec(
 }
 
 /** clone method which will be used to copy a objective plugin */
-scip::ObjCloneable* HeurFarthestInsert::clone(
-   SCIP*                 scip                /**< SCIP data structure */
-   ) const
+SCIP_DECL_HEURCLONE(scip::ObjCloneable* HeurFarthestInsert::clone)
 {
    return new HeurFarthestInsert(scip);
 }

@@ -2243,14 +2243,19 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+
+         /**@todo should only active constraints be added to the initconss array? at least cons->active is asserted in
+          *       conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c])
+          */
+         if( conshdlr->conss[c]->addarraypos >= 0 && !conshdlr->conss[c]->deleted &&
+            conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
             SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
          }
       }
    }
 
-#ifndef NDEBUG
+#if 0
    /* check if all initial constraints are included in the initconss array */
    {
       int c;
@@ -2423,8 +2428,14 @@ SCIP_RETCODE SCIPconshdlrInitLP(
        */
       conshdlrDelayUpdates(conshdlr);
       
+      /* start timing */
+      SCIPclockStart(conshdlr->sepatime, set);
+
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->initconss, conshdlr->ninitconss) );
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->sepatime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
@@ -6014,8 +6025,6 @@ SCIP_RETCODE SCIPconsEnfops(
    SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, &cons, 1, 1, solinfeasible, objinfeasible, result) );
    SCIPdebugMessage(" -> enfops returned result <%d>\n", *result);
 
-
-
    if( *result != SCIP_CUTOFF
       && *result != SCIP_CONSADDED
       && *result != SCIP_REDUCEDDOM
@@ -6093,7 +6102,9 @@ SCIP_RETCODE SCIPconsInitlp(
 
    /* call external method */
    if( conshdlr->consinitlp != NULL )
-   SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   {
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+   }
 
    return SCIP_OKAY;
 }

@@ -3081,11 +3081,7 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_Bool iscutoff;
-   SCIP_Bool isdeleted;
-   int dummy;
    int c;
-   int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3094,35 +3090,26 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 
    *result = SCIP_FEASIBLE;
 
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
+   /* tell SCIP that we have something nonlinear */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &iscutoff, &isdeleted) ); /*lint !e613*/
-      if( iscutoff )
+      if( SCIPconsIsEnabled(conss[c]) )
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
+         SCIPmarkNonlinearitiesPresent(scip);
+         if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+         {
+            int i;
 
-      /* if conss[c] has been deleted, skip the rest */
-      if( isdeleted )
-         continue;
+            consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
+            assert(consdata != NULL);
 
-      /* tell SCIP that we have something nonlinear */
-      SCIPmarkNonlinearitiesPresent(scip);
-      if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
-      {
-         consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
-         assert(consdata != NULL);
-
-         for( i = 0; i < consdata->nvars; ++i )
-            if( SCIPvarGetType(consdata->vars[i]) >= SCIP_VARTYPE_CONTINUOUS )
-            {
-               SCIPmarkContinuousNonlinearitiesPresent(scip);
-               break;
-            }
+            for( i = 0; i < consdata->nvars; ++i )
+               if( SCIPvarGetType(consdata->vars[i]) >= SCIP_VARTYPE_CONTINUOUS )
+               {
+                  SCIPmarkContinuousNonlinearitiesPresent(scip);
+                  break;
+               }
+         }
       }
    }
 
@@ -3150,15 +3137,18 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    {
       for( c = 0; c < nconss; ++c )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
-         if( consdata->nlrow == NULL )
+         if( SCIPconsIsEnabled(conss[c]) )
          {
-            SCIP_CALL( createNlRow(scip, conshdlr, conss[c]) );
-            assert(consdata->nlrow != NULL);
+            consdata = SCIPconsGetData(conss[c]);
+            assert(consdata != NULL);
+
+            if( consdata->nlrow == NULL )
+            {
+               SCIP_CALL( createNlRow(scip, conshdlr, conss[c]) );
+               assert(consdata->nlrow != NULL);
+            }
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
 
@@ -3796,7 +3786,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          return SCIP_OKAY;
       }
       if( isdeleted )
-      { /* conss[c] has been deleted */
+      {
+         /* conss[c] has been deleted */
          *result = SCIP_SUCCESS;
          continue;
       }
@@ -3819,12 +3810,16 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
       case SCIP_CUTOFF:
          *result = SCIP_CUTOFF;
          SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-         break;
+         return SCIP_OKAY;
       default:
          SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
          return SCIP_ERROR;
       } /*lint !e788*/
    }
+
+   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
+   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 } /*lint !e715*/

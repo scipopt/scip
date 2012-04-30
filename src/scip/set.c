@@ -944,6 +944,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_nodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "limits/totalnodes",
+         "maximal number of total nodes (incl. restarts) to process (-1: no limit)",
+         &(*set)->limit_totalnodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/stallnodes",
          "solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)",
          &(*set)->limit_stallnodes, FALSE, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,

@@ -956,7 +956,6 @@ SCIP_RETCODE SCIPconsAddLocks(
    );
 
 
-
 /*
  * Hash functions
  */

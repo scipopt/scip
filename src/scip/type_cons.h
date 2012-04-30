@@ -657,15 +657,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSDELVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
-
 /** constraint display method of constraint handler
  *
  *  The constraint handler can store a representation of the constraint into the given text file. Use the method
  *  SCIPinfoMessage() to push a string into the file stream.
-
  *
- * @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
- *       SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
+ *  @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
+ *        SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
  *
  *  input: - scip : SCIP main data structure - conshdlr : the constraint handler itself - cons : the constraint that
  *  should be displayed - file : the text file to store the information into
@@ -755,7 +753,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the variables which are
- *  involved in that particular constraint. If this not possible, the variables should be copyied into the variables
+ *  involved in that particular constraint. If this is possible, the variables should be copyied into the variables
  *  array and the success pointers has to be set to TRUE. Otherwise the success has to be set FALSE or the callback
  *  should not be implemented.
  *
@@ -775,7 +773,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint method of constraint handler which returns the number of variables (if possible)
  *
  *  The constraint handler can (this callback is optional) provide this callback to return the number variable which are
- *  involved in that particular constraint. If this not possible, the success pointers has to be set to FALSE or the
+ *  involved in that particular constraint. If this is not possible, the success pointers has to be set to FALSE or the
  *  callback should not be implemented.
  *
  *  input:

@@ -709,6 +709,21 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParXyz )
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+/** sets message handler for message output
+ *
+ * input:
+ *  - nlpi NLP interface structure
+ *  - messagehdlr SCIP message handler, or NULL to suppress all output
+ */
+static
+SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrXyz )
+{
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
 /*
  * NLP solver interface specific interface methods
  */
@@ -740,6 +755,7 @@ SCIP_RETCODE SCIPcreateNlpSolverXyz(
          nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
          nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
          nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
+         nlpiSetMessageHdlrXyz,
          nlpidata) );
 
    return SCIP_OKAY;

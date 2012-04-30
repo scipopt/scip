@@ -4725,6 +4725,7 @@ SCIP_RETCODE rowScale(
    /* scale the row sides, and move the constant to the sides; relax the sides with accumulated delta in order
     * to not destroy feasibility due to rounding
     */
+   /**@todo ensure that returned cut does not have infinite lhs and rhs */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
    {
       if( mindeltainf )

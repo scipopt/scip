@@ -280,6 +280,7 @@ void tcliqueMaxClique(
    int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int*             ntreenodes,         /**< pointer to store the number of used tree nodes (or NULL) */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    );
 

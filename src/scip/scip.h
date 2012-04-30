@@ -179,9 +179,9 @@ void SCIPprintError(
 
 /** creates and initializes SCIP data structures
  *
- *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
- *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
- *        file and turn off/on the display output.
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
+ *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output, respectively.
  */
 extern
 SCIP_RETCODE SCIPcreate(
@@ -276,23 +276,13 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+/** Installs the given message handler, such that all messages are passed to this handler. A message handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets not freed. That has to be done by the user using
- *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
+ *  @note The currently installed message handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 extern
 SCIP_RETCODE SCIPsetMessagehdlr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   );
-
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
- *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
- */
-extern
-SCIP_RETCODE SCIPsetMessagehdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
@@ -307,7 +297,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
 extern
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of log file, or NULL (stdout) */
+   const char*           filename            /**< name of log file, or NULL (no log) */
    );
 
 /** sets the currently installed message handler to be quiet (or not) */
@@ -399,6 +389,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
    );
@@ -4717,7 +4708,11 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4727,7 +4722,11 @@ SCIP_RETCODE SCIPenfopsCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4736,14 +4735,21 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls LP initialization method for single constraint */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
    );
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4751,7 +4757,10 @@ SCIP_RETCODE SCIPsepalpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4760,7 +4769,10 @@ SCIP_RETCODE SCIPsepasolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4769,7 +4781,11 @@ SCIP_RETCODE SCIPpropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4782,7 +4798,10 @@ SCIP_RETCODE SCIPrespropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** presolves of single constraint */
+/** presolves a single constraint
+ *
+ *  @note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4811,14 +4830,22 @@ SCIP_RETCODE SCIPpresolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
    );
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */

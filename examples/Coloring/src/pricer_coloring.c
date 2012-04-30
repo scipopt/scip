@@ -650,11 +650,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
 
       /* compute maximal clique */
       tcliqueMaxClique(NULL, NULL, NULL, NULL, cgraph, tcliqueNewsolPricer, (TCLIQUE_DATA*)pricerdata, maxstablesetnodes,
-         &(nmaxstablesetnodes), &maxstablesetweight, 0, 
-         (int)getIntegralVal(pricerdata->scalefactor, 1.0, -MINDELTA, MAXDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1, &status);
+         &(nmaxstablesetnodes), &maxstablesetweight, 0,
+         (int)getIntegralVal(pricerdata->scalefactor, 1.0, -MINDELTA, MAXDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1,
+         NULL, &status);
       assert(status == TCLIQUE_OPTIMAL);
 
-      /* if only the best vaiable should be priced per round, take the one which is given as return value from 
+      /* if only the best vaiable should be priced per round, take the one which is given as return value from
          tcliqueMaxClique and put it into improvingstablesets array so that it will be inserted into the LP */
       if ( pricerdata->onlybest && pricerdata->maxvarsround == 1 )
       {

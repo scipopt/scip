@@ -282,7 +282,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
       success = TRUE;
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, &success) );
 
       /* abort if the plugins were not successfully copied */
       if( !success )
@@ -542,11 +542,40 @@ SCIP_RETCODE fillDigraph(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, nvars) );
       }
 
+#ifndef NDEBUG
+      /* clearing variables array to check for consistency */
+      if( nconsvars == nvars )
+      {
+	 BMSclearMemoryArray(consvars, nconsvars);
+      }
+      else
+      {
+	 assert(nconsvars < nvars);
+	 BMSclearMemoryArray(consvars, nconsvars + 1);
+      }
+#endif
+
       /* get variables for this constraint */
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvars, nvars, success) );
 
       if( !(*success) )
+      {
+#ifndef NDEBUG
+	 /* it looks strange if returning the number of variables was successful but not returning the variables */
+	 SCIPwarningMessage(scip, "constraint <%s> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
+#endif
          break;
+      }
+
+#ifndef NDEBUG
+      /* check if returned variables are consistent with the number of variables that were returned */
+      for( v = nconsvars - 1; v >= 0; --v )
+	 assert(consvars[v] != NULL);
+      if( nconsvars < nvars )
+      {
+	 assert(consvars[nconsvars] == NULL);
+      }
+#endif
 
       /* transform given variables to active variables */
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
@@ -689,6 +718,12 @@ SCIP_RETCODE splitProblem(
             fixval = SCIPvarGetLbGlobal(compvars[0]);
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetUbGlobal(compvars[0]);
+
+#ifndef NDEBUG
+	 SCIPwarningMessage(scip, "strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#else
+	 SCIPdebugMessage("strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no contraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#endif
 
          SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
          assert(!infeasible);
