@@ -811,6 +811,7 @@ SCIP_RETCODE presolComponents(
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
+   /* do not run, if not all variables are explicitly known */
    if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
