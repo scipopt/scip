@@ -1064,7 +1064,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/octane/usefracspace",
-         "execute OCTANE only in the space of fractional variables (TRUE) or in the full space? ",
+         "execute OCTANE only in the space of fractional variables (TRUE) or in the full space?",
          &heurdata->usefracspace, TRUE, DEFAULT_USEFRACSPACE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

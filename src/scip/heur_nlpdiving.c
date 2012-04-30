@@ -2401,7 +2401,7 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/"HEUR_NAME"/maxfeasnlps",
-         "maximal number of NLPs with feasible solution to solve during one dive ",
+         "maximal number of NLPs with feasible solution to solve during one dive",
          &heurdata->maxfeasnlps, FALSE, DEFAULT_MAXFEASNLPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/"HEUR_NAME"/backtrack",
