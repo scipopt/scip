@@ -1148,7 +1148,7 @@ void SCIPhashmapPrintStatistics(
 
 /** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int i;
@@ -1163,7 +1163,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
 
 /** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int count = 0;
@@ -1178,7 +1178,7 @@ int SCIPhashmapGetNEntries(
 
 /** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    assert(hashmap != NULL);
@@ -1188,8 +1188,8 @@ int SCIPhashmapGetNLists(
 
 /** gives a specific list (bucket) in a hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
-   SCIP_HASHMAP*     hashmap,          /**< hash map */
-   int               listindex         /**< index of hash map list */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   int                   listindex           /**< index of hash map list */
 )
 {
    assert(hashmap != NULL);
@@ -1201,7 +1201,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
 
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
 )
 {
    int count = 0;
@@ -1214,7 +1214,7 @@ int SCIPhashmapListGetNEntries(
 
 /** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1224,7 +1224,7 @@ void* SCIPhashmapListGetOrigin(
 
 /** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1234,7 +1234,7 @@ void* SCIPhashmapListGetImage(
 
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1244,7 +1244,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 
 /** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
-   SCIP_HASHMAP*     hashmap           /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int listidx;
@@ -3566,9 +3566,9 @@ void SCIPstairmapPrint(
  */
 static
 SCIP_Bool stairmapFindLeft(
-   SCIP_STAIRMAP*        stairmap,             /**< stair map to search */
-   int                   timepoint,            /**< time point to search for */
-   int*                  pos                   /**< pointer to store the position */
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to search */
+   int                   timepoint,          /**< time point to search for */
+   int*                  pos                 /**< pointer to store the position */
    )
 {
    assert(stairmap != NULL);
@@ -4693,7 +4693,7 @@ SCIP_Bool SCIPbstIsEmpty(
 
 /** returns the the root node of the binary search or NULL if the binary search tree is empty */
 SCIP_BSTNODE* SCIPbstGetRoot(
-   SCIP_BST*             tree                 /**< tree to be evaluated */
+   SCIP_BST*             tree                /**< tree to be evaluated */
    )
 {
    assert(tree != NULL);
@@ -4706,8 +4706,8 @@ SCIP_BSTNODE* SCIPbstGetRoot(
  *  @note The old root including the rooted subtree is not delete.
  */
 void SCIPbstSetRoot(
-   SCIP_BST*             tree,                /**< tree to be evaluated */
-   SCIP_BSTNODE*         root                 /**< new root, or NULL */
+   SCIP_BST*             tree,               /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                /**< new root, or NULL */
    )
 {
    assert(tree != NULL);
