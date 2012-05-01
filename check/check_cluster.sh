@@ -147,6 +147,8 @@ do
   i=$instance
   instance=""
 
+  COUNT=`expr $COUNT + 1`
+
   echo timelimit $TIMELIMIT
 
   # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
