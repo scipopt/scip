@@ -78,8 +78,8 @@ void SCIPlpiexStart(
    void
    );
 
-/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in 
- *  extended and rational precision 
+/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in
+ *  extended and rational precision
  */
 extern
 void SCIPlpiexEnd(
@@ -725,9 +725,9 @@ SCIP_RETCODE SCIPlpiexWriteState(
    );
 
 /** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponding dual objective value.
- *  if wanted it will first directly test the corresponding approximate dual and primal solution 
+ *  if wanted it will first directly test the corresponding approximate dual and primal solution
  *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
- *  before performing the dual feasibility test on the more expensive exact basic solution. 
+ *  before performing the dual feasibility test on the more expensive exact basic solution.
  */
 extern
 SCIP_RETCODE SCIPlpiexStateDualFeasible(

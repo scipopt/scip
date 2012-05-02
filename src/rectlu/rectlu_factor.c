@@ -1,19 +1,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                           */  
-/*                        This file is part of the program                   */   
-/*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */ 
-/*                                                                           */  
-/*    Copyright (C) 2009-2010 Konrad-Zuse-Zentrum                            */ 
-/*                            fuer Informationstechnik Berlin                */ 
-/*                                                                           */ 
-/*   RECTLU is distributed under the terms of the ZIB Academic License.      */ 
-/*                                                                           */ 
-/*  You should have received a copy of the ZIB Academic License              */ 
-/*  along with RECTLU; see the file COPYING.                                 */ 
-/*                                                                           */ 
+/*                                                                           */
+/*                        This file is part of the program                   */
+/*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */
+/*                                                                           */
+/*    Copyright (C) 2009-2010 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*   RECTLU is distributed under the terms of the ZIB Academic License.      */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with RECTLU; see the file COPYING.                                 */
+/*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rectlu_factor.c 
+/**@file   rectlu_factor.c
  * @brief  rectlu internal functions
  * @author David Applegate
  * @author Bill Cook
@@ -22,7 +22,7 @@
  * @author Dan Steffy
  * @author Kati Wolter
  */
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/ 
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
 #include <stdio.h>

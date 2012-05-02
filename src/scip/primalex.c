@@ -32,7 +32,7 @@
 
 
 #ifdef WITH_EXACTSOLVE
-#include "gmp.h" 
+#include "gmp.h"
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -47,7 +47,7 @@ SCIP_RETCODE ensureSolsSize(
    )
 {
    assert(primal->nsols <= primal->solssize);
-   
+
    if( num > primal->solssize )
    {
       int newsize;
@@ -79,7 +79,7 @@ int primalexSearchSolPos(
    mpq_init(obj);
    mpq_init(middleobj);
 
-   SCIPsolexGetObj(sol, obj);   
+   SCIPsolexGetObj(sol, obj);
 
    left = -1;
    right = primal->nsols;
@@ -89,7 +89,7 @@ int primalexSearchSolPos(
       assert(left < middle && middle < right);
       assert(0 <= middle && middle < primal->nsols);
       SCIPsolexGetObj(primal->sols[middle], middleobj);
-     
+
       if( mpq_cmp(obj, middleobj) < 0 )
          right = middle;
       else
@@ -98,7 +98,7 @@ int primalexSearchSolPos(
    assert(left == right-1);
 
    return right;
-   
+
    mpq_clear(middleobj);
    mpq_clear(obj);
 }
@@ -192,7 +192,7 @@ SCIP_RETCODE primalexAddSol(
 
    /* allocate memory for solution storage */
    SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxsol) );
-   
+
    /* if the solution storage is full, free the last solution(s)
     * more than one solution may be freed, if set->limit_maxsol was decreased in the meantime
     */

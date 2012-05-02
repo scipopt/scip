@@ -46,7 +46,7 @@ struct SCIP_Solex
 {
    mpq_t                 obj;                /**< objective value of solution */
    SCIP_MPQARRAY*        vals;               /**< solution values for variables */
-   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from 
+   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
    SCIP_HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
    int                   primalindex;        /**< index of solution in array of solutions of exact primal data */

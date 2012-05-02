@@ -22,7 +22,7 @@
 
 #include <assert.h>
 #ifdef WITH_GMP
-#include "gmp.h" 
+#include "gmp.h"
 #endif
 
 #include "scip/lpiex.h"
@@ -87,8 +87,8 @@ void SCIPlpiexStart(
    errorMessage();
 }
 
-/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in 
- *  extended and rational precision 
+/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in
+ *  extended and rational precision
  */
 void SCIPlpiexEnd(
    void
@@ -889,9 +889,9 @@ SCIP_RETCODE SCIPlpiexWriteState(
 }
 
 /** checks whether LPi state (i.e. basis information) is dual feasible and returns corresponding dual objective value.
- *  if wanted it will first directly test the corresponding approximate dual and primal solution 
+ *  if wanted it will first directly test the corresponding approximate dual and primal solution
  *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
- *  before performing the dual feasibility test on the more expensive exact basic solution. 
+ *  before performing the dual feasibility test on the more expensive exact basic solution.
  */
 SCIP_RETCODE SCIPlpiexStateDualFeasible(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */

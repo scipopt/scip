@@ -24,11 +24,11 @@
 #define __SCIP_CONS_EXACTLP_H__
 
 
-/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might 
+/** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might
  *   move to another file. delete library inclusion then.
  */
 #include "mpfr.h" /* mpfr.h has to be included before gmp.h */
-#include "gmp.h" 
+#include "gmp.h"
 
 #include "scip/type_cons.h"
 #include "scip/type_lpiex.h"
@@ -73,8 +73,8 @@ SCIP_Bool mpqIsReal(
    mpq_t                 val                 /**< given rational number */
    );
 
-/** converts given rational number into an FP number; uses given rounding mode during conversion 
- * (should be used to construct an FP relaxation of a constraint) 
+/** converts given rational number into an FP number; uses given rounding mode during conversion
+ * (should be used to construct an FP relaxation of a constraint)
  */
 extern
 SCIP_Real mpqGetRealRelax(
@@ -83,8 +83,8 @@ SCIP_Real mpqGetRealRelax(
    mp_rnd_t              roundmode           /**< rounding mode to be used for the conversion */
    );
 
-/** converts given rational number into an FP number; uses default rounding mode during conversion 
- * (should be used to construct an FP approximation of a constraint) 
+/** converts given rational number into an FP number; uses default rounding mode during conversion
+ * (should be used to construct an FP approximation of a constraint)
  */
 extern
 SCIP_Real mpqGetRealApprox(
@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -170,7 +170,7 @@ SCIP_Bool SCIPisNegInfinityExactlp(
    const mpq_t           val                 /**< value to be compared against infinity */
    );
 
-/** returns a safe external value of the given exact internal objective value, i.e., a lower and an upper approximation 
+/** returns a safe external value of the given exact internal objective value, i.e., a lower and an upper approximation
  *  if given value is a lower and an upper bound on the optimal objective value, respectively
  */
 extern
@@ -199,7 +199,7 @@ void SCIPgetSolexOrigObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< exactlp constraint data */
    SCIP_SOLEX*           sol,                /**< exact primal solution */
-   mpq_t                 obj                 /**< pointer to store objective value */ 
+   mpq_t                 obj                 /**< pointer to store objective value */
    );
 
 /** returns transformed objective value of exact primal CIP solution */
@@ -207,7 +207,7 @@ extern
 void SCIPgetSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< exact primal solution */
-   mpq_t                 obj                 /**< pointer to store objective value */ 
+   mpq_t                 obj                 /**< pointer to store objective value */
    );
 
 /** returns objective value of best exact primal CIP solution found so far w.r.t. original problem */
@@ -215,7 +215,7 @@ extern
 void SCIPgetBestSolexObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< exactlp constraint data */
-   mpq_t                 obj                 /**< pointer to store objective value */ 
+   mpq_t                 obj                 /**< pointer to store objective value */
    );
 
 /** returns transformed objective value of best exact primal CIP solution found so far */
@@ -223,7 +223,7 @@ extern
 void SCIPgetBestSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< exactlp constraint data */
-   mpq_t                 obj                 /**< pointer to store objective value */ 
+   mpq_t                 obj                 /**< pointer to store objective value */
    );
 
 /** outputs non-zero variables of exact solution in original problem space to file stream */
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPprintBestSolexVar(
    );
 
 /** checks best exact primal solution for feasibility without adding it to the solution store;
- *  called for original exactlp constraints the method is used to double check the best exact solution in order to 
+ *  called for original exactlp constraints the method is used to double check the best exact solution in order to
  *  validate the presolving process
  */
 extern
@@ -314,9 +314,9 @@ void SCIPvarGetWorstGlobalBoundExactlp(
    mpq_t                 bound               /**< pointer to store worst bound */
    );
 
-/** returns safe dual bounding method to be applied; if user want's the solver to decide the most promising one is 
+/** returns safe dual bounding method to be applied; if user want's the solver to decide the most promising one is
  *  selected, otherwise the one the user wanted is returned.
- *  note, for the automatic mode, this method asumes that Neumaier and Shcherbina was already tested, 
+ *  note, for the automatic mode, this method asumes that Neumaier and Shcherbina was already tested,
  *  i.e., that we know whether it suceeded.
  */
 extern

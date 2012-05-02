@@ -168,7 +168,7 @@ ifeq ($(REDUCEDSOLVE),true)
 ifeq ($(ZIMPL),false)
 $(error REDUCEDSOLVE requires ZIMPL. Use either REDUCEDSOLVE=false or ZIMPL=true)
 endif
-FLAGS		+=	-DWITH_REDUCEDSOLVE			
+FLAGS		+=	-DWITH_REDUCEDSOLVE
 endif
 REDUCEDSOLVEDEP	:=	$(SRCDIR)/depend.reducedsolve
 REDUCEDSOLVESRC	:=	$(shell cat $(REDUCEDSOLVEDEP))
@@ -182,7 +182,7 @@ endif
 ifeq ($(GMP),false)
 $(error EXACTSOLVE requires GMP (and MPFR). Use either EXACTSOLVE=false or GMP=true)
 endif
-FLAGS		+=	-DWITH_EXACTSOLVE			
+FLAGS		+=	-DWITH_EXACTSOLVE
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
 endif
 EXACTSOLVEDEP	:=	$(SRCDIR)/depend.exactsolve
@@ -190,8 +190,8 @@ EXACTSOLVESRC	:=	$(shell cat $(EXACTSOLVEDEP))
 
 
 # flag for including branching plugins or supporting only first fractional variable branching
-ifeq ($(BRANCHPLGS),true) 
-FLAGS		+=	-DWITH_BRANCHPLGS			
+ifeq ($(BRANCHPLGS),true)
+FLAGS		+=	-DWITH_BRANCHPLGS
 endif
 BRANCHPLGSDEP	:=	$(SRCDIR)/depend.branchplgs
 BRANCHPLGSSRC	:=	$(shell cat $(BRANCHPLGSDEP))

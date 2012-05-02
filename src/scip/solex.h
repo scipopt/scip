@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPsolexSetVal(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to add to solution */
    const mpq_t           obj,                /**< objective value of variable */
-   const mpq_t           lb,                 /**< global lower bound of variable */ 
+   const mpq_t           lb,                 /**< global lower bound of variable */
    const mpq_t           val                 /**< solution value of variable */
    );
 

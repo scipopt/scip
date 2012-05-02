@@ -85,9 +85,9 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
 
    - "GMP=true"        to use GMP library for exact counting
-   - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library 
+   - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library
    - "GMP=auto"        to automaticaly link the GMP library in case ZIMPL is enabled (default)
- 
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
@@ -350,7 +350,7 @@ for exact MIP solving.
 - $(REDUCEDSOLVE): whether to reduce SCIP to a pure branch-and-bound algorithm, excluding all additional plugins
              "true", "false"
 
-- $(BRANCHPLGS): whether to include all branching plugins 
+- $(BRANCHPLGS): whether to include all branching plugins
   	     (otherwise the branch-and-bound algorithm will apply first-fractional variable branching)
              "true", "false"
 
@@ -368,7 +368,7 @@ Here is what you have to do to get SCIP running in exact mode:
 
    Package: GNU Multiple Precision Arithmetic Library (GMP) -- tested with version 4.3.1
    =====================================================================================
-   
+
    GMP is required for the exact LP solver QSopt_ex, SCIP in exact solving
    mode, ZIMPL, and the GNU MPFR library. It can be downloaded from
    "ftp://ftp.gnu.org/gnu/gmp". For correct behavior in QSopt_ex, it must
@@ -378,46 +378,46 @@ Here is what you have to do to get SCIP running in exact mode:
    "http://gmplib.org/manual").
 
    - "cd <path>/gmp-4.3.1"
-   - "./configure --disable-shared --enable-static --enable-alloca=malloc-reentrant --prefix=<path>/gmp-4.3.1/lib" 
+   - "./configure --disable-shared --enable-static --enable-alloca=malloc-reentrant --prefix=<path>/gmp-4.3.1/lib"
    - "make"
    - "make check"
    - "make install"
-   
+
    If you need to use a local GMP installation for SCIP, please provide the
    corresponding path via a new local makefile
    "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
-   
+
    FLAGS	      +=	-I<path>/gmp-4.3.1/lib/include
    LDFLAGS	      +=	-L<path>/gmp-4.3.1/lib/lib
-   
-   
+
+
    Package: GNU MPFR Library (MPFR) -- tested with version 2.4.2
    =============================================================
-   
+
    SCIP in exact solving mode requires MPFR. It can be downloaded from
    "ftp://ftp.gnu.org/gnu/mpfr". You can use the following commands
    for correctly installing MPFR (see also "Installing MPFR" on
    "http://www.mpfr.org/mpfr-current/mpfr.html").
 
    - "cd <path>/mpfr-2.4.2
-   - "./configure --disable-shared --enable-static --prefix=<path>/mpfr-2.4.2/lib" 
+   - "./configure --disable-shared --enable-static --prefix=<path>/mpfr-2.4.2/lib"
    - "make"
    - "make check"
    - "make install"
-   
+
    If you need to use a local MPFR installation for SCIP, please provide
    the corresponding path via a (new) local makefile
    "myscip/make/local/make.$(HOSTNAME)". For example,
    "myscip/make/local/make.alibaba" could contain lines of the form
-   
+
    FLAGS           +=      -I<path>/mpfr-2.4.2/lib/include
    LDFLAGS         +=      -L<path>/mpfr-2.4.2/lib/lib
-   
-   
+
+
    Package: ZIMPL version 3.0.0
    ============================
-   
+
    SCIP in exact solving mode requires ZIMPL for reading in a MIP instance
    without floating-point errors. Please stick to version 3.0.0; the ZIMPL
    reader of the present SCIP version is not compatible with newer ZIMPL
@@ -430,63 +430,63 @@ Here is what you have to do to get SCIP running in exact mode:
 
    SCIP will automatically ask for the path to ZIMPL while compiling (see
    standard SCIP instructions above).
-   
+
    Note that for some larger MIP instances, ZIMPL 3.0.0 only works if the
    stack size is large enough, otherwise you will get a segmentation
    fault. In a bash shell, the command "ulimit -s unlimited" corrects this
    problem.
-   
+
    To convert files given in mps-format to files in zpl-format for ZIMPL,
    you can use the script "mps2zpl.sh"; see Step 5.
 
 
    Package: Standard LP solver
    ===========================
-   
+
    You will need a standard LP solver based on floating-point
    arithmetic. SCIP will automatically ask for the path to the standard LP
    solver while compiling (see standard SCIP instructions above).
-   
-   
+
+
    Package: QSopt_ex version 2.5.5
    ===============================
-   
-   You need the exact LP solver QSopt_ex. You can obtain it via 
-   
+
+   You need the exact LP solver QSopt_ex. You can obtain it via
+
    - "svn co https://conexo.dii.uchile.cl/SVN/ESolver/tags/QSopt_ex-2.5.5 QSopt_ex-2.5.5".
-   
+
    Please stick to version 2.5.5. We tested the interface of SCIP for this
    version and, in particular, the following required replacement will only
    work for QSopt_ex 2.5.5. You need to add the functions
    "QSexact_verify()" and "QSexact_basis_dualstatus()" to QSopt_ex, which
    test a given basis for dual feasibility. For this, please, replace the
    files
-   
-   - "QSopt_ex-2.5.5/EXact/exact.c" 
-   - "QSopt_ex-2.5.5/EXact/exact.h" 
-   - "QSopt_ex-2.5.5/include/QSopt_ex.h" 
-   
+
+   - "QSopt_ex-2.5.5/EXact/exact.c"
+   - "QSopt_ex-2.5.5/EXact/exact.h"
+   - "QSopt_ex-2.5.5/include/QSopt_ex.h"
+
    by the ones provided in the directory "QSopt_ex-2.5.5-replace".
-   
+
    For installing the QSopt_ex, we refer to the file
    "QSopt_ex-2.5.5/README". The most important point is that QSopt_ex
    requires the GMP library to be compiled using the option
    "--enable-alloca=malloc-reentrant", which avoids memory overwriting
-   problems (see point "Package: GMP"). 
+   problems (see point "Package: GMP").
 
    Before compiling QSopt_ex, make sure to update the GMP path in
    "QSopt_ex-2.5.5/make.conf" (copy of "QSopt_ex-2.5.5/make.conf.default")
    and "QSopt_ex-2.5.5/EGlib/make.conf". For example, replace the the
    "GNUMP_LIB_DIR" and "GNUMP_INCLUDE_DIR" lines in both files by
-   
+
    GNUMP_LIB_DIR += <path>/gmp-4.3.1/lib/lib
    GNUMP_INCLUDE_DIR += <path>/gmp-4.3.1/lib/include
-   
+
    You can use the following commands for installing QSopt_ex.
 
    - "cd <path>/QSopt_ex-2.5.5
    - "make"
-   
+
    SCIP will automatically ask for missing links to QSopt_ex while
    compiling (see Step 2).
 
@@ -496,7 +496,7 @@ Here is what you have to do to get SCIP running in exact mode:
    and "READLINE", explained in the standard SCIP instructions above, and the
    following additional options:
 
- 
+
    - "ZIMPL=true"       to enable ZIMPL file reader (default)
    - "ZIMPL=false"      to disable ZIMPL file reader (not compatible with "EXACTSOLVE=true")
 
@@ -535,49 +535,49 @@ Here is what you have to do to get SCIP running in exact mode:
 
    Example 1 (Branch-and-bound algorithm in exact solving mode, all branching plugins)
    ===================================================================================
-   
-   Typing 
 
-   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true" 
+   Typing
+
+   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true"
 
    uses CPLEX as standard LP solver and QSopt_ex as exact LP solver. It
    results in a reduced version of SCIP (only branch-and-bound) with SCIP's
    default branching plugins. It will solve a MIP instance exactly.
-   
-   
+
+
    Example 2 (Branch-and-bound algorithm in exact solving mode, no branching plugins)
    ==================================================================================
-   
-   Typing 
-   
-   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true BRANCHPLGS=false" 
-   
+
+   Typing
+
+   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true BRANCHPLGS=false"
+
    uses CPLEX as standard LP solver and QSopt_ex as exact LP solver. It
    results in a reduced version of SCIP (only branch-and-bound) with only
    first-fractional variable branching. It will solve a MIP instance
    exactly.
-   
-   
+
+
    Example 3 (Branch-and-bound algorithm in standard solving mode, all branching plugins)
    ======================================================================================
-   
-   Typing 
-   
+
+   Typing
+
    "make LPS=cpx REDUCEDSOLVE=true"
 
    uses CPLEX as standard LP solver and no exact LP solver. It results in a
    reduced version of SCIP (only branch-and-bound) with SCIP's default
    branching plugins. It will solve a MIP instance with floating-point
    arithmetic and thus cannot guarantee to produce correct results.
-   
-   
+
+
    Example 4 (Branch-and-bound algorithm in standard solving mode, no branching plugins)
    =====================================================================================
-   
-   Typing 
 
-   "make LPS=cpx REDUCEDSOLVE=true BRANCHPLGS=false" 
-   
+   Typing
+
+   "make LPS=cpx REDUCEDSOLVE=true BRANCHPLGS=false"
+
    uses CPLEX as standard LP solver and no exact LP solver. It results in a
    reduced version of SCIP (only branch-and-bound) with only
    first-fractional variable branching. It will solve a MIP instance with
@@ -621,11 +621,11 @@ Here is what you have to do to get SCIP running in exact mode:
    script, which you will find in the SCIP base directory, to convert all
    instances stated in "check/shortmiplibex.test". For example, run
 
-   "mps2zpl.sh check/IP/miplib3/air03.mps" 
+   "mps2zpl.sh check/IP/miplib3/air03.mps"
 
-   Afterwards, enter 
+   Afterwards, enter
 
-   "make [options] TEST=shortmiplibex test" 
+   "make [options] TEST=shortmiplibex test"
 
    with the same options with which you compiled SCIP in step 1.
 

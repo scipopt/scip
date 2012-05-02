@@ -22,21 +22,21 @@
 
 #include <assert.h>
 
-#include "scip/def.h" 
+#include "scip/def.h"
 #include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/var.h"
-#include "scip/prob.h" 
-#include "scip/solex.h" 
-#include "scip/cons_exactlp.h" 
+#include "scip/prob.h"
+#include "scip/solex.h"
+#include "scip/cons_exactlp.h"
 
 #ifndef NDEBUG
 #include "scip/struct_solex.h"
 #endif
 
 #ifdef WITH_EXACTSOLVE
-#include "gmp.h" 
+#include "gmp.h"
 
 /** clears solution arrays of exact primal CIP solution */
 static
@@ -143,7 +143,7 @@ void solexPrintValue(
    if( n >= SCIP_MAXSTRLEN )
    {
       char* bigs;
-      
+
       if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
       {
          SCIPmessagePrintInfo("string too long\n");
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPsolexCreate(
    assert(sol != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPmpqarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPsolexSetVal(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to add to solution */
    const mpq_t           obj,                /**< objective value of variable */
-   const mpq_t           lb,                 /**< global lower bound of variable */ 
+   const mpq_t           lb,                 /**< global lower bound of variable */
    const mpq_t           val                 /**< solution value of variable */
    )
 {
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPsolexSetVal(
    gmp_snprintf(s, SCIP_MAXSTRLEN, "setting value of <%s> in solution %p to %Qd\n", SCIPvarGetName(var), (void*)sol, val);
    SCIPdebugMessage(s);
 #endif
-   
+
    mpq_init(oldval);
 
    /* we want to store only values for non-fixed variables (LOOSE or COLUMN); others have to be transformed */
@@ -240,20 +240,20 @@ SCIP_RETCODE SCIPsolexSetVal(
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
       {
          solexGetArrayVal(sol, var, oldval);
-      
+
          if( mpq_equal(val, oldval) == 0 )
          {
             mpq_t prod;
-         
+
             SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
-         
+
             /* update objective */
             mpq_init(prod);
             mpq_mul(prod, obj, oldval);
             mpq_sub(sol->obj, sol->obj, prod);
             mpq_mul(prod, obj, val);
             mpq_add(sol->obj, sol->obj, prod);
-         
+
             mpq_clear(prod);
          }
       }
@@ -266,26 +266,26 @@ SCIP_RETCODE SCIPsolexSetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      
+
       solexGetArrayVal(sol, var, oldval);
-      
+
       if( mpq_equal(val, oldval) == 0 )
       {
          mpq_t prod;
-         
+
          SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
-         
+
          /* update objective */
          mpq_init(prod);
          mpq_mul(prod, obj, oldval);
          mpq_sub(sol->obj, sol->obj, prod);
          mpq_mul(prod, obj, val);
          mpq_add(sol->obj, sol->obj, prod);
-         
+
          mpq_clear(prod);
       }
       break;
-      
+
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
 
@@ -302,7 +302,7 @@ SCIP_RETCODE SCIPsolexSetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables 
+       *  - implement this if exact version of SCIP supports aggregated variables
        */
       SCIPerrorMessage("cannot set solution value for aggregated variable\n");
       SCIPABORT();
@@ -315,17 +315,17 @@ SCIP_RETCODE SCIPsolexSetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports negated variables 
+       *  - implement this if exact version of SCIP supports negated variables
        */
       SCIPerrorMessage("cannot set solution value for negated variable\n");
       SCIPABORT();
       break;
-      
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
    }
-   
+
    mpq_clear(oldval);
 
    return SCIP_OKAY;
@@ -359,7 +359,7 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports fixed variables 
+       *  - implement this if exact version of SCIP supports fixed variables
        */
       SCIPerrorMessage("cannot get solution value of fixed variable\n");
       SCIPABORT();
@@ -367,7 +367,7 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables 
+       *  - implement this if exact version of SCIP supports aggregated variables
        */
       SCIPerrorMessage("cannot get solution value of aggregated variable\n");
       SCIPABORT();
@@ -375,7 +375,7 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_MULTAGGR:
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports multiaggregated variables 
+       *  - implement this if exact version of SCIP supports multiaggregated variables
        */
       SCIPerrorMessage("cannot get solution value of multiaggregated variable\n");
       SCIPABORT();
@@ -383,7 +383,7 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       /** @todo exiptodo: presolving extension
-       *  - implement this if exact version of SCIP supports negated variables 
+       *  - implement this if exact version of SCIP supports negated variables
        */
       SCIPerrorMessage("cannot get solution value of negated variable\n");
       SCIPABORT();
@@ -405,7 +405,7 @@ void SCIPsolexGetObj(
 
    /* for original solutions, sol->obj contains the external objective value */
    if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
-   {                                               
+   {
       /** @todo exiptodo: heuristics extension
        *  - implement this if exact version of SCIP supports getting objective value of original solutions */
       SCIPerrorMessage("cannot get objectiv value of original solution\n");
@@ -418,9 +418,9 @@ void SCIPsolexGetObj(
 }
 
 /** @todo exiptodo: heuristics extension
- *  - if heuristics are allowed to create and add exact solutions, then we need to implement SCIPsolexCheck(). currently, 
- *    we do not need it because only cons_exactlp.c adds solutions and they are valid for sure. 
- *  - should it be implemented here or in cons_exactlp.c?  
+ *  - if heuristics are allowed to create and add exact solutions, then we need to implement SCIPsolexCheck(). currently,
+ *    we do not need it because only cons_exactlp.c adds solutions and they are valid for sure.
+ *  - should it be implemented here or in cons_exactlp.c?
  */
 
 /** returns whether the given exact solutions in transformed space are equal */
@@ -443,7 +443,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 
    areequal = TRUE;
 
-   if( mpq_equal(sol1->obj, sol2->obj) != 0 ) 
+   if( mpq_equal(sol1->obj, sol2->obj) != 0 )
       return FALSE;
 
    mpq_init(val1);
@@ -459,7 +459,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 
    mpq_clear(val2);
    mpq_clear(val1);
-      
+
    return areequal;
 }
 
@@ -487,10 +487,10 @@ SCIP_RETCODE SCIPsolexPrint(
    conss = SCIPgetConss(scip);
    assert(conss != NULL);
    assert(SCIPgetNConss(scip) == 1);
-      
+
    mpq_init(solval);
    mpq_init(obj);
-   
+
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
    {
@@ -504,9 +504,9 @@ SCIP_RETCODE SCIPsolexPrint(
 #if 0
          /** @todo exiptodo: presolving extension
           *  - in addition, print objective coefficients of the variables (as in the inexact version)
-          *  - the problem is that currently SCIPvarGetObjExactlp() always returns the obj coef for the transformed 
+          *  - the problem is that currently SCIPvarGetObjExactlp() always returns the obj coef for the transformed
           *    problem, i.e. after objective scaling
-          */ 
+          */
          SCIPvarGetObjExactlp(conss[0], prob->fixedvars[v], obj);
          SCIPmessageFPrintInfo(file, " \t(obj: ");
          solexPrintValue(scip, file, obj);
@@ -545,7 +545,7 @@ SCIP_RETCODE SCIPsolexPrint(
 
          if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
             continue;
-         
+
          SCIPsolexGetVal(sol, transprob->fixedvars[v], solval);
          if( printzeros || mpq_sgn(solval) != 0 )
          {

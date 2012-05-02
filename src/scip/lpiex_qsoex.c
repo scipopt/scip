@@ -17,7 +17,7 @@
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
  * @author Daniel Espinoza
  * @author Marc Pfetsch
- * @author Kati Wolter 
+ * @author Kati Wolter
 */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -385,8 +385,8 @@ void SCIPlpiexStart(
    QSexactStart();
 }
 
-/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in 
- *  extended and rational precision 
+/** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in
+ *  extended and rational precision
  */
 void SCIPlpiexEnd(
    void
@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPlpiexCreate(
    memset(*lpi, 0, sizeof(struct SCIP_LPiEx));
 
    /* factor work is NULL unless used */
-   (*lpi)->factor =  (mpq_factor_work*) NULL; 
+   (*lpi)->factor =  (mpq_factor_work*) NULL;
 
    (*lpi)->prob = mpq_QScreate_prob(name, (int) objsen);
    if( (*lpi)->prob == NULL )
@@ -462,12 +462,12 @@ SCIP_RETCODE SCIPlpiexFree(
 
    SCIPdebugMessage("SCIPlpiexFree()\n");
 
-   /* free factor work */   
+   /* free factor work */
    if( (*lpi)->factor != NULL )
    {
       mpq_ILLfactor_free_factor_work((*lpi)->factor);
       BMSfreeMemoryArray( &((*lpi)->factor) );
-   }  
+   }
 
    /* free LP */
    mpq_QSfree_prob((*lpi)->prob);
@@ -554,9 +554,10 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs) );
 
    /* now we add the rows */
-   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, 0, 0, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, 0, (const mpq_t*) 0, (const mpq_t*) lpi->irhs,
+      lpi->isen, (const mpq_t*) lpi->irng, (const char**)rownames);
    QS_CONDRET(rval);
-   
+
    /* ensure column size */
    SCIP_CALL( ensureColMem(lpi, ncols) );
 
@@ -622,7 +623,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
          lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
       else
          lpi->iccnt[ncols-1] = 0;
-         
+
       assert( lpi->iccnt[ncols-1] >= 0 );
    }
 
@@ -679,7 +680,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
    }
    else
    {
-      for( i = 0; i < ncols; ++i ) 
+      for( i = 0; i < ncols; ++i )
       {
          rval = mpq_QSnew_col(lpi->prob, obj[i], lb[i], ub[i], (const char*) colnames[i]);
       }
@@ -800,7 +801,8 @@ SCIP_RETCODE SCIPlpiexAddRows(
    }
 
    /* now we add the rows */
-   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) val, (const mpq_t*) lpi->irhs,
+      lpi->isen, (const mpq_t*) lpi->irng, (const char**)rownames);
    QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
 
    return SCIP_OKAY;
@@ -933,10 +935,10 @@ SCIP_RETCODE SCIPlpiexChgBounds(
    {
       int j;
       char s[SCIP_MAXSTRLEN];
-   
+
       for (j = 0; j < ncols; ++j)
       {
-         if( lb == NULL) 
+         if( lb == NULL)
             gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], ub[j]);
          else if( ub == NULL )
             gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], lb[j]);
@@ -953,8 +955,8 @@ SCIP_RETCODE SCIPlpiexChgBounds(
    {
       for (i = 0; i < ncols; ++i)
          lpi->iccha[i] = 'L';
-      
-      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
+
+      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, (const mpq_t*) lb);
       QS_CONDRET(rval);
    }
 
@@ -962,8 +964,8 @@ SCIP_RETCODE SCIPlpiexChgBounds(
    {
       for (i = 0; i < ncols; ++i)
          lpi->iccha[i] = 'U';
-      
-      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
+
+      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, (const mpq_t*) ub);
    }
    QS_RETURN(rval);
 }
@@ -1816,11 +1818,11 @@ SCIP_RETCODE SCIPlpiexGetSolFeasibility(
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED)
       *primalfeasible = 1;
 
-   /* @todo: check why we can conclude dual feasibility from primal infeasibility. in theory, the LP could be primal and 
+   /* @todo: check why we can conclude dual feasibility from primal infeasibility. in theory, the LP could be primal and
     * dual infeasible as well; see also SCIPlpiexIsDualFeasible() and SCIPlpiexIsDualInfeasible()
     */
 #ifdef USEOBJLIM
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT ) 
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT )
 #else
    if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE )
 #endif
@@ -1966,7 +1968,7 @@ SCIP_Bool SCIPlpiexIsDualFeasible(
    SCIPdebugMessage("checking for dual feasibility\n");
 
 #ifdef USEOBJLIM
-   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT ); 
+   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT );
 #else
    return (lpi->solstat == QS_LP_OPTIMAL);
 #endif
@@ -2560,29 +2562,29 @@ SCIP_RETCODE SCIPlpiexSetState(
    SCIPdebugMessage("basis status of SCIP lpistate rows (nrows=%d):\n", lpistate->nrows);
    for (i = 0; i < nrows; ++i)
    {
-      SCIPdebugMessage("row_%d: %d (%s)\n", i, lpi->ircnt[i],  
+      SCIPdebugMessage("row_%d: %d (%s)\n", i, lpi->ircnt[i],
          lpi->ircnt[i] == SCIP_BASESTAT_LOWER ? "lower" : lpi->ircnt[i] == SCIP_BASESTAT_BASIC ? "basic" : "upper");
-      
+
       switch(lpi->ircnt[i])
       {
       case SCIP_BASESTAT_LOWER:
-         irstat[i] = QS_ROW_BSTAT_LOWER; 
+         irstat[i] = QS_ROW_BSTAT_LOWER;
 	 break;
       case SCIP_BASESTAT_BASIC:
          irstat[i] = QS_ROW_BSTAT_BASIC;
 	 break;
       case SCIP_BASESTAT_UPPER:
-         /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the 
-          * slack variable is allowed to be UPPER 
+         /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the
+          * slack variable is allowed to be UPPER
           */
          if( lpi->isen[i] == 'R' )
             /* sense of LPEX row is R, too */
             irstat[i] = QS_ROW_BSTAT_UPPER;
          else
-            /* sense of LPEX row is L, G or E, thus, basis status must be LOWER/BASIC. we use non-basic status LOWER 
-             * instead of non-basic status UPPER for slack variable in LPEX. this might happen when the inexact LP 
-             * is an FP relaxation of the exact LP  
-             */ 
+            /* sense of LPEX row is L, G or E, thus, basis status must be LOWER/BASIC. we use non-basic status LOWER
+             * instead of non-basic status UPPER for slack variable in LPEX. this might happen when the inexact LP
+             * is an FP relaxation of the exact LP
+             */
             irstat[i] = QS_ROW_BSTAT_LOWER;
 	 break;
       default:
@@ -2697,9 +2699,9 @@ SCIP_RETCODE SCIPlpiexWriteState(
 }
 
 /** checks whether LPi state (i.e. basis information) is dual feasible and returns corresponding dual objective value.
- *  if wanted it will first directly test the corresponding approximate dual and primal solution 
+ *  if wanted it will first directly test the corresponding approximate dual and primal solution
  *  (corrected via dual variables for bounds and primal variables for slacks if possible) for optimality
- *  before performing the dual feasibility test on the more expensive exact basic solution. 
+ *  before performing the dual feasibility test on the more expensive exact basic solution.
  */
 SCIP_RETCODE SCIPlpiexStateDualFeasible(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
@@ -2715,18 +2717,18 @@ SCIP_RETCODE SCIPlpiexStateDualFeasible(
    int rval = 0;
    QSbasis* B;
 
-   /* loads LPi state (like basis information) into solver */ 
+   /* loads LPi state (like basis information) into solver */
    SCIP_CALL( SCIPlpiexSetState(lpi, blkmem, lpistate) );
- 
+
    /* checks whether basis just loaded into the solver is dual feasible */
    B =  mpq_QSget_basis(lpi->prob);
-   
+
 #ifdef VERIFY_OUT
-   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 0);
+   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (char*) result, dualobjval, 0);
 #else
-   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (int*) result, dualobjval, 1);
+   rval = QSexact_verify(lpi->prob, B, (int) useprestep, primalsol, dualsol, (char*) result, dualobjval, 1);
 #endif
-   
+
    if( B )
       mpq_QSfree_basis(B);
 
@@ -3059,20 +3061,20 @@ SCIP_RETCODE SCIPlpiexCreateFactor(
    int rval;
    if(lpi->factor == NULL)
    {
-      int nsing;                                                
-      int *singr;                                               
-      int *singc; 
+      int nsing;
+      int *singr;
+      int *singc;
       int * basis;
- 
+
       SCIP_ALLOC(  BMSallocMemoryArray(&lpi->factor,1) );
-      
+
       SCIP_ALLOC(  BMSallocMemoryArray(&basis,dim) );
       for(i = 0; i < dim; i++)
-      { 
+      {
          basis[i] = i;
-      }      
-/*       mpq_factor_work *f = (mpq_factor_work *) NULL; */
-/*       f = (mpq_factor_work *) malloc (sizeof (mpq_factor_work)); */
+      }
+      /* mpq_factor_work *f = (mpq_factor_work *) NULL; */
+      /* f = (mpq_factor_work *) malloc (sizeof (mpq_factor_work)); */
       /* this is just a temporary fix for debugging, this should use lpi->factor!!! */
       mpq_init(lpi->factor->fzero_tol);
       mpq_init(lpi->factor->szero_tol);
@@ -3080,7 +3082,7 @@ SCIP_RETCODE SCIPlpiexCreateFactor(
       mpq_init(lpi->factor->partial_cur);
 
       mpq_ILLfactor_init_factor_work (lpi->factor );/*  lpi->factor  */
-      mpq_ILLfactor_create_factor_work (lpi->factor,dim);   
+      mpq_ILLfactor_create_factor_work (lpi->factor,dim);
 
       nsing = 0;
       singr = 0;
@@ -3088,7 +3090,7 @@ SCIP_RETCODE SCIPlpiexCreateFactor(
 
       rval = mpq_ILLfactor(lpi->factor,basis, cbeg,clen,cindx,ccoef,&nsing,&singr,&singc);
       assert(!rval);
-      if (nsing > 0) 
+      if (nsing > 0)
       {
          printf ("Matrix is nonsingular \n");
       }

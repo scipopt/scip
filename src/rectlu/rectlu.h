@@ -1,19 +1,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                           */  
-/*                        This file is part of the program                   */   
-/*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */ 
-/*                                                                           */  
-/*    Copyright (C) 2009-2010 Konrad-Zuse-Zentrum                            */ 
-/*                            fuer Informationstechnik Berlin                */ 
-/*                                                                           */ 
-/*   RECTLU is distributed under the terms of the ZIB Academic License.      */ 
-/*                                                                           */ 
-/*  You should have received a copy of the ZIB Academic License              */ 
-/*  along with RECTLU; see the file COPYING.                                 */ 
-/*                                                                           */ 
+/*                                                                           */
+/*                        This file is part of the program                   */
+/*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */
+/*                                                                           */
+/*    Copyright (C) 2009-2010 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*   RECTLU is distributed under the terms of the ZIB Academic License.      */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with RECTLU; see the file COPYING.                                 */
+/*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rectlu.h 
+/**@file   rectlu.h
  * @brief  rectlu user interface
  * @author David Applegate
  * @author Bill Cook
@@ -22,10 +22,10 @@
  * @author Dan Steffy
  * @author Kati Wolter
  */
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/                                   
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "rectlu_num.h"
- 
+
 
 #ifndef __RECTLU_H
 #define __RECTLU_H
@@ -159,28 +159,28 @@ typedef struct qsnum_factor_work {
 } qsnum_factor_work;
 
 
-/** factorizes the matrix and points f to factor work or returns error */ 
+/** factorizes the matrix and points f to factor work or returns error */
 int RECTLUbuildFactorization(
    qsnum_factor_work** f,                /**< pointer to store factor work*/
    int              n,                   /**< number of rows in matrix */
-   int              m,                   /**< number of columns in matrix*/ 
-   int*             basisx,              /**< basis columns of matrix */ 
+   int              m,                   /**< number of columns in matrix*/
+   int*             basisx,              /**< basis columns of matrix */
    mpq_t*           matval,              /**< values of matrix entries */
-   int*             matind,              /**< row index of matrix entries */ 
-   int*             matbeg,              /**< start of columns in sparse matrix */ 
-   int*             matcnt               /**< length of column in sparse matrix */                         
-   );    
+   int*             matind,              /**< row index of matrix entries */
+   int*             matbeg,              /**< start of columns in sparse matrix */
+   int*             matcnt               /**< length of column in sparse matrix */
+   );
 
-/** solves the system using factor work f */ 
+/** solves the system using factor work f */
 int RECTLUsolveSystem(
    qsnum_factor_work* f,                 /**< pointer to factor work*/
    int              n,                   /**< number of rows in matrix */
-   int              m,                   /**< number of columns in matrix*/ 
-   mpq_t*           rhs,                 /**< right hand side of system to solve */ 
+   int              m,                   /**< number of columns in matrix*/
+   mpq_t*           rhs,                 /**< right hand side of system to solve */
    mpq_t*           sol                  /**< solution to system */
    );
 
-/** frees factor work f */ 
+/** frees factor work f */
 void RECTLUfreeFactorization(
    qsnum_factor_work* f                 /**< pointer to store factor work*/
    );
