@@ -371,6 +371,72 @@ void SCIPrelaxSetData(
    relax->relaxdata = relaxdata;
 }
 
+/** set copy method of relaxation handler */
+void SCIPrelaxSetCopy(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxcopy = relaxcopy;
+}
+
+/** set destructor of relaxation handler */
+void SCIPrelaxSetFree(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxfree = relaxfree;
+}
+
+/** set initialization method of relaxation handler */
+void SCIPrelaxSetInit(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxinit = relaxinit;
+}
+
+/** set deinitialization method of relaxation handler */
+void SCIPrelaxSetExit(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxexit = relaxexit;
+}
+
+/** set solving process initialization method of relaxation handler */
+void SCIPrelaxSetInitsol(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxinitsol = relaxinitsol;
+}
+
+/** set solving process deinitialization method of relaxation handler */
+void SCIPrelaxSetExitsol(
+   SCIP_RELAX*           relax,              /**< relaxator  */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   relax->relaxexitsol = relaxexitsol;
+}
+
 /** gets name of relaxator */
 const char* SCIPrelaxGetName(
    SCIP_RELAX*           relax               /**< relaxator */
