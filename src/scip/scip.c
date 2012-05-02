@@ -3997,7 +3997,11 @@ SCIP_RETCODE SCIPsetPresolPriority(
    return SCIP_OKAY;
 }
 
-/** creates a relaxation handler and includes it in SCIP */
+/** creates a relaxation handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of relaxation handler */
@@ -4033,6 +4037,141 @@ SCIP_RETCODE SCIPincludeRelax(
 
    return SCIP_OKAY;
 }
+
+/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ */
+SCIP_RETCODE SCIPincludeRelaxBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   )
+{
+   SCIP_RELAX* relax;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeRelaxBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether relaxation handler is already present */
+   if( SCIPfindRelax(scip, name) != NULL )
+   {
+      SCIPerrorMessage("relaxation handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
+         name, desc, priority, freq,
+         NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
+   SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
+
+   if( relaxptr != NULL )
+      *relaxptr = relax;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of relaxator */
+SCIP_RETCODE SCIPsetRelaxCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetCopy(relax, relaxcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of relaxator */
+SCIP_RETCODE SCIPsetRelaxFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetFree(relax, relaxfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of relaxator */
+SCIP_RETCODE SCIPsetRelaxInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetInit(relax, relaxinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of relaxator */
+SCIP_RETCODE SCIPsetRelaxExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetExit(relax, relaxexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of relaxator */
+SCIP_RETCODE SCIPsetRelaxInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetInitsol(relax, relaxinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of relaxator */
+SCIP_RETCODE SCIPsetRelaxExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetExitsol(relax, relaxexitsol);
+
+   return SCIP_OKAY;
+}
+
 
 /** returns the relaxation handler of the given name, or NULL if not existing */
 SCIP_RELAX* SCIPfindRelax(
@@ -4674,9 +4813,9 @@ SCIP_RETCODE SCIPincludeHeur(
    return SCIP_OKAY;
 }
 
-/** Creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPheurSetInit() in pub_heur.h, for example.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurInit() in pub_heur.h, for example.
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
  */
 SCIP_RETCODE SCIPincludeHeurBasic(
