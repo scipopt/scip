@@ -1622,6 +1622,71 @@ SCIP_RETCODE SCIPincludeRelax(
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
 
+/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ */
+extern
+SCIP_RETCODE SCIPincludeRelaxBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   );
+
+/** sets copy method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxator */
+   );
+
+/** sets initialization method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxator */
+   );
+
+/** sets deinitialization method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxator */
+   );
+
+/** sets solving process initialization method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxator */
+   );
+
+/** sets solving process deinitialization method of relaxator */
+extern
+SCIP_RETCODE SCIPsetRelaxExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxator */
+   );
+
 /** returns the relaxation handler of the given name, or NULL if not existing */
 extern
 SCIP_RELAX* SCIPfindRelax(
