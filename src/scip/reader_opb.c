@@ -1305,7 +1305,9 @@ static
 SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   int*                  nNonlinearConss     /**< pointer to store number of nonlinear constraints */
+   int*                  nNonlinearConss,    /**< pointer to store number of nonlinear constraints */
+   SCIP_Bool             dynamicconss,       /**< should the created constraint be dynamic? */
+   SCIP_Bool             dynamicrows         /**< should rows be added and removed dynamically to the LP? */
    )
 {
    char name[OPB_MAX_LINELEN];
@@ -1322,8 +1324,6 @@ SCIP_RETCODE readConstraints(
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool dynamicconss;
-   SCIP_Bool dynamicrows;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1441,8 +1441,6 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
    initial = !dynamicrows;
    separate = TRUE;
    enforce = TRUE;
@@ -1605,6 +1603,8 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamicrows;
    int nNonlinearConss;
    int i;
 
@@ -1633,9 +1633,12 @@ SCIP_RETCODE readOPBFile(
 
    nNonlinearConss = 0;
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+
    while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
-      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
+      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss, dynamicconss, dynamicrows) );
    }
 
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
