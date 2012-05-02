@@ -3745,7 +3745,7 @@ SCIP_RETCODE SCIPincludeConflicthdlrBasic(
 {
    SCIP_CONFLICTHDLR* conflicthdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether conflict handler is already present */
    if( SCIPfindConflicthdlr(scip, name) != NULL )
@@ -3754,7 +3754,7 @@ SCIP_RETCODE SCIPincludeConflicthdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority,
+   SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
          NULL, NULL, NULL, NULL, NULL, NULL, conflictexec, conflicthdlrdata) );
    SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
 
@@ -3773,7 +3773,7 @@ SCIP_RETCODE SCIPsetConflicthdlrCopy(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetCopy(conflicthdlr, conflictcopy);
 
@@ -3789,7 +3789,7 @@ SCIP_RETCODE SCIPsetConflicthdlrFree(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetFree(conflicthdlr, conflictfree);
 
@@ -3805,7 +3805,7 @@ SCIP_RETCODE SCIPsetConflicthdlrInit(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetInit(conflicthdlr, conflictinit);
 
@@ -3821,7 +3821,7 @@ SCIP_RETCODE SCIPsetConflicthdlrExit(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetExit(conflicthdlr, conflictexit);
 
@@ -3837,7 +3837,7 @@ SCIP_RETCODE SCIPsetConflicthdlrInitsol(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetInitsol(conflicthdlr, conflictinitsol);
 
@@ -3853,7 +3853,7 @@ SCIP_RETCODE SCIPsetConflicthdlrExitsol(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconflicthdlrSetExitsol(conflicthdlr, conflictexitsol);
 
