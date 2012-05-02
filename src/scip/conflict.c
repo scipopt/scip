@@ -40,7 +40,7 @@
  * -#  Put all the given bound changes to a priority queue, which is ordered,
  *     such that the bound change that was applied last due to branching or deduction
  *     is at the top of the queue. The variables in the queue are always active
- *     problem variables. Because binary variables are prefered over general integer 
+ *     problem variables. Because binary variables are preferred over general integer
  *     variables, integer variables are put on the priority queue prior to the binary 
  *     variables. Create an empty conflict set.
  * -#  Remove the top bound change b from the priority queue.
@@ -57,12 +57,12 @@
  *            level as b, and were deduced earlier than b.
  *     -#  Otherwise, the bound change b was a branching decision or a deduction with
  *         missing inference reason, or the inference constraint's validity is more local
- *         than the one of the conflict detecing constraint.
+ *         than the one of the conflict detecting constraint.
  *          - If a the bound changed corresponds to a binary variable, add it or its 
  *            negation to the conflict set, depending on which of them is currently fixed to
  *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
  *            altogether at the same time).
- *          - Otherwise put the bound change iinto the conflict set.
+ *          - Otherwise put the bound change into the conflict set.
  *         Note that if the bound change was a branching, all deduced bound changes
  *         remaining in the priority queue have smaller inference depth level than b,
  *         since deductions are always applied after the branching decisions. However,
@@ -625,6 +625,72 @@ void SCIPconflicthdlrSetData(
    assert(conflicthdlr != NULL);
 
    conflicthdlr->conflicthdlrdata = conflicthdlrdata;
+}
+
+/** set copy method of conflict handler */
+void SCIPconflicthdlrSetCopy(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of the conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictcopy = conflictcopy;
+}
+
+/** set destructor of conflict handler */
+void SCIPconflicthdlrSetFree(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictfree = conflictfree;
+}
+
+/** set initialization method of conflict handler */
+void SCIPconflicthdlrSetInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialization method conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictinit = conflictinit;
+}
+
+/** set deinitialization method of conflict handler */
+void SCIPconflicthdlrSetExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialization method conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictexit = conflictexit;
+}
+
+/** set solving process initialization method of conflict handler */
+void SCIPconflicthdlrSetInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictinitsol = conflictinitsol;
+}
+
+/** set solving process deinitialization method of conflict handler */
+void SCIPconflicthdlrSetExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictexitsol = conflictexitsol;
 }
 
 /** gets name of conflict handler */

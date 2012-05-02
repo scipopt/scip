@@ -4560,8 +4560,8 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc, NULL) );
 
    /* create conflict handler for setppc constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecSetppc, NULL) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, NULL, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecSetppc, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

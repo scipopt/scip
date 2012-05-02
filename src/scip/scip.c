@@ -3687,7 +3687,11 @@ int SCIPgetNConshdlrs(
    return scip->set->nconshdlrs;
 }
 
-/** creates a conflict handler and includes it in SCIP */
+/** creates a conflict handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeConflicthdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of conflict handler */
@@ -3719,6 +3723,139 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
          conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
          conflicthdlrdata) );
    SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
+ */
+SCIP_RETCODE SCIPincludeConflicthdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR**   conflicthdlrptr,    /**< reference to a conflict handler pointer, or NULL */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   SCIP_CONFLICTHDLR* conflicthdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether conflict handler is already present */
+   if( SCIPfindConflicthdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("conflict handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority,
+         NULL, NULL, NULL, NULL, NULL, NULL, conflictexec, conflicthdlrdata) );
+   SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
+
+   if( conflicthdlrptr != NULL )
+      *conflicthdlrptr = conflicthdlr;
+
+   return SCIP_OKAY;
+}
+
+/** set copy method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetCopy(conflicthdlr, conflictcopy);
+
+   return SCIP_OKAY;
+}
+
+/** set destructor of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetFree(conflicthdlr, conflictfree);
+
+   return SCIP_OKAY;
+}
+
+/** set initialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialize conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetInit(conflicthdlr, conflictinit);
+
+   return SCIP_OKAY;
+}
+
+/** set deinitialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialize conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetExit(conflicthdlr, conflictexit);
+
+   return SCIP_OKAY;
+}
+
+/** set solving process initialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetInitsol(conflicthdlr, conflictinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** set solving process deinitialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetExitsol(conflicthdlr, conflictexitsol);
 
    return SCIP_OKAY;
 }
@@ -3813,10 +3950,11 @@ SCIP_RETCODE SCIPincludePresol(
    return SCIP_OKAY;
 }
 
-/** Creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+/** creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPpresolSetInit() in pub_presol.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludePresol</code>.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol.
  */
 SCIP_RETCODE SCIPincludePresolBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4076,11 +4214,11 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    return SCIP_OKAY;
 }
 
-/** sets copy method of relaxator */
+/** sets copy method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxCopy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4092,11 +4230,11 @@ SCIP_RETCODE SCIPsetRelaxCopy(
    return SCIP_OKAY;
 }
 
-/** sets destructor method of relaxator */
+/** sets destructor method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4108,11 +4246,11 @@ SCIP_RETCODE SCIPsetRelaxFree(
    return SCIP_OKAY;
 }
 
-/** sets initialization method of relaxator */
+/** sets initialization method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4124,11 +4262,11 @@ SCIP_RETCODE SCIPsetRelaxInit(
    return SCIP_OKAY;
 }
 
-/** sets deinitialization method of relaxator */
+/** sets deinitialization method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4140,11 +4278,11 @@ SCIP_RETCODE SCIPsetRelaxExit(
    return SCIP_OKAY;
 }
 
-/** sets solving process initialization method of relaxator */
+/** sets solving process initialization method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4156,11 +4294,11 @@ SCIP_RETCODE SCIPsetRelaxInitsol(
    return SCIP_OKAY;
 }
 
-/** sets solving process deinitialization method of relaxator */
+/** sets solving process deinitialization method of relaxation handler */
 SCIP_RETCODE SCIPsetRelaxExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxation handler */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetRelaxExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );

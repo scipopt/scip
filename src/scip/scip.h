@@ -1460,6 +1460,71 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    );
 
+/** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr.
+ */
+extern
+SCIP_RETCODE SCIPincludeConflicthdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR**   conflicthdlrptr,    /**< reference to a conflict handler pointer, or NULL */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   );
+
+/** set copy method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of conflict handler */
+   );
+
+/** set destructor of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   );
+
+/** set initialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialize conflict handler */
+   );
+
+/** set deinitialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialize conflict handler */
+   );
+
+/** set solving process initialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   );
+
+/** set solving process deinitialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   );
+
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
 SCIP_CONFLICTHDLR* SCIPfindConflicthdlr(
@@ -1604,7 +1669,11 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
-/** creates a relaxation handler and includes it in SCIP */
+/** creates a relaxation handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1639,52 +1708,52 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
 
-/** sets copy method of relaxator */
+/** sets copy method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxCopy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
-/** sets destructor method of relaxator */
+/** sets destructor method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
    );
 
-/** sets initialization method of relaxator */
+/** sets initialization method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
    );
 
-/** sets deinitialization method of relaxator */
+/** sets deinitialization method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
    );
 
-/** sets solving process initialization method of relaxator */
+/** sets solving process initialization method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
    );
 
-/** sets solving process deinitialization method of relaxator */
+/** sets solving process deinitialization method of relaxation handler */
 extern
 SCIP_RETCODE SCIPsetRelaxExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxator */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxation handler */
    );
 
 /** returns the relaxation handler of the given name, or NULL if not existing */

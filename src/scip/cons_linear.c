@@ -11284,6 +11284,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONFLICTHDLR* conflicthdlr;
 
    assert(scip != NULL);
 
@@ -11292,8 +11293,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear, NULL) );
 
    /* create conflict handler for linear constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecLinear, NULL) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecLinear, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
