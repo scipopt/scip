@@ -10,6 +10,7 @@ instances/MIP/gt2.mps
 instances/MIP/lseu.mps
 instances/MIP/misc03.mps
 instances/MIP/modglob.mps
+instances/MIP/p0033.osil
 instances/MIP/p0548.mps
 instances/MIP/pp08a.mps
 instances/MIP/rgn.mps
@@ -18,6 +19,7 @@ instances/MIP/vpm2.mps
 instances/MIQCP/bip_cross_min.10.10.10.1.pip
 instances/MIQCP/ex1266.mps
 instances/MIQCP/meanvarx.mps
+instances/MIQCP/parincQuadratic.osil
 instances/MIQCP/tltr.mps
 instances/MIQCP/util.mps
 instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb

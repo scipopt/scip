@@ -136,6 +136,7 @@ plugins:
 - added new presolver gateextraction, which tries to find and-gates/constraints with two operands which are linearized
   e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
   constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1))
+- added reader for MI(NL)Ps in OSiL (Optimization Services Instance Language) format
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
