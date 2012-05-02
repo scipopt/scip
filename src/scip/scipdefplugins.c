@@ -65,6 +65,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
+   SCIP_CALL( SCIPincludeReaderOsil(scip) );
    SCIP_CALL( SCIPincludeReaderPip(scip) );
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
    SCIP_CALL( SCIPincludeReaderRlp(scip) );

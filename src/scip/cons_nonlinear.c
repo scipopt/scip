@@ -855,6 +855,79 @@ SCIP_DECL_EXPRGRAPHVARREMOVE( exprgraphVarRemove )
    return SCIP_OKAY;
 }
 
+/* adds expression trees to constraint */
+static
+SCIP_RETCODE consdataAddExprtrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< nonlinear constraint data */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
+   SCIP_Real*            coefs,              /**< coefficients of expression trees, or NULL if all 1.0 */
+   SCIP_Bool             copytrees           /**< whether trees should be copied or ownership should be assumed */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(consdata->exprtrees != NULL || consdata->nexprtrees == 0);
+
+   if( nexprtrees == 0 )
+      return SCIP_OKAY;
+
+   /* invalidate activity information */
+   consdata->activity = SCIP_INVALID;
+
+   /* invalidate nonlinear row */
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
+   consdata->ispresolved  = FALSE;
+   consdata->curvature = SCIP_EXPRCURV_UNKNOWN;
+   consdata->iscurvchecked = FALSE;
+
+   if( consdata->nexprtrees == 0 )
+   {
+      assert(consdata->exprtrees   == NULL);
+      assert(consdata->nonlincoefs == NULL);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->exprtrees,   nexprtrees) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->nonlincoefs, nexprtrees) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->curvatures,  nexprtrees) );
+   }
+   else
+   {
+      assert(consdata->exprtrees   != NULL);
+      assert(consdata->nonlincoefs != NULL);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->exprtrees,   consdata->nexprtrees, consdata->nexprtrees + nexprtrees) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->nonlincoefs, consdata->nexprtrees, consdata->nexprtrees + nexprtrees) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->curvatures,  consdata->nexprtrees, consdata->nexprtrees + nexprtrees) );
+   }
+
+   for( i = 0; i < nexprtrees; ++i )
+   {
+      assert(exprtrees[i] != NULL);
+      /* the expression tree need to have SCIP_VAR*'s stored */
+      assert(SCIPexprtreeGetNVars(exprtrees[i]) == 0 || SCIPexprtreeGetVars(exprtrees[i]) != NULL);
+
+      if( copytrees )
+      {
+         SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->exprtrees[consdata->nexprtrees + i], exprtrees[i]) );
+      }
+      else
+      {
+         consdata->exprtrees[consdata->nexprtrees + i] = exprtrees[i];
+      }
+
+      consdata->nonlincoefs[consdata->nexprtrees + i] = (coefs != NULL ? coefs[i] : 1.0);
+      consdata->curvatures[consdata->nexprtrees + i] = SCIP_EXPRCURV_UNKNOWN;
+   }
+   consdata->nexprtrees += nexprtrees;
+
+   return SCIP_OKAY;
+}
+
 /* sets expression trees of constraints, clears previously ones */
 static
 SCIP_RETCODE consdataSetExprtrees(
@@ -872,76 +945,35 @@ SCIP_RETCODE consdataSetExprtrees(
    assert(consdata != NULL);
    assert(consdata->exprtrees != NULL || consdata->nexprtrees == 0);
 
-   /* clear previous expression trees */
-   for( i = 0; i < consdata->nexprtrees; ++i )
+   /* clear existing expression trees */
+   if( consdata->nexprtrees > 0 )
    {
-      assert(consdata->exprtrees[i] != NULL);
-      SCIP_CALL( SCIPexprtreeFree(&consdata->exprtrees[i]) );
-   }
+      for( i = 0; i < consdata->nexprtrees; ++i )
+      {
+         assert(consdata->exprtrees[i] != NULL);
+         SCIP_CALL( SCIPexprtreeFree(&consdata->exprtrees[i]) );
+      }
 
-   /* invalidate activity information */
-   consdata->activity = SCIP_INVALID;
+      /* invalidate activity information */
+      consdata->activity = SCIP_INVALID;
 
-   /* invalidate nonlinear row */
-   if( consdata->nlrow != NULL )
-   {
-      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
-   }
+      /* invalidate nonlinear row */
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
 
-   consdata->ispresolved  = FALSE;
-
-   if( nexprtrees == 0 )
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, &consdata->exprtrees,   consdata->nexprtrees);
-      SCIPfreeBlockMemoryArrayNull(scip, &consdata->nonlincoefs, consdata->nexprtrees);
-      SCIPfreeBlockMemoryArrayNull(scip, &consdata->curvatures,  consdata->nexprtrees);
-      consdata->nexprtrees = 0;
-
+      consdata->ispresolved  = FALSE;
       consdata->curvature = SCIP_EXPRCURV_LINEAR;
       consdata->iscurvchecked = TRUE;
 
-      return SCIP_OKAY;
+      SCIPfreeBlockMemoryArray(scip, &consdata->exprtrees,   consdata->nexprtrees);
+      SCIPfreeBlockMemoryArray(scip, &consdata->nonlincoefs, consdata->nexprtrees);
+      SCIPfreeBlockMemoryArray(scip, &consdata->curvatures,  consdata->nexprtrees);
+      consdata->nexprtrees = 0;
    }
 
-   if( consdata->nexprtrees == 0 )
-   {
-      assert(consdata->exprtrees   == NULL);
-      assert(consdata->nonlincoefs == NULL);
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->exprtrees,   nexprtrees) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->nonlincoefs, nexprtrees) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->curvatures,  nexprtrees) );
-   }
-   else
-   {
-      assert(consdata->exprtrees   != NULL);
-      assert(consdata->nonlincoefs != NULL);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->exprtrees,   consdata->nexprtrees, nexprtrees) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->nonlincoefs, consdata->nexprtrees, nexprtrees) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->curvatures,  consdata->nexprtrees, nexprtrees) );
-   }
-   consdata->nexprtrees = nexprtrees;
-
-   for( i = 0; i < nexprtrees; ++i )
-   {
-      assert(exprtrees[i] != NULL);
-      /* the expression tree need to have SCIP_VAR*'s stored */
-      assert(SCIPexprtreeGetNVars(exprtrees[i]) == 0 || SCIPexprtreeGetVars(exprtrees[i]) != NULL);
-
-      if( copytrees )
-      {
-         SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->exprtrees[i], exprtrees[i]) );
-      }
-      else
-      {
-         consdata->exprtrees[i] = exprtrees[i];
-      }
-
-      consdata->nonlincoefs[i] = (coefs != NULL ? coefs[i] : 1.0);
-      consdata->curvatures[i] = SCIP_EXPRCURV_UNKNOWN;
-   }
-
-   consdata->curvature = SCIP_EXPRCURV_UNKNOWN;
-   consdata->iscurvchecked = FALSE;
+   SCIP_CALL( consdataAddExprtrees(scip, consdata, nexprtrees, exprtrees, coefs, copytrees) );
 
    return SCIP_OKAY;
 }
@@ -7972,6 +8004,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
       for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
          if( varsusage[i] > 0 )
             ++(*nvars);
+
+      SCIPfreeBufferArray(scip, &varsusage);
    }
 
    (*success) = TRUE;
@@ -8378,6 +8412,29 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
    assert(exprtrees != NULL || nexprtrees == 0);
 
    SCIP_CALL( consdataSetExprtrees(scip, SCIPconsGetData(cons), nexprtrees, exprtrees, coefs, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** adds expression trees to a nonlinear constraint
+ * constraint must not be active yet
+ */
+extern
+SCIP_RETCODE SCIPaddExprtreesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< new expression trees, or NULL if nexprtrees is 0 */
+   SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsActive(cons));
+   assert(SCIPconsGetData(cons) != NULL);
+   assert(exprtrees != NULL || nexprtrees == 0);
+
+   SCIP_CALL( consdataAddExprtrees(scip, SCIPconsGetData(cons), nexprtrees, exprtrees, coefs, TRUE) );
 
    return SCIP_OKAY;
 }

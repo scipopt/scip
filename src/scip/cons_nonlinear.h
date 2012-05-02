@@ -228,6 +228,18 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
    SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
    );
 
+/** adds expression trees to a nonlinear constraint
+ * constraint must not be active yet
+ */
+extern
+SCIP_RETCODE SCIPaddExprtreesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< new expression trees, or NULL if nexprtrees is 0 */
+   SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
+   );
+
 /** gets the nonlinear constraint as a nonlinear row representation */
 extern
 SCIP_RETCODE SCIPgetNlRowNonlinear(

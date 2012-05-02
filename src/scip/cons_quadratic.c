@@ -11557,8 +11557,8 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
 }
 
 /** Adds a linear coefficient for a quadratic variable.
- * variable need to have been added as quadratic variable before
- * @see SCIPaddQuadVarQuadratic
+ *
+ * Variable will be added with square coefficient 0.0 if not existing yet.
  */
 SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11584,8 +11584,8 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
    if( pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot change linear coefficient.\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIP_CALL( addQuadVarTerm(scip, cons, var, coef, 0.0, SCIPconsIsTransformed(cons)) );
+      return SCIP_OKAY;
    }
    assert(pos < consdata->nquadvars);
    assert(consdata->quadvarterms[pos].var == var);
@@ -11603,8 +11603,8 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
 }
 
 /** Adds a square coefficient for a quadratic variable.
- * variable need to have been added as quadratic variable before
- * @see SCIPaddQuadVarQuadratic
+ *
+ * Variable will be added with linear coefficient 0.0 if not existing yet.
  */
 SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11630,8 +11630,8 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var, &pos) );
    if( pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot change square coefficient.\n", SCIPvarGetName(var));
-      return SCIP_INVALIDDATA;
+      SCIP_CALL( addQuadVarTerm(scip, cons, var, 0.0, coef, SCIPconsIsTransformed(cons)) );
+      return SCIP_OKAY;
    }
    assert(pos < consdata->nquadvars);
    assert(consdata->quadvarterms[pos].var == var);
@@ -11652,8 +11652,9 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
 }
 
 /** Adds a bilinear term to a quadratic constraint.
- * The variables of the bilinear term must have been added before.
- * The variables need to be different.
+ *
+ * Variables will be added with linear and square coefficient 0.0 if not existing yet.
+ * If variables are equal, only the square coefficient of the variable is updated.
  */
 SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11671,8 +11672,13 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    assert(cons != NULL);
    assert(var1 != NULL);
    assert(var2 != NULL);
-   assert(var1 != var2);
    assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   if( var1 == var2 )
+   {
+      SCIP_CALL( SCIPaddSquareCoefQuadratic(scip, cons, var1, coef) );
+      return SCIP_OKAY;
+   }
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -11680,16 +11686,19 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var1, &var1pos) );
    if( var1pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n", SCIPvarGetName(var1));
-      return SCIP_INVALIDDATA;
+      SCIP_CALL( addQuadVarTerm(scip, cons, var1, 0.0, 0.0, SCIPconsIsTransformed(cons)) );
+      var1pos = consdata->nquadvars-1;
    }
 
    SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, var2, &var2pos) );
    if( var2pos < 0 )
    {
-      SCIPerrorMessage("Quadratic variable <%s> not found in constraint. Cannot add bilinear term.\n", SCIPvarGetName(var2));
-      return SCIP_INVALIDDATA;
+      SCIP_CALL( addQuadVarTerm(scip, cons, var2, 0.0, 0.0, SCIPconsIsTransformed(cons)) );
+      var2pos = consdata->nquadvars-1;
    }
+
+   assert(consdata->quadvarterms[var1pos].var == var1);
+   assert(consdata->quadvarterms[var2pos].var == var2);
 
    SCIP_CALL( addBilinearTerm(scip, cons, var1pos, var2pos, coef) );
 
@@ -11790,8 +11799,23 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    return SCIPconsGetData(cons)->quadvarterms;
 }
 
+/** Ensures that quadratic variable terms are sorted. */
+SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+
+   SCIP_CALL( consdataSortQuadVarTerms(scip, SCIPconsGetData(cons)) );
+
+   return SCIP_OKAY;
+}
+
 /** Finds the position of a quadratic variable term for a given variable.
- * Note that if the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ *
+ * @note If the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
  */
 SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */

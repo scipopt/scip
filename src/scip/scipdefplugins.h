@@ -127,6 +127,7 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_opb.h"
+#include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
 #include "scip/reader_ppm.h"
 #include "scip/reader_rlp.h"
