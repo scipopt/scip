@@ -1570,7 +1570,20 @@ SCIP_RETCODE findDominancePairs(
  * Callback methods of presolver
  */
 
-#define presolCopyDomcol NULL
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyDomcol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolDomcol(scip) );
+
+   return SCIP_OKAY;
+}
+
 #define presolFreeDomcol NULL
 #define presolInitDomcol NULL
 #define presolExitDomcol NULL
