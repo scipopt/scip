@@ -7643,6 +7643,34 @@ SCIP_RETCODE SCIPcreateConsBivariate(
    return SCIP_OKAY;
 }
 
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBivariate(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBivariate() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_EXPRTREE*        f,                  /**< expression tree specifying bivariate function f(x,y) */
+   SCIP_BIVAR_CONVEXITY  convextype,         /**< kind of convexity of f(x,y) */
+   SCIP_VAR*             z,                  /**< linear variable in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of linear variable */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name, f, convextype, z, zcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** gets the linear variable of a bivariate constraint, or NULL if no such variable */
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -6553,6 +6553,35 @@ SCIP_RETCODE SCIPcreateConsAbspower(
    return SCIP_OKAY;
 }
 
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsAbspower(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsAbspower() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name, x, z, exponent, xoffset, zcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** gets the absolute power constraint as a nonlinear row representation */
 SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */

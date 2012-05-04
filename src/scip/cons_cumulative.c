@@ -8193,6 +8193,34 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    return SCIP_OKAY;
 }
 
+/** creates and captures a cumulative constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsCumulative(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsCumulative() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity            /**< available cumulative capacity */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+
+}
+
 /** set the left bound of the time axis to be considered (including hmin) */
 SCIP_RETCODE SCIPsetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */

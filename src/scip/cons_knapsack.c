@@ -9416,6 +9416,32 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    return SCIP_OKAY;
 }
 
+/** creates and captures a knapsack constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsKnapsack(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsKnapsack() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of items in the knapsack */
+   SCIP_VAR**            vars,               /**< array with item variables */
+   SCIP_Longint*         weights,            /**< array with item weights */
+   SCIP_Longint          capacity            /**< capacity of knapsack */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** adds new item to knapsack constraint */
 SCIP_RETCODE SCIPaddCoefKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */

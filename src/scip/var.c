@@ -14317,6 +14317,17 @@ void SCIPvarSetDeltransData(
    var->vardeltrans = vardeltrans;
 }
 
+/** sets method to copy this variable into sub-SCIPs */
+void SCIPvarSetCopyData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARCOPY     ((*varcopy))        /**< copy method of the variable */
+   )
+{
+   assert(var != NULL);
+
+   var->varcopy = varcopy;
+}
+
 /** gets status of variable */
 SCIP_VARSTATUS SCIPvarGetStatus(
    SCIP_VAR*             var                 /**< problem variable */

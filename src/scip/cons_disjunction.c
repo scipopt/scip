@@ -749,6 +749,31 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
    return SCIP_OKAY;
 }
 
+/** creates and captures a cumulative constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsDisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsDisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicDisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nconss,             /**< number of initial constraints in disjunction */
+   SCIP_CONS**           conss               /**< initial constraint in disjunction */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss,
+         TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+
 /** adds constraint to the disjunction of constraints */
 SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */

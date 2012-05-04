@@ -3438,6 +3438,33 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
+/** creates and captures problem variable with optional callbacks set to NULL, which can be set
+ *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), and SCIPvarSetCopy();
+ *  if variable is of integral type, fractional bounds are automatically rounded;
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+extern
+SCIP_RETCODE SCIPcreateVarBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   );
+
 /** outputs the variable name to the file stream */
 extern
 SCIP_RETCODE SCIPwriteVarName(

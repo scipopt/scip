@@ -3115,6 +3115,31 @@ SCIP_RETCODE SCIPcreateConsLinking(
    return SCIP_OKAY;
 }
 
+/** creates and captures a linking constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinking(); all flags can be set via SCIPsetCons<Flagname>-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinking() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR**            binvars,            /**< binary variables, or NULL */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   offset              /**< offset of the binary variable representation */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsLinking(scip, cons, name, intvar, binvars, nbinvars, offset,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
 
 /** checks if for the given integer variable a linking constraint exists */
 SCIP_Bool SCIPexistsConsLinking(
