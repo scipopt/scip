@@ -497,8 +497,8 @@ SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
-			scip/branch_mostinf.o \
 			scip/branch_leastinf.o \
+			scip/branch_mostinf.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
@@ -570,14 +570,14 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/nodesel_hybridestim.o \
 			scip/nodesel_restartdfs.o \
 			scip/presol_boundshift.o \
+			scip/presol_components.o \
 			scip/presol_convertinttobin.o \
+			scip/presol_domcol.o\
 			scip/presol_dualfix.o \
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
-			scip/presol_components.o \
-			scip/presol_domcol.o\
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
@@ -600,9 +600,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
-			scip/sepa_cgmip.o \
 			scip/sepa_cmir.o \
 			scip/sepa_flowcover.o \
 			scip/sepa_gomory.o \
