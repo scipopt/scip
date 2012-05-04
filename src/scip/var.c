@@ -11576,7 +11576,10 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    return SCIP_OKAY;
 }
 
-/** returns the solution value of the problem variable in the relaxation solution */
+/** returns the solution value of the problem variable in the relaxation solution
+ *
+ *  @todo Inline this function - similar to SCIPvarGetLPSol_rec.
+ */
 SCIP_Real SCIPvarGetRelaxSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -11597,7 +11600,7 @@ SCIP_Real SCIPvarGetRelaxSol(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-         return var->relaxsol;
+      return var->relaxsol;
 
    case SCIP_VARSTATUS_FIXED:
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));  /*lint !e777*/
