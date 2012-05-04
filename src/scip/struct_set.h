@@ -249,6 +249,7 @@ struct SCIP_Set
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */
+   SCIP_Longint          mem_externestim;    /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    SCIP_Real             mem_arraygrowfac;   /**< memory growing factor for dynamically allocated arrays */
    SCIP_Real             mem_treegrowfac;    /**< memory growing factor for tree array */
@@ -271,6 +272,7 @@ struct SCIP_Set
                                               *   therefore can be used to collect statistics over all runs) */
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
+   SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

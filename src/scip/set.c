@@ -215,6 +215,7 @@
                                                  *   runs) */
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
+#define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -721,6 +722,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->vbc_filename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
+   (*set)->mem_externestim = 0;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -1237,6 +1239,11 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/printreason",
          "should the reason be printed if a given start solution is infeasible",
          &(*set)->misc_printreason, FALSE, SCIP_DEFAULT_MISC_PRINTREASON,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/estimexternmem",
+         "should the usage of external memory be estimated?",
+         &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
          NULL, NULL) );
    
    /* node selection */
@@ -3716,6 +3723,14 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+SCIP_Longint SCIPsetGetMemExternEstim(
+   SCIP_SET*              set                /**< global SCIP settings */
+   )
+{
+   return set->mem_externestim;
 }
 
 /** calculate memory size for dynamically allocated arrays */

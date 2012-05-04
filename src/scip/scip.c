@@ -6715,6 +6715,11 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
+   if( scip->set->misc_estimexternmem )
+   {
+      scip->set->mem_externestim = SCIPgetMemUsed(scip);
+      printf("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
+   }
    return SCIP_OKAY;
 }
 
@@ -23515,6 +23520,16 @@ SCIP_Longint SCIPgetMemUsed(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPmemGetUsed(scip->mem);
+}
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+SCIP_Longint SCIPgetMemExternEstim(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetMemExternEstim", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetGetMemExternEstim(scip->set);
 }
 
 /** calculate memory size for dynamically allocated arrays */

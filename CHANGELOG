@@ -189,6 +189,7 @@ features:
 - added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 - added counter and clock for SCIPcopy() calls
+- better handling of memory limits, in particular for large problems
 
 SCIP version 2.1.2
 ==================

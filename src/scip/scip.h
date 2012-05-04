@@ -8972,6 +8972,12 @@ SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPgetMemExternEstim(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPcalcMemGrowSize(

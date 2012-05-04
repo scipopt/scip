@@ -838,6 +838,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPsetGetMemExternEstim(
+   SCIP_SET*              set                /**< global SCIP settings */
+   );
+
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPsetCalcMemGrowSize(
