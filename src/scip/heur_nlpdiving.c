@@ -594,7 +594,7 @@ SCIP_RETCODE choosePscostVar(
             else
                calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup, prefvar);
 
-            assert(pscostquot != SCIP_INVALID);
+            assert(!SCIPisInfinity(scip,ABS(pscostquot)));
 
             /* check, if candidate is new best candidate */
             if( pscostquot > bestpscostquot )
@@ -611,7 +611,7 @@ SCIP_RETCODE choosePscostVar(
       {
          /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
          calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
-         assert(pscostquot != SCIP_INVALID);
+         assert(!SCIPisInfinity(scip,ABS(pscostquot)));
 
          /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
          if( bestcandmayrounddown || bestcandmayroundup || pscostquot > bestpscostquot )
@@ -1056,8 +1056,8 @@ SCIP_RETCODE solveSubMIP(
       goto TERMINATE;
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 500) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", (SCIP_Longint)100) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", (SCIP_Longint)500) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -1505,7 +1505,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* set iteration limit */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, (int) maxnnlpiterations) );
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1628,6 +1628,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    }
 
    nlpstartsol = NULL;
+   assert(nlpcandsfrac != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcandssol != NULL);
+
    /* save solution of first NLP, if we may use it later */
    if( heurdata->nlpstart != 'n' )
    {
@@ -1694,6 +1698,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       }
 
       /* compute cover */
+      ncovervars = -1;
+      covervars = NULL;
       if( memorylimit > 2.0*SCIPgetMemExternEstim(scip) )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
@@ -1702,6 +1708,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
       if( covercomputed )
       {
+         assert(ncovervars > 0);
+         assert(covervars != NULL);
+
          /* create hash map */
          SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
 
