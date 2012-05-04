@@ -1265,7 +1265,11 @@ SCIP_RETCODE checkArraySizesHeur(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -1291,8 +1295,12 @@ SCIP_RETCODE checkArraySizesHeur(
    /* if memorylimit is exceeded free all data and exit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
    {
       *success = FALSE;
       SCIPdebugMessage("...memory limit exceeded\n");
@@ -2959,7 +2967,11 @@ SCIP_RETCODE checkArraySizesGLS(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -2979,9 +2991,13 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
 
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
-   if( memorylimit <= 0.0 )
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
    {
       SCIPdebugMessage("...memory limit exceeded - freeing all arrays\n");
       *success = FALSE;

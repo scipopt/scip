@@ -2755,6 +2755,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* update memory left */
    memorylimit -= SCIPgetMemUsed(coveringscip)/1048576.0;
+   memorylimit -= SCIPgetMemExternEstim(coveringscip)/1048576.0;
 
    /* allocate memory for storing bound disjunction information along probing path */
    SCIP_CALL( SCIPallocBufferArray(scip, &bdvars, 2*nvars) );
@@ -2792,7 +2793,7 @@ SCIP_RETCODE SCIPapplyUndercover(
       if( !reusecover )
       {
          SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
-               timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, maxcoversize, &success) );
+               timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, maxcoversize, &success) );
 
          STATISTIC(
             if( ncovers == 0 && success )
@@ -3247,8 +3248,12 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* only call heuristics if we have enough memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
    {
       SCIPdebugMessage("skipping undercover heuristic: too little memory\n");
       return SCIP_OKAY;
@@ -3499,7 +3504,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
       SCIPdebugMessage("solving covering problem\n\n");
 
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
-            timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, objlimit, success) );
+            timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, objlimit, success) );
 
       assert(*coversize >= 0);
       assert(*coversize <= nvars);

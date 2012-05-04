@@ -150,6 +150,7 @@ fixed bugs:
   solution could also have been added
 - fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
   contributions separately, count their occurences in a constraint, and provide a relaxed activity value
+- fixed bug in mutation heuristic with unnecessary aborts due to a wrong memory limit
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -190,6 +191,7 @@ features:
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 - added counter and clock for SCIPcopy() calls
 - better handling of memory limits, in particular for large problems
+- estimate memory consumption for sub-SCIP and do not copy them if close to memory limit
 
 SCIP version 2.1.2
 ==================

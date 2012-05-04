@@ -5005,9 +5005,13 @@ SCIP_RETCODE createSubscip(
    if( !SCIPisInfinity(scip, auxipdata->timelimit) )
       auxipdata->timelimit -= SCIPgetSolvingTime(scip);
 
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &auxipdata->memorylimit) );
    if( !SCIPisInfinity(scip, auxipdata->memorylimit) )
+   {
       auxipdata->memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      auxipdata->memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
    if( setnodelimit == TRUE )
       auxipdata->nodelimit = 3000;
@@ -5018,7 +5022,7 @@ SCIP_RETCODE createSubscip(
    auxipdata->objectivelimit = MIN(1.0, maxslack + feastol);
   
    /* abort if not enough memory available */
-   if( auxipdata->memorylimit <= 0.0 ) 
+   if( auxipdata->memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
       return SCIP_OKAY;
 
    /* abort if not enough time available */
