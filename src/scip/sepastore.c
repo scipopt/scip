@@ -775,7 +775,8 @@ SCIP_RETCODE computeScore(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             handlepool,         /**< whether the efficacy of cuts in the pool should be reduced  */
-   int                   pos                 /**< position of cut to handle */
+   int                   pos,                /**< position of cut to handle */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    )
 {
    SCIP_ROW* cut;
@@ -785,8 +786,21 @@ SCIP_RETCODE computeScore(
    cut = sepastore->cuts[pos];
 
    /* calculate cut's efficacy */
-   cutefficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
-   
+   switch ( efficiacychoice )
+   {
+   case SCIP_EFFICIACYCHOICE_LP:
+      cutefficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
+      break;
+   case SCIP_EFFICIACYCHOICE_RELAX:
+      cutefficacy = SCIProwGetRelaxEfficacy(cut, set, stat);
+      break;
+   case SCIP_EFFICIACYCHOICE_NLP:
+      cutefficacy = SCIProwGetNLPEfficacy(cut, set, stat);
+   default:
+      SCIPerrorMessage("Invalid efficiacy choice.\n");
+      return SCIP_INVALIDCALL;
+   }
+
    /* If a cut is not member of the cut pool, we slightly decrease its score to prefer identical
     * cuts which are in the cut pool.  This is because the conversion of cuts into linear
     * constraints after a restart looks at the cut pool and cannot find tight non-pool cuts.
@@ -821,6 +835,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
@@ -858,7 +873,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos) );
+      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos, efficiacychoice) );
    }
 
    /* apply all forced cuts */
@@ -986,7 +1001,8 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    )
 {
    int cnt;
@@ -1000,7 +1016,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    while( c < sepastore->ncuts )
    {
       assert( sepastore->efficacies[c] == SCIP_INVALID ); /*lint !e777*/
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c) );
+      SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c, efficiacychoice) );
       if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
       {
          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );

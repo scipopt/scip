@@ -981,7 +981,7 @@ SCIP_RETCODE initConssLP(
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
    }
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, prob, tree, lp, branchcand,
-         eventqueue, eventfilter, root, cutoff) );
+         eventqueue, eventfilter, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -2167,7 +2167,7 @@ SCIP_RETCODE priceAndCutLoop(
          {
             /* apply found cuts */
             SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, prob, tree, lp, branchcand,
-                  eventqueue, eventfilter, root, cutoff) );
+                  eventqueue, eventfilter, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
 
             if( !(*cutoff) )
             {
@@ -2889,6 +2889,7 @@ SCIP_RETCODE applyCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< is this the initial root LP? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff,             /**< pointer to whether the node can be cut off */
    SCIP_Bool*            propagateagain,     /**< pointer to store TRUE, if domain propagation should be applied again */
    SCIP_Bool*            solvelpagain        /**< pointer to store TRUE, if the node's LP has to be solved again */
@@ -2910,7 +2911,7 @@ SCIP_RETCODE applyCuts(
 
       olddomchgcount = stat->domchgcount;
       SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, prob, tree, lp, branchcand,
-            eventqueue, eventfilter, root, cutoff) );
+            eventqueue, eventfilter, root, efficiacychoice, cutoff) );
       *propagateagain = *propagateagain || (stat->domchgcount != olddomchgcount);
       *solvelpagain = TRUE;
    }
@@ -3086,7 +3087,7 @@ SCIP_RETCODE propAndSolve(
 
       /* apply found cuts */
       SCIP_CALL( applyCuts(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue, eventfilter,
-            (actdepth == 0), cutoff, propagateagain, solvelpagain) );
+            (actdepth == 0), SCIP_EFFICIACYCHOICE_RELAX, cutoff, propagateagain, solvelpagain) );
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
@@ -3184,7 +3185,7 @@ SCIP_RETCODE propAndSolve(
 
       /* apply found cuts */
       SCIP_CALL( applyCuts(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue, eventfilter,
-            (actdepth == 0), cutoff, propagateagain, solvelpagain) );
+            (actdepth == 0), SCIP_EFFICIACYCHOICE_RELAX, cutoff, propagateagain, solvelpagain) );
          
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
@@ -3463,7 +3464,7 @@ SCIP_RETCODE solveNode(
 
          /* apply found cuts */
          SCIP_CALL( applyCuts(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue, eventfilter,
-               (actdepth == 0), cutoff, &propagateagain, &solvelpagain) );
+               (actdepth == 0), SCIP_EFFICIACYCHOICE_LP, cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );
@@ -3663,7 +3664,7 @@ SCIP_RETCODE solveNode(
 
          /* apply found cuts */
          SCIP_CALL( applyCuts(blkmem, set, stat, transprob, tree, lp, sepastore, branchcand, eventqueue, eventfilter,
-               (actdepth == 0), cutoff, &propagateagain, &solvelpagain) );
+               (actdepth == 0), SCIP_EFFICIACYCHOICE_LP, cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, primal, tree, lp, conflict, cutoff) );

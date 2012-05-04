@@ -551,6 +551,22 @@ SCIP_Real SCIProwGetLPFeasibility(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** returns the feasibility of a row in the current relaxed solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetRelaxFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** returns the feasibility of a row in the current NLP solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetNLPFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** calculates the current pseudo activity of a row */
 extern
 void SCIProwRecalcPseudoActivity(
@@ -680,6 +696,22 @@ SCIP_Bool SCIProwIsSolEfficacious(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
+   );
+
+/** returns row's efficacy with respect to the relaxed solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetRelaxEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** returns row's efficacy with respect to the NLP solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetNLPEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** gets parallelism of row with objective function: if the returned value is 1, the row is parallel to the objective

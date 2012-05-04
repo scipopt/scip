@@ -17820,8 +17820,8 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    isroot = FALSE;
    if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       isroot = TRUE;
-   SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, 
-         scip->eventqueue, scip->eventfilter, scip->lp, isroot) );
+   SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat,
+         scip->eventqueue, scip->eventfilter, scip->lp, isroot, SCIP_EFFICIACYCHOICE_LP) );
 
    return SCIP_OKAY;
 }

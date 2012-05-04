@@ -5884,6 +5884,121 @@ SCIP_Real SCIProwGetLPFeasibility(
    return MIN(row->rhs - activity, activity - row->lhs);
 }
 
+/** returns the feasibility of a row in the relaxed solution solution: negative value means infeasibility
+ *
+ *  @todo Implement calculation of activities similar to LPs.
+ */
+SCIP_Real SCIProwGetRelaxFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   SCIP_Real activity;
+   SCIP_COL* col;
+   int c;
+
+   assert( row != NULL );
+   assert( stat != NULL );
+
+   activity = row->constant;
+   for (c = 0; c < row->nlpcols; ++c)
+   {
+      col = row->cols[c];
+      assert( col != NULL );
+      assert( col->lppos >= 0 );
+      assert( col->var != NULL );
+      assert( row->linkpos[c] >= 0 );
+      activity += row->vals[c] * SCIPvarGetRelaxSol(col->var, set);
+   }
+
+   if ( row->nunlinked > 0 )
+   {
+      for (c = row->nlpcols; c < row->len; ++c)
+      {
+         col = row->cols[c];
+         assert( col != NULL );
+         assert( col->lppos == -1 || row->linkpos[c] == -1 );
+         if ( col->lppos >= 0 )
+         {
+            assert( col->var != NULL );
+            activity += row->vals[c] * SCIPvarGetRelaxSol(col->var, set);
+         }
+      }
+   }
+#ifndef NDEBUG
+   else
+   {
+      for (c = row->nlpcols; c < row->len; ++c)
+      {
+         col = row->cols[c];
+         assert( col != NULL );
+         assert( col->lppos == -1 );
+         assert( row->linkpos[c] >= 0 );
+      }
+   }
+#endif
+   return MIN(row->rhs - activity, activity - row->lhs);
+}
+
+/** returns the feasibility of a row in the current NLP solution: negative value means infeasibility
+ *
+ *  @todo Implement calculation of activities similar to LPs.
+ */
+extern
+SCIP_Real SCIProwGetNLPFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   SCIP_Real activity;
+   SCIP_COL* col;
+   int c;
+
+   assert( row != NULL );
+   assert( stat != NULL );
+
+   activity = row->constant;
+   for (c = 0; c < row->nlpcols; ++c)
+   {
+      col = row->cols[c];
+      assert( col != NULL );
+      assert( col->lppos >= 0 );
+      assert( col->var != NULL );
+      assert( row->linkpos[c] >= 0 );
+      activity += row->vals[c] * SCIPvarGetNLPSol(col->var);
+   }
+
+   if ( row->nunlinked > 0 )
+   {
+      for (c = row->nlpcols; c < row->len; ++c)
+      {
+         col = row->cols[c];
+         assert( col != NULL );
+         assert( col->lppos == -1 || row->linkpos[c] == -1 );
+         if ( col->lppos >= 0 )
+         {
+            assert( col->var != NULL );
+            activity += row->vals[c] * SCIPvarGetNLPSol(col->var);
+         }
+      }
+   }
+#ifndef NDEBUG
+   else
+   {
+      for (c = row->nlpcols; c < row->len; ++c)
+      {
+         col = row->cols[c];
+         assert( col != NULL );
+         assert( col->lppos == -1 );
+         assert( row->linkpos[c] >= 0 );
+      }
+   }
+#endif
+   return MIN(row->rhs - activity, activity - row->lhs);
+}
+
 /** calculates the current pseudo activity of a row */
 void SCIProwRecalcPseudoActivity(
    SCIP_ROW*             row,                /**< row data */
@@ -6326,6 +6441,87 @@ SCIP_Bool SCIProwIsSolEfficacious(
    efficacy = SCIProwGetSolEfficacy(row, set, stat, sol);
 
    return SCIPsetIsEfficacious(set, root, efficacy);
+}
+
+/** returns row's efficacy with respect to the relaxed solution: e = -feasibility/norm */
+SCIP_Real SCIProwGetRelaxEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   SCIP_Real norm;
+   SCIP_Real feasibility;
+   SCIP_Real eps;
+
+   assert(set != NULL);
+
+   switch( set->sepa_efficacynorm )
+   {
+   case 'e':
+      norm = SCIProwGetNorm(row);
+      break;
+   case 'm':
+      norm = SCIProwGetMaxval(row, set);
+      break;
+   case 's':
+      norm = SCIProwGetSumNorm(row);
+      break;
+   case 'd':
+      norm = (row->len == 0 ? 0.0 : 1.0);
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
+      SCIPABORT();
+      norm = 0.0; /*lint !e527*/
+   }
+
+   eps = SCIPsetSumepsilon(set);
+   norm = MAX(norm, eps);
+   feasibility = SCIProwGetRelaxFeasibility(row, set, stat);
+
+   return -feasibility / norm;
+}
+
+/** returns row's efficacy with respect to the NLP solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetNLPEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   SCIP_Real norm;
+   SCIP_Real feasibility;
+   SCIP_Real eps;
+
+   assert(set != NULL);
+
+   switch( set->sepa_efficacynorm )
+   {
+   case 'e':
+      norm = SCIProwGetNorm(row);
+      break;
+   case 'm':
+      norm = SCIProwGetMaxval(row, set);
+      break;
+   case 's':
+      norm = SCIProwGetSumNorm(row);
+      break;
+   case 'd':
+      norm = (row->len == 0 ? 0.0 : 1.0);
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
+      SCIPABORT();
+      norm = 0.0; /*lint !e527*/
+   }
+
+   eps = SCIPsetSumepsilon(set);
+   norm = MAX(norm, eps);
+   feasibility = SCIProwGetNLPFeasibility(row, set, stat);
+
+   return -feasibility / norm;
 }
 
 /** returns the scalar product of the coefficient vectors of the two given rows */

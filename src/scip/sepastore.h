@@ -108,6 +108,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
@@ -132,7 +133,8 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    );
 
 /** get cuts in the separation storage */
