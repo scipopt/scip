@@ -3743,7 +3743,7 @@
  * subproblem's relaxation.
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding
- * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() to
+ * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
  * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
