@@ -6718,7 +6718,7 @@ SCIP_RETCODE SCIPtransformProb(
    if( scip->set->misc_estimexternmem )
    {
       scip->set->mem_externestim = SCIPgetMemUsed(scip);
-      printf("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
+      SCIPdebugMessage("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
    }
    return SCIP_OKAY;
 }
