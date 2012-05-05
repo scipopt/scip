@@ -627,6 +627,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_TOTALNODELIMIT:
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;

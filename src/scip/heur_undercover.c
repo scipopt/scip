@@ -992,7 +992,6 @@ SCIP_RETCODE createCoveringProblem(
          SCIP_CONS* indcons;
          SCIP_VAR* binvar;
          SCIP_VAR* coveringvar;
-         SCIP_Bool negated;
 
          /* get constraint and variables */
          indcons = SCIPconshdlrGetConss(conshdlr)[c];
@@ -1013,6 +1012,7 @@ SCIP_RETCODE createCoveringProblem(
          if( probindex == -1 )
          {
             SCIP_VAR* repvar;
+            SCIP_Bool negated;
 
             /* get binary representative of variable */
             negated = FALSE;
@@ -1029,15 +1029,11 @@ SCIP_RETCODE createCoveringProblem(
 
             /* check for negation */
             if( SCIPvarIsNegated(repvar) )
-            {
                probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
-               negated = TRUE;
-            }
             else
             {
                assert(SCIPvarIsActive(repvar));
                probindex = SCIPvarGetProbindex(repvar);
-               negated = FALSE;
             }
          }
          assert(probindex >= 0);
@@ -2717,7 +2713,9 @@ SCIP_RETCODE SCIPapplyUndercover(
    maxcoversize = nvars*heurdata->maxcoversizevars;
    if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
    {
-      maxcoversize = MIN(maxcoversize,heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) );
+      SCIP_Real maxcoversizeconss;
+      maxcoversizeconss = heurdata->maxcoversizeconss * nnlconss / ((SCIP_Real) SCIPgetNConss(scip));
+      maxcoversize = MIN(maxcoversize, maxcoversizeconss);
    }
 
    /* create covering problem */
@@ -3397,7 +3395,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* add int parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/mincoveredabs",
          "minimum number of nonlinear constraints in the original problem",
-         &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0.0, INT_MAX, NULL, NULL) );
+         &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
          "maximum number of backtracks in fix-and-propagate",

@@ -1960,10 +1960,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             /* for pseudo-cost computation */
-            if( heurdata->varselrule != 'd' )
-               frac = nlpcandsfrac[bestcand];
-            else
+            if( heurdata->varselrule == 'd' )
+            {
+               assert(pseudocandsnlpsol != NULL);
+               assert(0 <= bestcand && bestcand < npseudocands);
                frac = SCIPfrac(scip, pseudocandsnlpsol[bestcand]);
+            }
+            else
+               frac = nlpcandsfrac[bestcand];
          }
 
          /* apply domain propagation */
@@ -1985,6 +1989,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             solvesubmip = FALSE;
             probingdepth = SCIPgetProbingDepth(scip);
             assert(probingdepth >= 1);
+            assert(covervars != NULL);
 
             if( heurdata->nfixedcovervars != ncovervars )
             {
@@ -2227,15 +2232,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    }
 
 #if 1
+ /*lint --e{774}*/
    SCIPdebugMessage("NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
-      SCIPdebugPrintf("NLP sucks - nlperror: %d nlpsolstat: %d \n", nlperror, nlpsolstat);
+      SCIPdebugPrintf("NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
       STATISTIC( heurdata->nfailnlperror++; )
          }
    else if( SCIPisStopped(scip) || cutoff )
    {
-      SCIPdebugPrintf("LIMIT hit - stop: %d cutoff: %d \n", SCIPisStopped(scip), cutoff);
+      SCIPdebugPrintf("LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
       STATISTIC( heurdata->nfailcutoff++; )
          }
    else if(! (divedepth < 10
@@ -2247,7 +2253,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          (objval >= searchbound));
       STATISTIC( heurdata->nfaildepth++; )
          }
-   else if ( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
+   else if( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
       SCIPdebugPrintf("SUCCESS\n");
    }
@@ -2293,6 +2299,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       assert(heurdata->eventhdlr != NULL);
       assert(heurdata->nfixedcovervars == 0);
       assert(varincover != NULL);
+      assert(covervars != NULL);
 
       SCIPhashmapFree(&varincover);
 
