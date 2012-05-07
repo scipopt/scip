@@ -303,6 +303,8 @@ struct SCIP_Lp
    int                   nloosevars;         /**< number of loose variables in LP */
    int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
+   int                   ndivingrows;        /**< number of rows when entering diving mode */
+   int                   divinglpiitlim;     /**< LPI iteration limit when entering diving mode */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */

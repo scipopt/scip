@@ -1496,7 +1496,6 @@ void coefChanged(
    assert(row != NULL);
    assert(col != NULL);
    assert(lp != NULL);
-   assert(!lp->diving || row->lppos == -1);
 
    if( row->lpipos >= 0 && col->lpipos >= 0 )
    {
@@ -7041,13 +7040,12 @@ SCIP_RETCODE lpFlushDelRows(
       assert(lp->rows[lp->lpifirstchgrow] == lp->lpirows[lp->lpifirstchgrow]);
       lp->lpifirstchgrow++;
    }
-   
+
    /* shrink LP to the part which didn't change */
    if( lp->lpifirstchgrow < lp->nlpirows )
    {
       int i;
 
-      assert(!lp->diving);
       SCIPdebugMessage("flushing row deletions: shrink LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
       SCIP_CALL( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
@@ -7103,7 +7101,6 @@ SCIP_RETCODE lpFlushAddRows(
       return SCIP_OKAY;
 
    /* add the additional rows */
-   assert(!lp->diving);
    assert(lp->nrows > lp->nlpirows);
    SCIP_CALL( ensureLpirowsSize(lp, set, lp->nrows) );
 
@@ -7846,6 +7843,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divingobjchg = FALSE;
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
+   (*lp)->ndivingrows = 0;
+   (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetFeastol(set);
@@ -8098,7 +8097,6 @@ SCIP_RETCODE SCIPlpAddRow(
    )
 {
    assert(lp != NULL);
-   assert(!lp->diving);
    assert(row != NULL);
    assert(row->len == 0 || row->cols != NULL);
    assert(row->lppos == -1);
@@ -8296,8 +8294,6 @@ SCIP_RETCODE SCIPlpShrinkRows(
    SCIPdebugMessage("shrinking LP from %d to %d rows\n", lp->nrows, newnrows);
    if( newnrows < lp->nrows )
    {
-      assert(!lp->diving);
-
       for( r = lp->nrows-1; r >= newnrows; --r )
       {
          row = lp->rows[r];
@@ -16101,6 +16097,12 @@ SCIP_RETCODE SCIPlpStartDive(
       }
    }
 
+   /* store LPI iteration limit */
+   SCIP_CALL( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITLIM, &lp->divinglpiitlim) );
+
+   /* store current number of rows */
+   lp->ndivingrows = lp->nrows;
+
    /* switch to diving mode */
    lp->diving = TRUE;
 
@@ -16145,6 +16147,12 @@ SCIP_RETCODE SCIPlpEndDive(
          SCIP_CALL( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, SCIPvarGetUbLocal(var)) );
       }
    }
+
+   /* remove rows which were added in diving mode */
+   SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, lp->ndivingrows) );
+
+   /* restore LPI iteration limit */
+   SCIP_CALL( lpSetIterationLimit(lp, lp->divinglpiitlim) );
 
    /* reload LPI state saved at start of diving, free LPI state afterwards */
    SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate) );

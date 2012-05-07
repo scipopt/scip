@@ -18044,6 +18044,36 @@ SCIP_RETCODE SCIPchgVarUbDive(
    return SCIP_OKAY;
 }
 
+/** adds a row to the LP in current dive */
+SCIP_RETCODE SCIPaddRowDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   )
+{
+   SCIP_NODE* node;
+   int depth;
+
+   assert(scip != NULL);
+   assert(row != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddRowDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* get depth of current node */
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   assert(node != NULL);
+   depth = SCIPnodeGetDepth(node);
+
+   SCIP_CALL( SCIPlpAddRow(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, row, depth) );
+
+   return SCIP_OKAY;
+}
+
 /** gets variable's objective value in current dive */
 SCIP_Real SCIPgetVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */

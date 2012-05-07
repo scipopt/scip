@@ -6417,6 +6417,13 @@ SCIP_RETCODE SCIPchgVarUbDive(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
+/** adds a row to the LP in current dive */
+extern
+SCIP_RETCODE SCIPaddRowDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   );
+
 /** gets variable's objective value in current dive */
 extern
 SCIP_Real SCIPgetVarObjDive(
