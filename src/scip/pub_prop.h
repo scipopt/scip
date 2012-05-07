@@ -90,6 +90,13 @@ SCIP_Real SCIPpropGetSetupTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** sets frequency of propagator */
+extern
+void SCIPpropSetFreq(
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   freq                /**< new frequency of propagator */
+   );
+
 /** gets time in seconds used in this propagator */
 extern
 SCIP_Real SCIPpropGetTime(
