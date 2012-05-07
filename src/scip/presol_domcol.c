@@ -181,8 +181,8 @@ SCIP_RETCODE addEmptyRow(
    int                   considx             /**< row/constraint index */
    )
 {
-   matrix->lhs[considx] = 0;
-   matrix->rhs[considx] = 0;
+   matrix->lhs[considx] = 0.0;
+   matrix->rhs[considx] = 0.0;
 
    matrix->rowmatbeg[considx] = matrix->nnonzs;
    matrix->rowmatcnt[considx] = matrix->nnonzs - matrix->rowmatbeg[considx];
@@ -211,8 +211,8 @@ SCIP_RETCODE addConstraint(
 
    assert(scip != NULL);
    assert(matrix != NULL);
-   assert(vars != NULL);
-   assert(lhs <= rhs);
+   assert(vars != NULL || nvars == 0);
+   assert(SCIPisLE(scip, lhs, rhs));
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
       return SCIP_OKAY; /* constraint is redundant */
@@ -220,7 +220,7 @@ SCIP_RETCODE addConstraint(
    activevars = NULL;
    activevals = NULL;
    nactivevars = nvars;
-   activeconstant = 0;
+   activeconstant = 0.0;
 
    if( nvars > 0 )
    {
