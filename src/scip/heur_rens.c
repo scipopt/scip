@@ -110,7 +110,7 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** compute the number of initial fixings and check if the fixing rate exceeds the minimum fixing rate */
+/** compute the number of initial fixings and check whether the fixing rate exceeds the minimum fixing rate */
 static
 SCIP_RETCODE computeFixingrate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -138,40 +138,40 @@ SCIP_RETCODE computeFixingrate(
    /* get required variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
-   /* try to solve nlp relaxation */
-   if( (*startsol) == 'n')
+   /* try to solve NLP relaxation */
+   if( (*startsol) == 'n' )
    {
       SCIP_NLPSOLSTAT stat;
       SCIPdebug( int nlpverblevel; )
 
-      /* only call this function if nlp relaxation is available */
+      /* only call this function if NLP relaxation is available */
       assert(SCIPisNLPConstructed(scip));
 
-      /* activate nlp solver output if we are in SCIP's debug mode */
+      /* activate NLP solver output if we are in SCIP's debug mode */
       SCIPdebug( SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
       SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
 
-      SCIPdebugMessage("try to solve nlp relaxation to obtain fixing values\n");
+      SCIPdebugMessage("try to solve NLP relaxation to obtain fixing values\n");
 
-      /* set starting point to lp solution */
+      /* set starting point to LP solution */
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
-      /* solve nlp relaxation */
+      /* solve NLP relaxation */
       SCIP_CALL( SCIPsolveNLP(scip) );
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
       *success = (stat == SCIP_NLPSOLSTAT_GLOBOPT) || (stat == SCIP_NLPSOLSTAT_LOCOPT) || stat == (SCIP_NLPSOLSTAT_FEASIBLE);
-      SCIPdebugMessage("solving nlp relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
+      SCIPdebugMessage("solving NLP relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
 
-      /* reset nlp verblevel to the value it had before */
+      /* reset NLP verblevel to the value it had before */
       SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
 
       /* it the NLP was not successfully solved we stop the heuristic right away */
       if( !(*success) )
          return SCIP_OKAY;
 
-      /* count the number of variables with integreal solution values in the current NLP solution */
+      /* count the number of variables with integral solution values in the current NLP solution */
       for( i = 0; i < nbinvars + nintvars; ++i )
       {
          SCIP_Real solval;
@@ -186,14 +186,16 @@ SCIP_RETCODE computeFixingrate(
    {
       assert(*startsol == 'l');
 
-      /* compute the number of variables which have an integreal solution value in the LP */
+      /* compute the number of variables which have an integral solution value in the LP */
       fixingcounter = SCIPgetNPseudoBranchCands(scip) - SCIPgetNLPBranchCands(scip);
    }
 
    *fixingrate = 1.0;
    *success = FALSE;
 
-   /* abort, if all integer variables were fixed (which should not happen for MIP) */
+   /* abort, if all integer variables were fixed (which should not happen for MIP),
+    * but frequently happens for MINLPs using an LP relaxation
+    */
    if( fixingcounter == nbinvars + nintvars )
       return SCIP_OKAY;
 
@@ -207,7 +209,7 @@ SCIP_RETCODE computeFixingrate(
    return SCIP_OKAY;
 }
 
-/** creates a subproblem for subscip by fixing a number of variables */
+/** creates a subproblem by fixing a number of variables */
 static
 SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
@@ -256,7 +258,7 @@ SCIP_RETCODE createSubproblem(
       }
       else if( binarybounds )
       {
-         /* if the sub problem should be a binary problem, change the bounds to nearest integers */
+         /* if the subproblem should be a binary problem, change the bounds to nearest integers */
          lb = SCIPfeasFloor(scip,solval);
          ub = SCIPfeasCeil(scip,solval);
       }
@@ -274,7 +276,7 @@ SCIP_RETCODE createSubproblem(
 
    if( uselprows )
    {
-      SCIP_ROW** rows;                          /* original scip rows                         */
+      SCIP_ROW** rows; /* original scip rows */
       int nrows;
 
       /* get the rows and their number */
@@ -305,7 +307,7 @@ SCIP_RETCODE createSubproblem(
          nnonz = SCIProwGetNNonz(rows[i]);
          cols = SCIProwGetCols(rows[i]);
 
-         assert( lhs <= rhs );
+         assert(lhs <= rhs);
 
          /* allocate memory array to be filled with the corresponding subproblem variables */
          SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, nnonz) );
@@ -429,7 +431,7 @@ SCIP_RETCODE SCIPapplyRens(
       return SCIP_OKAY;
    }
 
-   /* get heuristic's data */
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -454,7 +456,7 @@ SCIP_RETCODE SCIPapplyRens(
 
    *result = SCIP_DIDNOTFIND;
 
-   /* get variables' data */
+   /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* initialize the subproblem */
@@ -487,11 +489,12 @@ SCIP_RETCODE SCIPapplyRens(
 
       valid = FALSE;
 
+      /* copy complete SCIP instance */
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
 
       if( heurdata->copycuts )
       {
-         /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
       }
 
@@ -582,8 +585,8 @@ SCIP_RETCODE SCIPapplyRens(
    /* presolve the subproblem */
    retcode = SCIPpresolve(subscip);
 
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    if( retcode != SCIP_OKAY )
    {
@@ -612,8 +615,8 @@ SCIP_RETCODE SCIPapplyRens(
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
       retcode = SCIPsolve(subscip);
 
-      /* Errors in solving the subproblem should not kill the overall solving process
-       * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       if( retcode != SCIP_OKAY )
       {
@@ -703,7 +706,7 @@ SCIP_DECL_HEURINIT(heurInitRens)
    assert( heur != NULL );
    assert( scip != NULL );
 
-   /* get heuristic's data */
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
@@ -735,7 +738,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
 
-   /* get heuristic's data */
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
