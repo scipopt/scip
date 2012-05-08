@@ -1154,9 +1154,9 @@ void findFixings(
    }
    else
    {
-      if( SCIPvarGetObj(dominatingvar) > 0.0 )
+      if( SCIPisGT(scip,SCIPvarGetObj(dominatingvar),0.0) )
       {
-         assert(SCIPvarGetObj(dominatedvar) > 0.0);
+         assert(SCIPisGT(scip,SCIPvarGetObj(dominatedvar),0.0));
          if( !SCIPisInfinity(scip, -dominatingwclb) &&
             SCIPisLE(scip, dominatingwclb, SCIPvarGetUbLocal(dominatingvar)) )
          {
@@ -1176,35 +1176,16 @@ void findFixings(
             (*nboundpreventions)++;
          }
       }
-      else if( SCIPvarGetObj(dominatingvar) < 0.0 /*&& SCIPvarGetObj(dominatedvar) > 0.0*/ )
+      else /* SCIPvarGetObj(dominatingvar) <= 0.0 */
       {
          if( !SCIPisInfinity(scip, dominatingub) &&
             SCIPisLE(scip, dominatingub, SCIPvarGetUbLocal(dominatingvar)) )
          {
-            /* we have a x->y dominance relation with a negative obj coefficient
+            /* we have a x->y dominance relation with a negative or zero obj coefficient
              * of the dominating variable x, thus the obj coefficient of the
-             * dominated variable y is positive or negative. in both cases we have to look
+             * dominated variable y is positive, negative or zero. in all cases we have to look
              * if the predicted upper bound of the dominating variable is great enough.
              */
-            if( varstofix[dominatedidx] == NOFIX )
-            {
-               varstofix[dominatedidx] = FIXATLB;
-               (*npossiblefixings)++;
-            }
-         }
-         else
-         {
-            (*nboundpreventions)++;
-         }
-      }
-      else
-      {
-         if( !SCIPisInfinity(scip, -dominatingwclb) &&
-            SCIPisLE(scip, dominatingwclb, SCIPvarGetUbLocal(dominatingvar)) &&
-            !SCIPisInfinity(scip, dominatingub) &&
-            SCIPisLE(scip, dominatingub, SCIPvarGetUbLocal(dominatingvar)) )
-         {
-            /* we claim both cases from above */
             if( varstofix[dominatedidx] == NOFIX )
             {
                varstofix[dominatedidx] = FIXATLB;
@@ -1282,6 +1263,17 @@ SCIP_RETCODE findDominancePairs(
          /* search only if nothing was found yet */
          col1domcol2 = col1domcol2 && (varstofix[col2] == NOFIX);
          col2domcol1 = col2domcol1 && (varstofix[col1] == NOFIX);
+
+         /* we search only for a dominance relation if the lower bounds are not negative */
+         if( !onlybinvars )
+         {
+            if( SCIPisLT(scip, SCIPvarGetLbLocal(matrix->vars[col1]), 0.0) ||
+               SCIPisLT(scip, SCIPvarGetLbLocal(matrix->vars[col2]), 0.0) )
+            {
+               col1domcol2 = FALSE;
+               col2domcol1 = FALSE;
+            }
+         }
 
          if( !col1domcol2 && !col2domcol1 )
             continue;
