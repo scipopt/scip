@@ -1012,7 +1012,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
-   (*lpi)->solisbasic = TRUE;
+   (*lpi)->solisbasic = FALSE;
    (*lpi)->cpxlp = CPXcreateprob((*lpi)->cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
    (*lpi)->fromscratch = FALSE;
@@ -1990,6 +1990,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2018,7 +2019,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
+
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2065,6 +2066,23 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
+   if( lpi->solstat == CPX_STAT_OPTIMAL ||  lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2076,6 +2094,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2104,7 +2123,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2150,6 +2170,23 @@ SCIP_RETCODE SCIPlpiSolveDual(
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
+   }
+
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
+   if( lpi->solstat == CPX_STAT_OPTIMAL || lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    }
 
 #if 0

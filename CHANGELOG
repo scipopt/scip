@@ -151,6 +151,8 @@ fixed bugs:
 - fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
   contributions separately, count their occurences in a constraint, and provide a relaxed activity value
 - fixed bug in mutation heuristic with unnecessary aborts due to a wrong memory limit
+- fixed bug in Cplex LPI: after running simplex, solisbasic flag was always true, which might be wrong if Cplex hit a
+  time limit
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
