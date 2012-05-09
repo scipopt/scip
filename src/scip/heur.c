@@ -65,6 +65,13 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
 
+
+/** comparison method for sorting heuristics w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
+{
+   return strcmp(SCIPheurGetName((SCIP_HEUR*)elem1), SCIPheurGetName((SCIP_HEUR*)elem2));
+}
+
 /** method to call, when the priority of a heuristic was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)

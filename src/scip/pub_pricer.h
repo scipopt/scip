@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPpricerComp);
 
+/** comparison method for sorting pricers w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpricerCompName);
+
 /** gets user data of variable pricer */
 extern
 SCIP_PRICERDATA* SCIPpricerGetData(

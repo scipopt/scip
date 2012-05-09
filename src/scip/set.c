@@ -660,6 +660,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nactivepricers = 0;
    (*set)->pricerssize = 0;
    (*set)->pricerssorted = FALSE;
+   (*set)->pricersnamesorted = FALSE;
    (*set)->conshdlrs = NULL;
    (*set)->conshdlrs_sepa = NULL;
    (*set)->conshdlrs_enfo = NULL;
@@ -670,27 +671,33 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nconflicthdlrs = 0;
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
+   (*set)->conflicthdlrsnamesorted = FALSE;
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
    (*set)->presolssorted = FALSE;
+   (*set)->presolsnamesorted = FALSE;
    (*set)->relaxs = NULL;
    (*set)->nrelaxs = 0;
    (*set)->relaxssize = 0;
    (*set)->relaxssorted = FALSE;
+   (*set)->relaxsnamesorted = FALSE;
    (*set)->sepas = NULL;
    (*set)->nsepas = 0;
    (*set)->sepassize = 0;
    (*set)->sepassorted = FALSE;
+   (*set)->sepasnamesorted = FALSE;
    (*set)->props = NULL;
    (*set)->nprops = 0;
    (*set)->propssize = 0;
    (*set)->propssorted = FALSE;
    (*set)->propspresolsorted = FALSE;
+   (*set)->propsnamesorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
    (*set)->heurssorted = FALSE;
+   (*set)->heursnamesorted = FALSE;
    (*set)->eventhdlrs = NULL;
    (*set)->neventhdlrs = 0;
    (*set)->eventhdlrssize = 0;
@@ -702,6 +709,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nbranchrules = 0;
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
+   (*set)->branchrulesnamesorted = FALSE;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -2404,6 +2412,22 @@ void SCIPsetSortPricers(
    {
       SCIPsortPtr((void**)set->pricers, SCIPpricerComp, set->npricers);
       set->pricerssorted = TRUE;
+      set->pricersnamesorted = FALSE;
+   }
+}
+
+/** sorts pricers by name */
+void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->pricersnamesorted )
+   {
+      SCIPsortPtr((void**)set->pricers, SCIPpricerCompName, set->npricers);
+      set->pricerssorted = FALSE;
+      set->pricersnamesorted = TRUE;
    }
 }
 
@@ -2538,6 +2562,22 @@ void SCIPsetSortConflicthdlrs(
    {
       SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrComp, set->nconflicthdlrs);
       set->conflicthdlrssorted = TRUE;
+      set->conflicthdlrsnamesorted = FALSE;
+   }
+}
+
+/** sorts conflict handlers by name */
+void SCIPsetSortConflicthdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->conflicthdlrsnamesorted )
+   {
+      SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrCompName, set->nconflicthdlrs);
+      set->conflicthdlrssorted = FALSE;
+      set->conflicthdlrsnamesorted = TRUE;
    }
 }
 
@@ -2595,6 +2635,22 @@ void SCIPsetSortPresols(
    {
       SCIPsortPtr((void**)set->presols, SCIPpresolComp, set->npresols);
       set->presolssorted = TRUE;
+      set->presolsnamesorted = FALSE;
+   }
+}
+
+/** sorts presolvers by name */
+void SCIPsetSortPresolsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->presolsnamesorted )
+   {
+      SCIPsortPtr((void**)set->presols, SCIPpresolCompName, set->npresols);
+      set->presolssorted = FALSE;
+      set->presolsnamesorted = TRUE;
    }
 }
 
@@ -2653,6 +2709,22 @@ void SCIPsetSortRelaxs(
    {
       SCIPsortPtr((void**)set->relaxs, SCIPrelaxComp, set->nrelaxs);
       set->relaxssorted = TRUE;
+      set->relaxsnamesorted = FALSE;
+   }
+}
+
+/** sorts relaxators by priorities */
+void SCIPsetSortRelaxsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->relaxsnamesorted )
+   {
+      SCIPsortPtr((void**)set->relaxs, SCIPrelaxCompName, set->nrelaxs);
+      set->relaxssorted = FALSE;
+      set->relaxsnamesorted = TRUE;
    }
 }
 
@@ -2711,6 +2783,22 @@ void SCIPsetSortSepas(
    {
       SCIPsortPtr((void**)set->sepas, SCIPsepaComp, set->nsepas);
       set->sepassorted = TRUE;
+      set->sepasnamesorted = FALSE;
+   }
+}
+
+/** sorts separators by name */
+void SCIPsetSortSepasName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->sepasnamesorted )
+   {
+      SCIPsortPtr((void**)set->sepas, SCIPsepaCompName, set->nsepas);
+      set->sepassorted = FALSE;
+      set->sepasnamesorted = TRUE;
    }
 }
 
@@ -2770,6 +2858,7 @@ void SCIPsetSortProps(
       SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
       set->propspresolsorted = FALSE;
+      set->propsnamesorted = FALSE;
    }
 }
 
@@ -2782,9 +2871,26 @@ void SCIPsetSortPropsPresol(
 
    if( !set->propspresolsorted )
    {
-      SCIPsortPtr((void**)set->props, SCIPpropPresolComp, set->nprops);
+      SCIPsortPtr((void**)set->props, SCIPpropCompPresol, set->nprops);
       set->propspresolsorted = TRUE;
       set->propssorted = FALSE;
+      set->propsnamesorted = FALSE;
+   }
+}
+
+/** sorts propagators w.r.t. names */
+void SCIPsetSortPropsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->propsnamesorted )
+   {
+      SCIPsortPtr((void**)set->props, SCIPpropCompName, set->nprops);
+      set->propssorted = FALSE;
+      set->propspresolsorted = FALSE;
+      set->propsnamesorted = TRUE;
    }
 }
 
@@ -2843,6 +2949,22 @@ void SCIPsetSortHeurs(
    {
       SCIPsortPtr((void**)set->heurs, SCIPheurComp, set->nheurs);
       set->heurssorted = TRUE;
+      set->heursnamesorted = FALSE;
+   }
+}
+
+/** sorts heuristics by names */
+void SCIPsetSortHeursName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->heursnamesorted )
+   {
+      SCIPsortPtr((void**)set->heurs, SCIPheurCompName, set->nheurs);
+      set->heurssorted = FALSE;
+      set->heursnamesorted = TRUE;
    }
 }
 
@@ -3033,6 +3155,22 @@ void SCIPsetSortBranchrules(
    {
       SCIPsortPtr((void**)set->branchrules, SCIPbranchruleComp, set->nbranchrules);
       set->branchrulessorted = TRUE;
+      set->branchrulesnamesorted = FALSE;
+   }
+}
+
+/** sorts branching rules by priorities */
+void SCIPsetSortBranchrulesName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->branchrulesnamesorted )
+   {
+      SCIPsortPtr((void**)set->branchrules, SCIPbranchruleCompName, set->nbranchrules);
+      set->branchrulessorted = FALSE;
+      set->branchrulesnamesorted = TRUE;
    }
 }
 

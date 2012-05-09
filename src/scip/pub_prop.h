@@ -39,7 +39,11 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
 
 /** compares two propagators w. r. to their presolving priority */
 extern
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol);
+
+/** comparison method for sorting propagators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName);
 
 /** gets user data of propagator */
 extern

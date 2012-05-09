@@ -1085,6 +1085,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPbranchruleComp)
    return ((SCIP_BRANCHRULE*)elem2)->priority - ((SCIP_BRANCHRULE*)elem1)->priority;
 }
 
+/** comparison method for sorting branching rules w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPbranchruleCompName)
+{
+   return strcmp(SCIPbranchruleGetName((SCIP_BRANCHRULE*)elem1), SCIPbranchruleGetName((SCIP_BRANCHRULE*)elem2));
+}
+
 /** method to call, when the priority of a branching rule was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdBranchrulePriority)

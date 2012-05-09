@@ -47,6 +47,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPpresolComp)
    return ((SCIP_PRESOL*)elem2)->priority - ((SCIP_PRESOL*)elem1)->priority;
 }
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName)
+{
+   return strcmp(SCIPpresolGetName((SCIP_PRESOL*)elem1), SCIPpresolGetName((SCIP_PRESOL*)elem2));
+}
+
 /** method to call, when the priority of a presolver was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPresolPriority)
@@ -693,4 +699,3 @@ int SCIPpresolGetNChgSides(
 
    return presol->nchgsides;
 }
-

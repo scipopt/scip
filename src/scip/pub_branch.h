@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPbranchruleComp);
 
+/** comparison method for sorting branching rules w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPbranchruleCompName);
+
 /** gets user data of branching rule */
 extern
 SCIP_BRANCHRULEDATA* SCIPbranchruleGetData(

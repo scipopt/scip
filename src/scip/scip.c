@@ -22074,6 +22074,9 @@ void printPresolverStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
+   /* sort presolvers w.r.t. their name */
+   SCIPsetSortPresolsName(scip->set);
+
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
    {
@@ -22094,12 +22097,14 @@ void printPresolverStatistics(
          SCIPpresolGetNChgCoefs(presol));
    }
 
-   /* presolver statistics */
+   /* sort propagators w.r.t. their name */
+   SCIPsetSortPropsName(scip->set);
+
    for( i = 0; i < scip->set->nprops; ++i )
    {
       SCIP_PROP* prop;
       prop = scip->set->props[i];
-      if( SCIPpropDoesPresolve(prop) 
+      if( SCIPpropDoesPresolve(prop)
 #if 0
          && ( SCIPpropGetNFixedVars(prop) > 0
             || SCIPpropGetNAggrVars(prop) > 0
@@ -22110,7 +22115,7 @@ void printPresolverStatistics(
             || SCIPpropGetNAddConss(prop) > 0
             || SCIPpropGetNChgSides(prop) > 0
             || SCIPpropGetNChgCoefs(prop) > 0
-            || SCIPpropGetNUpgdConss(prop) > 0) 
+            || SCIPpropGetNUpgdConss(prop) > 0)
 #endif
          )
       {
@@ -22278,6 +22283,9 @@ void printPropagatorStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagators        : #Propagate   #ResProp    Cutoffs    DomReds\n");
 
+   /* sort propagaters w.r.t. their name */
+   SCIPsetSortPropsName(scip->set);
+
    for( i = 0; i < scip->set->nprops; ++i )
    {
       SCIP_PROP* prop;
@@ -22413,7 +22421,11 @@ void printSeparatorStatistics(
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
+   /* sort separators w.r.t. their name */
+   SCIPsetSortSepasName(scip->set);
+
    for( i = 0; i < scip->set->nsepas; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
@@ -22423,6 +22435,7 @@ void printSeparatorStatistics(
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
          SCIPsepaGetNCutsFound(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
+   }
 }
 
 static
@@ -22442,13 +22455,18 @@ void printPricerStatistics(
       SCIPpricestoreGetNProbPricings(scip->pricestore),
       SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
+   /* sort pricers w.r.t. their name */
+   SCIPsetSortPricersName(scip->set);
+
    for( i = 0; i < scip->set->nactivepricers; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10d %10d\n",
          SCIPpricerGetName(scip->set->pricers[i]),
          SCIPpricerGetTime(scip->set->pricers[i]),
          SCIPpricerGetSetupTime(scip->set->pricers[i]),
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
+   }
 }
 
 static
@@ -22464,7 +22482,11 @@ void printBranchruleStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
+   /* sort branching rules  w.r.t. their name */
+   SCIPsetSortBranchrulesName(scip->set);
+
    for( i = 0; i < scip->set->nbranchrules; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
@@ -22476,6 +22498,7 @@ void printBranchruleStatistics(
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
+   }
 }
 
 static
@@ -22498,15 +22521,18 @@ void printHeuristicStatistics(
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
-   SCIPsetSortHeurs(scip->set);
+   /* sort heuristics w.r.t. their names */
+   SCIPsetSortHeursName(scip->set);
 
    for( i = 0; i < scip->set->nheurs; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetSetupTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]));
+   }
 }
 
 static
@@ -22605,7 +22631,6 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f\n", (SCIP_Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
-   
 }
 
 static
@@ -22643,11 +22668,16 @@ void printRelaxatorStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls\n");
 
+   /* sort relaxators w.r.t. their name */
+   SCIPsetSortRelaxsName(scip->set);
+
    for( i = 0; i < scip->set->nrelaxs; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT"\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
+   }
 }
 
 static

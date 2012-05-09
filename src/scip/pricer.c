@@ -49,6 +49,15 @@ SCIP_DECL_SORTPTRCOMP(SCIPpricerComp)
       return ((SCIP_PRICER*)elem2)->priority - ((SCIP_PRICER*)elem1)->priority;
 }
 
+/** comparison method for sorting pricers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpricerCompName)
+{
+   if( ((SCIP_PRICER*)elem1)->active != ((SCIP_PRICER*)elem2)->active )
+      return ((SCIP_PRICER*)elem1)->active ? -1 : +1;
+   else
+      return strcmp(SCIPpricerGetName((SCIP_PRICER*)elem1), SCIPpricerGetName((SCIP_PRICER*)elem2));
+}
+
 /** method to call, when the priority of a pricer was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPricerPriority)

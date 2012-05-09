@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName);
+
 /** gets user data of presolver */
 extern
 SCIP_PRESOLDATA* SCIPpresolGetData(

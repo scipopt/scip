@@ -350,6 +350,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
    return ((SCIP_CONFLICTHDLR*)elem2)->priority - ((SCIP_CONFLICTHDLR*)elem1)->priority;
 }
 
+/** comparison method for sorting conflict handler w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName)
+{
+   return strcmp(SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem1), SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem2));
+}
+
 /** method to call, when the priority of a conflict handler was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)

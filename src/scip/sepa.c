@@ -45,6 +45,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPsepaComp)
    return ((SCIP_SEPA*)elem2)->priority - ((SCIP_SEPA*)elem1)->priority;
 }
 
+/** comparison method for sorting separators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPsepaCompName)
+{
+   return strcmp(SCIPsepaGetName((SCIP_SEPA*)elem1), SCIPsepaGetName((SCIP_SEPA*)elem2));
+}
+
 /** method to call, when the priority of a separator was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdSepaPriority)

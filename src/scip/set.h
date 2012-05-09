@@ -522,6 +522,12 @@ void SCIPsetSortPricers(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts pricers by name */
+extern
+void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts constraint handler in constraint handler list */
 extern
 SCIP_RETCODE SCIPsetIncludeConshdlr(
@@ -556,6 +562,12 @@ void SCIPsetSortConflicthdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts conflict handlers by name */
+extern
+void SCIPsetSortConflicthdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts presolver in presolver list */
 extern
 SCIP_RETCODE SCIPsetIncludePresol(
@@ -573,6 +585,12 @@ SCIP_PRESOL* SCIPsetFindPresol(
 /** sorts presolvers by priorities */
 extern
 void SCIPsetSortPresols(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts presolvers by name */
+extern
+void SCIPsetSortPresolsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -596,6 +614,12 @@ void SCIPsetSortRelaxs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts relaxators by name */
+extern
+void SCIPsetSortRelaxsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts separator in separator list */
 extern
 SCIP_RETCODE SCIPsetIncludeSepa(
@@ -613,6 +637,12 @@ SCIP_SEPA* SCIPsetFindSepa(
 /** sorts separators by priorities */
 extern
 void SCIPsetSortSepas(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts separators by name */
+extern
+void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -642,6 +672,12 @@ void SCIPsetSortPropsPresol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts propagators w.r.t. names */
+extern
+void SCIPsetSortPropsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -659,6 +695,12 @@ SCIP_HEUR* SCIPsetFindHeur(
 /** sorts heuristics by priorities */
 extern
 void SCIPsetSortHeurs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by name */
+extern
+void SCIPsetSortHeursName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -714,6 +756,12 @@ SCIP_BRANCHRULE* SCIPsetFindBranchrule(
 /** sorts branching rules by priorities */
 extern
 void SCIPsetSortBranchrules(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts branching rules by name */
+extern
+void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

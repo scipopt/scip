@@ -46,9 +46,15 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
 }
 
 /** compares two propagators w. r. to their priority */
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp)
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol)
 {  /*lint --e{715}*/
    return ((SCIP_PROP*)elem2)->presolpriority - ((SCIP_PROP*)elem1)->presolpriority;
+}
+
+/** comparison method for sorting propagators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName)
+{
+   return strcmp(SCIPpropGetName((SCIP_PROP*)elem1), SCIPpropGetName((SCIP_PROP*)elem2));
 }
 
 /** method to call, when the priority of a propagator was changed */
@@ -1100,4 +1106,3 @@ SCIP_Bool SCIPpropDoesPresolve(
 
    return (prop->proppresol != NULL);
 }
-

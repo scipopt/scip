@@ -113,14 +113,22 @@ struct SCIP_Set
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
+   SCIP_Bool             pricersnamesorted;  /**< are the pricers sorted by name? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
+   SCIP_Bool             conflicthdlrsnamesorted;/**< are the conflict handlers sorted by name? */
    SCIP_Bool             presolssorted;      /**< are the presolvers sorted by priority? */
+   SCIP_Bool             presolsnamesorted;  /**< are the presolvers sorted by name? */
    SCIP_Bool             relaxssorted;       /**< are the relaxators sorted by priority? */
+   SCIP_Bool             relaxsnamesorted;   /**< are the relaxators sorted by name? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
+   SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
+   SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
+   SCIP_Bool             heursnamesorted;    /**< are the heuristics sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
+   SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
    SCIP_Bool             continnonlinpresent;/**< marks whether any constraints with continuous nonlinear variables are present */
