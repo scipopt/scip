@@ -619,11 +619,18 @@ public:
             cpxobj *= -1.0;
 
          /* check for inconsistent statuses */
-         if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
+         if( cpxstat == CPX_STAT_OPTIMAL_INFEAS )
+         {
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s)\n",
+               m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat));
+            if( EXIT_AT_CPXERROR )
+               exit(1);
+         }
+         else if( (m_stat == SPxSolver::OPTIMAL && cpxstat != CPX_STAT_OPTIMAL)
             || (m_stat == SPxSolver::UNBOUNDED && cpxstat != CPX_STAT_UNBOUNDED)
             || (m_stat == SPxSolver::INFEASIBLE && cpxstat != CPX_STAT_INFEASIBLE) )
          {
-            SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+            SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
                m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
             if( EXIT_AT_WRONG_RESULT )
                exit(1);
@@ -636,7 +643,7 @@ public:
                if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
                   || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                   if( EXIT_AT_WRONG_RESULT )
@@ -645,7 +652,7 @@ public:
                else if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                }
@@ -655,7 +662,7 @@ public:
                if( (getSense() == SPxSolver::MINIMIZE && cpxobj < getObjUpLimit())
                   || (getSense() == SPxSolver::MAXIMIZE && cpxobj > getObjLoLimit()) )
                {
-                  SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
+                  SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
                      getSense() == SPxSolver::MINIMIZE ? getObjUpLimit() : getObjLoLimit(), cpxStatusString(cpxstat), m_checknum);
                }
@@ -663,14 +670,14 @@ public:
             case CPX_STAT_INFEASIBLE:
                break;
             case CPX_STAT_UNBOUNDED:
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
                   m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
                break;
             case CPX_STAT_INForUNBD:
             default:
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
+               SCIPerrorMessage("In %s: SoPlex status=%d (%s) while CPLEX status=%d (%s) (checknum=%d)\n",
                   m_probname, m_stat, spxStatusString(m_stat), cpxstat, cpxStatusString(cpxstat), m_checknum);
                break;
             }  /*lint !e788*/
@@ -681,15 +688,13 @@ public:
             if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
                || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
             {
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good (checknum=%d)\n", value(),
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good (checknum=%d)\n", value(),
                   m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj, m_checknum);
-               if( EXIT_AT_WRONG_RESULT )
-                  exit(1);
             }
             else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
                || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
             {
-               SCIPmessagePrintWarning(m_messagehdlr, "In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", value(),
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", value(),
                   m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj, m_checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
