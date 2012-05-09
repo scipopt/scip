@@ -178,6 +178,7 @@ parameters:
 - new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
 - new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
   SCIP_STATUS_TOTALNODELIMIT is added
+- new parameter propagating/probing/maxdepth to set the maximal depth until the probing propagation is executed
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

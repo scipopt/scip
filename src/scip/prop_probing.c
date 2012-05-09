@@ -39,7 +39,6 @@
 #define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
-
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
@@ -62,6 +61,7 @@
                                          *   and implications, until probing is aborted (0: don't abort) */
 #define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
                                          *   (0: don't abort) */
+#define DEFAULT_MAXDEPTH            -1  /**< maximal depth until propagation is executed(-1: no limit) */
 
 /*
  * Data structures
@@ -94,6 +94,7 @@ struct SCIP_PropData
    int                   nuseless;           /**< current number of successive useless probings */
    int                   ntotaluseless;      /**< current number of successive totally useless probings */
    int                   nsumuseless;        /**< current number of useless probings */
+   int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
 };
 
@@ -1128,6 +1129,10 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    if( propdata->lastnode == SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
       return SCIP_OKAY;
 
+   /* if maximal depth for propagation is reached, stop */
+   if( propdata->maxdepth >= 0 && propdata->maxdepth < SCIPgetDepth(scip) )
+      return SCIP_OKAY;
+
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* get (number of) fractional variables that should be integral */
@@ -1264,6 +1269,10 @@ SCIP_RETCODE SCIPincludePropProbing(
          "propagating/"PROP_NAME"/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxsumuseless, TRUE, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/"PROP_NAME"/maxdepth",
+         "maximal depth until propagation is executed(-1: no limit)",
+         &propdata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
