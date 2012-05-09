@@ -611,7 +611,7 @@ SCIP_RETCODE fillDigraph(
             assert(idx2 >= 0);
 
             /* we add only one directed edge, because the other direction is automatically added for component computation */
-            SCIP_CALL( SCIPdigraphAddEdge(digraph, idx1, idx2) );
+            SCIP_CALL( SCIPdigraphAddArc(digraph, idx1, idx2) );
          }
       }
    }

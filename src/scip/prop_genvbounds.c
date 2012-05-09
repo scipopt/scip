@@ -922,13 +922,13 @@ SCIP_RETCODE sortGenVBounds(
             SCIPhashmapExists(propdata->lbgenvbounds, genvbound->vars[j]) )
          {
             int from = ((GENVBOUND*) SCIPhashmapGetImage(propdata->lbgenvbounds, genvbound->vars[j]))->index;
-            SCIP_CALL( SCIPdigraphAddEdge(graph, from, i) );
+            SCIP_CALL( SCIPdigraphAddArc(graph, from, i) );
          }
          else if( SCIPisNegative(scip, genvbound->coefs[j]) &&
             SCIPhashmapExists(propdata->ubgenvbounds, genvbound->vars[j]) )
          {
             int from = ((GENVBOUND*) SCIPhashmapGetImage(propdata->ubgenvbounds, genvbound->vars[j]))->index;
-            SCIP_CALL( SCIPdigraphAddEdge(graph, from, i) );
+            SCIP_CALL( SCIPdigraphAddArc(graph, from, i) );
          }
       }
    }

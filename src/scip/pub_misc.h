@@ -3438,41 +3438,47 @@ void SCIPdigraphFree(
    SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
    );
 
-/** add (directed) edge to the directed graph structure
- *  @note: if the edge is already contained, it is added a second time
+/** add (directed) arc to the directed graph structure
+ *  @note: if the arc is already contained, it is added a second time
  */
 extern
-SCIP_RETCODE SCIPdigraphAddEdge(
+SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
    );
 
-/** add (directed) edge to the directed graph structure, if it is not contained, yet */
+/** add (directed) arc to the directed graph structure, if it is not contained, yet */
 extern
-SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
    );
 
-/** returns the number of edges originating at the given node */
+/** returns the number of arcs originating at the given node */
 extern
-int SCIPdigraphGetNOutEdges(
+int SCIPdigraphGetNOutArcs(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the number of outgoing edges is returned */
+   int                   node                /**< node for which the number of outgoing arcs is returned */
    );
 
-/** returns the array of edges originating at the given node; this array must not be changed from outside */
+/** returns the array of arcs originating at the given node; this array must not be changed from outside */
 extern
-int* SCIPdigraphGetOutEdges(
+int* SCIPdigraphGetOutArcs(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the array of outgoing edges is returned */
+   int                   node                /**< node for which the array of outgoing arcs is returned */
+   );
+
+/** returns the number of nodes */
+extern
+int SCIPdigraphGetNNodes(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note For each edge, its reverse is added, so the graph does not need
+ *  @note For each arc, its reverse is added, so the graph does not need
  *        to be the directed representation of an undirected graph.
  */
 extern

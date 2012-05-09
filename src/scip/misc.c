@@ -4024,13 +4024,13 @@ SCIP_RETCODE ensureAdjnodesSize(
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the directed graph structure
- *  @note: if the edge is already contained, it is added a second time
+/** add (directed) arc to the directed graph structure
+ *  @note: if the arc is already contained, it is added a second time
  */
-SCIP_RETCODE SCIPdigraphAddEdge(
+SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
    )
 {
    assert(digraph != NULL);
@@ -4041,18 +4041,18 @@ SCIP_RETCODE SCIPdigraphAddEdge(
 
    SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
 
-   /* add edge */
+   /* add arc */
    digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
    digraph->nadjnodes[startnode]++;
 
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the directed graph structure, if it is not contained, yet */
-SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+/** add (directed) arc to the directed graph structure, if it is not contained, yet */
+SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
    )
 {
    int i;
@@ -4069,17 +4069,17 @@ SCIP_RETCODE SCIPdigraphAddEdgeSafe(
 
    SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
 
-   /* add edge */
+   /* add arc */
    digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
    digraph->nadjnodes[startnode]++;
 
    return SCIP_OKAY;
 }
 
-/** returns the number of edges originating at the given node */
-int SCIPdigraphGetNOutEdges(
+/** returns the number of arcs originating at the given node */
+int SCIPdigraphGetNOutArcs(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the number of outgoing edges is returned */
+   int                   node                /**< node for which the number of outgoing arcs is returned */
    )
 {
    assert(digraph != NULL);
@@ -4091,10 +4091,10 @@ int SCIPdigraphGetNOutEdges(
    return digraph->nadjnodes[node];
 }
 
-/** returns the array of edges originating at the given node; this array must not be changed from outside */
-int* SCIPdigraphGetOutEdges(
+/** returns the array of arcs originating at the given node; this array must not be changed from outside */
+int* SCIPdigraphGetOutArcs(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the array of outgoing edges is returned */
+   int                   node                /**< node for which the array of outgoing arcs is returned */
    )
 {
    assert(digraph != NULL);
@@ -4105,6 +4105,16 @@ int* SCIPdigraphGetOutEdges(
    assert((digraph->nadjnodes[node] == 0) || (digraph->adjnodes[node] != NULL));
 
    return digraph->adjnodes[node];
+}
+
+/** returns the number of nodes */
+int SCIPdigraphGetNNodes(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+  assert(digraph != NULL);
+
+  return digraph->nnodes;
 }
 
 /** performs depth-first-search in the given directed graph from the given start node */
@@ -4180,7 +4190,7 @@ void depthFirstSearch(
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note For each edge, its reverse is added, so the graph does not need
+ *  @note For each arc, its reverse is added, so the graph does not need
  *        to be the directed representation of an undirected graph.
  */
 SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
@@ -4222,12 +4232,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    /* store the number of directed arcs per node */
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
 
-   /* add reverse edges to the graph */
+   /* add reverse arcs to the graph */
    for( i = digraph->nnodes - 1; i>= 0; --i )
    {
       for( j = 0; j < ndirectedadjnodes[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddEdge(digraph, digraph->adjnodes[i][j], i) );
+         SCIP_CALL( SCIPdigraphAddArc(digraph, digraph->adjnodes[i][j], i) );
       }
    }
 
