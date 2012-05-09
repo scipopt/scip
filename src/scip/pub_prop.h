@@ -233,6 +233,12 @@ int SCIPpropGetNChgSides(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+extern
+int SCIPpropGetNPresolCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
 /** returns the timing mask of the propagator */
 extern
 SCIP_PROPTIMING SCIPpropGetTimingmask(

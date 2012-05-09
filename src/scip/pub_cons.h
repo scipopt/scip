@@ -321,6 +321,12 @@ int SCIPconshdlrGetNChgSides(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets number of times the presolving method of the constraint handler was called and tried to find reductions */
+extern
+int SCIPconshdlrGetNPresolCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets separation priority of constraint handler */
 extern
 int SCIPconshdlrGetSepaPriority(

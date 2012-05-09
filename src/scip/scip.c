@@ -22072,7 +22072,7 @@ void printPresolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  Calls  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
    /* sort presolvers w.r.t. their name */
    SCIPsetSortPresolsName(scip->set);
@@ -22083,9 +22083,10 @@ void printPresolverStatistics(
       SCIP_PRESOL* presol;
       presol = scip->set->presols[i];
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpresolGetName(presol));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetSetupTime(presol),
+         SCIPpresolGetNCalls(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
          SCIPpresolGetNChgVarTypes(presol),
@@ -22120,9 +22121,10 @@ void printPresolverStatistics(
          )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPpropGetPresolTime(prop),
 	    SCIPpropGetSetupTime(prop),
+            SCIPpropGetNPresolCalls(prop),
             SCIPpropGetNFixedVars(prop),
             SCIPpropGetNAggrVars(prop),
             SCIPpropGetNChgVarTypes(prop),
@@ -22157,9 +22159,10 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetSetupTime(conshdlr),
+            SCIPconshdlrGetNPresolCalls(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
             SCIPconshdlrGetNChgVarTypes(conshdlr),

@@ -162,6 +162,12 @@ int SCIPpresolGetNChgSides(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+/** gets number of times the presolver was called and tried to find reductions */
+extern
+int SCIPpresolGetNCalls(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -287,6 +287,7 @@ SCIP_RETCODE SCIPpropInit(
       prop->nupgdconss = 0;
       prop->nchgcoefs = 0;
       prop->nchgsides = 0;
+      prop->npresolcalls = 0;
       prop->wasdelayed = FALSE;
       prop->presolwasdelayed = FALSE;
    }
@@ -595,6 +596,10 @@ SCIP_RETCODE SCIPpropPresol(
          SCIPerrorMessage("propagator <%s> returned invalid result <%d>\n", prop->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of presolving calls, if the propagator tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(prop->npresolcalls);
    }
    else
    {
@@ -1085,6 +1090,16 @@ int SCIPpropGetNChgSides(
    assert(prop != NULL);
 
    return prop->nchgsides;
+}
+
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+int SCIPpropGetNPresolCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->npresolcalls;
 }
 
 /** returns the timing mask of the propagator */

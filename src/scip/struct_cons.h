@@ -232,6 +232,7 @@ struct SCIP_Conshdlr
    int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   int                   npresolcalls;       /**< number of times the constraint handler was called in presolving and tried to find reductions */
    int                   delayupdatecount;   /**< must the updates of the constraint arrays be delayed until processUpdates()? */
    SCIP_Bool             delaysepa;          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */

@@ -216,6 +216,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
+      presol->ncalls = 0;
       presol->wasdelayed = FALSE;
    }
    
@@ -472,6 +473,10 @@ SCIP_RETCODE SCIPpresolExec(
          SCIPerrorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of calls, if the presolver tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(presol->ncalls);
    }
    else
    {
@@ -698,4 +703,14 @@ int SCIPpresolGetNChgSides(
    assert(presol != NULL);
 
    return presol->nchgsides;
+}
+
+/** gets number of times the presolver was called and tried to find reductions */
+int SCIPpresolGetNCalls(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->ncalls;
 }
