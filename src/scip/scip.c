@@ -2827,7 +2827,7 @@ SCIP_RETCODE SCIPincludeReader(
 {
    SCIP_READER* reader;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether reader is already present */
    if( SCIPfindReader(scip, name) != NULL )
@@ -2903,7 +2903,7 @@ SCIP_RETCODE SCIPincludePricer(
 {
    SCIP_PRICER* pricer;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether pricer is already present */
    if( SCIPfindPricer(scip, name) != NULL )
@@ -3063,7 +3063,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
 {
    SCIP_CONSHDLR* conshdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether constraint handler is already present */
    if( SCIPfindConshdlr(scip, name) != NULL )
@@ -3137,7 +3137,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
 {
    SCIP_CONFLICTHDLR* conflicthdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether conflict handler is already present */
    if( SCIPfindConflicthdlr(scip, name) != NULL )
@@ -3224,7 +3224,7 @@ SCIP_RETCODE SCIPincludePresol(
 {
    SCIP_PRESOL* presol;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether presolver is already present */
    if( SCIPfindPresol(scip, name) != NULL )
@@ -3309,7 +3309,7 @@ SCIP_RETCODE SCIPincludeRelax(
 {
    SCIP_RELAX* relax;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether relaxation handler is already present */
    if( SCIPfindRelax(scip, name) != NULL )
@@ -3400,7 +3400,7 @@ SCIP_RETCODE SCIPincludeSepa(
 {
    SCIP_SEPA* sepa;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether separator is already present */
    if( SCIPfindSepa(scip, name) != NULL )
@@ -3495,7 +3495,7 @@ SCIP_RETCODE SCIPincludeProp(
 {
    SCIP_PROP* prop;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether propagator is already present */
    if( SCIPfindProp(scip, name) != NULL )
@@ -3602,7 +3602,7 @@ SCIP_RETCODE SCIPincludeHeur(
 {
    SCIP_HEUR* heur;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether heuristic is already present */
    if( SCIPfindHeur(scip, name) != NULL )
@@ -3686,7 +3686,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
 {
    SCIP_EVENTHDLR* eventhdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether event handler is already present */
    if( SCIPfindEventhdlr(scip, name) != NULL )
@@ -3757,7 +3757,7 @@ SCIP_RETCODE SCIPincludeNodesel(
 {
    SCIP_NODESEL* nodesel;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether node selector is already present */
    if( SCIPfindNodesel(scip, name) != NULL )
@@ -3870,7 +3870,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 {
    SCIP_BRANCHRULE* branchrule;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether branching rule is already present */
    if( SCIPfindBranchrule(scip, name) != NULL )
@@ -3988,7 +3988,7 @@ SCIP_RETCODE SCIPincludeDisp(
 {
    SCIP_DISP* disp;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether display column is already present */
    if( SCIPfindDisp(scip, name) != NULL )
@@ -4079,7 +4079,7 @@ SCIP_RETCODE SCIPincludeNlpi(
    assert(scip != NULL);
    assert(nlpi != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether NLPI is already present */
    if( SCIPfindNlpi(scip, SCIPnlpiGetName(nlpi)) != NULL )
@@ -4162,7 +4162,7 @@ SCIP_RETCODE SCIPincludeExternalCodeInformation(
    assert(scip != NULL);
    assert(name != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeExternalCodeInformation", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeExternalCodeInformation", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsetIncludeExternalCode(scip->set, name, description) );
 
