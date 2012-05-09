@@ -748,6 +748,8 @@ SCIP_RETCODE splitProblem(
       }
       else
       {
+         SCIP_RESULT subscipresult;
+
          assert(ncompconss > 0);
 
          /* in debug mode, we want to be informed about components with single constraints;
@@ -766,9 +768,9 @@ SCIP_RETCODE splitProblem(
          {
             /* build subscip for one component and try to solve it */
             SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars, ncompvars,
-                  nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss, result) );
+                  nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss, &subscipresult) );
 
-            if( *result == SCIP_CUTOFF )
+            if( subscipresult == SCIP_CUTOFF )
                break;
          }
       }
