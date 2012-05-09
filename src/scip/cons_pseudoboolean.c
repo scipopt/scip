@@ -332,7 +332,7 @@ void conshdlrdataExit(
       conshdlrdata->hashtablesize = 0;
    }
 
-   if( conshdlrdata->allnonlinterms == NULL )
+   if( conshdlrdata->allnonlinterms != NULL )
    {
       SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms );
 
