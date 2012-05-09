@@ -5472,8 +5472,12 @@ SCIP_RETCODE SCIPvarChgObj(
          oldobj = var->obj;
          var->obj = newobj;
 
-         /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+         /* update the number of variables with non-zero objective coefficient;
+          * we only want to do the update, if the variable is added to the problem;
+          * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
+          */
+         if( SCIPvarIsActive(var) )
+            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
 
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
@@ -5538,8 +5542,12 @@ SCIP_RETCODE SCIPvarAddObj(
          oldobj = var->obj;
          var->obj += addobj;
 
-         /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+         /* update the number of variables with non-zero objective coefficient;
+          * we only want to do the update, if the variable is added to the problem;
+          * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
+          */
+         if( SCIPvarIsActive(var) )
+            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
 
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;

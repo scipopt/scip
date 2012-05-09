@@ -1366,8 +1366,6 @@ void SCIPprobUpdateNObjVars(
 
    if( !SCIPsetIsZero(set, newobj) )
       prob->nobjvars++;
-
-   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
 }
 
 /** update the dual bound if its better as the current one */
@@ -1580,6 +1578,9 @@ SCIP_RETCODE SCIPprobInitSolve(
    {
       SCIP_CALL( prob->probinitsol(set->scip, prob->probdata) );
    }
+
+   /* assert that the counter for variables with nonzero objective is correct */
+   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
 
    return SCIP_OKAY;
 }
