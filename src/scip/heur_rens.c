@@ -549,7 +549,6 @@ SCIP_RETCODE SCIPapplyRens(
 
       /* disable conflict analysis */
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
-      assert(!SCIPisConflictAnalysisApplicable(scip));
    }
 
 #ifdef SCIP_DEBUG
