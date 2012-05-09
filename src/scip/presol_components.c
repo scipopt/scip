@@ -459,11 +459,12 @@ SCIP_RETCODE copyAndSolveComponent(
             compnr, SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip), nvars, SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
             SCIPgetNContVars(subscip), nconss);
 
-         /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the subproblem,
-          * because otherwise, the primal bound might lead to dual reductions that cannot be transferred to the original problem
-          * without also transferring the possibly suboptimal solution (which is currently not possible)
+         /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the
+          * subproblem, because otherwise, the primal bound might lead to dual reductions that cannot be transferred to
+          * the original problem without also transferring the possibly suboptimal solution (which is currently not
+          * possible)
           */
-         if( SCIPgetNSols(subscip) )
+         if( SCIPgetNSols(subscip) > 0 )
          {
             SCIP_Bool infeasible;
             SCIP_Bool tightened;
