@@ -195,6 +195,8 @@ features:
 - added counter and clock for SCIPcopy() calls
 - better handling of memory limits, in particular for large problems
 - estimate memory consumption for sub-SCIP and do not copy them if close to memory limit
+- number of presolving calls of plugins is counted and displayed in the statistics,
+  can be accessed via SCIPpresolGetNCalls() and SCIP<prop/conshdlr>getNPresolCalls()
 
 SCIP version 2.1.2
 ==================
