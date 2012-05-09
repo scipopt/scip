@@ -3991,6 +3991,35 @@ void SCIPdigraphFree(
    BMSfreeMemory(digraph);
 }
 
+/** output of the given directed graph via the given message handler */
+void SCIPdigraphPrint(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+   int j;
+
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", i);
+
+      for( j = 0; j < digraph->nadjnodes[i] ; ++j )
+      {
+         if( j == 0 )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", digraph->adjnodes[i][j]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", digraph->adjnodes[i][j]);
+         }
+      }
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
+}
+
 #define STARTADJNODESSIZE 5
 
 /* ensures that adjnodes array of one node in a directed graph is big enough */
