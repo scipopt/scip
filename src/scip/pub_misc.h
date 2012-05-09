@@ -3425,6 +3425,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    int                   nnodes              /**< number of nodes */
    );
 
+/** copies directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCopy(
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   );
+
 /** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
 extern
 SCIP_RETCODE SCIPdigraphSetSizes(

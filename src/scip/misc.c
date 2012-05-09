@@ -3936,6 +3936,57 @@ SCIP_RETCODE SCIPdigraphCreate(
    (*digraph)->ncomponents = 0;
    (*digraph)->componentstartsize = 0;
 
+   (*digraph)->components = NULL;
+   (*digraph)->componentstarts = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** copies directed graph structure */
+SCIP_RETCODE SCIPdigraphCopy(
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   )
+{
+   int ncomponents;
+   int nnodes;
+   int i;
+
+   SCIP_ALLOC( BMSallocMemory(targetdigraph) );
+
+   nnodes = sourcedigraph->nnodes;
+   ncomponents = sourcedigraph->ncomponents;
+   (*targetdigraph)->nnodes = nnodes;
+   (*targetdigraph)->ncomponents = ncomponents;
+
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->adjnodes, nnodes) );
+
+   for( i = 0; i < nnodes; ++i )
+   {
+      if( sourcedigraph->nadjnodes[i] > 0 )
+      {
+         assert(sourcedigraph->adjnodes[i] != NULL);
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->adjnodes[i]), sourcedigraph->adjnodes[i], sourcedigraph->nadjnodes[i]) );
+      }
+   }
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->adjnodessize, sourcedigraph->nadjnodes, nnodes) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nadjnodes, sourcedigraph->nadjnodes, nnodes) );
+
+
+   if( ncomponents > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components, sourcedigraph->componentstarts[ncomponents]) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts, sourcedigraph->componentstarts, ncomponents+1) );
+      (*targetdigraph)->componentstartsize = ncomponents+1;
+   }
+   else
+   {
+      (*targetdigraph)->components = NULL;
+      (*targetdigraph)->componentstarts = NULL;
+      (*targetdigraph)->componentstartsize = 0;
+   }
+
    return SCIP_OKAY;
 }
 
