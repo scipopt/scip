@@ -3239,14 +3239,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
  src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
  src/scip/type_history.h src/scip/lpi.h src/nlpi/pub_expr.h \
- src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
- src/scip/cons_linear.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
- src/scip/cons_indicator.h src/scip/cons_quadratic.h \
- src/scip/cons_nonlinear.h lib/zimplinc/zimpl/bool.h \
- lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
- lib/zimplinc/zimpl/numb.h lib/zimplinc/zimpl/bound.h \
- lib/zimplinc/zimpl/mono.h lib/zimplinc/zimpl/term.h \
- lib/zimplinc/zimpl/xlpglue.h lib/zimplinc/zimpl/zimpllib.h
+ src/scip/intervalarith.h src/nlpi/type_exprinterpret.h
 $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/blockmemshell/memory.h \
