@@ -822,8 +822,7 @@ SCIP_RETCODE presolComponents(
 
    *result = SCIP_DIDNOTRUN;
 
-   /**@todo maybe only not in SCIP_STAGE_PRESOLVING ? */
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE || SCIPinProbing(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
    /* do not run, if not all variables are explicitly known */
