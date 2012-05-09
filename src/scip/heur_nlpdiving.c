@@ -1052,7 +1052,7 @@ SCIP_RETCODE solveSubMIP(
    }
 
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    /* set limits for the subproblem */
@@ -1700,7 +1700,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       /* compute cover */
       ncovervars = -1;
       covervars = NULL;
-      if( memorylimit > 2.0*SCIPgetMemExternEstim(scip) )
+      if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &covervars, SCIPgetNVars(scip)) );
          SCIP_CALL( SCIPcomputeCoverUndercover(scip, &ncovervars, covervars, timelimit, memorylimit, SCIPinfinity(scip), FALSE, FALSE, FALSE, 'u', &covercomputed) );

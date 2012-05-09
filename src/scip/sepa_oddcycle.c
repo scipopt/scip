@@ -1300,7 +1300,7 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
       SCIPdebugMessage("...memory limit exceeded\n");
@@ -2997,7 +2997,7 @@ SCIP_RETCODE checkArraySizesGLS(
    }
 
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMessage("...memory limit exceeded - freeing all arrays\n");
       *success = FALSE;

@@ -5022,7 +5022,7 @@ SCIP_RETCODE createSubscip(
    auxipdata->objectivelimit = MIN(1.0, maxslack + feastol);
   
    /* abort if not enough memory available */
-   if( auxipdata->memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( auxipdata->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       return SCIP_OKAY;
 
    /* abort if not enough time available */

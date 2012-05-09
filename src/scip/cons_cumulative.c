@@ -5756,7 +5756,7 @@ SCIP_RETCODE dualPresolving(
    }
 
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);

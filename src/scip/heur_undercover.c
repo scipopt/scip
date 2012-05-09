@@ -3251,7 +3251,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip) )
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMessage("skipping undercover heuristic: too little memory\n");
       return SCIP_OKAY;

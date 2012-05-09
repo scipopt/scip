@@ -1782,7 +1782,7 @@ SCIP_RETCODE solveSubscip(
    }
 
    /* abort if not enough memory is left to create a copy of SCIP, including external memory usage */
-   if( memorylimit > 2.0*SCIPgetMemExternEstim(scip) )
+   if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
    }

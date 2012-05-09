@@ -340,7 +340,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* abort if no time is left or not enough memory to create a copy of SCIP
     * for rapid learning, this does not include external memory usage, because no LPs are solved
     */
-   if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip) )
+   if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
