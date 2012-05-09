@@ -193,7 +193,7 @@ SCIP_Bool sepastoreIsCutRedundant(
    {
       SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g]\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
-      /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
 
@@ -305,7 +305,7 @@ SCIP_RETCODE sepastoreAddCut(
 
    SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d)\n",
       SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut));
-   /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+   /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
 
    /* capture the cut */
    SCIProwCapture(cut);
@@ -894,7 +894,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       {
          /* add cut to the LP and update orthogonalities */
          SCIPdebugMessage(" -> applying forced cut <%s>\n", SCIProwGetName(cut));
-         /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+         /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
          SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
       }
    }
@@ -917,7 +917,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
          SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
-      /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
 
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
