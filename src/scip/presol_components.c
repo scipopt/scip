@@ -18,7 +18,16 @@
  * @author Dieter Weninger
  * @author Gerald Gamrath
  *
- * TODO: simulation of presolving without solve
+ * This presolver looks for independent components at the end of the presolving.
+ * If independent components are found in which a maximum number of discrete variables
+ * is not exceeded, the presolver tries to solve them in advance as subproblems.
+ * Afterwards, if a subproblem was solved to optimality, the corresponding
+ * variables/constraints can be fixed/deleted in the main problem.
+ *
+ * @todo simulation of presolving without solve
+ * @todo solve all components with less than given size, count number of components with nodelimit reached;
+ *       if all components could be solved within nodelimit (or all but x), continue solving components in
+ *       increasing order until one hit the time limit
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,7 +35,6 @@
 #include <assert.h>
 
 #include "scip/presol_components.h"
-
 
 #define PRESOL_NAME            "components"
 #define PRESOL_DESC            "components presolver"
@@ -365,7 +373,7 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
    }
 
-   /* the following asserts are not true, because some aggregations in the original scip instance could not get sesolved
+   /* the following asserts are not true, because some aggregations in the original scip instance could not get resolved
     * inside some constraints, so the copy (subscip) will have also some inactive variables which were copied
     */
 #if 0
@@ -405,6 +413,11 @@ SCIP_RETCODE copyAndSolveComponent(
          SCIP_Bool fixed;
 
          ++(*nsolvedprobs);
+
+         SCIPdebugMessage("++++++++++++++ sub-SCIP for component %d solved to optimality (time=%.2f): %d vars (%d bin, %d int, %d impl, %d cont), %d conss\n",
+            compnr, SCIPgetSolvingTime(subscip), SCIPgetNVars(subscip), SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNImplVars(subscip),
+            SCIPgetNContVars(subscip), nconss);
+
 
          sol = SCIPgetBestSol(subscip);
 
@@ -543,6 +556,13 @@ SCIP_RETCODE fillDigraph(
 
    for( c = 0; c < nconss; ++c )
    {
+      /* check for reached timelimit */
+      if( (c % 1000 == 0) && SCIPisStopped(scip) )
+      {
+         *success = FALSE;
+         break;
+      }
+
       /* get number of variables for this constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, success) );
 
@@ -799,22 +819,17 @@ SCIP_RETCODE presolComponents(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   SCIP_DIGRAPH* digraph;
    SCIP_CONS** conss;
    SCIP_CONS** tmpconss;
-   SCIP_VAR** vars;
-   SCIP_VAR** tmpvars;
-   int* firstvaridxpercons;
+   SCIP_Bool success;
    int nconss;
    int ntmpconss;
    int nvars;
-   int* components;
    int ncomponents;
    int ndeletedconss;
    int ndeletedvars;
    int nsolvedprobs;
    int c;
-   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(presol != NULL);
@@ -831,6 +846,10 @@ SCIP_RETCODE presolComponents(
 
    /* only call the component presolver, if presolving would be stopped otherwise */
    if( !SCIPisPresolveFinished(scip) )
+      return SCIP_OKAY;
+
+   /* cehck for a reached timelimit */
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
@@ -866,21 +885,35 @@ SCIP_RETCODE presolComponents(
       }
    }
 
-   /* get number of variables and copy variables into a local array */
-   tmpvars = SCIPgetVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   BMScopyMemoryArray(vars, tmpvars, nvars);
-
    if( nvars > 1 && nconss > 1 )
    {
+      SCIP_DIGRAPH* digraph;
+      SCIP_VAR** vars;
+      int* firstvaridxpercons;
+      int* varlocks;
+      int v;
+
+      /* copy variables into a local array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercons, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varlocks, nvars) );
+      BMScopyMemoryArray(vars, SCIPgetVars(scip), nvars);
+
+      /* count number of varlocks for each variable (up + down locks) and multiply it by 2;
+       * that value is used as an estimate of the number of arcs incident to the variable's node in the digraph
+       */
+      for( v = 0; v < nvars; ++v )
+         varlocks[v] = 2 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
 
       /* create and fill directed graph */
       SCIP_CALL( SCIPdigraphCreate(&digraph, nvars) );
+      SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
       SCIP_CALL( fillDigraph(scip, digraph, conss, nconss, firstvaridxpercons, &success) );
 
       if( success )
       {
+         int* components;
+
          SCIP_CALL( SCIPallocBufferArray(scip, &components, nvars) );
 
          /* compute independent components */
@@ -893,31 +926,49 @@ SCIP_RETCODE presolComponents(
           */
          if( ncomponents > 0 )
          {
-            int* ncompvars;
+            int* compsize;
             int* permu;
+            int* compvars;
+            int ncompvars;
+            int nbinvars;
+            int nintvars;
+            int ncontvars;
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &ncompvars, ncomponents) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &compsize, ncomponents) );
             SCIP_CALL( SCIPallocBufferArray(scip, &permu, ncomponents) );
 
             /* get number of variables in the components */
             for( c = 0; c < ncomponents; ++c )
             {
-               SCIPdigraphGetComponent(digraph, c, NULL, &ncompvars[c]);
+               SCIPdigraphGetComponent(digraph, c, &compvars, &ncompvars);
                permu[c] = c;
+               nbinvars = 0;
+               nintvars = 0;
+
+               for( v = 0; v < ncompvars; ++v )
+               {
+                  /* check whether variable is of binary or integer type */
+                  if( SCIPvarGetType(vars[compvars[v]]) == SCIP_VARTYPE_BINARY )
+                     nbinvars++;
+                  else if( SCIPvarGetType(vars[compvars[v]]) == SCIP_VARTYPE_INTEGER )
+                     nintvars++;
+               }
+               ncontvars = ncompvars - nintvars - nbinvars;
+               compsize[c] = 1000 * (nbinvars + presoldata->intfactor * nintvars) + MIN(999, ncontvars);
             }
 
             /* get permutation of component numbers such that the size of the components is increasing */
-            SCIPsortIntInt(ncompvars, permu, ncomponents);
+            SCIPsortIntInt(compsize, permu, ncomponents);
 
             /* now, we need the reverse direction, i.e., for each component number, we store its new number
-             * such that the components are sorted; for this, we abuse the ncompvars array
+             * such that the components are sorted; for this, we abuse the compsize array
              */
             for( c = 0; c < ncomponents; ++c )
-               ncompvars[permu[c]] = c;
+               compsize[permu[c]] = c;
 
             /* for each variable, replace the old component number by the new one */
             for( c = 0; c < nvars; ++c )
-               components[c] = ncompvars[components[c]];
+               components[c] = compsize[components[c]];
 
             /* create subproblems from independent components and solve them in dependence of their size */
             SCIP_CALL( splitProblem(scip, presoldata, conss, vars, nconss, nvars, components, ncomponents, firstvaridxpercons,
@@ -927,7 +978,7 @@ SCIP_RETCODE presolComponents(
             (*ndelconss) += ndeletedconss;
 
             SCIPfreeBufferArray(scip, &permu);
-            SCIPfreeBufferArray(scip, &ncompvars);
+            SCIPfreeBufferArray(scip, &compsize);
          }
 
          SCIPfreeBufferArray(scip, &components);
@@ -935,10 +986,11 @@ SCIP_RETCODE presolComponents(
 
       SCIPdigraphFree(&digraph);
 
+      SCIPfreeBufferArray(scip, &varlocks);
       SCIPfreeBufferArray(scip, &firstvaridxpercons);
+      SCIPfreeBufferArray(scip, &vars);
    }
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &conss);
 
    /* update result to SCIP_SUCCESS, if reductions were found;
