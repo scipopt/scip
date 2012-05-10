@@ -2529,7 +2529,7 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
       const char* presolname;
       presolname = SCIPpresolGetName(presols[i]);
 
-      /* get maxrounds parameter of presolvers */
+      /* reset maxrounds parameter of presolvers */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
 
       SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, paramname) );
@@ -2544,7 +2544,7 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
       const char* propname;
       propname = SCIPpropGetName(props[i]);
 
-      /* get maxrounds parameter of presolvers */
+      /* reset maxprerounds parameter of propagator */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", propname);
       SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, paramname) );
    }
@@ -2558,7 +2558,7 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
       const char* conshdlrname;
       conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
 
-      /* reset maxprerounds parameter of presolvers */
+      /* reset maxprerounds parameter of constraint handler */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", conshdlrname);
       SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, paramname) );
 
@@ -2728,7 +2728,23 @@ SCIP_RETCODE paramsetSetPresolvingFast(
    {
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/knapsack/disaggregation", FALSE, quiet) );
    }
-   
+
+   /* explicitly disable components presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "components") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable dominated columns presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "domcol") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/domcol/maxrounds", 0, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 
