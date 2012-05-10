@@ -74,6 +74,13 @@
 #define DEFAULT_NPSEUDOBRANCHES       2 /**< number of children created in pseudo branching (0: disable branching) */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
+
+/* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
+
+/*
+ * Data structures
+ */
+
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {

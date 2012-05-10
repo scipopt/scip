@@ -77,6 +77,8 @@
 #define DEFAULT_MAXNODES               500LL /**< maximum nodes to solve an independent cumulative constraint (-1: unlimited) */
 
 
+/* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
+
 /*
  * Data structures
  */
