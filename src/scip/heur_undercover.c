@@ -754,6 +754,16 @@ SCIP_RETCODE createCoveringProblem(
          probindex = SCIPvarGetProbindex(andres);
          negated = FALSE;
 
+	 /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
+	 if( termIsConstant(scip, andres, 1.0, globalbounds) )
+	 {
+	    /* free memory for covering constraint */
+	    SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+	    SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+
+	    continue;
+	 }
+
          if( probindex == -1 )
          {
             SCIP_VAR* repvar;
@@ -761,6 +771,7 @@ SCIP_RETCODE createCoveringProblem(
             /* get binary representative of variable */
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, SCIPgetResultantAnd(scip, andcons), &repvar, &negated) );
             assert(repvar != NULL);
+	    assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
 
             if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
             {
@@ -769,14 +780,6 @@ SCIP_RETCODE createCoveringProblem(
                SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
-            }
-            else if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_FIXED )
-            {
-               /* free memory for covering constraint */
-               SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-               SCIPfreeBufferArray(coveringscip, &coveringconsvars);
-
-               continue;
             }
 
             /* check for negation */
