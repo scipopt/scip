@@ -4188,8 +4188,8 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    return SCIP_OKAY;
 }
 
-/** returns the number of arcs originating at the given node */
-int SCIPdigraphGetNOutArcs(
+/** returns the number of successor nodes */
+int SCIPdigraphGetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the number of outgoing arcs is returned */
    )
@@ -4203,8 +4203,8 @@ int SCIPdigraphGetNOutArcs(
    return digraph->nadjnodes[node];
 }
 
-/** returns the array of arcs originating at the given node; this array must not be changed from outside */
-int* SCIPdigraphGetOutArcs(
+/** returns the array of indices of the successor nodes; this array must not be changed from outside */
+int* SCIPdigraphGetSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the array of outgoing arcs is returned */
    )
