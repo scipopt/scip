@@ -4071,6 +4071,38 @@ void SCIPdigraphPrint(
    }
 }
 
+/** output of the given directed graph via the given message handler */
+void SCIPdigraphPrintComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int c;
+   int i;
+
+   for( c = 0; c < digraph->ncomponents; ++c )
+   {
+      int start = digraph->componentstarts[c];
+      int end =  digraph->componentstarts[c+1];
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "Components %d --> ", c);
+
+      for( i = start; i < end; ++i )
+      {
+         if( i == start )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", digraph->components[i]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", digraph->components[i]);
+         }
+      }
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
+}
+
 #define STARTADJNODESSIZE 5
 
 /* ensures that adjnodes array of one node in a directed graph is big enough */
@@ -4270,12 +4302,12 @@ void depthFirstSearch(
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note For each arc, its reverse is added, so the graph does not need
- *        to be the directed representation of an undirected graph.
+ *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
+ *        undirected graph.
  */
 SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   minsize,            /**< all components with less nodes are ignored */
+   int                   minsize,            /**< all components with less nodes are ignored (use -1 to ignore none) */
    int*                  components,         /**< array with as many slots as there are nodes in the directed graph
                                               *   to store for each node the component to which it belongs
                                               *   (components are numbered 0 to ncomponents - 1); or NULL, if components
@@ -4313,7 +4345,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
 
    /* add reverse arcs to the graph */
-   for( i = digraph->nnodes - 1; i>= 0; --i )
+   for( i = digraph->nnodes - 1; i >= 0; --i )
    {
       for( j = 0; j < ndirectedadjnodes[i]; ++j )
       {
@@ -4332,7 +4364,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          &digraph->components[compstart], &ndfsnodes);
 
       /* forget about this component if it is too small */
-      if( ndfsnodes >= minsize )
+      if( minsize == -1 || ndfsnodes >= minsize )
       {
          digraph->ncomponents++;
 
@@ -4349,7 +4381,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          /* store component number for contained nodes if array was given */
          if( components != NULL )
          {
-            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >=  compstart; --i )
+            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >= compstart; --i )
             {
                components[digraph->components[i]] = digraph->ncomponents - 1;
             }
@@ -4373,12 +4405,11 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    return SCIP_OKAY;
 }
 
-/** Performes an (almost) topological sort on the undirected components of the directed graph.
- *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+/** Performes an (almost) topological sort on the undirected components of the directed graph. The undirected
+ *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
- *  Note, that in general a topological sort is not unique.
- *  Note, that there might be directed cycles, that are randomly broken,
- *  which is the reason for having only almost topologically sorted arrays.
+ *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
+ *        broken, which is the reason for having only almost topologically sorted arrays.
  */
 SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */

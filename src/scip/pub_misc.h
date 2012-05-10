@@ -3454,6 +3454,14 @@ void SCIPdigraphPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** output of the given directed graph via the given message handler */
+extern
+void SCIPdigraphPrintComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
 /** add (directed) arc to the directed graph structure
  *  @note: if the arc is already contained, it is added a second time
  */
