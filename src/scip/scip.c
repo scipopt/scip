@@ -5555,8 +5555,10 @@ int SCIPgetNObjVars(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
+#if 0 /* this is much too expensive */
       /* check that the internal count is correct */
       assert(scip->transprob->nobjvars == SCIPprobGetNObjVars(scip->transprob, scip->set));
+#endif
       return scip->transprob->nobjvars;
 
    default:

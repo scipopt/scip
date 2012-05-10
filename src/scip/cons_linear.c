@@ -6436,7 +6436,7 @@ SCIP_Bool checkEqualObjective(
 }
 
 /** check if the linear equality constraint is equal to a subset of the objective function; if so we can remove the
- *  objective coefficient and add an objective offset
+ *  objective coefficients and add an objective offset
  */
 static
 SCIP_RETCODE checkPartialObjective(
