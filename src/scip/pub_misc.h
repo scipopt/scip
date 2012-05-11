@@ -3445,23 +3445,6 @@ void SCIPdigraphFree(
    SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
    );
 
-
-/** output of the given directed graph via the given message handler */
-extern
-void SCIPdigraphPrint(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** output of the given directed graph via the given message handler */
-extern
-void SCIPdigraphPrintComponents(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
 /** add (directed) arc to the directed graph structure
  *  @note: if the arc is already contained, it is added a second time
  */
@@ -3472,12 +3455,35 @@ SCIP_RETCODE SCIPdigraphAddArc(
    int                   endnode             /**< start node of the arc */
    );
 
+/** add (directed) arc and a related data to the directed graph structure
+ *  @note: if the arc is already contained, it is added a second time
+ */
+extern
+SCIP_RETCODE SCIPdigraphAddArcWithData(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode,            /**< start node of the arc */
+   void*                 data                /**< data that should be stored for the arc */
+   );
+
 /** add (directed) arc to the directed graph structure, if it is not contained, yet */
 extern
 SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the arc */
    int                   endnode             /**< start node of the arc */
+   );
+
+/** returns the number of nodes of the given digraph */
+extern
+int SCIPdigraphGetNNodes(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the total number of arcs in the given digraph */
+extern
+int SCIPdigraphGetNArcs(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** returns the number of successor nodes */
@@ -3494,16 +3500,19 @@ int* SCIPdigraphGetSuccessors(
    int                   node                /**< node for which the array of outgoing arcs is returned */
    );
 
-/** returns the number of nodes */
+/** returns the array of datas corresponding to the arcs originating at the given node;
+ *  this array must not be changed from outside
+ */
 extern
-int SCIPdigraphGetNNodes(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
+void** SCIPdigraphGetSuccessorArcsDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    );
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note For each arc, its reverse is added, so the graph does not need
- *        to be the directed representation of an undirected graph.
+ *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
+ *        undirected graph.
  */
 extern
 SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
@@ -3517,12 +3526,11 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    );
 
-/** Performes an (almost) topological sort on the undirected components of the directed graph.
- *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+/** Performes an (almost) topological sort on the undirected components of the directed graph. The undirected
+ *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
- *  Note, that in general a topological sort is not unique.
- *  Note, that there might be directed cycles, that are randomly broken,
- *  which is the reason for having only almost topologically sorted arrays.
+ *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
+ *        broken, which is the reason for having only almost topologically sorted arrays.
  */
 extern
 SCIP_RETCODE SCIPdigraphTopoSortComponents(
@@ -3551,6 +3559,22 @@ void SCIPdigraphGetComponent(
 extern
 void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** output of the given directed graph via the given message handler */
+extern
+void SCIPdigraphPrint(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** output of the given directed graph via the given message handler */
+extern
+void SCIPdigraphPrintComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /*
