@@ -17562,7 +17562,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
-   SCIP_Bool parsucc;
    int* rowinds;
    int* colinds;
    int nnewcols;
@@ -17606,8 +17605,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    /* create auxiliary LP */
    SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
-   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, SCIPsetFeastol(set), &parsucc) );
-   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, SCIPsetDualfeastol(set), &parsucc) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetFeastol(set)) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, SCIPsetDualfeastol(set)) );
 
    /* get storage */
    if( normtype == 'o' )
