@@ -778,6 +778,27 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 }
 
 
+/** gets the element as the key */
+SCIP_DECL_HASHGETKEY(SCIPhashGetKeyStandard)
+{  /*lint --e{715}*/
+   /* the key is the element itself */
+   return elem;
+}
+
+/** returns TRUE iff both keys(pointer) are equal */
+SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
+{
+   return (key1 == key2);
+}
+
+/** returns the hash value of the key */
+SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
+{  /*lint --e{715}*/
+   /* the key is used as the keyvalue too */
+   return (unsigned int)(size_t) key;
+}
+
+
 
 /*
  * Hash Map

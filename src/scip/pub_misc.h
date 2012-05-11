@@ -192,7 +192,17 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString);
 extern
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString);
 
+/** gets the element as the key */
+extern
+SCIP_DECL_HASHGETKEY(SCIPhashGetKeyStandard);
 
+/** returns TRUE iff both keys(pointer) are equal */
+extern
+SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr);
+
+/** returns the hash value of the key */
+extern
+SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
 
 
 /*

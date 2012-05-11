@@ -133,9 +133,11 @@ plugins:
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
 - added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
-- added new presolver gateextraction, which tries to find and-gates/constraints with two operands which are linearized
+- added new presolver gateextraction, which tries to find and-gates/constraints which are linearized
   e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
-  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1))
+  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1));
+  gate-extractor is also able to detect logicor constraints and set-packing/-partitioning constraints with the same
+  variables, to upgrade these both constraints to a set-partitioning constraint
 - added reader for MI(NL)Ps in OSiL (Optimization Services Instance Language) format
 
 fixed bugs:
@@ -179,6 +181,11 @@ parameters:
 - new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
   SCIP_STATUS_TOTALNODELIMIT is added
 - new parameter propagating/probing/maxdepth to set the maximal depth until the probing propagation is executed
+- new parameter <presolving/gateextraction/searchequations> by default is set to TRUE, that parameter allows you to
+  search for logicor constraints and set-packing/-partitioning constraints with same variables
+- new parameter <presolving/gateextraction/sorting> by default is set to 1, that parameter determines if you want to try
+  to extract big-gates(-1) or small-gates(1) at first by ordering bigger/smaller logicor constraint up front, or use
+  them as they are (0)
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -197,6 +204,8 @@ features:
 - estimate memory consumption for sub-SCIP and do not copy them if close to memory limit
 - number of presolving calls of plugins is counted and displayed in the statistics,
   can be accessed via SCIPpresolGetNCalls() and SCIP<prop/conshdlr>getNPresolCalls()
+- new methods SCIPhashGetKeyStandard() which returns the element itself as the key, SCIPhashKeyEqPtr(),
+  SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
 
 SCIP version 2.1.2
 ==================
