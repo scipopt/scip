@@ -4307,8 +4307,8 @@ int* SCIPdigraphGetSuccessors(
    return digraph->adjnodes[node];
 }
 
-/** returns the array of datas corresponding to the arcs originating at the given node;
- *  this array must not be changed from outside
+/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+ *  array must not be changed from outside
  */
 void** SCIPdigraphGetSuccessorsDatas(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -4320,8 +4320,11 @@ void** SCIPdigraphGetSuccessorsDatas(
    assert(node < digraph->nnodes);
    assert(digraph->nadjnodes[node] >= 0);
    assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
+
+   if( digraph->arcdatas == NULL )
+      return NULL;
+
    assert((digraph->nadjnodes[node] == 0) || (digraph->arcdatas[node] != NULL));
-   assert(digraph->arcdatas != NULL);
 
    return digraph->arcdatas[node];
 }
