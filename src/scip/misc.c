@@ -3553,9 +3553,14 @@ void SCIPstairmapPrint(
 {
    int t;
 
+   SCIPmessageFPrintInfo(messagehdlr, file, "Stairmap <%p> --> ", stairmap);
+
    for( t = 0; t < stairmap->ntimepoints; ++t )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]);
+      if( t == 0 )
+         SCIPmessageFPrintInfo(messagehdlr, file, "%d:(%d,%d)", t, stairmap->timepoints[t], stairmap-> freecapacities[t]);
+      else
+         SCIPmessageFPrintInfo(messagehdlr, file, ", %d:(%d,%d)", t, stairmap->timepoints[t], stairmap-> freecapacities[t]);
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file,"\n");
@@ -3584,6 +3589,25 @@ SCIP_Bool stairmapFindLeft(
    (*pos)--;
 
    return FALSE;
+}
+
+/** returns if the given time point exists in the stair map and stores the position of the given time point if it
+ *  exists; otherwise the position of the next larger existing time point is stored
+ */
+static
+SCIP_Bool stairmapFindRight(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to search */
+   int                   timepoint,          /**< time point to search for */
+   int*                  pos                 /**< pointer to store the position */
+   )
+{
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(stairmap->ntimepoints > 0);
+   assert(stairmap->timepoints[0] == 0);
+
+   /* find the position of time point in the time points array via binary search */
+   return SCIPsortedvecFindInt(stairmap->timepoints, timepoint, stairmap->ntimepoints, pos);
 }
 
 /** inserts the given time point into the stairmap if it this time point does not exists yet; returns its position in the
@@ -3696,12 +3720,16 @@ void SCIPstairmapInsertStair(
 {
    assert(stairmap != NULL);
    assert(left < right);
+   assert(height >= 0);
    assert(infeasible != NULL);
 
    (*infeasible) = FALSE;
 
    /* insert stair into the stair map */
    SCIPdebugMessage("insert stair [%d,%d] with height %d\n", left, right, height);
+
+   if( height == 0 )
+      return;
 
    /* try to insert stair into the stair map */
    stairmapUpdate(stairmap, left, right, height, infeasible);
@@ -3767,16 +3795,14 @@ SCIP_Bool SCIPstairmapIsFeasibleStart(
    assert(height >= 0);
    assert(pos != NULL);
 
-   if( duration == 0 )
+   if( duration == 0 || height == 0 )
       return TRUE;
 
    endtime = timepoint + duration;
 
    /* check if the activity fits at timepoint */
    (void)stairmapFindLeft(stairmap, timepoint, &startpos);
-
-   if( !stairmapFindLeft(stairmap, endtime, &endpos) )
-      endpos++;
+   (void)stairmapFindRight(stairmap, endtime, &endpos);
 
    assert(stairmap->timepoints[startpos] <= timepoint);
    assert(stairmap->timepoints[endpos] >= endtime);
@@ -3834,7 +3860,7 @@ int SCIPstairmapGetEarliestFeasibleStart(
 
    (*infeasible) = TRUE;
 
-   while( (*infeasible) && starttime <= ub )
+   while( starttime <= ub )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
       {
@@ -3883,7 +3909,10 @@ int SCIPstairmapGetLatestFeasibleStart(
    assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
 
    if( duration == 0 || height == 0 )
+   {
+      (*infeasible) = FALSE;
       return ub;
+   }
 
    starttime = ub;
    (void)stairmapFindLeft(stairmap, starttime, &pos);
@@ -3891,7 +3920,7 @@ int SCIPstairmapGetLatestFeasibleStart(
 
    (*infeasible) = TRUE;
 
-   while( (*infeasible) && starttime >= lb )
+   while( starttime >= lb )
    {
       if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
       {
@@ -3908,7 +3937,7 @@ int SCIPstairmapGetLatestFeasibleStart(
       starttime = stairmap->timepoints[pos] - duration;
    }
 
-   assert(*infeasible || starttime >= lb);
+   assert(*infeasible || (starttime >= lb && starttime <= ub));
 
    return starttime;
 }
