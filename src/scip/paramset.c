@@ -2745,6 +2745,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/domcol/maxrounds", 0, quiet) );
    }
 
+   /* explicitly disable gate extraction presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "gateextraction") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 
