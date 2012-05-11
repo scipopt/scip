@@ -17674,25 +17674,29 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          if( SCIProwIsModifiable(row) )
             continue;
 
+         /* make sure row is sorted */
+         rowSortLP(row);
+         assert( row->lpcolssorted );
+
          /* check whether we have an equation */
          if( SCIPsetIsEQ(set, row->lhs, row->rhs) )
          {
-            assert( !SCIPsetIsInfinity(set, ABS(row->lhs)) );
-            assert( !SCIPsetIsInfinity(set, ABS(row->rhs)) );
+            assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
+            assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
          }
          else
          {
             if( relaxrows )
             {
                /* otherwise add slacks for each side if necessary */
-               if( !SCIPsetIsInfinity(set, ABS(row->lhs)) )
+               if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
                {
                   obj[nnewcols] = 1.0;
                   lb[nnewcols] = 0.0;
                   ub[nnewcols] = 1.0;
                   ++nnewcols;
                }
-               if( !SCIPsetIsInfinity(set, ABS(row->rhs)) )
+               if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
                {
                   obj[nnewcols] = 1.0;
                   lb[nnewcols] = 0.0;
@@ -17729,14 +17733,14 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             continue;
 
          /* add slacks for each bound if necessary */
-         if( !SCIPsetIsInfinity(set, ABS(col->lb)) )
+         if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
          {
             obj[nnewcols] = 1.0;
             lb[nnewcols] = 0.0;
             ub[nnewcols] = 1.0;
             ++nnewcols;
          }
-         if( !SCIPsetIsInfinity(set, ABS(col->ub)) )
+         if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
          {
             obj[nnewcols] = 1.0;
             lb[nnewcols] = 0.0;
@@ -17784,6 +17788,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       if( SCIProwIsModifiable(row) )
          continue;
+      assert( row->lpcolssorted );
 
       /* get row data */
       lhs = row->lhs - (SCIPsetIsInfinity(set, -row->lhs) ? 0.0 : row->constant);
@@ -17816,7 +17821,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       else
       {
          /* treat lhs */
-         if( !SCIPsetIsInfinity(set, ABS(lhs)) )
+         if( !SCIPsetIsInfinity(set, REALABS(lhs)) )
          {
             assert(!SCIPsetIsEQ(set, lhs, rhs));
 
@@ -17847,7 +17852,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          }
 
          /* treat rhs */
-         if( !SCIPsetIsInfinity(set, ABS(rhs)) )
+         if( !SCIPsetIsInfinity(set, REALABS(rhs)) )
          {
             assert(!SCIPsetIsEQ(set, lhs, rhs));
 
@@ -17955,7 +17960,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       }
 
       /* lower bound */
-      if( !SCIPsetIsInfinity(set, ABS(col->lb)) )
+      if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -17977,7 +17982,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       }
 
       /* upper bound */
-      if( !SCIPsetIsInfinity(set, ABS(col->ub)) )
+      if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
       {
          /* add artificial variable */
          colinds[1] = lp->ncols;
@@ -18006,6 +18011,14 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
 #ifdef SCIP_OUTPUT
    SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInterior.lp") );
+#endif
+
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert( ncols == nnewcols );
+   }
 #endif
 
    /* solve and store point */
@@ -18065,7 +18078,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
             else
             {
                /* treat lhs */
-               if( !SCIPsetIsInfinity(set, ABS(lhs)) )
+               if( !SCIPsetIsInfinity(set, REALABS(lhs)) )
                {
                   if( normtype == 'o' )
                   {
@@ -18076,7 +18089,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
                      assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasGT(set, sum, lhs) );
                }
                /* treat rhs */
-               if( !SCIPsetIsInfinity(set, ABS(rhs)) )
+               if( !SCIPsetIsInfinity(set, REALABS(rhs)) )
                {
                   if( normtype == 'o' )
                   {
@@ -18127,7 +18140,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
          if( !SCIPsetIsEQ(set, col->lb, col->ub) )
          {
             /* treat lb */
-            if( !SCIPsetIsInfinity(set, ABS(col->lb)) )
+            if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
             {
                if( normtype == 'o' )
                {
@@ -18138,7 +18151,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
                   assert( SCIPsetIsFeasZero(set, primal[lp->ncols+1]) || SCIPsetIsFeasGT(set, val, col->lb) );
             }
             /* treat rhs */
-            if( !SCIPsetIsInfinity(set, ABS(col->ub)) )
+            if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
             {
                if( normtype == 'o' )
                {
