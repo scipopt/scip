@@ -813,24 +813,31 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
-            for (j = 0; j <= lastcolumn; ++j)
+            if ( ispart )
             {
-               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-                  break;
-               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
-                  break;
+               /* add bounds (variables fixed to 0) that result in the first nonzero entry */
+               for (j = 0; j <= lastcolumn; ++j)
+               {
+                  /* add varaibles in row up to the first variable fixed to 0 */
+                  if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                     break;
 
-               /* at this point the variable should be fixed to 0 */
-               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+               }
             }
-
-            /* add bounds that result in the last one - check top left entry for packing case */
-            if ( ! ispart && lastones[0] == -1 )
+            else
             {
-               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               /* add bounds that result in the last one - check top left entry for packing case */
+               if ( lastones[0] == -1 )
+               {
+                  assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               }
+
+               /* mark variable fixed to 1 */
+               assert( SCIPvarGetLbLocal(vars[i][firstnonzeroinrow]) > 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][firstnonzeroinrow]) );
             }
 
             /* add bounds that result in the last one - pass through rows */
