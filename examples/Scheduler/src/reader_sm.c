@@ -61,7 +61,7 @@ struct SCIP_RcpspData
    SCIP_DIGRAPH*        precedencegraph;     /**< precedence graph of the jobs */
    const char**         jobnames;            /**< array of job names */
    const char**         resourcenames;       /**< array of resource names */
-   int**                resourcedemands;     /**< resource demands matrix (job i needs resourcedemands[i][j] units of resource j) */
+   int**                demands;             /**< resource demands matrix (job i needs demands[i][j] units of resource j) */
    int*                 durations;           /**< array of job durations */
    int*                 capacities;          /**< array of resource capacities */
    int                  njobs;               /**< number of jobs */
@@ -95,7 +95,7 @@ void outputRcpspData(
 
       for( r = 0; r < rcpspdata->nresources; ++r )
       {
-         SCIPinfoMessage(scip, NULL, " %3d" , rcpspdata->resourcedemands[i][r] );
+         SCIPinfoMessage(scip, NULL, " %3d" , rcpspdata->demands[i][r] );
       }
 
       SCIPinfoMessage(scip, NULL, "\n");
@@ -241,7 +241,7 @@ SCIP_RETCODE getNJobs(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->jobnames, njobs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->durations, njobs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->resourcedemands, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->demands, njobs) );
 
    *state = NEXT;
 
@@ -343,11 +343,11 @@ SCIP_RETCODE getJobs(
    strtol(linestr, &linestr, 10);
    rcpspdata->durations[jobid] = strtol(linestr, &linestr, 10);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->resourcedemands[jobid], rcpspdata->nresources) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->demands[jobid], rcpspdata->nresources) );
 
    for( r = 0; r < rcpspdata->nresources; ++r )
    {
-      rcpspdata->resourcedemands[jobid][r] = strtol(linestr, &linestr, 10);
+      rcpspdata->demands[jobid][r] = strtol(linestr, &linestr, 10);
    }
 
    /* check if we paresed the last job */
@@ -408,184 +408,21 @@ SCIP_RETCODE getPrecedence(
    return SCIP_OKAY;
 }
 
-/** compute trivial upper bound for makespan and start time variables */
+/** compute trivial upper bound for makespan */
 static
 int computeUbmakespan(
-   SCIP_RCPSPDATA*       rcpspdata           /**< resources constrained project scheduling data */
+   int*                  durations,          /**< array of durations */
+   int                   njobs               /**< number og jobs */
    )
 {
    int j;
    int ub;
 
-   assert( rcpspdata != NULL );
-
    ub = 0;
-   for( j = 0; j < rcpspdata->njobs; ++j )
-      ub += rcpspdata->durations[j];
+   for( j = 0; j < njobs; ++j )
+      ub += durations[j];
 
    return ub;
-}
-
-/** creates a cumulative scheduling problem */
-static
-SCIP_RETCODE createProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RCPSPDATA*       rcpspdata,          /**< resources constrained project scheduling data */
-   const char*           problemname         /**< problem name */
-   )
-{
-   SCIP_VAR** jobs;
-   SCIP_VAR** vars;
-   SCIP_VAR* var;
-
-   SCIP_CONS* cons;
-
-   int* demands;
-   int* durations;
-
-   char name[SCIP_MAXSTRLEN];
-
-   int njobs;
-   int nvars;
-   int ubmakespan;
-   int i;
-   int j;
-   int r;
-
-   assert( scip != NULL );
-   assert( rcpspdata != NULL );
-
-   SCIPdebugMessage( "start method SCIPcreateSchedulingSMProblem\n");
-
-   /* output rcpspdata to check it */
-   SCIPdebug( outputRcpspData(scip, rcpspdata) );
-
-   /* create SCIP data structure */
-   SCIP_CALL( SCIPcreateProb(scip, problemname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-
-   njobs = rcpspdata->njobs ;
-   assert( njobs >= 0 );
-   assert(rcpspdata->durations[njobs-1] == 0 );
-
-   /* compute a feasible upper bound on the makespan */
-   ubmakespan = computeUbmakespan(rcpspdata);
-
-   /* allocate buffer for jobs and precedence constraints */
-   SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
-
-   /* create an activity constraint for each activity */
-   for( j = 0; j < njobs - 1; ++j ) /* but not for last job which is the makespan (-1) */
-   {
-      /* construct variable name */
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "start_%s", rcpspdata->jobnames[j]);
-
-      /* create integer starting variable */
-      SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, (SCIP_Real)ubmakespan, 0.0, SCIP_VARTYPE_INTEGER,
-            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-
-      SCIP_CALL( SCIPaddVar(scip, var) );
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
-      jobs[j] = var;
-      SCIP_CALL( SCIPreleaseVar(scip, &var) );
-   }
-
-   /* create makespan variable */
-   SCIP_CALL( SCIPcreateVar(scip, &var, "makespan", 0.0, (SCIP_Real)ubmakespan, 1.0, SCIP_VARTYPE_INTEGER,
-         TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddVar(scip, var) );
-   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
-
-   jobs[njobs-1] = var;
-   SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-   /* precedence constraints */
-   for( j = 0; j < njobs - 1; ++j )
-   {
-      SCIP_VAR* predvar;
-      int nprecedences;
-
-      nprecedences = SCIPdigraphGetNSuccessors(rcpspdata->precedencegraph, j);
-
-      predvar = jobs[j];
-      assert(predvar != NULL);
-
-      if( nprecedences > 0 )
-      {
-         int* successors;
-
-         successors = SCIPdigraphGetSuccessors(rcpspdata->precedencegraph, j);
-
-         for( i = 0; i < nprecedences; ++i )
-         {
-            SCIP_VAR* succvar;
-
-            succvar = jobs[successors[i]];
-            assert(succvar != NULL);
-
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, successors[i]);
-
-            SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, succvar, -1.0,
-                  -SCIPinfinity(scip), -rcpspdata->durations[j],
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-         }
-      }
-      else
-      {
-         /* add precedence constraints for those jobs without successor */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, njobs);
-
-         SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, jobs[njobs-1], -1.0,
-               -SCIPinfinity(scip), -rcpspdata->durations[j],
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      }
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, rcpspdata->njobs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, rcpspdata->njobs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &durations, rcpspdata->njobs) );
-
-
-   /* create resource constraints */
-   for( r = 0; r < rcpspdata->nresources; ++r )
-   {
-      nvars = 0;
-      for( j = 0; j < rcpspdata->njobs; ++j ) /* also makespan constraint! */
-      {
-         if( rcpspdata->resourcedemands[j][r] > 0 )
-         {
-            vars[nvars] = jobs[j];
-            demands[nvars] = rcpspdata->resourcedemands[j][r];
-            durations[nvars] = rcpspdata->durations[j];
-            nvars++;
-         }
-      }
-
-      SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, rcpspdata->resourcenames[r],
-            nvars, vars, durations, demands, rcpspdata->capacities[r],
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   }
-
-   /* initialize the problem specific heuristic */
-   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, rcpspdata->precedencegraph, jobs,
-         rcpspdata->durations, rcpspdata->resourcedemands, rcpspdata->capacities,
-         njobs, rcpspdata->nresources) );
-
-   /* free buffer array */
-   SCIPfreeBufferArray(scip, &durations);
-   SCIPfreeBufferArray(scip, &demands);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &jobs);
-
-   SCIPdebugMessage( "reader_sm has created each constraint handler!\n");
-
-   return SCIP_OKAY;
 }
 
 /** read file */
@@ -725,7 +562,7 @@ SCIP_DECL_READERREAD(readerReadSm)
    rcpspdata.precedencegraph = NULL;
    rcpspdata.jobnames = NULL;
    rcpspdata.durations = NULL;
-   rcpspdata.resourcedemands = NULL;
+   rcpspdata.demands = NULL;
    rcpspdata.capacities = NULL;
    rcpspdata.njobs = 0;
    rcpspdata.nresources = 0;
@@ -733,8 +570,12 @@ SCIP_DECL_READERREAD(readerReadSm)
    /* read file */
    SCIP_CALL( readFile(scip, filename, &rcpspdata) );
 
+   /* output rcpspdata to check it */
+   SCIPdebug( outputRcpspData(scip, rcpspdata) );
+
    /* create problem */
-   SCIP_CALL( createProblem(scip, &rcpspdata, filename) );
+   SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
+         rcpspdata.precedencegraph, rcpspdata.durations, rcpspdata.capacities, rcpspdata.njobs, rcpspdata.nresources) );
 
    (*result) = SCIP_SUCCESS;
 
@@ -744,12 +585,12 @@ SCIP_DECL_READERREAD(readerReadSm)
       for( j = 0; j < rcpspdata.njobs; ++j )
       {
          SCIPfreeBufferArray(scip, &(rcpspdata.jobnames[j]));
-         SCIPfreeBufferArray(scip, &(rcpspdata.resourcedemands[j]));
+         SCIPfreeBufferArray(scip, &(rcpspdata.demands[j]));
       }
 
       SCIPfreeBufferArray(scip, &rcpspdata.jobnames);
       SCIPfreeBufferArray(scip, &rcpspdata.durations);
-      SCIPfreeBufferArray(scip, &rcpspdata.resourcedemands);
+      SCIPfreeBufferArray(scip, &rcpspdata.demands);
    }
 
    if( rcpspdata.nresources > 0 )
@@ -798,6 +639,186 @@ SCIP_RETCODE SCIPincludeReaderSm(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/"READER_NAME"/mipmodel", "create MIP model?",
          NULL, FALSE, FALSE, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a cumulative scheduling problem */
+SCIP_RETCODE SCIPcreateSchedulingProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           problemname,        /**< problem name */
+   const char**          jobnames,           /**< job names, or NULL */
+   const char**          resourcenames,      /**< resource names, or NULL */
+   int**                 demands,            /**< demand matrix resource job demand */
+   SCIP_DIGRAPH*         precedencegraph,    /**< direct graph to store the precedence conditions */
+   int*                  durations,          /**< array to store the processing for each job */
+   int*                  capacities,         /**< array to store the different capacities */
+   int                   njobs,              /**< number of jobs to be parsed */
+   int                   nresources          /**< number of capacities to be parsed */
+   )
+{
+   SCIP_VAR** jobs;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+
+   SCIP_CONS* cons;
+
+   char name[SCIP_MAXSTRLEN];
+
+   int* consdurations;
+   int* consdemands;
+
+   int nvars;
+   int ubmakespan;
+   int i;
+   int j;
+   int r;
+
+   assert( scip != NULL );
+   assert( njobs >= 0 );
+
+   SCIPdebugMessage( "start method SCIPcreateSchedulingSMProblem\n");
+
+   /* create SCIP data structure */
+   SCIP_CALL( SCIPcreateProb(scip, problemname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+
+   /* compute a feasible upper bound on the makespan */
+   ubmakespan = computeUbmakespan(durations, njobs);
+
+   /* allocate buffer for jobs and precedence constraints */
+   SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
+
+   /* create an activity constraint for each activity */
+   for( j = 0; j < njobs - 1; ++j ) /* but not for last job which is the makespan (-1) */
+   {
+      /* construct variable name */
+      if( jobnames != NULL )
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "start_%s", jobnames[j]);
+      else
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "start_%d", j);
+
+      /* create integer starting variable */
+      SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, (SCIP_Real)ubmakespan, 0.0, SCIP_VARTYPE_INTEGER,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
+      jobs[j] = var;
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+   }
+
+   /* create makespan variable */
+   SCIP_CALL( SCIPcreateVar(scip, &var, "makespan", 0.0, (SCIP_Real)ubmakespan, 1.0, SCIP_VARTYPE_INTEGER,
+         TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddVar(scip, var) );
+   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
+
+   jobs[njobs-1] = var;
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+   /* precedence constraints */
+   for( j = 0; j < njobs - 1; ++j )
+   {
+      SCIP_VAR* predvar;
+      int nsuccessors;
+
+      nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
+
+      predvar = jobs[j];
+      assert(predvar != NULL);
+
+      if( nsuccessors > 0 )
+      {
+         int* successors;
+         void** distances;
+
+         successors = SCIPdigraphGetSuccessors(precedencegraph, j);
+         distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+
+         for( i = 0; i < nsuccessors; ++i )
+         {
+            SCIP_VAR* succvar;
+            int distance;
+
+            succvar = jobs[successors[i]];
+            assert(succvar != NULL);
+
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, successors[i]);
+
+            if( distances != NULL && distances[i] != NULL )
+               distance = (int)(size_t)distances[i];
+            else
+               distance = durations[j];
+
+            SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, succvar, -1.0,
+                  -SCIPinfinity(scip), -distance,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         }
+      }
+      else
+      {
+         /* add precedence constraints for those jobs without successor */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, njobs);
+
+         SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, jobs[njobs-1], -1.0,
+               -SCIPinfinity(scip), -durations[j],
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consdemands, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consdurations, njobs) );
+
+
+   /* create resource constraints */
+   for( r = 0; r < nresources; ++r )
+   {
+      nvars = 0;
+      for( j = 0; j < njobs; ++j ) /* also makespan constraint! */
+      {
+         if( demands[j][r] > 0 )
+         {
+            vars[nvars] = jobs[j];
+            consdemands[nvars] = demands[j][r];
+            consdurations[nvars] = durations[j];
+            nvars++;
+         }
+      }
+
+      if( nvars > 0 )
+      {
+         /* construct constraint name */
+         if( resourcenames != NULL )
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", resourcenames[r]);
+         else
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "R%d", r);
+
+         SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, name,
+               nvars, vars, consdurations, consdemands, capacities[r],
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
+
+   /* initialize the problem specific heuristic */
+   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, precedencegraph, jobs,
+         durations, demands, capacities, njobs, nresources) );
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &consdurations);
+   SCIPfreeBufferArray(scip, &consdemands);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &jobs);
+
+   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
 
    return SCIP_OKAY;
 }

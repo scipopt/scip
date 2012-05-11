@@ -36,6 +36,21 @@ SCIP_RETCODE SCIPincludeReaderSm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** creates a cumulative scheduling problem */
+extern
+SCIP_RETCODE SCIPcreateSchedulingProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           problemname,        /**< problem name */
+   const char**          jobnames,           /**< job names, or NULL */
+   const char**          resourcenames,      /**< resource names, or NULL */
+   int**                 demands,            /**< demand matrix resource job demand */
+   SCIP_DIGRAPH*         precedencegraph,    /**< direct graph to store the precedence conditions */
+   int*                  durations,          /**< array to store the processing for each job */
+   int*                  capacities,         /**< array to store the different capacities */
+   int                   njobs,              /**< number of jobs to be parsed */
+   int                   nresources          /**< number of capacities to be parsed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -279,8 +279,6 @@ int profilesFindEarliestFeasibleStart(
    int start;
    int r;
 
-   SCIPdebugMessage("find earliest start for duration %d\n", duration);
-
    assert(!(*infeasible));
 
    do
@@ -448,6 +446,7 @@ SCIP_RETCODE performForwardScheduling(
    int*                  starttimes,         /**< array to store the start times for each job */
    int*                  lsts,               /**< array of latest start times for each job */
    int*                  perm,               /**< permutation defining the order of the jobs */
+   int*                  makespan,           /**< pointer to store the makespan of the forward scheduling solution */
    SCIP_Bool*            infeasible          /**< pointer to store if an infeasibility was detected */
    )
 {
@@ -458,8 +457,11 @@ SCIP_RETCODE performForwardScheduling(
 
    nresources = heurdata->nresources;
    njobs = heurdata->njobs;
+   *makespan = 0;
 
    assert(*infeasible == FALSE);
+
+   SCIPdebugMessage("perform forward scheduling\n");
 
    /* create resource profiles for checking the resource requirements */
    SCIP_CALL( SCIPallocBufferArray(scip, &profiles, nresources) );
@@ -483,20 +485,25 @@ SCIP_RETCODE performForwardScheduling(
       assert(demands != NULL);
 
       /* skip jobs which have a duration of zero */
-      if( duration == 0 )
-         continue;
+      if( duration > 0 )
+      {
 
-      /* find earliest start time w.r.t to all resource profiles */
-      starttimes[idx] = profilesFindEarliestFeasibleStart(profiles, nresources, starttimes[idx], lsts[idx], duration, demands, infeasible);
+         /* find earliest start time w.r.t to all resource profiles */
+         starttimes[idx] = profilesFindEarliestFeasibleStart(profiles, nresources, starttimes[idx], lsts[idx], duration, demands, infeasible);
 
-      if( *infeasible )
-         break;
+         /* adjust makespan */
+         (*makespan) = MAX(*makespan, starttimes[idx] + duration);
 
-      /* insert the job into the profiles */
-      profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands);
+         if( *infeasible )
+            break;
 
-      /* propagate the new earliest start time of the job */
-      propagateEst(heurdata->precedencegraph, starttimes, lsts, idx, duration, infeasible);
+         /* insert the job into the profiles */
+         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands);
+
+         /* propagate the new earliest start time of the job */
+         propagateEst(heurdata->precedencegraph, starttimes, lsts, idx, duration, infeasible);
+      }
+      SCIPdebugMessage("job %d -> est %d\n", idx, starttimes[idx]);
    }
 
    /* free resource profiles */
@@ -505,6 +512,8 @@ SCIP_RETCODE performForwardScheduling(
       SCIPstairmapFree(&profiles[j]);
    }
    SCIPfreeBufferArray(scip, &profiles);
+
+   SCIPdebugMessage("forward scheduling: makespan %d, feasible %d\n", *makespan, !(*infeasible));
 
    return SCIP_OKAY;
 }
@@ -532,6 +541,8 @@ SCIP_RETCODE performBackwardScheduling(
    nresources = heurdata->nresources;
    njobs = heurdata->njobs;
    durations = heurdata->durations;
+
+   SCIPdebugMessage("perform forward scheduling\n");
 
    /* create resource profiles for checking the resource requirements */
    SCIP_CALL( SCIPallocBufferArray(scip, &profiles, nresources) );
@@ -562,6 +573,9 @@ SCIP_RETCODE performBackwardScheduling(
          /* insert the job into the profiles */
          profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands);
       }
+
+      SCIPdebugMessage("job %d -> est %d\n", idx, starttimes[idx]);
+
    }
 
    /* free resource profiles */
@@ -646,6 +660,7 @@ SCIP_RETCODE executeHeuristic(
    int* perm;
    SCIP_Bool infeasible;
    SCIP_Bool stored;
+   int makespan;
    int njobs;
 
    /* get heuristic data */
@@ -674,7 +689,7 @@ SCIP_RETCODE executeHeuristic(
     *
     * STEP 1: perform forward scheduling, that is, shift all jobs to the left as much as possible in the given ordering
     */
-   SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &infeasible) );
+   SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &makespan, &infeasible) );
 
    if( !infeasible )
    {
@@ -689,7 +704,7 @@ SCIP_RETCODE executeHeuristic(
       /* get permutation w.r.t. earliest start time given by the starttimes and reset the start time to the earliest start time */
       SCIP_CALL( getEstPermuataion(scip, starttimes, ests, heurdata->durations, perm, njobs) );
 
-      SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &infeasible) );
+      SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &makespan, &infeasible) );
 
       SCIP_CALL( SCIPcreateOrigSol(scip, &sol, heur) );
 
