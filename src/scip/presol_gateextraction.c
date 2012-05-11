@@ -1408,7 +1408,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * size)) );
 
    /* search for set-partitioning constraints arising from a logicor and a set-packing constraints with equal variables */
-   if( presoldata->searchequations )
+   if( presoldata->searchequations && !SCIPisStopped(scip) )
    {
       SCIP_HASHTABLE* setppchashdatatable;
       HASHDATA** setppchashdatas;
@@ -1519,7 +1519,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       }
 
       /* check all (new) logicors against all collected set-packing/-partitioning constraints */
-      for( c = nlogicorconss - 1; c >= 0; --c )
+      for( c = nlogicorconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
       {
 	 logicor = logicorconss[c];
 	 assert(logicor != NULL);
@@ -1681,7 +1681,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    assert(presoldata->nsetppchashdatas > 0);
 
    /* search for gates */
-   if( presoldata->nsetppchashdatas > 0 )
+   if( presoldata->nsetppchashdatas > 0 && !SCIPisStopped(scip) )
    {
       SCIP_CONS** gateconss;
       SCIP_VAR** activevars;
@@ -1706,7 +1706,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       /* check all (new) logicors against all set-packing constraints, to extract and-constraints with two or more
        * operands or set-partitioning constraints three or more variables
        */
-      for( c = presoldata->nusefullogicor - 1; c >= endloop; --c )
+      for( c = presoldata->nusefullogicor - 1; c >= endloop && !SCIPisStopped(scip); --c )
       {
 	 assert(presoldata->usefullogicor[c] != NULL);
 
