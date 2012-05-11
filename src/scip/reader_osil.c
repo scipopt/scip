@@ -538,6 +538,74 @@ SCIP_RETCODE readConstraints(
    return SCIP_OKAY;
 }
 
+/** reads mult and incr attributes of an OSiL node
+ *
+ * if mult attribute is not present, then returns mult=1
+ * if incr attribute is not present, then returns incrint=0 and incrreal=0
+ */
+static
+void readMultIncr(
+   const XML_NODE*       node,               /**< XML node to read attributes from */
+   int*                  mult,               /**< buffer to store mult */
+   int*                  incrint,            /**< buffer to store incr as int, or NULL if no int expected */
+   SCIP_Real*            incrreal,           /**< buffer to store incr as real, or NULL if no real expected */
+   SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
+   )
+{
+   const char* attrval;
+
+   assert(node != NULL);
+   assert(mult != NULL);
+   assert(doingfine != NULL);
+
+   *mult = 1;
+   if( incrint != NULL )
+      *incrint = 0;
+   if( incrreal != NULL )
+      *incrreal = 0.0;
+
+   attrval = xmlGetAttrval(node, "mult");
+   if( attrval == NULL )
+      return;
+
+   *mult = (int)strtol(attrval, (char**)&attrval, 10);
+   if( *attrval != '\0' || *mult < 1 )
+   {
+      SCIPerrorMessage("Invalid value '%s' in mult attribute of node.\n", xmlGetAttrval(node, "mult"));
+      *doingfine = FALSE;
+      return;
+   }
+
+   if( *mult == 1 )
+      return;
+
+   attrval = xmlGetAttrval(node, "incr");
+   if( attrval == NULL )
+      return;
+
+   if( incrint != NULL )
+   {
+      *incrint = (int)strtol(attrval, (char**)&attrval, 10);
+      if( *attrval != '\0' )
+      {
+         SCIPerrorMessage("Invalid value '%s' in incr attribute of node.\n", xmlGetAttrval(node, "incr"));
+         *doingfine = FALSE;
+         return;
+      }
+   }
+
+   if( incrreal != NULL )
+   {
+      *incrreal = strtod(attrval, (char**)&attrval);
+      if( *attrval != '\0' || (incrreal != incrreal) )
+      {
+         SCIPerrorMessage("Invalid value '%s' in incr attribute of node.\n", xmlGetAttrval(node, "incr"));
+         *doingfine = FALSE;
+         return;
+      }
+   }
+}
+
 /** parse linear coefficients of constraints */
 static
 SCIP_RETCODE readLinearCoefs(
@@ -563,6 +631,9 @@ SCIP_RETCODE readLinearCoefs(
    SCIP_Real* val;
    int nnz;
    int count;
+   int mult;
+   int incrint;
+   SCIP_Real incrreal;
 
    assert(scip != NULL);
    assert(datanode != NULL);
@@ -669,6 +740,22 @@ SCIP_RETCODE readLinearCoefs(
          *doingfine = FALSE;
          goto CLEANUP;
       }
+
+      readMultIncr(elnode, &mult, &incrint, NULL, doingfine);
+      if( !*doingfine )
+         goto CLEANUP;
+
+      for( --mult; mult > 0; --mult )
+      {
+         ++count;
+         if( count >= (rowmajor ? nconss : nvars) + 1 )
+         {
+            SCIPerrorMessage("too many elements under start node, expected %d, got at least %d.\n", (rowmajor ? nconss : nvars) + 1, count + 1);
+            *doingfine = FALSE;
+            goto CLEANUP;
+         }
+         start[count] = start[count-1] + incrint;
+      }
    }
    if( count != (rowmajor ? nconss : nvars) + 1 )
    {
@@ -710,6 +797,22 @@ SCIP_RETCODE readLinearCoefs(
          *doingfine = FALSE;
          goto CLEANUP;
       }
+
+      readMultIncr(elnode, &mult, &incrint, NULL, doingfine);
+      if( !*doingfine )
+         goto CLEANUP;
+
+      for( --mult; mult > 0; --mult )
+      {
+         ++count;
+         if( count >= nnz )
+         {
+            SCIPerrorMessage("too many elements under rowIdx or colIdx node, expected %d, got at least %d.\n", nnz, count + 1);
+            *doingfine = FALSE;
+            goto CLEANUP;
+         }
+         idx[count] = idx[count-1] + incrint;
+      }
    }
    if( count != nnz )
    {
@@ -750,6 +853,22 @@ SCIP_RETCODE readLinearCoefs(
          SCIPerrorMessage("Invalid value '%s' in <el> node.\n", xmlGetData(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
+      }
+
+      readMultIncr(elnode, &mult, NULL, &incrreal, doingfine);
+      if( !*doingfine )
+         goto CLEANUP;
+
+      for( --mult; mult > 0; --mult )
+      {
+         ++count;
+         if( count >= nnz )
+         {
+            SCIPerrorMessage("too many elements under rowIdx or colIdx node, expected %d, got at least %d.\n", nnz, count + 1);
+            *doingfine = FALSE;
+            goto CLEANUP;
+         }
+         val[count] = val[count-1] + incrreal;
       }
    }
    if( count != nnz )
