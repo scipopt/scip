@@ -4164,7 +4164,8 @@ SCIP_RETCODE ensureAdjnodesSize(
 }
 
 /** add (directed) arc to the directed graph structure
- *  @note: if the arc is already contained, it is added a second time
+ *
+ *  @note if the arc is already contained, it is added a second time
  */
 SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -4188,7 +4189,8 @@ SCIP_RETCODE SCIPdigraphAddArc(
 }
 
 /** add (directed) arc and a related data to the directed graph structure
- *  @note: if the arc is already contained, it is added a second time
+ *
+ *  @note if the arc is already contained, it is added a second time
  */
 SCIP_RETCODE SCIPdigraphAddArcWithData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
