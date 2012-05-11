@@ -27,7 +27,7 @@
 #include <ctype.h>
 
 
-#include "heur_scheduling_elsf.h"
+#include "heur_listscheduling.h"
 #include "reader_sm.h"
 
 #include "scip/cons_cumulative.h"
@@ -573,7 +573,7 @@ SCIP_RETCODE createProblem(
    }
 
    /* initialize the problem specific heuristic */
-   SCIP_CALL( SCIPinitializeSchedulingElsf(scip, rcpspdata->precedencegraph, jobs,
+   SCIP_CALL( SCIPinitializeHeurListScheduling(scip, rcpspdata->precedencegraph, jobs,
          rcpspdata->durations, rcpspdata->resourcedemands, rcpspdata->capacities,
          njobs, rcpspdata->nresources) );
 
