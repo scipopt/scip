@@ -1121,7 +1121,10 @@ SCIP_RETCODE tightenBounds(
             /* if variable not fixed yet, then do so now */
             SCIP_Real fixval;
 
-            fixval = SCIPselectSimpleValue(bounds.inf - SCIPepsilon(scip), bounds.sup + SCIPepsilon(scip), MAXDNOM);
+            if( bounds.inf != bounds.sup )
+               fixval = (bounds.inf + bounds.sup) / 2.0;
+            else
+               fixval = bounds.inf;
             SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeas, &tightened) );
 
             if( infeas )
