@@ -1280,6 +1280,7 @@ SCIP_RETCODE readExpression(
    if( strcmp(exprname, "negate") == 0 ||
       strcmp(exprname, "abs") == 0 ||
       strcmp(exprname, "squareRoot") == 0 ||
+      strcmp(exprname, "sqrt") == 0 ||
       strcmp(exprname, "square") == 0 ||
       strcmp(exprname, "exp") == 0 ||
       strcmp(exprname, "ln") == 0 ||
@@ -1310,7 +1311,7 @@ SCIP_RETCODE readExpression(
       {
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_ABS, arg) );
       }
-      else if( strcmp(exprname, "squareRoot") == 0 )
+      else if( strcmp(exprname, "squareRoot") == 0 || strcmp(exprname, "sqrt") == 0 )
       {
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SQRT, arg) );
       }
