@@ -30,7 +30,7 @@
 
 
 #define PRESOL_NAME            "gateextraction"
-#define PRESOL_DESC            "presolver template"
+#define PRESOL_DESC            "presolver extracting gate(and)-constraints"
 #define PRESOL_PRIORITY         1000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
