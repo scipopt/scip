@@ -405,6 +405,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   {
                      SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
                         cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
+
+		     /* release the row */
+		     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
                      continue;
                   }
 
