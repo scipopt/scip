@@ -3402,14 +3402,18 @@ SCIP_RETCODE SCIPlpiGetState(
    return SCIP_OKAY;
 }
 
-/** loads LPi state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
-   int nrows, ncols;
+   int nrows;
+   int ncols;
+   int i;
 
    assert(blkmem != NULL);
    assert(lpi != NULL);
@@ -3436,6 +3440,26 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
+
+   /* extend the basis to the current LP beyond the previously existing columns */
+   for (i = lpistate->ncols; i < ncols; ++i)
+   {
+      SCIP_Real bnd;
+      CHECK_ZERO( XPRSgetlb(lpi->xprslp, &bnd, i, i) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         CHECK_ZERO( XPRSgetub(lpi->xprslp, &bnd, i, i) );
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
+   for (i = lpistate->nrows; i < nrows; ++i)
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information into Xpress */
    SCIP_CALL( setBase(lpi) );

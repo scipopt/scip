@@ -2768,9 +2768,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715} */
+   char* icstat = 0;
+   char* irstat = 0;
    register int i;
-   int rval = 0, ncols, nrows;
-   char* icstat=0, *irstat=0;
+   int ncols;
+   int nrows;
+   int rval = 0;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2805,9 +2808,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->iccnt, lpi->ircnt);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < ncols; ++i )
-      lpi->iccnt[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      /* get bounds from qsopt */
+      rval = QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub);
+      if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
+            lpi->iccnt[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->iccnt[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->iccnt[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 

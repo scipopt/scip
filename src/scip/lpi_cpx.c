@@ -327,6 +327,12 @@ SCIP_RETCODE setBase(
    /* load basis information into CPLEX */
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
+   /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+
    return SCIP_OKAY;
 }
 
@@ -3528,11 +3534,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = CPX_AT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd;
+      CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free -> super basic */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = CPX_BASIC;
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
