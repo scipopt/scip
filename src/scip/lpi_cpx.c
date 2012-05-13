@@ -53,7 +53,7 @@
       }                                                                 \
    }
 
-#define CPX_INT_MAX 2100000000 /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -63,7 +63,8 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #define NUMINTPARAM  10
-static const int intparam[NUMINTPARAM] = {
+static const int intparam[NUMINTPARAM] =
+{
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
@@ -75,8 +76,10 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SCRIND,
    CPX_PARAM_THREADS
 };
+
 #define NUMDBLPARAM  7
-static const int dblparam[NUMDBLPARAM] = {
+static const int dblparam[NUMDBLPARAM] =
+{
    CPX_PARAM_EPRHS,
    CPX_PARAM_EPOPT,
    CPX_PARAM_BAREPCOMP,
@@ -85,7 +88,9 @@ static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_TILIM,
    CPX_PARAM_EPMRK
 };
-static const double dblparammin[NUMDBLPARAM] = {
+
+static const double dblparammin[NUMDBLPARAM] =
+{
    +1e-09, /*CPX_PARAM_EPRHS*/
    +1e-09, /*CPX_PARAM_EPOPT*/
    +1e-12, /*CPX_PARAM_BAREPCOMP*/
@@ -143,7 +148,7 @@ struct SCIP_LPi
                                               *   we set the thread count to 1. In order to fulfill assert in lp.c,
                                               *   we have to return the value set by SCIP and not the real thread count */
 #endif
-   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -594,11 +599,13 @@ void setIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
       {
          lpi->cpxparam.intparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -622,11 +629,13 @@ void setDblParam(
       parval = -1e+75;
 
    for( i = 0; i < NUMDBLPARAM; ++i )
+   {
       if( dblparam[i] == param )
       {
          lpi->cpxparam.dblparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
@@ -635,7 +644,7 @@ void setDblParam(
 /** marks the current LP to be unsolved */
 static
 void invalidateSolution(
-   SCIP_LPI*const        lpi                 /**< LP interface structure */
+   SCIP_LPI* const       lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -966,7 +975,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   int          restat;
+   int restat;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
@@ -2018,7 +2027,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    default:
       return SCIP_LPERROR;
    }
-
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
@@ -3239,8 +3247,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3278,8 +3285,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3321,8 +3327,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3361,8 +3366,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3403,8 +3407,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
