@@ -1043,12 +1043,12 @@ public:
 
    /** copy column names into namestorage with access via colnames */
    void getColNames(
-      int                   firstcol,           /**< first column to get name from LP */
-      int                   lastcol,            /**< last column to get name from LP */
-      char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-      char*                 namestorage,        /**< storage for col names */
-      int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      int                firstcol,           /**< first column to get name from LP */
+      int                lastcol,            /**< last column to get name from LP */
+      char**             colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+      char*              namestorage,        /**< storage for col names */
+      int                namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+      int*               storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
       )
    {
       assert( m_colnames != NULL );
@@ -1088,12 +1088,12 @@ public:
 
    /** copy row names into namestorage with access via row */
    void getRowNames(
-      int                   firstrow,           /**< first row to get name from LP */
-      int                   lastrow,            /**< last row to get name from LP */
-      char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-      char*                 namestorage,        /**< storage for row names */
-      int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-      int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+      int                firstrow,           /**< first row to get name from LP */
+      int                lastrow,            /**< last row to get name from LP */
+      char**             rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+      char*              namestorage,        /**< storage for row names */
+      int                namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+      int*               storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
       )
    {
       assert( m_rownames != NULL );
@@ -1152,16 +1152,16 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   SPxSCIP*                 spx;                /**< our SPxSolver implementation */
-   int*                     cstat;              /**< array for storing column basis status */
-   int*                     rstat;              /**< array for storing row basis status */
-   int                      cstatsize;          /**< size of cstat array */
-   int                      rstatsize;          /**< size of rstat array */
-   SCIP_PRICING             pricing;            /**< current pricing strategy */
-   SCIP_Bool                solved;             /**< was the current LP solved? */
-   SLUFactor*               factorization;      /**< factorization possibly needed for basis inverse */
-   SCIP_Real                rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
-   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+   SPxSCIP*              spx;                /**< our SPxSolver implementation */
+   int*                  cstat;              /**< array for storing column basis status */
+   int*                  rstat;              /**< array for storing row basis status */
+   int                   cstatsize;          /**< size of cstat array */
+   int                   rstatsize;          /**< size of rstat array */
+   SCIP_PRICING          pricing;            /**< current pricing strategy */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
+   SLUFactor*            factorization;      /**< factorization possibly needed for basis inverse */
+   SCIP_Real             rowrepswitch;       /**< use row representation if number of rows divided by number of columns exceeds this value */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
