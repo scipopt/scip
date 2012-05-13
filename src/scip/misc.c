@@ -4225,7 +4225,6 @@ SCIP_RETCODE SCIPdigraphAddArcWithData(
    assert(endnode >= 0);
    assert(startnode < digraph->nnodes);
    assert(endnode < digraph->nnodes);
-   assert(data != NULL);
 
    if( digraph->arcdatas == NULL )
    {
@@ -4344,8 +4343,6 @@ void** SCIPdigraphGetSuccessorsDatas(
 
    if( digraph->arcdatas == NULL )
       return NULL;
-
-   assert((digraph->nadjnodes[node] == 0) || (digraph->arcdatas[node] != NULL));
 
    return digraph->arcdatas[node];
 }
