@@ -17563,7 +17563,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Real objval;
    SCIP_Real alpha;
    SCIP_RETCODE retcode;
-   int* rowinds;
    int* colinds;
    int nnewcols;
 #ifndef NDEBUG
@@ -17635,6 +17634,11 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       obj[j] = 0.0;
       lb[j] = -SCIPlpiInfinity(lpi);
       ub[j] =  SCIPlpiInfinity(lpi);
+#if 0
+      /* note: we could also use the original bounds - free variables seem to be faster. */
+      lb[j] = lp->cols[j]->lb;
+      ub[j] = lp->cols[j]->ub;
+#endif
    }
 
    /* add artificial alpha variable */
@@ -17764,7 +17768,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIPsetFreeBufferArray(set, &lb);
 
    /* prepare storage for rows */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows + (inclobjcutoff ? 1 : 0) + 2*lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colinds, lp->ncols+2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colvals, lp->ncols+2) );
 
@@ -18007,7 +18010,6 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    SCIPsetFreeBufferArray(set, &colvals);
    SCIPsetFreeBufferArray(set, &colinds);
-   SCIPsetFreeBufferArray(set, &rowinds);
 
 #ifdef SCIP_OUTPUT
    SCIP_CALL( SCIPlpiWriteLP(lpi, "relativeInterior.lp") );
