@@ -197,7 +197,11 @@ extern "C" {
  * Defines for handling SCIP return codes
  */
 
+#ifndef NDEBUG
 #define SCIPABORT() assert(FALSE)
+#else
+#define SCIPABORT() exit(1)
+#endif
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
