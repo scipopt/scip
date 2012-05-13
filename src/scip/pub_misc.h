@@ -14,9 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc.h
- * @ingroup PUBLICMETHODS
- * @brief  public miscellaneous methods
+ * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ *
+ * This file contains a bunch of data structures and miscellaneous methods:
+ *
+ * - \ref DataStructures "Data structures"
+ * - \ref MiscellaneousMethods "Miscellaneous Methods"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,8 +40,20 @@
 extern "C" {
 #endif
 
+/** @defgroup DataStructures Data Structures
+ *
+ *  Below you find a list of available data structures
+ *
+ * @{
+ */
+
 /*
  * Priority Queue
+ */
+
+/**@defgroup PriorityQueue Priority Queue
+ *
+ * @{
  */
 
 /** creates priority queue */
@@ -92,11 +108,16 @@ void** SCIPpqueueElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
-
+/**@} */
 
 
 /*
  * Hash Table
+ */
+
+/**@defgroup HashTable Hash Table
+ *
+ *@{
  */
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -204,9 +225,16 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr);
 extern
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
 
+/**@} */
+
 
 /*
  * Hash Map
+ */
+
+/**@defgroup HashMap Hash Map
+ *
+ *@{
  */
 
 /** creates a hash map mapping pointers to pointers */
@@ -324,10 +352,496 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
 );
 
+/**@} */
 
+/*
+ * Stair Map
+ */
+
+/**@defgroup StairMap Stair Map
+ *
+ *@{
+ */
+
+/** creates stair map */
+extern
+SCIP_RETCODE SCIPstairmapCreate(
+   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
+   int                   upperbound,         /**< upper bound of the stairmap */
+   int                   ntimepoints         /**< minimum size to ensure */
+   );
+
+/** frees given stair map */
+extern
+void SCIPstairmapFree(
+   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
+   );
+
+/** resizes the stair map arrays */
+extern
+SCIP_RETCODE SCIPstairmapResize(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
+   int                   ntimepoints         /**< minimum size to ensure */
+   );
+
+/** output of the given stair map */
+extern
+void SCIPstairmapPrint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** insert a stair into stair map; if stair is non-empty the stair map will be updated otherwise nothing happens */
+extern
+void SCIPstairmapInsertStair(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer to store if the stair does not fit due to capacity */
+   );
+
+/** subtracts the height from the stair map during stair time */
+extern
+void SCIPstairmapDeleteStair(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height              /**< height of the stair */
+   );
+
+/** returns the time point at the given position */
+extern
+int SCIPstairmapGetTimepoint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   pos                 /**< position */
+   );
+
+/** returns TRUE if the stair  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
+extern
+SCIP_Bool SCIPstairmapIsFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   timepoint,          /**< time point to start */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   int*                  pos                 /**< pointer to store the earliest position where the stair does not fit */
+   );
+
+/** return the earliest possible starting point within the time interval [lb,ub] for a given stair (given by its height
+ *  and duration)
+ */
+extern
+int SCIPstairmapGetEarliestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest starting time of the given stair */
+   int                   ub,                 /**< latest starting time of the given stair */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+   );
+
+/** return the latest possible starting point within the time interval [lb,ub] for a given stair (given by its height and
+ *  duration)
+ */
+extern
+int SCIPstairmapGetLatestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest possible start point */
+   int                   ub,                 /**< latest possible start point */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+   );
+
+/**@} */
+
+/*
+ * Directed graph
+ */
+
+/**@defgroup DirectedGraph Directed Graph
+ *
+ *@{
+ */
+
+/** creates directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** copies directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCopy(
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   );
+
+/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+extern
+SCIP_RETCODE SCIPdigraphSetSizes(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   );
+
+/** frees given directed graph structure */
+extern
+void SCIPdigraphFree(
+   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
+   );
+
+/** add (directed) arc to the directed graph structure
+ *
+ *  @note if the arc is already contained, it is added a second time
+ */
+extern
+SCIP_RETCODE SCIPdigraphAddArc(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
+   );
+
+/** add (directed) arc and a related data to the directed graph structure
+ *
+ *  @note if the arc is already contained, it is added a second time
+ */
+extern
+SCIP_RETCODE SCIPdigraphAddArcWithData(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode,            /**< start node of the arc */
+   void*                 data                /**< data that should be stored for the arc */
+   );
+
+/** add (directed) arc to the directed graph structure, if it is not contained, yet */
+extern
+SCIP_RETCODE SCIPdigraphAddArcSafe(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode             /**< start node of the arc */
+   );
+
+/** returns the number of nodes of the given digraph */
+extern
+int SCIPdigraphGetNNodes(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the total number of arcs in the given digraph */
+extern
+int SCIPdigraphGetNArcs(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the number of successor nodes */
+extern
+int SCIPdigraphGetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the number of outgoing arcs is returned */
+   );
+
+/** returns the array of indices of the successor nodes; this array must not be changed from outside */
+extern
+int* SCIPdigraphGetSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing arcs is returned */
+   );
+
+/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+ *  array must not be changed from outside
+ */
+extern
+void** SCIPdigraphGetSuccessorsDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
+   );
+
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
+ *        undirected graph.
+ */
+extern
+SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< all components with less nodes are ignored */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
+                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
+   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
+                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
+   );
+
+/** Performes an (almost) topological sort on the undirected components of the directed graph. The undirected
+ *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
+ *
+ *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
+ *        broken, which is the reason for having only almost topologically sorted arrays.
+ */
+extern
+SCIP_RETCODE SCIPdigraphTopoSortComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** returns the number of previously computed undirected components for the given directed graph */
+extern
+int SCIPdigraphGetNComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** Returns the previously computed undirected component of the given number for the given directed graph.
+ *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
+ */
+extern
+void SCIPdigraphGetComponent(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the component to return */
+   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component;
+                                              *   or NULL, if not needed */
+   );
+
+/** frees the component information for the given directed graph */
+extern
+void SCIPdigraphFreeComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   );
+
+/** output of the given directed graph via the given message handler */
+extern
+void SCIPdigraphPrint(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** output of the given directed graph via the given message handler */
+extern
+void SCIPdigraphPrintComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/**@} */
+
+/*
+ * Binary search tree
+ */
+
+/**@defgroup BinarySearchTree Binary Search Tree
+ *
+ *@{
+ */
+
+/** creates a search tree node with sorting value and user data */
+extern
+SCIP_RETCODE SCIPbstnodeCreate(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
+   void*                 key,                /**< sorting key */
+   void*                 dataptr             /**< user node data pointer, or NULL */
+   );
+
+/** frees the search node including the rooted subtree
+ *
+ *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
+ */
+extern
+void SCIPbstnodeFree(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< search node to be freed */
+   );
+
+/** returns whether the search node is a leaf */
+extern
+SCIP_Bool SCIPbstnodeIsLeaf(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the user data pointer stored in that search node */
+extern
+void* SCIPbstnodeGetData(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the key of the search node */
+extern
+void* SCIPbstnodeGetKey(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns the parent which can be NULL if the given node is the root */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetParent(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns left child which can be NULL if the given node is a leaf */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** returns right child which can be NULL if the given node is a leaf */
+extern
+SCIP_BSTNODE* SCIPbstnodeGetRightchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   );
+
+/** sets the give node data
+ *
+ *  @note The old user pointer is not freed.
+ */
+extern
+void SCIPbstnodeSetData(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 dataptr             /**< node user data pointer */
+   );
+
+/** sets the key to the search node
+ *
+ *  @note The old key pointer is not freed.
+ */
+extern
+void SCIPbstnodeSetKey(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 key                 /**< key value */
+   );
+
+/** sets parent node
+ *
+ *  @note The old parent including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetParent(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
+   );
+
+/** sets left child
+ *
+ *  @note The old left child including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetLeftchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         left                /**< new left child, or NULL */
+   );
+
+/** sets right child
+ *
+ *  @note The old right child including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstnodeSetRightchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         right               /**< new right child, or NULL */
+   );
+
+/** creates an binary search tree */
+extern
+SCIP_RETCODE SCIPbstCreate(
+   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
+   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
+   );
+
+/** frees binary search tree
+ *
+ *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
+ */
+extern
+void SCIPbstFree(
+   SCIP_BST**            tree                /**< pointer to binary search tree */
+   );
+
+/** returns whether the binary search tree is empty (has no nodes) */
+extern
+SCIP_Bool SCIPbstIsEmpty(
+   SCIP_BST*             tree                /**< binary search tree */
+   );
+
+/** returns the the root node of the binary search or NULL if the binary search tree is empty */
+extern
+SCIP_BSTNODE* SCIPbstGetRoot(
+   SCIP_BST*             tree                /**< tree to be evaluated */
+   );
+
+/** sets root node
+ *
+ *  @note The old root including the rooted subtree is not delete.
+ */
+extern
+void SCIPbstSetRoot(
+   SCIP_BST*             tree,               /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                /**< new root, or NULL */
+   );
+
+/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method */
+extern
+SCIP_RETCODE SCIPbstInsert(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
+   );
+
+/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
+extern
+SCIP_RETCODE SCIPbstDelete(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
+   );
+
+/** compares to search nodes using the search tree comparer */
+extern
+int SCIPbstComp(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node1,              /**< search node 1 */
+   SCIP_BSTNODE*         node2               /**< search node 2 */
+   );
+
+/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
+ *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
+ *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
+ *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
+ */
+extern
+SCIP_BSTNODE* SCIPbstFindInsertNode(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node to find */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   );
+
+/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
+ *  return. If a search node with the same key exists, the method returns the last search node and sets the found
+ *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
+ *  which is smaller than the given one and sets the found pointer to FALSE.
+ */
+extern
+SCIP_BSTNODE* SCIPbstFindKey(
+   SCIP_BST*             tree,               /**< binary search tree */
+   void*                 key,                /**< key value */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   );
+
+/**@} */
+
+/**@} */
 
 /*
  * Sorting algorithms
+ */
+
+/**@defgroup SortingAlgorithms Sorting Algorithms
+ *
+ * @{
  */
 
 /** default comparer for integers */
@@ -3328,467 +3842,21 @@ SCIP_Bool SCIPsortedvecFindDownLong(
    int*                  pos                 /**< pointer to store position of element */
    );
 
+/**@} */
 
-/*
- * Stair map
- */
-
-/** creates stair map */
-extern
-SCIP_RETCODE SCIPstairmapCreate(
-   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
-   int                   upperbound,         /**< upper bound of the stairmap */
-   int                   ntimepoints         /**< minimum size to ensure */
-   );
-
-/** frees given stair map */
-extern
-void SCIPstairmapFree(
-   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
-   );
-
-/** resizes the stair map arrays */
-extern
-SCIP_RETCODE SCIPstairmapResize(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
-   int                   ntimepoints         /**< minimum size to ensure */
-   );
-
-/** output of the given stair map */
-extern
-void SCIPstairmapPrint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** insert a stair into stair map; if stair is non-empty the stair map will be updated otherwise nothing happens */
-extern
-void SCIPstairmapInsertStair(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the stair  */
-   int                   right,              /**< right side of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer to store if the stair does not fit due to capacity */
-   );
-
-/** subtracts the height from the stair map during stair time */
-extern
-void SCIPstairmapDeleteStair(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the stair  */
-   int                   right,              /**< right side of the stair */
-   int                   height              /**< height of the stair */
-   );
-
-/** returns the time point at the given position */
-extern
-int SCIPstairmapGetTimepoint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   pos                 /**< position */
-   );
-
-/** returns TRUE if the stair  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
-extern
-SCIP_Bool SCIPstairmapIsFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   int*                  pos                 /**< pointer to store the earliest position where the stair does not fit */
-   );
-
-/** return the earliest possible starting point within the time interval [lb,ub] for a given stair (given by its height
- *  and duration)
- */
-extern
-int SCIPstairmapGetEarliestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest starting time of the given stair */
-   int                   ub,                 /**< latest starting time of the given stair */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
-   );
-
-/** return the latest possible starting point within the time interval [lb,ub] for a given stair (given by its height and
- *  duration)
- */
-extern
-int SCIPstairmapGetLatestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
-   );
-
-/*
- * Directed graph
- */
-
-/** creates directed graph structure */
-extern
-SCIP_RETCODE SCIPdigraphCreate(
-   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
-   int                   nnodes              /**< number of nodes */
-   );
-
-/** copies directed graph structure */
-extern
-SCIP_RETCODE SCIPdigraphCopy(
-   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
-   );
-
-/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
-extern
-SCIP_RETCODE SCIPdigraphSetSizes(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int*                  sizes               /**< sizes of the adjacency lists */
-   );
-
-/** frees given directed graph structure */
-extern
-void SCIPdigraphFree(
-   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
-   );
-
-/** add (directed) arc to the directed graph structure
+/**@defgroup MiscellaneousMethods Miscellaneous Methods
  *
- *  @note if the arc is already contained, it is added a second time
+ * Below you find a list of miscellaneous methods grouped by different categories
+ *@{
  */
-extern
-SCIP_RETCODE SCIPdigraphAddArc(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the arc */
-   int                   endnode             /**< start node of the arc */
-   );
-
-/** add (directed) arc and a related data to the directed graph structure
- *
- *  @note if the arc is already contained, it is added a second time
- */
-extern
-SCIP_RETCODE SCIPdigraphAddArcWithData(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the arc */
-   int                   endnode,            /**< start node of the arc */
-   void*                 data                /**< data that should be stored for the arc */
-   );
-
-/** add (directed) arc to the directed graph structure, if it is not contained, yet */
-extern
-SCIP_RETCODE SCIPdigraphAddArcSafe(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the arc */
-   int                   endnode             /**< start node of the arc */
-   );
-
-/** returns the number of nodes of the given digraph */
-extern
-int SCIPdigraphGetNNodes(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-   );
-
-/** returns the total number of arcs in the given digraph */
-extern
-int SCIPdigraphGetNArcs(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-   );
-
-/** returns the number of successor nodes */
-extern
-int SCIPdigraphGetNSuccessors(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the number of outgoing arcs is returned */
-   );
-
-/** returns the array of indices of the successor nodes; this array must not be changed from outside */
-extern
-int* SCIPdigraphGetSuccessors(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the array of outgoing arcs is returned */
-   );
-
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
- *  array must not be changed from outside
- */
-extern
-void** SCIPdigraphGetSuccessorsDatas(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
-   );
-
-/** Compute undirected connected components on the given graph.
- *
- *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
- *        undirected graph.
- */
-extern
-SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   minsize,            /**< all components with less nodes are ignored */
-   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
-                                              *   to store for each node the component to which it belongs
-                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
-                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
-   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
-                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
-   );
-
-/** Performes an (almost) topological sort on the undirected components of the directed graph. The undirected
- *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
- *
- *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
- *        broken, which is the reason for having only almost topologically sorted arrays.
- */
-extern
-SCIP_RETCODE SCIPdigraphTopoSortComponents(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-   );
-
-/** returns the number of previously computed undirected components for the given directed graph */
-extern
-int SCIPdigraphGetNComponents(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-   );
-
-/** Returns the previously computed undirected component of the given number for the given directed graph.
- *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
- */
-extern
-void SCIPdigraphGetComponent(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   compidx,            /**< number of the component to return */
-   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
-   int*                  nnodes              /**< pointer to store the number of nodes in the component;
-                                              *   or NULL, if not needed */
-   );
-
-/** frees the component information for the given directed graph */
-extern
-void SCIPdigraphFreeComponents(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-   );
-
-/** output of the given directed graph via the given message handler */
-extern
-void SCIPdigraphPrint(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** output of the given directed graph via the given message handler */
-extern
-void SCIPdigraphPrintComponents(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/*
- * Binary search tree
- */
-
-/** creates a search tree node with sorting value and user data */
-extern
-SCIP_RETCODE SCIPbstnodeCreate(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
-   void*                 key,                /**< sorting key */
-   void*                 dataptr             /**< user node data pointer, or NULL */
-   );
-
-/** frees the search node including the rooted subtree
- *
- *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
- */
-extern
-void SCIPbstnodeFree(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node                /**< search node to be freed */
-   );
-
-/** returns whether the search node is a leaf */
-extern
-SCIP_Bool SCIPbstnodeIsLeaf(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** returns the user data pointer stored in that search node */
-extern
-void* SCIPbstnodeGetData(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** returns the key of the search node */
-extern
-void* SCIPbstnodeGetKey(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** returns the parent which can be NULL if the given node is the root */
-extern
-SCIP_BSTNODE* SCIPbstnodeGetParent(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** returns left child which can be NULL if the given node is a leaf */
-extern
-SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** returns right child which can be NULL if the given node is a leaf */
-extern
-SCIP_BSTNODE* SCIPbstnodeGetRightchild(
-   SCIP_BSTNODE*         node                /**< search node */
-   );
-
-/** sets the give node data
- *
- *  @note The old user pointer is not freed.
- */
-extern
-void SCIPbstnodeSetData(
-   SCIP_BSTNODE*         node,               /**< search node */
-   void*                 dataptr             /**< node user data pointer */
-   );
-
-/** sets the key to the search node
- *
- *  @note The old key pointer is not freed.
- */
-extern
-void SCIPbstnodeSetKey(
-   SCIP_BSTNODE*         node,               /**< search node */
-   void*                 key                 /**< key value */
-   );
-
-/** sets parent node
- *
- *  @note The old parent including the rooted subtree is not delete.
- */
-extern
-void SCIPbstnodeSetParent(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
-   );
-
-/** sets left child
- *
- *  @note The old left child including the rooted subtree is not delete.
- */
-extern
-void SCIPbstnodeSetLeftchild(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         left                /**< new left child, or NULL */
-   );
-
-/** sets right child
- *
- *  @note The old right child including the rooted subtree is not delete.
- */
-extern
-void SCIPbstnodeSetRightchild(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         right               /**< new right child, or NULL */
-   );
-
-/** creates an binary search tree */
-extern
-SCIP_RETCODE SCIPbstCreate(
-   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
-   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
-   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
-   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
-   );
-
-/** frees binary search tree
- *
- *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
- */
-extern
-void SCIPbstFree(
-   SCIP_BST**            tree                /**< pointer to binary search tree */
-   );
-
-/** returns whether the binary search tree is empty (has no nodes) */
-extern
-SCIP_Bool SCIPbstIsEmpty(
-   SCIP_BST*             tree                /**< binary search tree */
-   );
-
-/** returns the the root node of the binary search or NULL if the binary search tree is empty */
-extern
-SCIP_BSTNODE* SCIPbstGetRoot(
-   SCIP_BST*             tree                /**< tree to be evaluated */
-   );
-
-/** sets root node
- *
- *  @note The old root including the rooted subtree is not delete.
- */
-extern
-void SCIPbstSetRoot(
-   SCIP_BST*             tree,               /**< tree to be evaluated */
-   SCIP_BSTNODE*         root                /**< new root, or NULL */
-   );
-
-/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method */
-extern
-SCIP_RETCODE SCIPbstInsert(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
-   );
-
-/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
-extern
-SCIP_RETCODE SCIPbstDelete(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
-   );
-
-/** compares to search nodes using the search tree comparer */
-extern
-int SCIPbstComp(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node1,              /**< search node 1 */
-   SCIP_BSTNODE*         node2               /**< search node 2 */
-   );
-
-/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
- *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
- *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
- *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
- */
-extern
-SCIP_BSTNODE* SCIPbstFindInsertNode(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node to find */
-   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
-   );
-
-/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
- *  return. If a search node with the same key exists, the method returns the last search node and sets the found
- *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
- *  which is smaller than the given one and sets the found pointer to FALSE.
- */
-extern
-SCIP_BSTNODE* SCIPbstFindKey(
-   SCIP_BST*             tree,               /**< binary search tree */
-   void*                 key,                /**< key value */
-   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
-   );
 
 /*
  * Numerical methods
+ */
+
+/**@defgroup NumericalMethods Numerical Methods
+ *
+ *@{
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
@@ -3884,11 +3952,16 @@ SCIP_Real SCIPrelDiff(
 
 #endif
 
-
+/**@} */
 
 
 /*
  * Random Numbers
+ */
+
+/**@defgroup RandomNumbers Random Numbers
+ *
+ *@{
  */
 
 /** returns a random integer between minrandval and maxrandval */
@@ -3907,11 +3980,16 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-
+/**@} */
 
 
 /*
  * Additional math functions
+ */
+
+/**@defgroup AdditionalMathFunctions Additional math functions
+ *
+ *@{
  */
 
 /** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
@@ -3924,10 +4002,15 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
-
+/**@} */
 
 /*
  * Permutations / Shuffling
+ */
+
+/**@defgroup PermutationsShuffling Permutations Shuffling
+ *
+ *@{
  */
 
 /** swaps the addresses of two pointers */
@@ -3944,7 +4027,7 @@ void SCIPpermuteArray(
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
    int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
-   ); 
+   );
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
@@ -3958,9 +4041,15 @@ SCIP_RETCODE SCIPgetRandomSubset(
    unsigned int          randseed            /**< seed value for random generator */
    );
 
+/**@} */
 
 /*
  * Strings
+ */
+
+/**@defgroup StringMethods String Methods
+ *
+ *@{
  */
 
 /** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
@@ -4032,8 +4121,15 @@ void SCIPstrCopySection(
                                               *   otherwise NULL */
    );
 
+/**@} */
+
 /*
  * File methods
+ */
+
+/**@defgroup FileMethods File Methods
+ *
+ *@{
  */
 
 /** returns, whether the given file exists */
@@ -4051,6 +4147,10 @@ void SCIPsplitFilename(
    char**                extension,          /**< pointer to store extension, or NULL if not needed */
    char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    );
+
+/**@} */
+
+/**@} */
 
 #ifdef __cplusplus
 }
