@@ -200,7 +200,7 @@ extern "C" {
 #ifndef NDEBUG
 #define SCIPABORT() assert(FALSE)
 #else
-#define SCIPABORT() exit(1)
+#define SCIPABORT() abort()
 #endif
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
