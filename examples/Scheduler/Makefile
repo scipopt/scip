@@ -38,6 +38,7 @@ CHECKDIR	=	check
 MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
 			heur_listscheduling.o \
+			reader_sch.o \
 			reader_sm.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))

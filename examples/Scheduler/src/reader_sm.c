@@ -685,6 +685,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
    /* compute a feasible upper bound on the makespan */
    ubmakespan = computeUbmakespan(durations, njobs);
+   ubmakespan *= 100;
 
    /* allocate buffer for jobs and precedence constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &jobs, njobs) );
@@ -747,10 +748,12 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, successors[i]);
 
-            if( distances != NULL && distances[i] != NULL )
-               distance = (int)(size_t)distances[i];
-            else
+            if( distances == NULL )
                distance = durations[j];
+            else if ( distances[i] == NULL )
+               distance = 0;
+            else
+               distance = (int)(size_t)distances[i];
 
             SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, succvar, -1.0,
                   -SCIPinfinity(scip), -distance,
@@ -775,7 +778,6 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, njobs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consdemands, njobs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consdurations, njobs) );
-
 
    /* create resource constraints */
    for( r = 0; r < nresources; ++r )

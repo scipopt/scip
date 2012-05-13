@@ -26,6 +26,7 @@
 #include "scip/scipshell.h"
 
 #include "heur_listscheduling.h"
+#include "reader_sch.h"
 #include "reader_sm.h"
 
 /** runs the shell */
@@ -50,6 +51,7 @@ SCIP_RETCODE runShell(
 
    /* include problem reader */
    SCIP_CALL( SCIPincludeReaderSm(scip) );
+   SCIP_CALL( SCIPincludeReaderSch(scip) );
 
    /* include problem specific heuristic */
    SCIP_CALL( SCIPincludeHeurListScheduling(scip) );
