@@ -34,7 +34,7 @@
 #define PROP_DESC                       "generalized variable bounds propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_BEFORELP
 #define PROP_PRIORITY                     -10      /**< propagator priority */
-#define PROP_FREQ                          -1      /**< propagator frequency */
+#define PROP_FREQ                           1      /**< propagator frequency */
 #define PROP_DELAY                      FALSE      /**< should propagation method be delayed, if other propagators
                                                     *   found reductions? */
 #define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after

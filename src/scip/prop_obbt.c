@@ -44,7 +44,7 @@
 #define PROP_DESC                       "optimality-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY                -1000000      /**< propagator priority */
-#define PROP_FREQ                          -1      /**< propagator frequency */
+#define PROP_FREQ                           0      /**< propagator frequency */
 #define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
                                                     *   found reductions? */
 #define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after
