@@ -1348,9 +1348,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "times") == 0 ||
       strcmp(exprname, "divide") == 0 ||
       strcmp(exprname, "power") == 0 ||
-      strcmp(exprname, "log") == 0 ||
-      strcmp(exprname, "min") == 0 ||
-      strcmp(exprname, "max") == 0
+      strcmp(exprname, "log") == 0
      )
    {
       SCIP_EXPR* arg1;
@@ -1502,6 +1500,54 @@ SCIP_RETCODE readExpression(
       }
 
       SCIPfreeBufferArray(scip, &args);
+
+      return SCIP_OKAY;
+   }
+
+   if( strcmp(exprname, "min") == 0 || strcmp(exprname, "max") == 0 )
+   {
+      const XML_NODE* argnode;
+      SCIP_EXPROP exprop;
+      SCIP_EXPR* arg2;
+
+      if( xmlFirstChild(node) == NULL )
+      {
+         SCIPerrorMessage("expected at least one child in <%s> node\n", exprname);
+         *doingfine = FALSE;
+         return SCIP_OKAY;
+      }
+
+      argnode = xmlFirstChild(node);
+      SCIP_CALL( readExpression(scip, expr, argnode, exprvaridx, nexprvars, nvars, doingfine) );
+      if( !*doingfine )
+      {
+         assert(*expr == NULL);
+         return SCIP_OKAY;
+      }
+      arg2 = NULL;
+
+      exprop = (strcmp(exprname, "min") == 0) ? SCIP_EXPR_MIN : SCIP_EXPR_MAX;
+
+      for( argnode = xmlNextSibl(argnode); argnode != NULL; argnode = xmlNextSibl(argnode) )
+      {
+         assert(arg2 == NULL);
+         SCIP_CALL( readExpression(scip, &arg2, argnode, exprvaridx, nexprvars, nvars, doingfine) );
+         if( !*doingfine )
+         {
+            assert(arg2 == NULL);
+            break;
+         }
+
+         assert(*expr != NULL);
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, exprop, *expr, arg2) );
+         arg2 = NULL;
+      }
+
+      if( !*doingfine )
+      {
+         SCIPexprFreeDeep(SCIPblkmem(scip), expr);
+      }
+      assert(arg2 == NULL);
 
       return SCIP_OKAY;
    }
