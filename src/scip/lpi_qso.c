@@ -2770,7 +2770,7 @@ SCIP_RETCODE SCIPlpiSetState(
 {  /*lint --e{715} */
    char* icstat = 0;
    char* irstat = 0;
-   register int i;
+   int i;
    int ncols;
    int nrows;
    int rval = 0;
@@ -2886,7 +2886,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for QSopt */
-   SCIPwarningMessage(lpi->messagehdlr, "QSopt interface does not implement SCIPlpiClearState()\n");
+   SCIPerrorMessage("QSopt interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }
