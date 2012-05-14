@@ -207,6 +207,7 @@ features:
   can be accessed via SCIPpresolGetNCalls() and SCIP<prop/conshdlr>getNPresolCalls()
 - new methods SCIPhashGetKeyStandard() which returns the element itself as the key, SCIPhashKeyEqPtr(),
   SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
+- correct initialization of steepest edge weights with SoPlex 1.6.0.4
 
 SCIP version 2.1.2
 ==================

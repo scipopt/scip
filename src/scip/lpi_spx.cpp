@@ -169,6 +169,7 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
+   SPxSteepPR            m_price_steep_ex;   /**< steepest edge with exact weight initialization */
    SPxParMultPR          m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR            m_price_devex;      /**< devex pricer */
 #ifdef WITH_BOUNDFLIPPING
@@ -207,6 +208,9 @@ public:
       const char*        probname = NULL     /**< name of problem */
       )
       : SPxSolver(LEAVE, COLUMN),
+#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 3)
+        m_price_steep_ex(SPxSteepPR::EXACT),
+#endif
         m_probname(0),
         m_fromscratch(false),
         m_scaling(false),
@@ -280,7 +284,7 @@ public:
 
    void setSteepPricer()
    {
-      setPricer(&m_price_steep);
+      setPricer(&m_price_steep_ex);
       m_autopricing = false;
    }
 
@@ -577,7 +581,7 @@ public:
       if( m_autopricing && m_stat == SPxSolver::ABORT_ITER && (m_itlim < 0 || m_itlim - m_itused > 0) )
       {
          setTerminationIter(m_itlim - m_itused);
-         setPricer(&m_price_steep);
+         setPricer(&m_price_steep_ex);
 
          trySolve(printwarning);
 
