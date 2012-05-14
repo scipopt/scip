@@ -90,7 +90,7 @@ void xprs_error(
 
 #define CHECK_ZEROLPIE(x) CHECK_ZEROE(lpi->xprslp, x)
 #define CHECK_ZEROLPIW(x) CHECK_ZEROW(lpi->xprslp, lpi->messagehdlr, x)
-#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, (*lpi)->messagehdlr, x)
+#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, x)
 #define CHECK_ZERO CHECK_ZEROLPIE
 
 #define ABORT_ZERO(x) { int _restat_;                                   \
