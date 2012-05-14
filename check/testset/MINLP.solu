@@ -1,8 +1,49 @@
+=best= 4stufen  116329.6706
 =opt= alan           2.9250
+=opt= batch     285506.5082
+=opt= batchdes  167427.6571
+=best= beuster  116347.9503
+=best= blendgap -19134.6103
+=opt= cecil_13 -115656.5280
+=best= chp_partload 23.5537
+=best= contvar  809149.8272
+=opt=  csched1  -30639.2578
+=opt=  csched1a -30430.1770
+=best= csched2  -166101.9964
+=best= csched2a -165398.7013
+=opt= deb10        209.4278
+=best= deb6        201.7393
+=best= deb7        116.5846
+=best= deb8        116.5846
+=best= deb9        116.5846
+=best= detf1        12.1613
+=best= dosemin2d   173.9806
+=best= dosemin3d     1.3240
 =opt= du-opt5        8.0737
 =opt= du-opt         3.5563
+=best= eg_all_s      7.6578
+=best= eg_disc_s     5.7605
+=best= eg_disc2_s    5.6421
+=best= eg_int_s      6.4531
 =opt= elf            0.191666657
+=opt= eniplac  -132117.0830
+=opt= enpro48   187277.2594
+=opt= enpro48pb 187277.2594
+=opt= enpro56   263428.3010
+=opt= enpro56pb 263428.3010
+=opt= ex1221         7.6672
+=opt= ex1222         1.0765
+=opt= ex1223         4.5796
 =opt= ex1223a        4.5796
+=opt= ex1223b        4.5796
+=opt= ex1224        -0.9435
+=opt= ex1225        31.0000
+=opt= ex1226       -17.0000
+=opt= ex1233    155010.6713
+=opt= ex1243     83402.5064
+=opt= ex1244     82042.9052
+=opt= ex1252    128893.7410
+=opt= ex1252a   128893.7410
 =opt= ex1263        19.6
 =opt= ex1263a       19.6
 =opt= ex1264         8.6
@@ -11,19 +52,72 @@
 =opt= ex1265a       10.3
 =opt= ex1266        16.3
 =opt= ex1266a       16.3
+=opt= ex3           68.0097
+=opt= ex3pb         68.0097
 =opt= ex4           -8.0641
+=opt= fac1   160912610
+=opt= fac2   331837500
 =opt= fac3    31982310
+=opt= feedtray     -13.4060
 =opt= feedtray2      0.0
 =opt= fuel        8566.1190
+=best= fuzzy        -0.5377
+=opt= fo7_2         17.7493
+=opt= fo7           20.7298
+=opt= fo8           22.3819
+=opt= fo9           23.4643
+=opt= fo7_ar25_1    23.0936
+=opt= fo7_ar2_1     24.8398
+=opt= fo7_ar3_1     22.5175
+=opt= fo7_ar4_1     20.7298
+=opt= fo7_ar5_1     17.7493
+=opt= fo8_ar25_1    28.0452
+=opt= fo8_ar2_1     30.3406
+=opt= fo8_ar3_1     23.9101
+=opt= fo8_ar4_1     22.3819
+=opt= fo8_ar5_1     22.3819
+=opt= fo9_ar25_1    32.1864
+=opt= fo9_ar2_1     32.6250
+=opt= fo9_ar3_1     24.8155
+=opt= fo9_ar4_1     23.4643
+=opt= fo9_ar5_1     23.4643
+=best= gasnet  6999381.5619
+=opt= gastrans      89.0858
 =opt= gbd            2.2000
+=opt= ghg_1veh       7.7816
+=best= ghg_2veh      7.7709
+=best= ghg_3veh      7.7543
+=opt= gear           0.0000
+=opt= gear2          0.0000
+=opt= gear3          0.0000
+=opt= gear4          1.6434
+=best= hda       -5964.5341
+=opt= johnall     -224.7302
+=opt= gkocis        -1.9231
 =best= lop97ic    4041.831512
 =opt= lop97icx    4099.0600
+=opt= m3            37.8000
+=opt= m6            82.2569
+=opt= m7           106.7569
+=opt= m7_ar25_1    143.5850
+=opt= m7_ar2_1     190.2350
+=opt= m7_ar3_1     143.5850
+=opt= m7_ar4_1     106.7569
+=opt= m7_ar5_1     106.4600
+=best= mbtd          4.8333
 =opt= meanvarx      14.3692321148754
 =opt= meanvarxsc    14.3692
+=opt= minlphix     316.6927
+=opt= hmittelman    13.0000
 =opt= netmod_dol1   -0.5600
 =opt= netmod_dol2   -0.5600
 =opt= netmod_kar1   -0.419789612097304
 =opt= netmod_kar2   -0.419789612097304
+=opt= no7_ar25_1   107.8153
+=opt= no7_ar2_1    107.8153
+=opt= no7_ar3_1    107.8153
+=opt= no7_ar4_1     98.5184
+=opt= no7_ar5_1     90.6227
 =opt= nous1          1.5670693
 =opt= nous2          0.625967407
 =unkn= nuclear104
@@ -47,20 +141,44 @@
 =best= nuclearvd    -1.0344
 =best= nuclearve    -1.0351
 =best= nuclearvf    -1.0194
-=opt=  nvs03        16.0000 
-=opt=  nvs04         0.7200 
-=opt=  nvs07         4.0000 
-=opt=  nvs10      -310.8000 
-=opt=  nvs11      -431.0000 
-=opt=  nvs12      -481.2000 
-=opt=  nvs13      -585.2000 
-=opt=  nvs14    -40358.1548 
-=opt=  nvs15         1.0000 
-=opt=  nvs17     -1100.4000 
-=opt=  nvs18      -778.4000 
-=opt=  nvs19     -1098.4000 
-=opt=  nvs23     -1125.2000 
-=opt=  nvs24     -1033.2000 
+=opt= nvs01         12.4697
+=opt= nvs02          5.96418452
+=opt= nvs03         16.0000
+=opt= nvs04          0.7200
+=opt= nvs05          5.4709
+=opt= nvs06          1.7703
+=opt= nvs07          4.0000
+=opt= nvs08         23.4497
+=opt= nvs09        -43.1343
+=opt= nvs10       -310.8000
+=opt= nvs11       -431.0000
+=opt= nvs12       -481.2000
+=opt= nvs13       -585.2000
+=opt= nvs14     -40358.1548
+=opt= nvs15          1.0000
+=opt= nvs16          0.7031
+=opt= nvs17      -1100.4000
+=opt= nvs18       -778.4000
+=opt= nvs19      -1098.4000
+=opt= nvs20        230.9222
+=opt= nvs21         -5.6848
+=opt= nvs22          6.0582
+=opt= nvs23      -1125.2000
+=opt= nvs24      -1033.2000
+=opt= o7_2         116.9459
+=opt= o7           131.6531
+=opt= o7_ar25_1    140.4120
+=opt= o7_ar2_1     140.4120
+=opt= o7_ar3_1     137.9318
+=opt= o7_ar4_1     131.6531
+=opt= o7_ar5_1     116.9458
+=opt= o8_ar4_1     243.0707
+=opt= o9_ar4_1     236.1385
+=opt= oaer          -1.9231
+=opt= oil           -0.9325
+=opt= oil2          -0.7333
+=opt= ortez      -9532.0391
+=opt= parallel     924.2956
 =best= pb302035 3379359.0000
 =best= pb302055 3599602.0000
 =best= pb302075 4050938.0000
@@ -71,18 +189,35 @@
 =best= pb351595 6670264.0000
 =opt= prob02    112235.0000
 =opt= prob03        10.0000
+=opt= prob10         3.4455
+=opt= procsel       -1.9231
 =opt= product    -2142.9481
 =opt= product2   -2102.3893
+=opt= pump      128893.7410
 =best= qap      388214.0000
 =best= qapw     388214.0000
+=opt= ravem     269590.2193
+=opt= ravempb   269590.2193
+=opt= risk2b       -55.8761
+=opt= risk2bpb     -55.8761
+=best= saa_2        12.6922529
 =opt= sep1        -510.0810
 =best= space25     484.3286
 =best= space25a    484.3286
 =best= space960 7610305.2458
 =opt= spectra2      13.9783
+=opt= spring         0.846245427
 =opt= st_e13         2.0000
+=opt= st_e14         4.5796
+=opt= st_e15         7.6672
 =opt= st_e27         2.0000
+=opt= st_e29        -0.9435
 =opt= st_e31        -2.0000
+=opt= st_e32        -1.4304
+=opt= st_e35     64868.0768
+=opt= st_e36      -246.0000
+=opt= st_e38      7197.7271
+=opt= st_e40        30.4142
 =opt= st_miqp1     281.0000
 =opt= st_miqp2       2.0000
 =opt= st_miqp3      -6.0000
@@ -98,6 +233,15 @@
 =opt= st_testgr1   -12.8116
 =opt= st_testgr3   -20.5900
 =opt= st_testph4   -80.5000
+=opt= stockcycle 119948.6883
+=best= super1        9.5079
+=best= super2        4.9345
+=best= super3       12.6284
+=best= super3t      -0.6689
+=opt= synheat   154997.3349
+=opt= synthes1       6.0098
+=opt= synthes2      73.0353
+=opt= synthes3      68.0097
 =opt= tln2           5.3000
 =opt= tln4           8.3000
 =opt= tln5          10.3000
@@ -105,9 +249,28 @@
 =opt= tln7          15.0000
 =opt= tln12         90.5000
 =opt= tloss         16.3
+=best= tls12       112.8000
+=opt= tls2           5.3000
+=opt= tls4           8.3000
+=opt= tls5          10.3000
+=best= tls6         15.3000
+=best= tls7         15.5000
 =opt= tltr          48.0666666667
+=best= uselinear -1050.3359
 =opt= util         999.578750235364
+=best= var_con10   444.2140
+=best= var_con5    278.1449
 =opt= waste        598.9192
+=best= water3      907.0165
+=best= water4      910.8822
+=best= waterful2  1012.6093
+=best= waters      913.7757
+=best= watersbp    913.7757
+=best= watersym1   913.7757
+=best= watersym2   940.894499
+=best= waterx      909.0401
+=best= waterz      907.0170
+=opt= windfac        0.2545
 
 =opt= clay0203m    41572.982
 =opt= clay0204m    6545.0
@@ -1014,18 +1177,18 @@
 =opt= 19_box_topo_orig                  0
 =opt= 1_box_topo_orig                   0
 =opt= 20_box_topo_orig             23.112
-=inf= 21_box_topo_orig  
+=inf= 21_box_topo_orig
 =opt= 22_box_topo_orig             25.824
-=inf= 23_box_topo_orig  
+=inf= 23_box_topo_orig
 =opt= 24_box_topo_orig             130.43
 =opt= 25_box_topo_orig          308.60298
 =opt= 26_box_topo_orig             130.43
 =opt= 27_box_topo_orig          308.60298
 =best= 28_box_topo_orig             322.56
-=inf= 29_box_topo_orig  
+=inf= 29_box_topo_orig
 =opt= 2_box_topo_orig                   0
 =best= 30_box_topo_orig           211.0284
-=inf= 31_box_topo_orig  
+=inf= 31_box_topo_orig
 =best= 32_box_topo_orig             192.13
 =opt= 33_box_topo_orig         217.090367
 =best= 34_box_topo_orig             255.91
@@ -1064,13 +1227,13 @@
 =best= topo_orig_00012            406.1616
 =best= topo_orig_00014            630.3672
 =best= topo_orig_00015          1512.35099
-=inf= topo_orig_00016   
+=inf= topo_orig_00016
 =opt= topo_orig_00017                1000
-=inf= topo_orig_00018   
+=inf= topo_orig_00018
 =opt= topo_orig_00019                2000
-=inf= topo_orig_00020   
+=inf= topo_orig_00020
 =opt= topo_orig_00021          2500.36939
-=inf= topo_orig_00022   
+=inf= topo_orig_00022
 =best= topo_orig_00023          8777.19582
 =best= topo_orig_00024            317.3764
 =best= topo_orig_00025          1271.13041
@@ -1080,11 +1243,11 @@
 =opt= topo_orig_00035          1501.38926
 =best= topo_orig_00037          3357.99508
 =best= topo_orig_00039           4838.6186
-=inf= topo_orig_00040   
+=inf= topo_orig_00040
 =opt= topo_orig_00041           1183.9344
-=inf= topo_orig_00042   
+=inf= topo_orig_00042
 =opt= topo_orig_00043          2477.76366
-=inf= topo_orig_00044   
+=inf= topo_orig_00044
 =best= topo_orig_00045          4684.46054
-=inf= topo_orig_00046   
+=inf= topo_orig_00046
 =best= topo_orig_00047          11789.7215
