@@ -1698,7 +1698,7 @@ MSKrescodee filterTRMrescode(
       *termcode = res;
       if (res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM)
       {
-         SCIPmessagePrintWarning(messages, "Return code %d in [%d]\n", res, optimizecount);
+         SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
 
 #if ASSERT_ON_WARNING
          assert(0);
@@ -1809,13 +1809,13 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
 
-      MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+      MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
    }
 
 #if FORCE_MOSEK_SUMMARY
@@ -1868,7 +1868,7 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-      SCIPmessagePrintWarning("lpi->messagehdlr, Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
       
       if (lpi->termcode == MSK_RES_OK)
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
@@ -2180,7 +2180,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    }
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
