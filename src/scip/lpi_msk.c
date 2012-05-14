@@ -165,7 +165,7 @@ static SCIP_RETCODE scip_checkdata(
    int gotbasicsol;
    MSKboundkeye* tbkc;
    MSKboundkeye* tbkx;
-   MSKstakeye*tskc; 
+   MSKstakeye *tskc;
    MSKstakeye* tskx;
    double* tblc;
    double* tbuc;
@@ -3787,15 +3787,15 @@ SCIP_RETCODE SCIPlpiSetState(
       {
          /* if lower bound is +/- infinity -> try upper bound */
          if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
-            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+            lpi->skx[i] = MSK_SK_SUPBAS;  /* variable is free (super basic) */
          else
-            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+            lpi->skx[i] = MSK_SK_UPR;     /* use finite upper bound */
       }
       else
-         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+         lpi->skx[i] = MSK_SK_LOW;        /* use finite lower bound */
    }
    for (i = lpistate->nrows; i < nrows; ++i)
-      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
+      lpi->skc[i] = MSK_SK_BAS;
 
    /* load basis information into MOSEK */
    SCIP_CALL( setbase(lpi) );
