@@ -355,103 +355,105 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 /**@} */
 
 /*
- * Stair Map
+ * Resource Profile
  */
 
-/**@defgroup StairMap Stair Map
+/**@defgroup ResourceProfile Resource Profile
  *
  *@{
  */
 
-/** creates stair map */
+/** creates resource profile */
 extern
-SCIP_RETCODE SCIPstairmapCreate(
-   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
-   int                   upperbound,         /**< upper bound of the stairmap */
+SCIP_RETCODE SCIPprofileCreate(
+   SCIP_PROFILE**        profile,            /**< pointer to store the created resource profile */
+   int                   upperbound,         /**< upper bound of the profile */
    int                   ntimepoints         /**< minimum size to ensure */
    );
 
-/** frees given stair map */
+/** frees given resource profile */
 extern
-void SCIPstairmapFree(
-   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
+void SCIPprofileFree(
+   SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    );
 
-/** resizes the stair map arrays */
+/** resizes the resource profile arrays */
 extern
-SCIP_RETCODE SCIPstairmapResize(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
+SCIP_RETCODE SCIPprofileResize(
+   SCIP_PROFILE*         profile,            /**< resource profile to resize */
    int                   ntimepoints         /**< minimum size to ensure */
    );
 
-/** output of the given stair map */
+/** output of the given resource profile */
 extern
-void SCIPstairmapPrint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+void SCIPprofilePrint(
+   SCIP_PROFILE*         profile,            /**< resource profile to output */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** insert a stair into stair map; if stair is non-empty the stair map will be updated otherwise nothing happens */
+/** insert a core into resource profile; if the core is non-empty the resource profile will be updated otherwise nothing
+ *  happens
+ */
 extern
-void SCIPstairmapInsertStair(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the stair  */
-   int                   right,              /**< right side of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer to store if the stair does not fit due to capacity */
+void SCIPprofileInsertCore(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   left,               /**< left side of the core  */
+   int                   right,              /**< right side of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    );
 
-/** subtracts the height from the stair map during stair time */
+/** subtracts the height from the resource profile during core time */
 extern
-void SCIPstairmapDeleteStair(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   left,               /**< left side of the stair  */
-   int                   right,              /**< right side of the stair */
-   int                   height              /**< height of the stair */
+void SCIPprofileDeleteCore(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   left,               /**< left side of the core  */
+   int                   right,              /**< right side of the core */
+   int                   height              /**< height of the core */
    );
 
 /** returns the time point at the given position */
 extern
-int SCIPstairmapGetTimepoint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+int SCIPprofileGetTimepoint(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   pos                 /**< position */
    );
 
-/** returns TRUE if the stair  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
+/** returns TRUE if the core (given by its height and during) can be inserted at the given time point; otherwise FALSE */
 extern
-SCIP_Bool SCIPstairmapIsFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+SCIP_Bool SCIPprofileIsFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   int*                  pos                 /**< pointer to store the earliest position where the stair does not fit */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
    );
 
-/** return the earliest possible starting point within the time interval [lb,ub] for a given stair (given by its height
+/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
  *  and duration)
  */
 extern
-int SCIPstairmapGetEarliestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest starting time of the given stair */
-   int                   ub,                 /**< latest starting time of the given stair */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+int SCIPprofileGetEarliestFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   lb,                 /**< earliest starting time of the given core */
+   int                   ub,                 /**< latest starting time of the given core */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    );
 
-/** return the latest possible starting point within the time interval [lb,ub] for a given stair (given by its height and
+/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
  *  duration)
  */
 extern
-int SCIPstairmapGetLatestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+int SCIPprofileGetLatestFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   lb,                 /**< earliest possible start point */
    int                   ub,                 /**< latest possible start point */
-   int                   duration,           /**< duration of the stair */
-   int                   height,             /**< height of the stair */
-   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+   int                   duration,           /**< duration of the core */
+   int                   height,             /**< height of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    );
 
 /**@} */

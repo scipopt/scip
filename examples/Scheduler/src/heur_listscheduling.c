@@ -243,7 +243,7 @@ SCIP_RETCODE constructSolution(
 static
 void profilesInsertJob(
    SCIP*                 scip,
-   SCIP_STAIRMAP**       profiles,           /**< array of resource profiles */
+   SCIP_PROFILE**       profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
    int                   starttime,          /**< start time of the job */
    int                   duration,           /**< duration of the job */
@@ -257,7 +257,7 @@ void profilesInsertJob(
    for( p = 0; p < nprofiles; ++p )
    {
       /* add job to resource profile */
-      SCIPstairmapInsertStair(profiles[p], starttime, starttime + duration, demands[p], &infeasible);
+      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &infeasible);
       assert(!infeasible);
    }
 }
@@ -266,7 +266,7 @@ void profilesInsertJob(
 /** retruns for the given job (duration and demands) the earliest feasible start time w.r.t. all profiles */
 static
 int profilesFindEarliestFeasibleStart(
-   SCIP_STAIRMAP**       profiles,           /**< array of resource profiles */
+   SCIP_PROFILE**       profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
    int                   est,                /**< earliest start time */
    int                   lst,                /**< latest start time */
@@ -290,7 +290,7 @@ int profilesFindEarliestFeasibleStart(
          assert(est >= 0);
 
          /* get next possible time to start from the current earliest starting time */
-         start = SCIPstairmapGetEarliestFeasibleStart(profiles[r], est, lst, duration, demands[r], infeasible);
+         start = SCIPprofileGetEarliestFeasibleStart(profiles[r], est, lst, duration, demands[r], infeasible);
 
          /* stop if job cannot be inserted */
          if( *infeasible )
@@ -315,7 +315,7 @@ int profilesFindEarliestFeasibleStart(
 /** retruns for the given job (duration and demands) the earliest feasible start time w.r.t. all profiles */
 static
 int profilesFindLatestFeasibleStart(
-   SCIP_STAIRMAP**       profiles,           /**< array of resource profiles */
+   SCIP_PROFILE**       profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
    int                   lst,                /**< latest start time */
    int                   duration,           /**< duration of the job */
@@ -334,7 +334,7 @@ int profilesFindLatestFeasibleStart(
       for( r = 0; r < nprofiles; ++r )
       {
          /* get next latest possible time to start from */
-         start = SCIPstairmapGetLatestFeasibleStart(profiles[r], 0, lst, duration, demands[r], infeasible);
+         start = SCIPprofileGetLatestFeasibleStart(profiles[r], 0, lst, duration, demands[r], infeasible);
 
          if( *infeasible )
          {
@@ -457,7 +457,7 @@ SCIP_RETCODE performForwardScheduling(
    SCIP_Bool*            infeasible          /**< pointer to store if an infeasibility was detected */
    )
 {
-   SCIP_STAIRMAP** profiles;
+   SCIP_PROFILE** profiles;
    int nresources;
    int njobs;
    int j;
@@ -475,7 +475,7 @@ SCIP_RETCODE performForwardScheduling(
    for( j = 0; j < nresources; ++j )
    {
       assert(heurdata->capacities[j] > 0);
-      SCIP_CALL( SCIPstairmapCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
+      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
    }
 
    for( j = 0; j < njobs && !(*infeasible); ++j )
@@ -515,7 +515,7 @@ SCIP_RETCODE performForwardScheduling(
    /* free resource profiles */
    for( j = 0; j < nresources; ++j )
    {
-      SCIPstairmapFree(&profiles[j]);
+      SCIPprofileFree(&profiles[j]);
    }
    SCIPfreeBufferArray(scip, &profiles);
 
@@ -536,7 +536,7 @@ SCIP_RETCODE performBackwardScheduling(
    SCIP_Bool*            infeasible          /**< pointer to store if an infeasibility was detected */
    )
 {
-   SCIP_STAIRMAP** profiles;
+   SCIP_PROFILE** profiles;
    int* durations;
    int* demands;
    int duration;
@@ -556,7 +556,7 @@ SCIP_RETCODE performBackwardScheduling(
    for( j = 0; j < nresources; ++j )
    {
       assert(heurdata->capacities[j] > 0);
-      SCIP_CALL( SCIPstairmapCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
+      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
    }
 
    for( j = 0; j < njobs; ++j )
@@ -590,7 +590,7 @@ SCIP_RETCODE performBackwardScheduling(
    /* free resource profiles */
    for( j = 0; j < nresources; ++j )
    {
-      SCIPstairmapFree(&profiles[j]);
+      SCIPprofileFree(&profiles[j]);
    }
    SCIPfreeBufferArray(scip, &profiles);
 

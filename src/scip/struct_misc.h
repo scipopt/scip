@@ -129,8 +129,8 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
-/** stair map */
-struct SCIP_Stairmap
+/** resource profile */
+struct SCIP_Profile
 {
    int*                  timepoints;         /**< time point array */
    int*                  freecapacities;     /**< array holding corresponding available capacity */

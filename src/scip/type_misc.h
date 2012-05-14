@@ -66,11 +66,11 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
 
-/** Stair map data structure
+/** Resource profile data structure
  *
- *  - \ref StairMap "List of all available methods"
+ *  - \ref ResourceProfile "List of all available methods"
  */
-typedef struct SCIP_Stairmap SCIP_STAIRMAP;
+typedef struct SCIP_Profile SCIP_PROFILE;
 
 /** Directed graph data structure (stored as adjacency list)
  *
