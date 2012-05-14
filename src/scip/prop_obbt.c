@@ -29,7 +29,7 @@
 /**@todo add first filter round in direction of objective function */
 /**@todo implement conflict resolving callback by calling public method of genvbounds propagator, since the reason are
  *       exactly the variable bounds with nonnegative reduced costs stored in the right-hand side of the generated
- *       generalized variable bound
+ *       generalized variable bound (however, this only makes sense if we run locally)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

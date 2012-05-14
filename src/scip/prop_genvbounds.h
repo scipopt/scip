@@ -17,6 +17,7 @@
  * @ingroup PROPAGATORS
  * @brief   generalized variable bounds propagator
  * @author  Stefan Weltge
+ * @author  Ambros Gleixner
  *
  *  A generalized variable bound is a linear inequality of the form
  *
