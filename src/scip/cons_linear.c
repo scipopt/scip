@@ -9808,8 +9808,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
-         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          * correctly 
+         /* an extra blank line should be printed separately since the buffer message handler only handles up to one
+          * line correctly
           */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
