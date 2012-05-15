@@ -144,6 +144,7 @@ SCIP_RETCODE readCnf(
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
+   SCIP_Bool useobj;
    int linecount;
    int clauselen;
    int clausenum;
@@ -194,6 +195,7 @@ SCIP_RETCODE readCnf(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/useobj", &useobj) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
@@ -331,10 +333,13 @@ SCIP_RETCODE readCnf(
  TERMINATE:
    /* change objective values and release variables */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-   for( v = 0; v < nvars; ++v )
+   if( useobj )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
+      }
    }
 
    /* free temporary memory */
@@ -439,6 +444,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/cnfreader/useobj", "should an artificial objective, depending on the number of clauses a variable appears in, be used?",
          NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;

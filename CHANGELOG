@@ -191,6 +191,8 @@ parameters:
 - new parameter <presolving/gateextraction/sorting> by default is set to 1, that parameter determines if you want to try
   to extract big-gates(-1) or small-gates(1) at first by ordering bigger/smaller logicor constraint up front, or use
   them as they are (0)
+- new parameter <reading/cnfreader/useobj> to state whether an artificial objective, depending on the number of clauses
+  a variable appears in, should be used, by default set to FALSE, old default behavior of reader corresponds to TRUE
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -212,6 +214,7 @@ features:
 - new methods SCIPhashGetKeyStandard() which returns the element itself as the key, SCIPhashKeyEqPtr(),
   SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
 - correct initialization of steepest edge weights with SoPlex 1.6.0.4
+- CNF reader now creates feasibility instances per default, usage of an objective has to be set by a parameter
 
 SCIP version 2.1.2
 ==================
