@@ -22178,7 +22178,7 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          - %10d          -          - %10d          -          -          -          -          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          -      - %10d          -          - %10d          -          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
