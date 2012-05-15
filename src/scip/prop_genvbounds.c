@@ -452,7 +452,6 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
    )
 {
-   SCIP_BOUNDTYPE boundtype;
    int nvars;
    int i;
 
@@ -460,9 +459,6 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    assert(scip != NULL);
    assert(genvbound != NULL);
-
-   boundtype = genvbound->boundtype;
-   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
    nvars = genvbound->ncoefs;
    assert(nvars > 0); /* if only the primal bound participates in the propagation, it is globally valid and should not be analyzed */
