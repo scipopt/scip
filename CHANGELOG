@@ -215,6 +215,7 @@ features:
   SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
 - correct initialization of steepest edge weights with SoPlex 1.6.0.4
 - CNF reader now creates feasibility instances per default, usage of an objective has to be set by a parameter
+- make test now also checks instances in wbo, cnf, osil, and fzn format
 
 SCIP version 2.1.2
 ==================

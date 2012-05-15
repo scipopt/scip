@@ -97,11 +97,16 @@ $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
 $NAME/check/instances/Indicator/*.lp \
+$NAME/check/instances/MIP/*.fzn \
 $NAME/check/instances/MIP/*.mps \
+$NAME/check/instances/MIP/*.osil \
 $NAME/check/instances/MIQCP/*.lp \
 $NAME/check/instances/MIQCP/*.mps \
+$NAME/check/instances/MIQCP/*.osil \
 $NAME/check/instances/MIQCP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
+$NAME/check/instances/PseudoBoolean/*.wbo \
+$NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps
