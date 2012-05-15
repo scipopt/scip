@@ -140,6 +140,9 @@ plugins:
   gate-extractor is also able to detect logicor constraints and set-packing/-partitioning constraints with the same
   variables, to upgrade these both constraints to a set-partitioning constraint
 - added reader for MI(NL)Ps in OSiL (Optimization Services Instance Language) format
+- added new presolver components, that searches for independent components in the problem structure and solves
+  these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
+- added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
@@ -174,7 +177,7 @@ parameters:
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter numerics/recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
-- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter
   separating/cgmip/nodelimit.
 - new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
   only extract set-partitioning and no and-constraints
