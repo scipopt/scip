@@ -787,7 +787,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyStandard)
 
 /** returns TRUE iff both keys(pointer) are equal */
 SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
-{
+{  /*lint --e{715}*/
    return (key1 == key2);
 }
 
