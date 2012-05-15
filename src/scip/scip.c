@@ -2408,6 +2408,32 @@ SCIP_RETCODE SCIPgetStringParam(
    return SCIP_OKAY;
 }
 
+/** fixes the value of an existing parameter */
+SCIP_RETCODE SCIPfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, scip->messagehdlr, name, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** unfixes the value of an existing parameter */
+SCIP_RETCODE SCIPunfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPunfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, scip->messagehdlr, name, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing parameter */
 SCIP_RETCODE SCIPsetParam(
    SCIP*                 scip,               /**< SCIP data structure */

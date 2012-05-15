@@ -745,6 +745,20 @@ SCIP_RETCODE SCIPgetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** fixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
+/** unfixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPunfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPsetParam(
