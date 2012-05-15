@@ -213,8 +213,8 @@ public:
 #endif
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(false),
-        m_presolving(false),
+        m_scaling(true),
+        m_presolving(true),
         m_feastol(1e-06),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
