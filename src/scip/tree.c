@@ -5988,8 +5988,18 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_Bool lperror;
 
          /* reset the LP state before probing started */
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
-         SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+         if( tree->probinglpistate == NULL )
+         {
+            SCIP_CALL( SCIPlpiClearState(lp->lpi) );
+            lp->primalfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
+            lp->dualfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
+            lp->solisbasic = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
+            SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+         }
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */

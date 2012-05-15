@@ -156,6 +156,7 @@ fixed bugs:
 - fixed bug in mutation heuristic with unnecessary aborts due to a wrong memory limit
 - fixed bug in Cplex LPI: after running simplex, solisbasic flag was always true, which might be wrong if Cplex hit a
   time limit
+- fixed bug in SCIP probing mode with cleared LPI state but solved LP
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines

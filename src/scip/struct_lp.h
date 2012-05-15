@@ -322,8 +322,8 @@ struct SCIP_Lp
    SCIP_Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
-   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
-   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
