@@ -463,9 +463,6 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    nvars = genvbound->ncoefs;
    assert(nvars > 0); /* if only the primal bound participates in the propagation, it is globally valid and should not be analyzed */
 
-   /* propagations in which the primal bound participates should currently not participate in conflict analysis */
-   assert(genvbound->cutoffcoef == 0.0);
-
    /* add variables on the right-hand side as reasons for propagation */
    for( i = 0; i < nvars; i++ )
    {
@@ -498,7 +495,6 @@ SCIP_RETCODE analyzeGenVBoundConflict(
 {
    assert(scip != NULL);
    assert(genvbound != NULL);
-   assert(genvbound->cutoffcoef == 0.0);
 
    /* the infeasible results from the fact that the new lower/upper bound lies above the current upper/lower bound */
    assert(genvbound->boundtype != SCIP_BOUNDTYPE_LOWER || SCIPisGT(scip, boundval, SCIPvarGetUbLocal(genvbound->var)));
@@ -586,23 +582,9 @@ SCIP_RETCODE applyGenVBound(
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, genvbound->var, boundval, FALSE, &infeas, &tightened) );
       }
    }
-   /* tighten bound locally; if the primal bound contributes to the bound we must not participate in conflict analysis */
-   else if( !SCIPisZero(scip, genvbound->cutoffcoef) )
-   {
-      if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_CALL( SCIPtightenVarLb(scip, genvbound->var, boundval, FALSE, &infeas, &tightened) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPtightenVarUb(scip, genvbound->var, boundval, FALSE, &infeas, &tightened) );
-      }
-   }
    /* tighten bound locally and participate in conflict analysis */
    else
    {
-      assert(genvbound->cutoffcoef == 0.0);
-
       if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
       {
          SCIP_CALL( SCIPinferVarLbProp(scip, genvbound->var, boundval, prop, genvbound->index, FALSE, &infeas, &tightened) );
@@ -1496,10 +1478,26 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
+   /* check also in optimized mode that inferinfo is correct */
+   if( inferinfo >= propdata->ngenvbounds)
+   {
+      SCIPerrorMessage("generalized variable bounds propagator received inferinfo out of range; propagation not resolved, safe to continue\n");
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    /* get genvbound responsible for the bound change */
    genvbound = propdata->genvboundstore[inferinfo];
    assert(genvbound != NULL);
    assert(genvbound->var == infervar);
+
+   /* check also in optimized mode that inferinfo is correct */
+   if( genvbound->var != infervar )
+   {
+      SCIPerrorMessage("generalized variable bounds propagator received incorrect inferinfo; propagation not resolved, safe to continue\n");
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* resolve propagation */
    SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, bdchgidx) );
