@@ -3606,7 +3606,6 @@ void SCIPprofileFree(
 }
 
 /** resizes the resource profile arrays */
-extern
 SCIP_RETCODE SCIPprofileResize(
    SCIP_PROFILE*         profile,            /**< resource profile to resize */
    int                   ntimepoints         /**< minimum size to ensure */
@@ -4088,8 +4087,10 @@ SCIP_RETCODE SCIPdigraphCopy(
       {
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdatas[i] != NULL);
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]), sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) );
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]), sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) );
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
+               sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
+               sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
    }
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
@@ -4098,8 +4099,10 @@ SCIP_RETCODE SCIPdigraphCopy(
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components, sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts, sourcedigraph->componentstarts, ncomponents + 1) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
+            sourcedigraph->componentstarts[ncomponents]) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+            sourcedigraph->componentstarts,ncomponents + 1) );
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else
@@ -4125,8 +4128,8 @@ SCIP_RETCODE SCIPdigraphSetSizes(
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) );
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) );
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -4188,14 +4191,14 @@ SCIP_RETCODE ensureSuccessorsSize(
       if( digraph->successorssize[idx] == 0 )
       {
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) );
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) );
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
          digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
    }
 
