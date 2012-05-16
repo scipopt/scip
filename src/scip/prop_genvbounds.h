@@ -20,28 +20,34 @@
  * @author  Ambros Gleixner
  *
  *  A generalized variable bound is a linear inequality of the form
+ *  \f[
+ *     c \, x_i \geq \sum (a_j \, x_j) + d \cdot \mbox{primal\_bound} + \mbox{const},
+ *  \f]
+ *  where \f$c\f$ is either 1 or -1 and \f$primal\_bound\f$ is an upper bound on the optimal objective
+ *  value, which may improve during the solving process. In SCIP, generalized variable bounds are
+ *  used for providing bounds on the LHS's variable \f$x_i\f$. If the above inequality is valid, the
+ *  following bounds, depending on \f$x_i\f$'s coefficient, are also valid:
+ *  \f[
+ *     c = 1   \qquad\Rightarrow\qquad   x_i \geq  \mbox{minactivity}(\sum a_j \, x_j) 
+ *                                       + d \cdot \mbox{primal\_bound} + \mbox{const}
+ *  \f]
+ *  \f[
+ *     c = -1  \qquad\Rightarrow\qquad   x_i \leq - \mbox{minactivity}(\sum a_j \, x_j) 
+ *                                       - d \cdot \mbox{primal\_bound} - \mbox{const}.
+ *  \f]
  *
- *     c * x_i >= sum(a_j * x_j) + d * primal_bound + const,
+ *  Note that for feasible problems, \f$d \leq 0\f$ must hold. If \f$d < 0\f$ a decrease of the
+ *  primal bound causes an improvement of the provided bound. Similarly, if \f$a_j > 0\f$ (\f$< 0\f$), a
+ *  tightened lower (upper) bound of a variable \f$x_j\f$ also yields a better bound for \f$x_i\f$.
  *
- *  where x_i's coefficient c is either 1 or -1 and "primal_bound" is an upper bound on the optimal objective value,
- *  which may improve during the solving process. In SCIP, generalized variable bounds are used for providing bounds on
- *  the LHS's variable x_i. If the above inequality is valid, the following bounds, depending on x_i's coefficient, are
- *  also valid:
- *
- *     c = 1   =>   x_i >=   minactivity(sum(a_j * x_j)) + d * primal_bound + const
- *
- *     c = -1  =>   x_i <= - minactivity(sum(a_j * x_j)) - d * primal_bound - const.
- *
- *  Note that for feasible problems, d <= 0 must hold. If d < 0 a decrease of the primal bound causes an improvement of
- *  the provided bound. Similarly, if a_j > 0 (< 0), a tightened lower (upper) bound of a variable x_j also yields a
- *  better bound for x_i.
- *
- *  The genvbounds propagator sorts its stored generalized variable bounds topologically in the following order: A
- *  generalized variable bound A (c * x_i >= ...) preceeds a generalized variable bound B if the left-hand side variable
- *  of A appears in the right-hand side of B with sign of its coefficient equal to c; i.e., if A is propagated and
- *  tightens the corresponding bound of x_i, then the minactivity on the right-hand side of B increases. We assume that
- *  this order is acyclic for the generalized variable bounds added. Under this condition, propagating the generalized
- *  variable bounds in a topological order ensures that all propagations are found in one round.
+ *  The genvbounds propagator sorts its stored generalized variable bounds topologically in the
+ *  following order: A generalized variable bound A (\f$c\, x_i \geq \ldots\f$) preceeds a
+ *  generalized variable bound B if the left-hand side variable of A appears in the right-hand side
+ *  of B with sign of its coefficient equal to c; i.e., if A is propagated and tightens the
+ *  corresponding bound of x_i, then the minactivity on the right-hand side of B increases. We
+ *  assume that this order is acyclic for the generalized variable bounds added. Under this
+ *  condition, propagating the generalized variable bounds in a topological order ensures that all
+ *  propagations are found in one round.
  *
  *  Both global and local propagation is applied: If the primal bound improves, generalized variable bounds with a
  *  nonzero coefficient d are enforced in order to tighten global bounds using the global variable bounds for computing
