@@ -1036,13 +1036,22 @@ public:
 
    bool readLP(const char* fname)
    {
+      clear();
+
       if ( m_rownames != 0 )
 	 delete m_rownames;
       if ( m_colnames != 0 )
 	 delete m_colnames;
       m_rownames = new NameSet;
       m_colnames = new NameSet;
-      return SPxSolver::readFile(fname, m_rownames, m_colnames);
+
+      if( SPxSolver::readFile(fname, m_rownames, m_colnames) )
+      {
+         m_stat(NO_PROBLEM);
+         m_sense = sense();
+      }
+      else
+         return false;
    }
 
    /** copy column names into namestorage with access via colnames */

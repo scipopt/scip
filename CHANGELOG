@@ -163,6 +163,7 @@ fixed bugs:
 - fixed bug in Cplex LPI: after running simplex, solisbasic flag was always true, which might be wrong if Cplex hit a
   time limit
 - fixed bug in SCIP probing mode with cleared LPI state but solved LP
+- fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
