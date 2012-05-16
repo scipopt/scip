@@ -2261,6 +2261,27 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    return SCIP_OKAY;
 }
 
+/** creates and captures a SOS1 constraint with all constraint flags set to their default values.
+ *
+ *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
+ *  to wrong results as the variable array will not be resorted
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSOS1( scip, cons, name, nvars, vars, weights,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
 
 /** adds variable to SOS1 constraint, the position is determined by the given weight */
 SCIP_RETCODE SCIPaddVarSOS1(

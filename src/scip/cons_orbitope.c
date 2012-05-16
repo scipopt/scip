@@ -2380,3 +2380,26 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 
    return SCIP_OKAY;
 }
+
+/** creates and captures an orbitope constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
+   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
+   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
+   )
+{
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, resolveprop,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}

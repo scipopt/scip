@@ -4661,6 +4661,25 @@ SCIP_RETCODE SCIPcreateConsSetpart(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
+/** creates and captures a set partitioning constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetpart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetpart(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures a set packing constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -4700,6 +4719,27 @@ SCIP_RETCODE SCIPcreateConsSetpack(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
+/** creates and captures a set packing constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetpack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetpack(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+
+}
+
+
 /** creates and captures a set covering constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -4737,6 +4777,26 @@ SCIP_RETCODE SCIPcreateConsSetcover(
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
+}
+
+/** creates and captures a set covering constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetcover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetcover(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+
 }
 
 /** adds coefficient in set partitioning / packing / covering constraint */
