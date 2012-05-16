@@ -1047,11 +1047,12 @@ public:
 
       if( SPxSolver::readFile(fname, m_rownames, m_colnames) )
       {
-         m_stat(NO_PROBLEM);
+         m_stat = NO_PROBLEM;
          m_sense = sense();
+         return true;
       }
-      else
-         return false;
+
+      return false;
    }
 
    /** copy column names into namestorage with access via colnames */
