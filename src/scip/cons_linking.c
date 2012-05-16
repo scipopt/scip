@@ -2815,8 +2815,6 @@ SCIP_DECL_CONSPARSE(consParseLinking)
    varssize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, varssize) );
 
-   printf("<%s>\n", str);
-
    while( *str != '=' )
       ++str;
 
@@ -2826,8 +2824,6 @@ SCIP_DECL_CONSPARSE(consParseLinking)
    /* skip whitespace */
    while( isspace((int)*str) )
       ++str;
-
-   printf("<%s>\n", str);
 
    /* check for the string "no binary variables yet" */
    if( strncmp(str, "no binary variables yet", 24) != 0 )
