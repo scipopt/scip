@@ -14328,6 +14328,38 @@ void SCIPvarSetCopyData(
    var->varcopy = varcopy;
 }
 
+/** sets the initial flag of a variable; only possible for original or loose variables */
+SCIP_RETCODE SCIPvarSetInitial(
+   SCIP_VAR*            var,
+   SCIP_Bool            initial
+   )
+{
+   assert(var != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL && var->varstatus != SCIP_VARSTATUS_LOOSE )
+      return SCIP_INVALIDCALL;
+
+   var->initial = initial;
+
+   return SCIP_OKAY;
+}
+
+/** sets the removable flag of a variable; only possible for original or loose variables */
+SCIP_RETCODE SCIPvarSetRemovable(
+   SCIP_VAR*            var,
+   SCIP_Bool            removable
+   )
+{
+   assert(var != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL && var->varstatus != SCIP_VARSTATUS_LOOSE )
+      return SCIP_INVALIDCALL;
+
+   var->removable = removable;
+
+   return SCIP_OKAY;
+}
+
 /** gets status of variable */
 SCIP_VARSTATUS SCIPvarGetStatus(
    SCIP_VAR*             var                 /**< problem variable */

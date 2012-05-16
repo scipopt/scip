@@ -3438,9 +3438,10 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
-/** creates and captures problem variable with optional callbacks set to NULL, which can be set
+/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
  *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
- *  SCIPvarSetDeltransData(), and SCIPvarSetCopy();
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
+ *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
  *  if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
  *
@@ -3459,10 +3460,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
    SCIP_Real             lb,                 /**< lower bound of variable */
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
-   SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   SCIP_VARTYPE          vartype             /**< type of variable */
    );
 
 /** outputs the variable name to the file stream */

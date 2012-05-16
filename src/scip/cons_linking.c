@@ -3013,6 +3013,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinking) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinking) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinking) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinking) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinking) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ) );
