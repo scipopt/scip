@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */
 /*                                                                           */
-/*    Copyright (C) 2009-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2009-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*   RECTLU is distributed under the terms of the ZIB Academic License.      */
