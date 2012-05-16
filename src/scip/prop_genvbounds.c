@@ -22,6 +22,7 @@
 
 /**@todo should we only discard events catched from nodes that are not the current node's ancestors? */
 /**@todo improve computation of minactivity */
+/**@todo keep after restart and use in presolving */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -184,13 +185,17 @@ SCIP_Real getMinActivity(
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            coefs,              /**< array of coefficients */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool             global              /**< use global variable bounds? */
+   SCIP_Bool             global,             /**< use global variable bounds? */
+   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change at which minactivity should be computed;
+                                              *   if NULL use global resp. local bounds
+                                              */
    )
 {
    assert(scip != NULL);
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(nvars >= 0);
+   assert(bdchgidx == NULL || !global);
 
    SCIP_Real minval;
    int i;
@@ -205,6 +210,13 @@ SCIP_Real getMinActivity(
       if( global )
       {
          bound = coefs[i] > 0.0 ? SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbGlobal(vars[i]);
+      }
+      else if( bdchgidx != NULL )
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE)));
+         assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
+
+         bound = coefs[i] > 0.0 ? SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE) : SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
       }
       else
       {
@@ -235,7 +247,7 @@ SCIP_Real getGenVBoundsBound(
    assert(scip != NULL);
    assert(genvbound != NULL);
 
-   boundval = getMinActivity(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, global);
+   boundval = getMinActivity(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, global, NULL);
 
    if( SCIPisInfinity(scip, -boundval) )
    {
@@ -428,7 +440,7 @@ SCIP_RETCODE freeComponentsData(
 static
 SCIP_RETCODE freeGenVBound(
    SCIP*                 scip,
-   GENVBOUND*               genvbound
+   GENVBOUND*            genvbound
    )
 {
    assert(scip != NULL);
@@ -444,78 +456,508 @@ SCIP_RETCODE freeGenVBound(
    return SCIP_OKAY;
 }
 
-/** resolves a propagation by adding the right-hand side variables of the generalized variable bound */
+/** relaxes lower bound of given variable */
 static
-SCIP_RETCODE resolveGenVBoundPropagation(
+SCIP_RETCODE widenGenVBoundVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
-   GENVBOUND*            genvbound,          /**< genvbound data structure */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
+   SCIP_BDCHGIDX**       bdchgidx,           /**< pointer to the bound change index corresponding to the lower bound
+                                              *   value being relaxed; may be NULL at input (start from local bounds)
+                                              */
+   SCIP_Real             minlb               /**< minimum value to which lower bound may be relaxed */
    )
 {
-   int nvars;
-   int i;
-
-   SCIPdebugMessage("resolving genvbound propagation\n");
+   SCIP_BDCHGINFO* bdchginfo;
+   SCIP_Real lb;
+   int nbdchgs;
 
    assert(scip != NULL);
-   assert(genvbound != NULL);
+   assert(var != NULL);
+   assert(bdchgidx != NULL);
 
-   nvars = genvbound->ncoefs;
-   assert(nvars > 0); /* if only the primal bound participates in the propagation, it is globally valid and should not be analyzed */
+   /* get number of bound changes */
+   nbdchgs = SCIPvarGetNBdchgInfosLb(var);
 
-   /* add variables on the right-hand side as reasons for propagation */
-   for( i = 0; i < nvars; i++ )
+   assert(nbdchgs >= 0);
+   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
+   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoLb(var, nbdchgs-1))));
+
+   /* nothing to do if we are at global bounds */
+   if( nbdchgs == 0 )
    {
-      assert(!SCIPisZero(scip, genvbound->coefs[i]));
-
-      if( genvbound->coefs[i] > 0.0 )
-      {
-         SCIPdebugMessage("adding lower bound of variable <%s> (genvbound->vars[%d])\n", SCIPvarGetName(genvbound->vars[i]), i);
-
-         SCIP_CALL( SCIPaddConflictLb(scip, genvbound->vars[i], bdchgidx ) );
-      }
-      else
-      {
-         SCIPdebugMessage("adding upper bound of variable <%s> (genvbound->vars[%d])\n", SCIPvarGetName(genvbound->vars[i]), i);
-
-         SCIP_CALL( SCIPaddConflictUb(scip, genvbound->vars[i], bdchgidx ) );
-      }
+      assert(*bdchgidx == NULL);
+      return SCIP_OKAY;
    }
+
+   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d; try to relax lower bound to at most %.15g\n",
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, minlb);
+
+   /* get lower bound at bdchgidx */
+   lb = SCIPvarGetLbAtIndex(var, *bdchgidx, FALSE);
+
+   /* in this case, we should not be called for performance reasons */
+   assert(SCIPisGT(scip, lb, minlb));
+
+   /* try to relax lower bound */
+   while( nbdchgs > 0 )
+   {
+      /* get next bound change */
+      bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
+
+      /* skip bound changes tighter than initial bound */
+      if( SCIPisLT(scip, lb, SCIPbdchginfoGetOldbound(bdchginfo)) )
+      {
+         nbdchgs--;
+         continue;
+      }
+
+      SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
+
+      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference upper bound is less
+       * equal to the next possible relaxed lower bound, then we have to break since in this case the inference upper bound
+       * does not lead to a cutoff anymore
+       */
+      if( SCIPisLT(scip, SCIPbdchginfoGetOldbound(bdchginfo), minlb) )
+         break;
+
+      SCIPdebugMessage("***** relaxed lower bound of inference variable <%s> from %.15g to %.15g\n",
+         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
+
+      lb = SCIPbdchginfoGetOldbound(bdchginfo);
+      *bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+      nbdchgs--;
+   }
+   assert(nbdchgs >= 0);
+   assert(nbdchgs > 0 || SCIPisEQ(scip, lb, SCIPvarGetLbGlobal(var)));
+   assert(SCIPisGE(scip, lb, minlb));
+
+   SCIPdebugMessage("relaxed lower bound to %.15g\n", lb);
+
+   assert(SCIPisEQ(scip, lb, SCIPvarGetLbAtIndex(var, *bdchgidx, FALSE)));
 
    return SCIP_OKAY;
 }
 
-/** resolves a propagation by adding the right-hand side variables of the generalized variable bound */
+/** relaxes upper bound of given variable */
+static
+SCIP_RETCODE widenGenVBoundVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
+   SCIP_BDCHGIDX**       bdchgidx,           /**< pointer to the bound change index corresponding to the upper bound
+                                              *   value being relaxed; may be NULL at input (start from local bounds) and
+                                              *   output (meaning all bound changes were relaxed)
+                                              */
+   SCIP_Real             maxub               /**< maximum value to which upper bound may be relaxed */
+   )
+{
+   SCIP_BDCHGINFO* bdchginfo;
+   SCIP_Real ub;
+   int nbdchgs;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(bdchgidx != NULL);
+
+   /* get number of bound changes */
+   nbdchgs = SCIPvarGetNBdchgInfosUb(var);
+
+   assert(nbdchgs >= 0);
+   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
+   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoUb(var, nbdchgs-1))));
+
+   /* nothing to do if we are at global bounds */
+   if( nbdchgs == 0 )
+   {
+      assert(*bdchgidx == NULL);
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d; try to relax upper bound up to %.15g\n",
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, maxub);
+
+   /* get upper bound at bdchgidx */
+   ub = SCIPvarGetUbAtIndex(var, *bdchgidx, FALSE);
+
+   /* in this case, we should not be called for performance reasons */
+   assert(SCIPisLT(scip, ub, maxub));
+
+   /* try to relax upper bound */
+   while( nbdchgs > 0 )
+   {
+      /* get next bound change */
+      bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
+
+      /* skip bound changes tighter than initial bound */
+      if( SCIPisGT(scip, ub, SCIPbdchginfoGetOldbound(bdchginfo)) )
+      {
+         nbdchgs--;
+         continue;
+      }
+
+      SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
+
+      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
+       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
+       * does not lead to a cutoff anymore
+       */
+      if( SCIPisGT(scip, SCIPbdchginfoGetOldbound(bdchginfo), maxub) )
+         break;
+
+      SCIPdebugMessage("***** relaxed upper bound of inference variable <%s> from %.15g to %.15g\n",
+         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
+
+      ub = SCIPbdchginfoGetOldbound(bdchginfo);
+      *bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+      nbdchgs--;
+   }
+   assert(nbdchgs >= 0);
+   assert(nbdchgs > 0 || SCIPisEQ(scip, ub, SCIPvarGetUbGlobal(var)));
+   assert(SCIPisLE(scip, ub, maxub));
+
+   SCIPdebugMessage("relaxed upper bound to %.15g\n", ub);
+
+   assert(SCIPisEQ(scip, ub, SCIPvarGetUbAtIndex(var, *bdchgidx, FALSE)));
+
+   return SCIP_OKAY;
+}
+
+/** resolves propagation of lower bound on +/- left-hand side variable of a generalized variable bound */
+static
+SCIP_RETCODE resolveGenVBoundPropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GENVBOUND*            genvbound,          /**< genvbound data structure */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real*            boundval            /**< pointer to lower bound value on +/- left-hand side variable */
+   )
+{
+   SCIP_VAR* lhsvar;
+   SCIP_VAR** vars;
+   SCIP_Real minactivity;
+   SCIP_Real slack;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(genvbound != NULL);
+   assert(boundval != NULL);
+
+   /* get left-hand side variable */
+   lhsvar = genvbound->var;
+   assert(lhsvar != NULL);
+
+   /* get right-hand side variables */
+   vars =  genvbound->vars;
+   nvars = genvbound->ncoefs;
+   assert(vars != NULL);
+
+   /* if only the primal bound participates in the propagation, it is globally valid and should not be analyzed */
+   assert(nvars > 0);
+
+   /* when resolving a propagation, bdchgidx is not NULL and boundval should be the bound change performed for the
+    * left-hand side variable
+    */
+   assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_LOWER || SCIPisEQ(scip,
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, SCIPvarGetLbAtIndex(lhsvar, bdchgidx, TRUE)));
+   assert(bdchgidx == NULL || genvbound->boundtype != SCIP_BOUNDTYPE_UPPER || SCIPisEQ(scip,
+         SCIPvarIsIntegral(genvbound->var) ? SCIPfeasCeil(scip, *boundval) : *boundval, -SCIPvarGetUbAtIndex(lhsvar, bdchgidx, TRUE)));
+
+   /* when creating an initial conflict, bdchgidx is NULL and +/-boundval must exceed the upper/lower bound of the
+    * left-hand side variable
+    */
+   assert(bdchgidx != NULL || genvbound->boundtype != SCIP_BOUNDTYPE_LOWER
+      || SCIPisGT(scip, *boundval, SCIPvarGetUbLocal(lhsvar)));
+   assert(bdchgidx != NULL || genvbound->boundtype != SCIP_BOUNDTYPE_UPPER
+      || SCIPisGT(scip, *boundval, -SCIPvarGetLbLocal(lhsvar)));
+
+   SCIPdebugMessage("resolving genvbound propagation: lhs=%s<%s> >= boundval=%.15g\n",
+      genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? "+" : "-", SCIPvarGetName(lhsvar), *boundval);
+
+   /* subtract constant terms from bound value */
+   *boundval -= genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   *boundval -= genvbound->constant;
+
+   SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", *boundval);
+
+   /* compute minimal activity at current bound change index */
+   minactivity = getMinActivity(scip, genvbound->vars, genvbound->coefs, genvbound->ncoefs, FALSE, bdchgidx);
+
+   SCIPdebugMessage("minactivity of right-hand side is minactivity=%.15g\n", minactivity);
+
+   /* check that propagation at the bound change index was correct; note that by now, with smaller cutoff bound, we
+    * might even perform a stronger propagation
+    */
+   assert(SCIPisGE(scip, minactivity, *boundval));
+
+   slack = MAX(minactivity - *boundval, 0.0);
+
+   SCIPdebugMessage("slack=%.15g\n", slack);
+
+   /* add variables on the right-hand side as reasons for propagation */
+   for( i = 0; i < nvars; i++ )
+   {
+      assert(vars[i] != NULL);
+      assert(!SCIPisZero(scip, genvbound->coefs[i]));
+      assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE)));
+      assert(SCIPisEQ(scip, SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE), SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
+
+      if( genvbound->coefs[i] > 0.0 )
+      {
+         SCIP_BDCHGIDX* newbdchgidx;
+         SCIP_Real conflictlb;
+         SCIP_Real oldlb;
+         SCIP_Real newlb;
+
+         oldlb = SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE);
+         newlb = oldlb;
+         newbdchgidx = bdchgidx;
+
+         /* get lower bound already enforced by conflict set */
+         conflictlb = SCIPgetConflictVarLb(scip, genvbound->vars[i]);
+         assert(SCIPisGE(scip, conflictlb, SCIPvarGetLbGlobal(genvbound->vars[i])));
+
+         SCIPdebugMessage("lower bound of variable <%s> (genvbound->vars[%d]) in conflict set is %.15g\n",
+            SCIPvarGetName(genvbound->vars[i]), i, conflictlb);
+
+         /* try bound widening if slack is still positive and lower bound is not yet enforced by conflict set */
+         if( SCIPisPositive(scip, slack) && SCIPisGT(scip, newlb, conflictlb) )
+         {
+            SCIP_Real minlb;
+
+            minlb = newlb - (slack / genvbound->coefs[i]);
+
+            SCIP_CALL( widenGenVBoundVarLb(scip, vars[i], &newbdchgidx, minlb) );
+            newlb = SCIPvarGetLbAtIndex(vars[i], newbdchgidx, FALSE);
+            assert(SCIPisLE(scip, newlb, oldlb));
+            assert(SCIPisGE(scip, newlb, minlb));
+         }
+
+         /* if lower bound is already enforced by conflict set we do not need to add the bound change; only update slack */
+         if( SCIPisLE(scip, newlb, conflictlb) )
+         {
+            SCIPdebugMessage("skipping lower bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set; new slack=%.15g\n",
+               SCIPvarGetName(genvbound->vars[i]), i, slack - genvbound->coefs[i] * (oldlb - conflictlb));
+
+            slack -= genvbound->coefs[i] * (oldlb - conflictlb);
+         }
+         else
+         {
+            SCIPdebugMessage("adding lower bound of variable <%s> (genvbound->vars[%d]); new slack=%.15g\n",
+               SCIPvarGetName(genvbound->vars[i]), i, slack - genvbound->coefs[i] * (oldlb - newlb));
+
+            SCIP_CALL( SCIPaddConflictLb(scip, genvbound->vars[i], newbdchgidx ) );
+            slack -= genvbound->coefs[i] * (oldlb - newlb);
+         }
+         assert(!SCIPisNegative(scip, slack));
+      }
+      else
+      {
+         SCIP_BDCHGIDX* newbdchgidx;
+         SCIP_Real conflictub;
+         SCIP_Real oldub;
+         SCIP_Real newub;
+
+         oldub = SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE);
+         newub = oldub;
+         newbdchgidx = bdchgidx;
+
+         /* get upper bound already enforced by conflict set */
+         conflictub = SCIPgetConflictVarUb(scip, genvbound->vars[i]);
+         assert(SCIPisLE(scip, conflictub, SCIPvarGetUbGlobal(genvbound->vars[i])));
+
+         SCIPdebugMessage("upper bound of variable <%s> (genvbound->vars[%d]) in conflict set is %.15g\n",
+            SCIPvarGetName(genvbound->vars[i]), i, conflictub);
+
+         /* try bound widening if slack is still positive and upper bound is not yet enforced by conflict set */
+         if( SCIPisPositive(scip, slack) && SCIPisLT(scip, newub, conflictub) )
+         {
+            SCIP_Real maxub;
+
+            maxub = newub - (slack / genvbound->coefs[i]);
+
+            SCIP_CALL( widenGenVBoundVarUb(scip, vars[i], &newbdchgidx, maxub) );
+            newub = SCIPvarGetUbAtIndex(vars[i], newbdchgidx, FALSE);
+            assert(SCIPisGE(scip, newub, oldub));
+            assert(SCIPisLE(scip, newub, maxub));
+         }
+
+         /* if upper bound is already enforced by conflict set we do not need to add the bound change; only update slack */
+         if( SCIPisGE(scip, newub, conflictub) )
+         {
+            SCIPdebugMessage("skipping upper bound of variable <%s> (genvbound->vars[%d]) already enforced in conflict set; new slack=%.15g\n",
+               SCIPvarGetName(genvbound->vars[i]), i, slack - genvbound->coefs[i] * (oldub - conflictub));
+
+            slack -= genvbound->coefs[i] * (oldub - conflictub);
+         }
+         else
+         {
+            SCIPdebugMessage("adding upper bound of variable <%s> (genvbound->vars[%d]; new slack=%.15g)\n",
+               SCIPvarGetName(genvbound->vars[i]), i, slack - genvbound->coefs[i] * (oldub - newub));
+
+            SCIP_CALL( SCIPaddConflictUb(scip, genvbound->vars[i], newbdchgidx) );
+            slack -= genvbound->coefs[i] * (oldub - newub);
+         }
+         assert(!SCIPisNegative(scip, slack));
+      }
+   }
+
+   /* if slack is positive, return increased boundval */
+   if( SCIPisPositive(scip, slack) )
+      *boundval += slack;
+
+   /* add constant terms again */
+   *boundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
+   *boundval += genvbound->constant;
+
+   return SCIP_OKAY;
+}
+
+/** create initial conflict */
 static
 SCIP_RETCODE analyzeGenVBoundConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    GENVBOUND*            genvbound,          /**< genvbound data structure */
-   SCIP_Real             boundval            /**< propagated bound on left-hand side variable of genvbound that led to the infeasibility */
+   SCIP_Real             boundval            /**< propagated lower bound on +/- left-hand side variable of genvbound that led to the infeasibility */
    )
 {
+   SCIP_Real infeasthreshold;
+
    assert(scip != NULL);
    assert(genvbound != NULL);
 
-   /* the infeasible results from the fact that the new lower/upper bound lies above the current upper/lower bound */
+   /* the infeasibility results from the fact that the new lower/upper bound lies above the current upper/lower bound */
    assert(genvbound->boundtype != SCIP_BOUNDTYPE_LOWER || SCIPisGT(scip, boundval, SCIPvarGetUbLocal(genvbound->var)));
-   assert(genvbound->boundtype != SCIP_BOUNDTYPE_UPPER || SCIPisLT(scip, boundval, SCIPvarGetLbLocal(genvbound->var)));
+   assert(genvbound->boundtype != SCIP_BOUNDTYPE_UPPER || SCIPisGT(scip, boundval, -SCIPvarGetLbLocal(genvbound->var)));
 
-   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   /* check if conflict analysis is applicable */
+   if( !SCIPisConflictAnalysisApplicable(scip) )
+      return SCIP_OKAY;
+
+   /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   infeasthreshold = 2 * SCIPfeastol(scip);
 
-   /* add upper bound of the (left-hand side) variable for which we tried to change the lower bound */
    if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( SCIPaddConflictUb(scip, genvbound->var, NULL) );
+      SCIP_BDCHGIDX* bdchgidx;
+      SCIP_Real conflictub;
+      SCIP_Real relaxub;
+
+      /* get current upper bound on left-hand side variable */
+      relaxub = SCIPvarGetUbLocal(genvbound->var);
+      bdchgidx = NULL;
+
+      /* get upper bound already enforced by conflict set */
+      conflictub = SCIPgetConflictVarUb(scip, genvbound->var);
+      assert(SCIPisLE(scip, conflictub, SCIPvarGetUbGlobal(genvbound->var)));
+
+      SCIPdebugMessage("upper bound of variable <%s> (genvbound->var) in conflict set is %.15g\n",
+         SCIPvarGetName(genvbound->var), conflictub);
+
+      /* if upper bound on left-hand side variable is not yet enforced by conflict set we try to widen it */
+      if( SCIPisLT(scip, relaxub, conflictub) )
+      {
+         SCIP_Real maxub;
+
+         maxub = boundval - infeasthreshold;
+         SCIP_CALL( widenGenVBoundVarUb(scip, genvbound->var, &bdchgidx, maxub) );
+         relaxub = SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, FALSE);
+      }
+
+      /* if upper bound is already enforced by conflict set we do not have to add it */
+      if( SCIPisGE(scip, relaxub, conflictub) )
+      {
+         /* add right-hand side variables that force the lower bound of the left-hand side variable above conflictub */
+         boundval = conflictub + infeasthreshold;
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+      }
+      else
+      {
+         /* add right-hand side variables that force the lower bound of the left-hand side variable above relaxub */
+         boundval = relaxub + infeasthreshold;
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+
+         /* upper bound of the left-hand side variable leading to infeasibility */
+         boundval = MIN(boundval - infeasthreshold, SCIPvarGetUbGlobal(genvbound->var));
+
+         /* try to widen the bound one last time (in resolveGenVBoundPropagation(), boundval may increase) */
+         if( SCIPisGE(scip, boundval, SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, FALSE)) )
+         {
+            SCIP_CALL( widenGenVBoundVarUb(scip, genvbound->var, &bdchgidx, boundval) );
+         }
+
+         /* round down boundval if variable is integral */
+         if( SCIPvarIsIntegral(genvbound->var) )
+            boundval = SCIPfloor(scip, boundval);
+
+         /* boundval must be a relaxation of the bound we report to SCIP's conflict analysis */
+         assert(SCIPisGE(scip, boundval, SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, TRUE)));
+
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, genvbound->var, bdchgidx, boundval) );
+      }
    }
-   /* add lower bound of the (left-hand side) variable for which we tried to change the upper bound */
    else
    {
-      SCIP_CALL( SCIPaddConflictLb(scip, genvbound->var, NULL) );
-   }
+      SCIP_BDCHGIDX* bdchgidx;
+      SCIP_Real conflictlb;
+      SCIP_Real relaxlb;
 
-   /* add right-hand side variables that led to the new bound */
-   SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL) );
+      /* get current lower bound on left-hand side variable */
+      relaxlb = SCIPvarGetLbLocal(genvbound->var);
+      bdchgidx = NULL;
+
+      /* get lower bound already enforced by conflict set */
+      conflictlb = SCIPgetConflictVarLb(scip, genvbound->var);
+      assert(SCIPisGE(scip, conflictlb, SCIPvarGetLbGlobal(genvbound->var)));
+
+      SCIPdebugMessage("lower bound of variable <%s> (genvbound->var) in conflict set is %.15g\n",
+         SCIPvarGetName(genvbound->var), conflictlb);
+
+      /* if lower bound on left-hand side variable is not yet enforced by conflict set we try to widen it */
+      if( SCIPisGT(scip, relaxlb, conflictlb) )
+      {
+         SCIP_Real minlb;
+
+         minlb = -boundval + infeasthreshold;
+         SCIP_CALL( widenGenVBoundVarLb(scip, genvbound->var, &bdchgidx, minlb) );
+         relaxlb = SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, FALSE);
+      }
+
+      /* if lower bound is already enforced by conflict set we do not have to add it */
+      if( SCIPisLE(scip, relaxlb, conflictlb) )
+      {
+         /* add right-hand side variables that force the upper bound of the left-hand side variable below conflictlb */
+         boundval = -conflictlb + infeasthreshold;
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+      }
+      else
+      {
+         /* add right-hand side variables that force the upper bound of the left-hand side variable below relaxlb */
+         boundval = -relaxlb + infeasthreshold;
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+
+         /* lower bound of the left-hand side variable leading to infeasibility */
+         boundval = MAX(-boundval + infeasthreshold, SCIPvarGetLbGlobal(genvbound->var));
+
+         /* try to widen the bound one last time (in resolveGenVBoundPropagation(), boundval may increase) */
+         if( SCIPisLE(scip, boundval, SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, FALSE)) )
+         {
+            SCIP_CALL( widenGenVBoundVarLb(scip, genvbound->var, &bdchgidx, boundval) );
+         }
+
+         /* round up boundval if variable is integral */
+         if( SCIPvarIsIntegral(genvbound->var) )
+            boundval = SCIPceil(scip, boundval);
+
+         /* boundval must be a relaxation of the bound we report to SCIP's conflict analysis */
+         assert(SCIPisLE(scip, boundval, SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, TRUE)));
+
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, genvbound->var, bdchgidx, boundval) );
+      }
+   }
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -566,7 +1008,7 @@ SCIP_RETCODE applyGenVBound(
       SCIPdebugMessage("  genvbound: ");
       printGenVBound(scip, genvbound);
       printf("\n");
-      SCIPdebugMessage("    [%g,%g] -> [%g,%g]\n", lb, ub, new_lb, new_ub);
+      SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
 #endif
 
@@ -592,7 +1034,7 @@ SCIP_RETCODE applyGenVBound(
          /* initialize conflict analysis if infeasible */
          if( infeas )
          {
-            SCIPdebugMessage(" -> lower bound tightening on variable <%s> lead to infeasibility\n",
+            SCIPdebugMessage(" -> lower bound tightening on variable <%s> led to infeasibility\n",
                   SCIPvarGetName(genvbound->var));
 
             SCIP_CALL( analyzeGenVBoundConflict(scip, genvbound, boundval) );
@@ -605,10 +1047,10 @@ SCIP_RETCODE applyGenVBound(
          /* initialize conflict analysis if infeasible */
          if( infeas )
          {
-            SCIPdebugMessage(" -> upper bound tightening on variable <%s> lead to infeasibility\n",
+            SCIPdebugMessage(" -> upper bound tightening on variable <%s> led to infeasibility\n",
                   SCIPvarGetName(genvbound->var));
 
-            SCIP_CALL( analyzeGenVBoundConflict(scip, genvbound, boundval) );
+            SCIP_CALL( analyzeGenVBoundConflict(scip, genvbound, -boundval) );
          }
       }
    }
@@ -1467,6 +1909,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    GENVBOUND* genvbound;
+   SCIP_Real boundval;
 
    SCIPdebugMessage("explain %s bound change of variable <%s>\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
@@ -1499,8 +1942,20 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
       return SCIP_OKAY;
    }
 
+   /* get value of bound change on left-hand side */
+   boundval = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER
+      ? SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, TRUE)
+      : -SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, TRUE);
+
+   /* if left-hand side variable is integer, it suffices to explain a bound change greater than boundval - 1 */
+   if( SCIPvarIsIntegral(genvbound->var) )
+   {
+      assert(SCIPisIntegral(scip, boundval));
+      boundval = MIN(boundval, SCIPfeasCeil(scip, boundval - 1.0) + 2 * SCIPfeastol(scip));
+   }
+
    /* resolve propagation */
-   SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, bdchgidx) );
+   SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, bdchgidx, &boundval) );
 
    *result = SCIP_SUCCESS;
 
