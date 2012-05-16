@@ -481,11 +481,11 @@ SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
    );
 
-/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+/** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
 extern
 SCIP_RETCODE SCIPdigraphSetSizes(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int*                  sizes               /**< sizes of the adjacency lists */
+   int*                  sizes               /**< sizes of the successor lists */
    );
 
 /** frees given directed graph structure */
@@ -494,7 +494,7 @@ void SCIPdigraphFree(
    SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
    );
 
-/** add (directed) arc to the directed graph structure
+/** add (directed) arc and a related data to the directed graph structure
  *
  *  @note if the arc is already contained, it is added a second time
  */
@@ -502,27 +502,21 @@ extern
 SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the arc */
-   int                   endnode             /**< start node of the arc */
-   );
-
-/** add (directed) arc and a related data to the directed graph structure
- *
- *  @note if the arc is already contained, it is added a second time
- */
-extern
-SCIP_RETCODE SCIPdigraphAddArcWithData(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the arc */
    int                   endnode,            /**< start node of the arc */
-   void*                 data                /**< data that should be stored for the arc */
+   void*                 data                /**< data that should be stored for the arc; or NULL */
    );
 
-/** add (directed) arc to the directed graph structure, if it is not contained, yet */
+/** add (directed) arc to the directed graph structure, if it is not contained, yet
+ *
+ * @note if there already exists an arc from startnode to endnode, the new arc is not added,
+ *       even if its data is different
+ */
 extern
 SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the arc */
-   int                   endnode             /**< start node of the arc */
+   int                   endnode,            /**< start node of the arc */
+   void*                 data                /**< data that should be stored for the arc; or NULL */
    );
 
 /** returns the number of nodes of the given digraph */
@@ -537,7 +531,7 @@ int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
-/** returns the number of successor nodes */
+/** returns the number of successor nodes of the given node */
 extern
 int SCIPdigraphGetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -577,7 +571,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    );
 
-/** Performes an (almost) topological sort on the undirected components of the directed graph. The undirected
+/** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
  *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
  *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly

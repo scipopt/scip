@@ -141,10 +141,10 @@ struct SCIP_Profile
 /** digraph structure to store and handle graphs */
 struct SCIP_Digraph
 {
-   int**                 adjnodes;           /**< adjacency list: for each node (first dimension) list of adjacent nodes */
-   void***               arcdatas;           /**< arc datas correponding to the arcs to adjacent nodes given by the adjnodes array  */
-   int*                  adjnodessize;       /**< sizes of the adjacency lists for the nodes */
-   int*                  nadjnodes;          /**< number of arcs stored in the adjacency lists of the nodes */
+   int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
+   void***               arcdatas;           /**< arc datas corresponding to the arcs to successors given by the successors array  */
+   int*                  successorssize;     /**< sizes of the successor lists for the nodes */
+   int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
    int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
    int                   ncomponents;        /**< number of undirected components stored */
