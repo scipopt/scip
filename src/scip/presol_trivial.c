@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_trivial.c
- * @ingroup PRESOLVERS
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
  */
@@ -33,14 +32,30 @@
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
+#ifdef FIXSIMPLEVALUE
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-
+#endif
 
 
 
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolTrivial(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeTrivial NULL
@@ -159,11 +174,15 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
          }
 
          /* fix variables with equal bounds */
-         if( SCIPisFeasEQ(scip, lb, ub) )
+         if( SCIPisEQ(scip, lb, ub) )
          {
             SCIP_Real fixval;
 
+#ifdef FIXSIMPLEVALUE
             fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
+#else
+            fixval = (lb + ub)/2;
+#endif
             SCIPdebugMessage("fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", 
                SCIPvarGetName(vars[v]), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );
@@ -202,6 +221,7 @@ SCIP_RETCODE SCIPincludePresolTrivial(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyTrivial,
          presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
          presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
          presoldata) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objdisp.h
- * @brief  C++ wrapper for display column
+ * @brief  C++ wrapper for display columns
  * @author Kati Wolter
  */
 
@@ -26,16 +26,29 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for display columns */
-class ObjDisp
+/**
+ *  @brief C++ wrapper for display columns
+ *
+ *  This class defines the interface for display columns implemented in C++. Note that there is a pure virtual function
+ *  (this function has to be implemented). This function is: scip_output().
+ *
+ * - \ref DISP "Instructions for implementing a display column"
+ * - \ref DISPLAYS "List of available display columns"
+ *  - \ref type_disp.h "Corresponding C interface"
+ */
+class ObjDisp : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
    
+   /** SCIP data structure */
+   SCIP* scip_;
+
    /** name of the display column */
    char* scip_name_;
    
@@ -59,6 +72,7 @@ public:
 
    /** default constructor */
    ObjDisp(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of display column */
       const char*        desc,               /**< description of display column */
       const char*        header,             /**< head line of display column */
@@ -67,7 +81,8 @@ public:
       int                position,           /**< relative position of display column */
       SCIP_Bool          stripline           /**< should the column be separated with a line from its right neighbour? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_header_(0),
         scip_width_(width),
@@ -75,18 +90,20 @@ public:
         scip_position_(position),
         scip_stripline_(stripline)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_header_, header, std::strlen(header)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_header_, header, std::strlen(header)+1) );
    }
 
    /** destructor */
    virtual ~ObjDisp()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
-      SCIPfreeMemoryArray(scip, &scip_header_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_header_);
    }
 
    /** destructor of display column to free user data (called when SCIP is exiting) */

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -73,8 +73,16 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: scip
+scip:
+		@$(MAKE) -C $(SCIPDIR) libs $^
+
 .PHONY: doc
 doc:
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
@@ -88,10 +96,10 @@ $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
-clean:
+clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		-rm -f $(OBJDIR)/*.o
-		-rmdir -p $(OBJDIR)
+		-rmdir $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
 
@@ -103,11 +111,11 @@ depend:		$(SCIPDIR)
 
 -include	$(MAINDEP)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$@
 

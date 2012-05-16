@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 LIMIT=$1
+QUEUE=$2
+LIMITQUEUE=$3
 
 while true
 do
-  ALLQUEUE=`qstat | grep -c ""`
-  QUEUE=`qstat | grep -c $USER`
+  ALLQUEUED=`qstat | grep -c ""`
+  QUEUED=`qstat -u $USER | grep -c " $QUEUE "`
   RUNNING=`qstat -u $USER | grep -c " R "`
 
   # display current user load and total load 
-  echo jobs in progress: $RUNNING / $QUEUE "("$ALLQUEUE")"
-  
-  if test $ALLQUEUE -le $LIMIT
+  echo jobs in progress: $RUNNING / $QUEUED "("$ALLQUEUED")"
+ 
+  if test $ALLQUEUED -le 1990
       then
-      break
+
+      if test $QUEUED -le $LIMITQUEUE
+	  then
+	  break
+      fi
+
+      if test $ALLQUEUED -le $LIMIT
+	  then
+	  break
+      fi
   fi
 
   sleep 30

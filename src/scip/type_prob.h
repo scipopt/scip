@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -108,6 +108,37 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - restart         : was this exit solve call triggered by a restart?
  */
 #define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata, SCIP_Bool restart)
+
+/** copies user data of source SCIP for the target SCIP
+ *
+ *  This method should copy the problem data of the source SCIP and create a target problem data for (target)
+ *  SCIP. Implementing this callback is optional. If the copying process was successful the target SCIP gets this
+ *  problem data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target SCIP will have no problem data
+ *  at all.
+ *
+ *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+ *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+ *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop due to
+ *  recursion.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourcedata      : source user problem data
+ *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
+ *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
+ *  - targetdata      : pointer to the target user problem data to create
+ *  - global          : create a global or a local copy? 
+ *
+ *  output:
+ *  - result          : pointer to store the result of the call
+ *
+ *  possible return values for *result:
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_SUCCESS    : the copying process was successfully performed
+ */
+#define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourcedata, \
+      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_PROBDATA** targetdata, SCIP_Bool global, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
+#include "scip/clock.h"
 #include "scip/pub_misc.h"
 #include "scip/reader.h"
 #include "scip/prob.h"
@@ -38,6 +39,23 @@
 #include "scip/struct_reader.h"
 
 
+/** copies the given reader to a new scip */
+SCIP_RETCODE SCIPreaderCopyInclude(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(reader != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( reader->readercopy != NULL )
+   {
+      SCIPdebugMessage("including reader %s in subscip %p\n", SCIPreaderGetName(reader), (void*)set->scip);
+      SCIP_CALL( reader->readercopy(set->scip, reader) );
+   }
+   return SCIP_OKAY;
+}
 
 /** creates a reader */
 SCIP_RETCODE SCIPreaderCreate(
@@ -45,6 +63,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -60,11 +79,15 @@ SCIP_RETCODE SCIPreaderCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
+   (*reader)->readercopy = readercopy;
    (*reader)->readerfree = readerfree;
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
-   
+
+   /* create reading clock */
+   SCIP_CALL( SCIPclockCreate(&(*reader)->readingtime, SCIP_CLOCKTYPE_DEFAULT) );
+
    return SCIP_OKAY;
 }
 
@@ -84,6 +107,9 @@ SCIP_RETCODE SCIPreaderFree(
       SCIP_CALL( (*reader)->readerfree(set->scip, *reader) );
    }
 
+   /* free clock */
+   SCIPclockFree(&(*reader)->readingtime);
+   
    BMSfreeMemoryArray(&(*reader)->name);
    BMSfreeMemoryArray(&(*reader)->desc);
    BMSfreeMemoryArray(&(*reader)->extension);
@@ -125,8 +151,32 @@ SCIP_RETCODE SCIPreaderRead(
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
    {
+      SCIP_CLOCK* readingtime;
+
+      /**@note we need temporary clock to measure the reading time correctly since in case of creating a new problem
+       *       within the reader all clocks are reset (including the reader clocks); this resetting is necessary for
+       *       example for those case we people solve several problems using the (same) interactive shell
+       */
+
+      assert(!SCIPclockIsRunning(reader->readingtime));
+
+      /* create a temporary clock for measuring the reading time */
+      SCIP_CALL( SCIPclockCreate(&readingtime, SCIP_CLOCKTYPE_DEFAULT) );
+      
+      /* start timing */
+      SCIPclockStart(readingtime, set);
+      
       /* call reader to read problem */
       retcode = reader->readerread(set->scip, reader, filename, result);
+
+      /* stop timing */
+      SCIPclockStop(readingtime, set);
+
+      /* add time to reader reading clock */
+      SCIPclockSetTime(reader->readingtime, SCIPclockGetTime(reader->readingtime) + SCIPclockGetTime(readingtime));
+      
+      /* free the temporary clock */
+      SCIPclockFree(&readingtime);
    }
    else
    {
@@ -135,7 +185,7 @@ SCIP_RETCODE SCIPreaderRead(
    }
 
    /* check for reader errors */
-   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */
@@ -180,46 +230,87 @@ SCIP_RETCODE SCIPreaderWrite(
    )
 {
    SCIP_RETCODE retcode;
-   int i;
-   
-   SCIP_VAR** vars;
-   int nvars;
-   SCIP_VAR** fixedvars;
-   int nfixedvars;
-   SCIP_CONS** conss;
-   int nconss;
-
-   SCIP_VAR* var;
-   SCIP_CONS* cons;
-
-   int size;
-   char* name;
-   const char* consname;
-   const char** varnames;
-   const char** fixedvarnames;
-   const char** consnames;
    
    assert(reader != NULL);
    assert(set != NULL);
    assert(extension != NULL);
    assert(result != NULL);
-
-   vars = prob->vars;
-   nvars = prob->nvars;
-   fixedvars = prob->fixedvars;
-   nfixedvars = prob->nfixedvars;
-   conss = prob->conss;
-   nconss = prob->nconss;
    
-   varnames = NULL;
-   fixedvarnames = NULL; 
-   consnames = NULL;
-
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
+      SCIP_VAR** vars;
+      int nvars;
+      SCIP_VAR** fixedvars;
+      int nfixedvars;
+      SCIP_CONS** conss;
+      int nconss;
+      int i;
+
+      SCIP_CONS* cons;
+      
+      char* name;
+      const char* consname;
+      const char** varnames;
+      const char** fixedvarnames;
+      const char** consnames;
+      
+      varnames = NULL;
+      fixedvarnames = NULL; 
+      consnames = NULL;
+      
+      vars = prob->vars;
+      nvars = prob->nvars;
+      fixedvars = prob->fixedvars;
+      nfixedvars = prob->nfixedvars;
+
+      /* case of the transformed problem, we want to write currently valid problem */
+      if( prob->transformed )
+      {
+         SCIP_CONSHDLR** conshdlrs;
+         int nconshdlrs;
+         
+         conshdlrs = set->conshdlrs;
+         nconshdlrs = set->nconshdlrs;
+         
+         /* collect number of constraints which have to be enforced; these are the constraints which currency (locally)
+          * enabled; these also includes the local constraints 
+          */
+         nconss = 0;
+         for( i = 0; i < nconshdlrs; ++i )
+            nconss += SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+         
+         SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
+
+         /* copy the constraints */
+         nconss = 0;
+         for( i = 0; i < nconshdlrs; ++i )
+         {
+            SCIP_CONS** conshdlrconss;
+            int nconshdlrconss;
+            int c;
+            
+            conshdlrconss = SCIPconshdlrGetEnfoConss(conshdlrs[i]);
+            nconshdlrconss = SCIPconshdlrGetNEnfoConss(conshdlrs[i]);
+            
+            for( c = 0; c < nconshdlrconss; ++c )
+            {
+               conss[nconss] = conshdlrconss[c];
+               nconss++;
+            }
+         }
+      }
+      else
+      {
+         conss = prob->conss;
+         nconss = prob->nconss;
+      }
+      
       if( genericnames )
       {
+         SCIP_VAR* var;
+         int size;
+
          /* save variable and constraint names and replace these names by generic names */
 
          /* allocate memory for saving the original variable and constraint names */
@@ -228,9 +319,10 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
 
          /* compute length of the generic variable names:
-	  * - nvars + 1 to avoid log of zero
-	  * - +3 (zero at end + 'x' + 1 because we round down)
-	  * Example: 10 -> need 4 chars ("x10\0") */
+          * - nvars + 1 to avoid log of zero
+          * - +3 (zero at end + 'x' + 1 because we round down)
+          * Example: 10 -> need 4 chars ("x10\0") 
+          */
          size = (int) log10(nvars+1.0) + 3;
 
          for( i = 0; i < nvars; ++i )
@@ -306,6 +398,12 @@ SCIP_RETCODE SCIPreaderWrite(
          BMSfreeMemoryArray(&varnames);
          BMSfreeMemoryArray(&fixedvarnames);
          BMSfreeMemoryArray(&consnames);
+      }
+      
+      if( prob->transformed )
+      {
+         /* free memory */
+         BMSfreeMemoryArray(&conss);
       }
    }
    else
@@ -394,4 +492,26 @@ SCIP_Bool SCIPreaderCanWrite(
    return (reader->readerwrite != NULL);
 }
 
+/** gets time in seconds used in this reader for reading */
+SCIP_Real SCIPreaderGetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return SCIPclockGetTime(reader->readingtime);
+}
+
+/** resets reading time of reader */
+SCIP_RETCODE SCIPreaderResetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+   
+   /* reset reading time/clock */
+   SCIPclockReset(reader->readingtime);
+
+   return SCIP_OKAY;
+}
 

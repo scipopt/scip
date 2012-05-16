@@ -7,7 +7,7 @@ OFLAGS		+=	-O3 -axSSE4.1 -w1 -vec_report0 -par_report0 -ip -mtune=core2 #-msse4.
 CFLAGS		+=
 CXXFLAGS	+=
 ARFLAGS		=	crs
-LDFLAGS		+=	-lpthread -lm -lstdc++ -static-intel
+LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -static-intel
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

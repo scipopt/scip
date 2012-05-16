@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -52,6 +52,17 @@ do
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
   then
+      # in case an output file exists, copy it away to save the results
+      DATEINT=`date +"%s"`
+      if test -e $OUTFILE
+      then
+	  cp $OUTFILE $OUTFILE.old-$DATEINT
+      fi
+      if test -e $ERRFILE
+      then
+	  cp $ERRFILE $ERRFILE.old-$DATEINT
+      fi
+
       echo > $OUTFILE
       echo > $ERRFILE
       echo create overall output and error file for $EVALFILE
@@ -114,45 +125,46 @@ do
   # check if the out file exists
   if test -e $DIR/$EVALFILE.out
   then
-
       echo create results for $EVALFILE
 
-      QUEUE=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
+      # detect test set
+      TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-      if test "$QUEUE" = "gbe"
+      # detect test used solver
+      SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
+      
+      echo "Testset " $TSTNAME
+      echo "Solver  " $SOLVER
+
+      if test -f testset/$TSTNAME.test
       then
-	  TSTNAME=`echo $EVALFILE | sed 's/check.gbe.\([a-zA-Z0-9_-]*\).*/\1/g'`
-      else 
-	  if test "$QUEUE" = "ib"
-	  then
-	      TSTNAME=`echo $EVALFILE | sed 's/check.ib.\([a-zA-Z0-9_-]*\).*/\1/g'`
-	  else
-	      TSTNAME=$QUEUE
-	  fi
-      fi
-
-      echo $QUEUE
-      echo $TSTNAME
-
-      if test -f $TSTNAME.test
-      then
-	  TESTFILE=$TSTNAME.test
+	  TESTFILE=testset/$TSTNAME.test
       else
 	  TESTFILE=""
       fi
 
-      if test -f $TSTNAME.solu
+      if test -f testset/$TSTNAME.solu
       then
-	  SOLUFILE=$TSTNAME.solu
+	  SOLUFILE=testset/$TSTNAME.solu
       else 
-	  if test -f all.solu
+	  if test -f testset/all.solu
 	  then
-	      SOLUFILE=all.solu
+	      SOLUFILE=testset/all.solu
 	  else
 	      SOLUFILE=""
 	  fi
       fi
 
-      awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+      if test  "$SOLVER" = "cplex"
+      then
+	  awk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
+      else
+	  if test  "$SOLVER" = "cbc"
+	  then
+	      awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+	  else
+	      awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+	  fi
+      fi
   fi
 done

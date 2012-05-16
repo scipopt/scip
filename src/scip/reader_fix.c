@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_fix.c
- * @ingroup FILEREADERS 
  * @brief  file reader for variable fixings
  * @author Tobias Achterberg
  */
@@ -25,7 +24,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
 
 #include "scip/reader_fix.h"
@@ -96,7 +95,7 @@ SCIP_RETCODE readSol(
       nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
       if( nread < 2 )
       {
-         SCIPwarningMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);
+         SCIPerrorMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);
          error = TRUE;
          break;
       }
@@ -107,8 +106,8 @@ SCIP_RETCODE readSol(
       {
          if( !unknownvariablemessage )
          {
-            SCIPwarningMessage("unknown variable <%s> in line %d of solution file <%s>\n", varname, lineno, filename);
-            SCIPwarningMessage("  (further unknown variables are ignored)\n");
+            SCIPwarningMessage(scip, "unknown variable <%s> in line %d of solution file <%s>\n", varname, lineno, filename);
+            SCIPwarningMessage(scip, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
          continue;
@@ -126,7 +125,7 @@ SCIP_RETCODE readSol(
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
-            SCIPwarningMessage("invalid solution value <%s> for variable <%s> in line %d of solution file <%s>\n",
+            SCIPerrorMessage("invalid solution value <%s> for variable <%s> in line %d of solution file <%s>\n",
                valuestring, varname, lineno, filename);
             error = TRUE;
             break;
@@ -137,7 +136,7 @@ SCIP_RETCODE readSol(
       SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
       if( infeasible )
       {
-         SCIPwarningMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
+         SCIPerrorMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
             varname, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), value, lineno, filename);
          error = TRUE;
          break;
@@ -153,7 +152,7 @@ SCIP_RETCODE readSol(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "fixed %d variables from solution file <%s>\n", nfixed, filename);
 
    if( error )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }
@@ -164,6 +163,21 @@ SCIP_RETCODE readSol(
 /*
  * Callback methods of reader
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyFix)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderFix(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeFix NULL
@@ -177,11 +191,12 @@ SCIP_DECL_READERREAD(readerReadFix)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPwarningMessage("reading of fixing file is only possible after a problem was created\n");
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of fixing file is only possible after a problem was created\n");
+      return SCIP_READERROR;
    }
 
    /* free transformed problem, s.t. fixings are applied to the original problem */
@@ -217,8 +232,7 @@ SCIP_RETCODE SCIPincludeReaderFix(
 
    /* include fix reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
+         readerCopyFix, readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
 
    return SCIP_OKAY;
 }
-

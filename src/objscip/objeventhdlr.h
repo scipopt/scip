@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,15 +26,26 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for event handlers */
-class ObjEventhdlr
+/** @brief C++ wrapper for event handlers
+ *
+ *  This class defines the interface for eventt handlers implemented in C++. Note that there is a pure virtual function
+ *  (this function has to be implemented). This function is: scip_exec(). 
+ *
+ *  - \ref EVENT "Instructions for implementing an event handler"
+ *  - \ref type_event.h "Corresponding C interface"
+ */
+class ObjEventhdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the event handler */
    char* scip_name_;
@@ -44,22 +55,26 @@ public:
    
    /** default constructor */
    ObjEventhdlr(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of event handler */
       const char*        desc                /**< description of event handler */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjEventhdlr()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
    /** destructor of event handler to free user data (called when SCIP is exiting) */

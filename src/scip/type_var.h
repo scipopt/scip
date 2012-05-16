@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for problem variables
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for user variable data implemented in C. Each variable can be equipped with a
+ *  variable data struct. This data can be accessed via the function SCIPgetVardata() at any time after it is created
+ *  and before it is deleted.
+ *
+ *  - \ref scip::ObjVardata "Corresponding C interface"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -89,15 +95,14 @@ typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
 
-
 /** frees user data of original variable (called when the original variable is freed)
  *
  *  This method should free the user data of the original variable.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    var             : original variable the data to free is belonging to
- *    vardata         : pointer to the user variable data to free
+ *  - scip            : SCIP main data structure
+ *  - var             : original variable the data to free is belonging to
+ *  - vardata         : pointer to the user variable data to free
  */
 #define SCIP_DECL_VARDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
 
@@ -113,11 +118,11 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  memory location.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sourcevar       : original variable
- *    sourcedata      : source variable data to transform
- *    targetvar       : transformed variable
- *    targetdata      : pointer to store created transformed variable data
+ *  - scip            : SCIP main data structure
+ *  - sourcevar       : original variable
+ *  - sourcedata      : source variable data to transform
+ *  - targetvar       : transformed variable
+ *  - targetdata      : pointer to store created transformed variable data
  */
 #define SCIP_DECL_VARTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, SCIP_VAR* targetvar, SCIP_VARDATA** targetdata)
 
@@ -128,11 +133,42 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  user data of the transformed variable, that was created in the VARTRANS method.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    var             : transformed variable the data to free is belonging to
- *    vardata         : pointer to the user variable data to free
+ *  - scip            : SCIP main data structure
+ *  - var             : transformed variable the data to free is belonging to
+ *  - vardata         : pointer to the user variable data to free
  */
 #define SCIP_DECL_VARDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
+
+/** copies variable data of source SCIP variable for the target SCIP variable
+ *
+ *  This method should copy the variable data of the source SCIP and create a target variable data for target
+ *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
+ *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+ *  all.
+ *
+ *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+ *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+ *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourcevar       : variable of the source SCIP
+ *  - sourcedata      : variable data of the source variable which should get copied
+ *  - varmap,         : a hashmap which stores the mapping of source variables to corresponding target variables
+ *  - consmap,        : a hashmap which stores the mapping of source constraints to corresponding target constraints
+ *  - targetvar       : variable of the (target) SCIP (targetvar is the copy of sourcevar)
+ *  - targetdata      : pointer to store created copy of the variable data for the (target) SCIP
+ *
+ *  output:
+ *  - result          : pointer to store the result of the call
+ *
+ *  possible return values for *result:
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_SUCCESS    : the copying process was successfully performed
+ */
+#define SCIP_DECL_VARCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, \
+      SCIP_HASHMAP* varmap, SCIP_HASHMAP* consmap, SCIP_VAR* targetvar, SCIP_VARDATA** targetdata, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

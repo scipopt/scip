@@ -1,8 +1,0 @@
-# maximal number of separation rounds per node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 5]
-separating/maxrounds = 0
-
-# maximal number of separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/maxroundsroot = 0
-

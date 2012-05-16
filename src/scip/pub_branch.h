@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,6 +80,12 @@ SCIP_Real SCIPbranchruleGetMaxbounddist(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** gets time in seconds used in this branching rule for setting up for next stages */
+extern
+SCIP_Real SCIPbranchruleGetSetupTime(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
 /** gets time in seconds used in this branching rule */
 extern
 SCIP_Real SCIPbranchruleGetTime(
@@ -92,9 +98,9 @@ SCIP_Longint SCIPbranchruleGetNLPCalls(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/** gets the total number of times, the branching rule was called on a relaxation solution */
+/** gets the total number of times, the branching rule was called on external candidates */
 extern
-SCIP_Longint SCIPbranchruleGetNRelaxCalls(
+SCIP_Longint SCIPbranchruleGetNExternCalls(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 

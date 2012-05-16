@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_PricerData
 
 extern "C"
 {
+
+/** copy method for pricer plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRICERCOPY(pricerCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PRICERDATA* pricerdata;
+   
+   assert(scip != NULL);
+   
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+   assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ != scip);
+
+   if( pricerdata->objpricer->iscloneable() )
+   {
+      scip::ObjPricer* newobjpricer;
+      newobjpricer = dynamic_cast<scip::ObjPricer*> (pricerdata->objpricer->clone(scip, valid));
+
+      /* call include method of pricer object */
+      SCIP_CALL( SCIPincludeObjPricer(scip, newobjpricer, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRICERFREE(pricerFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_PRICERFREE(pricerFreeObj)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ == scip);
 
    /* call virtual method of pricer object */
    SCIP_CALL( pricerdata->objpricer->scip_free(scip, pricer) );
@@ -81,6 +108,7 @@ SCIP_DECL_PRICERINIT(pricerInitObj)
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
+   assert(pricerdata->objpricer->scip_ == scip);
 
    /* call virtual method of pricer object */
    SCIP_CALL( pricerdata->objpricer->scip_init(scip, pricer) );
@@ -189,6 +217,9 @@ SCIP_RETCODE SCIPincludeObjPricer(
 {
    SCIP_PRICERDATA* pricerdata;
 
+   assert(scip != NULL);
+   assert(objpricer != NULL);
+
    /* create variable pricer data */
    pricerdata = new SCIP_PRICERDATA;
    pricerdata->objpricer = objpricer;
@@ -197,6 +228,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          objpricer->scip_delay_,
+         pricerCopyObj,
          pricerFreeObj, pricerInitObj, pricerExitObj, 
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) ); /*lint !e429*/

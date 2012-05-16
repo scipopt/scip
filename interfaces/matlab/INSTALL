@@ -1,0 +1,58 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*                  This file is part of the program and library             *
+*         SCIP --- Solving Constraint Integer Programs                      *
+*                                                                           *
+*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+*                            fuer Informationstechnik Berlin                *
+*                                                                           *
+*  SCIP is distributed under the terms of the ZIB Academic License.         *
+*                                                                           *
+*  You should have received a copy of the ZIB Academic License              *
+*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This is a very-beta-version of a functional MATLAB interface for SCIP
+Up to now, it has only been tested with SCIP version 2.0.1 and MATLAB version 7.9
+
+It supports solving LPs and MIPs with SCIP that are defined via dense matrices in MATLAB.
+
+Currently not supported, but planned for future version:
+ - sparse data structures
+ - setting user parameters in SCIP from MATLAB
+ - problem types other than MIP (e.g., quadratic programs)
+ - object-oriented interface to interactively manipulate the data structures
+ - support of empty constraint set (a rather pathological case)
+
+Please let us know (e-mail to berthold@zib.de and gleixner@zib.de), if you are missing any of these or any other features.
+Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
+
+To use SCIP from MATLAB, you have to do the following:
+ - start MATLAB
+ - run installscip
+ - specify the path to your SCIP installation, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0
+   - this makes a function called scip available, which has 8 input and two output paramaters
+   - it might be necessary that you compiled SCIP with make USRCFLAGS="-fPic" USRCXXFLAGS="-fPic"
+ - if this works fine, you should try to run the example files diet_lp and stein9_ip
+ - now try your own application
+
+syntax of the function scip:
+[bestsol, objval] = scip(matrix, lhs, rhs, obj, lb, ub, vartype, objsense)
+input parameters are
+   matrix   : real matrix with constraint nonzeros
+   lhs      : real vector with left-hand sides of constraints
+   rhs      : real vector with right-hand sides of constraints
+   obj      : real vector with objective coefficient of variables
+   lb       : real vector with lower bounds of variables
+   ub       : real vector with upper bounds of variables
+   vartype  : character vector with types of variables (b: binary, i: general integer, c: continuous)
+   objsense : value indicating optimization sense (+1: minimize, -1: maximize)
+output parameters are
+   bestsol  : real vector containing best solution found
+   objval   : objective function value of best solution found
+
+hints:
+ - choose +/- 1e+20 (or bigger) to represent infinte values
+ - choose lhs[i]=rhs[i] to represent an equation
+ - choose obj = 0 to represent a pure feasibility problem

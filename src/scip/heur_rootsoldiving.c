@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rootsoldiving.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
  * @author Kati Wolter
  */
@@ -35,6 +34,7 @@
 #define HEUR_FREQOFS       5
 #define HEUR_MAXDEPTH     -1
 #define HEUR_TIMING       SCIP_HEURTIMING_AFTERLPPLUNGE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -52,7 +52,7 @@
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
+#define DEFAULT_ALPHA               0.9 /**< soft rounding factor to fade out objective coefficients */
 
 
 /* locally defined heuristic data */
@@ -67,13 +67,29 @@ struct SCIP_HeurData
                                               *   (-1: no limit) */
    SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
+   SCIP_Real             alpha;              /**< soft rounding factor to fade out objective coefficients */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
 
+
 /*
  * Callback methods
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyRootsoldiving)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -151,32 +167,32 @@ SCIP_DECL_HEUREXIT(heurExitRootsoldiving) /*lint --e{715}*/
 static
 SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata; 
+   SCIP_HEURDATA* heurdata;
    SCIP_VAR** vars;
    SCIP_Real* rootsol;
    SCIP_Real* objchgvals;
    int* softroundings;
    int* intvalrounds;
-   int nvars;           
+   int nvars;
    int nbinvars;
    int nintvars;
    int nlpcands;
-   SCIP_LPSOLSTAT lpsolstat; 
+   SCIP_LPSOLSTAT lpsolstat;
    SCIP_Real absstartobjval;
    SCIP_Real objstep;
    SCIP_Real alpha;
    SCIP_Real oldobj;
    SCIP_Real newobj;
-   SCIP_Bool lperror;          
+   SCIP_Bool lperror;
    SCIP_Bool lpsolchanged;
    SCIP_Longint nsolsfound;
    SCIP_Longint ncalls;
-   SCIP_Longint nlpiterations; 
+   SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
-   int depth;       
-   int maxdepth;    
+   int depth;
+   int maxdepth;
    int maxdivedepth;
-   int divedepth;   
+   int divedepth;
    int startnlpcands;
    int ncycles;
    int i;
@@ -232,6 +248,13 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get number of fractional variables, that should be integral */
+   nlpcands = SCIPgetNLPBranchCands(scip);
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal diving depth */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -240,10 +263,9 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       maxdivedepth = (int)(heurdata->depthfac * nvars);
    maxdivedepth = MAX(maxdivedepth, 10);
 
-
    *result = SCIP_DIDNOTFIND;
 
-   /* get all varibales of LP */
+   /* get all variables of LP */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* get root solution value of all binary and integer variables */
@@ -269,9 +291,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   /* get number of fractional variables, that should be integral */
-   nlpcands = SCIPgetNLPBranchCands(scip);
-
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d, LPobj=%g, objstep=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth,
       SCIPgetLPObjval(scip), objstep);
@@ -279,15 +298,15 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    lperror = FALSE;
    divedepth = 0;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   alpha = 0.9; /**@todo make this constant a parameter setting */
+   alpha = heurdata->alpha;
    ncycles = 0;
    lpsolchanged = TRUE;
    startnlpcands = nlpcands;
    while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) 
-	  && !SCIPisStopped(scip) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations))
+      && !SCIPisStopped(scip) )
    {
       SCIP_Bool success;
       int hardroundingidx;
@@ -296,9 +315,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_Real hardroundingnewbd;
       SCIP_Bool boundschanged;
 
-#ifdef NDEBUG
-      SCIP_RETCODE retstat;
-#endif
+      SCIP_RETCODE retcode;
 
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
@@ -307,10 +324,10 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       if( success )
       {
          SCIPdebugMessage("rootsoldiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
-         
+
          /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
-            
+         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+
          /* check, if solution was feasible and good enough */
          if( success )
          {
@@ -327,8 +344,8 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       boundschanged = FALSE;
 
       SCIPdebugMessage("dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT":\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
-         
-      /* round solution x* from diving LP: 
+
+      /* round solution x* from diving LP:
        *   - x~_j = down(x*_j)    if x*_j is integer or binary variable and x*_j <= root solution_j
        *   - x~_j = up(x*_j)      if x*_j is integer or binary variable and x*_j  > root solution_j
        *   - x~_j = x*_j          if x*_j is continuous variable
@@ -344,7 +361,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          var = vars[i];
          oldobj = SCIPgetVarObjDive(scip, var);
          newobj = oldobj;
-         
+
          solval =  SCIPvarGetLPSol(var);
          if( SCIPisFeasIntegral(scip, solval) )
          {
@@ -357,7 +374,8 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
                intvalrounds[i]++;
                if( intvalrounds[i] == 5 && SCIPgetVarLbDive(scip, var) < SCIPgetVarUbDive(scip, var) - 0.5 )
                {
-                  solval = SCIPfeasFloor(scip, solval);
+                  /* use exact integral value, if the variable is only integral within numerical tolerances */
+                  solval = SCIPfloor(scip, solval+0.5);
                   SCIPdebugMessage(" -> fixing <%s> = %g\n", SCIPvarGetName(var), solval);
                   SCIP_CALL( SCIPchgVarLbDive(scip, var, solval) );
                   SCIP_CALL( SCIPchgVarUbDive(scip, var, solval) );
@@ -375,7 +393,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             softroundings[i]--;
             if( softroundings[i] <= -10 && hardroundingidx == -1 )
             {
-               SCIPdebugMessage(" -> hard rounding <%s>[%g] <= %g\n", 
+               SCIPdebugMessage(" -> hard rounding <%s>[%g] <= %g\n",
                   SCIPvarGetName(var), solval, SCIPfeasFloor(scip, solval));
                hardroundingidx = i;
                hardroundingdir = -1;
@@ -395,7 +413,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             softroundings[i]++;
             if( softroundings[i] >= +10 && hardroundingidx == -1 )
             {
-               SCIPdebugMessage(" -> hard rounding <%s>[%g] >= %g\n", 
+               SCIPdebugMessage(" -> hard rounding <%s>[%g] >= %g\n",
                   SCIPvarGetName(var), solval, SCIPfeasCeil(scip, solval));
                hardroundingidx = i;
                hardroundingdir = +1;
@@ -407,7 +425,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             else
                newobj = alpha * oldobj - objstep;
          }
-         
+
          /* remember the objective change */
          objchgvals[i] = newobj;
       }
@@ -419,27 +437,27 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          for( i = 0; i < nbinvars + nintvars; ++i )
          {
             SCIP_VAR* var;
-            
+
             var = vars[i];
             SCIPdebugMessage(" -> i=%d  var <%s>, solval=%g, rootsol=%g, oldobj=%g, newobj=%g\n",
                i, SCIPvarGetName(var), SCIPvarGetLPSol(var), rootsol[i], SCIPgetVarObjDive(scip, var), objchgvals[i]);
-         
+
             SCIP_CALL( SCIPchgVarObjDive(scip, var, objchgvals[i]) );
          }
-      
+
          /* fade out the objective values of the continuous variables */
          for( i = nbinvars + nintvars; i < nvars; i++ )
          {
             SCIP_VAR* var;
-            
+
             var = vars[i];
             oldobj = SCIPgetVarObjDive(scip, var);
             newobj = alpha * oldobj;
-            
-            SCIPdebugMessage(" -> i=%d  var <%s>, solval=%g, oldobj=%g, newobj=%g\n", 
+
+            SCIPdebugMessage(" -> i=%d  var <%s>, solval=%g, oldobj=%g, newobj=%g\n",
                i, SCIPvarGetName(var), SCIPvarGetLPSol(var), oldobj, newobj);
-            
-            SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) ); 
+
+            SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) );
          }
       }
 
@@ -447,18 +465,23 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
 
+      retcode = SCIPsolveDiveLP(scip,  MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      lpsolstat = SCIPgetLPSolstat(scip);
+
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
-      if( retstat != SCIP_OKAY )
-      { 
-         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+      if( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         if( lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {
+            SCIP_CALL( retcode );
+         }
 #endif
+         SCIPwarningMessage(scip, "Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(scip, "This does not affect the remaining solution procedure --> continue\n");
+      }
 
       if( lperror )
          break;
@@ -474,7 +497,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          ncycles++;
 
       /* get LP solution status and number of fractional variables, that should be integral */
-      lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE && hardroundingidx != -1 )
       {
          SCIP_VAR* var;
@@ -502,7 +524,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIPdebugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }
 
-   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
+   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n",
       lpsolstat, divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
 
    /* check if a solution has been found */
@@ -515,7 +537,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIPdebugMessage("rootsoldiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )
@@ -559,30 +581,31 @@ SCIP_RETCODE SCIPincludeHeurRootsoldiving(
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
-         heurFreeRootsoldiving, heurInitRootsoldiving, heurExitRootsoldiving, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
+         heurCopyRootsoldiving,
+         heurFreeRootsoldiving, heurInitRootsoldiving, heurExitRootsoldiving,
          heurInitsolRootsoldiving, heurExitsolRootsoldiving, heurExecRootsoldiving,
          heurdata) );
 
    /* rootsoldiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/rootsoldiving/minreldepth", 
+         "heuristics/rootsoldiving/minreldepth",
          "minimal relative depth to start diving",
          &heurdata->minreldepth, TRUE, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/rootsoldiving/maxreldepth", 
+         "heuristics/rootsoldiving/maxreldepth",
          "maximal relative depth to start diving",
          &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/rootsoldiving/maxlpiterquot", 
+         "heuristics/rootsoldiving/maxlpiterquot",
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/rootsoldiving/maxlpiterofs", 
+         "heuristics/rootsoldiving/maxlpiterofs",
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/rootsoldiving/maxsols", 
+         "heuristics/rootsoldiving/maxsols",
          "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
          &heurdata->maxsols, TRUE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -593,7 +616,11 @@ SCIP_RETCODE SCIPincludeHeurRootsoldiving(
          "heuristics/rootsoldiving/depthfacnosol",
          "maximal diving depth factor if no feasible solution was found yet",
          &heurdata->depthfacnosol, TRUE, DEFAULT_DEPTHFACNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/rootsoldiving/alpha",
+         "soft rounding factor to fade out objective coefficients",
+         &heurdata->alpha, TRUE, DEFAULT_ALPHA, 0.0, 1.0, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 

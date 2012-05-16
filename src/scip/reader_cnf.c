@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,10 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.c
- * @ingroup FILEREADERS 
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
+ *
+ * DIMACS CNF (conjunctive normal form) file format used for example for SAT problems. For a detailed description of
+ * this format see http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html .
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,6 +48,7 @@
 
 static
 void readError(
+   SCIP*                 scip,               /**< SCIP data structure */
    int                   linecount,          /**< line number of error */
    const char*           errormsg            /**< error message */
    )
@@ -55,16 +58,18 @@ void readError(
 
 static
 void readWarning(
+   SCIP*                 scip,               /**< SCIP data structure */
    int                   linecount,          /**< line number of error */
    const char*           warningmsg          /**< warning message */
    )
 {
-   SCIPwarningMessage("Line <%d>: %s\n", linecount, warningmsg);
+   SCIPwarningMessage(scip, "Line <%d>: %s\n", linecount, warningmsg);
 }
 
 /** reads the next non-empty non-comment line of a cnf file */
 static
 SCIP_RETCODE readCnfLine(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_FILE*            file,               /**< input file */
    char*                 buffer,             /**< buffer for storing the input line */
    int                   size,               /**< size of the buffer */
@@ -90,8 +95,8 @@ SCIP_RETCODE readCnfLine(
          {
             char s[SCIP_MAXSTRLEN];
             (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "line too long (exceeds %d characters)", size-2);
-            readError(*linecount, s);
-            return SCIP_PARSEERROR;
+            readError(scip, *linecount, s);
+            return SCIP_READERROR;
          }
       }
       else
@@ -155,34 +160,34 @@ SCIP_RETCODE readCnf(
    linecount = 0;
 
    /* read header */
-   SCIP_CALL( readCnfLine(file, line, sizeof(line), &linecount) );
+   SCIP_CALL( readCnfLine(scip, file, line, sizeof(line), &linecount) );
    if( *line != 'p' )
    {
-      readError(linecount, "problem declaration line expected");
-      return SCIP_PARSEERROR;
+      readError(scip, linecount, "problem declaration line expected");
+      return SCIP_READERROR;
    }
    if( sscanf(line, "p %8s %d %d", format, &nvars, &nclauses) != 3 )
    {
-      readError(linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");
-      return SCIP_PARSEERROR;
+      readError(scip, linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");
+      return SCIP_READERROR;
    }
    if( strcmp(format, "cnf") != 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid format tag <%s> (must be 'cnf')", format);
-      readError(linecount, s);
-      return SCIP_PARSEERROR;
+      readError(scip, linecount, s);
+      return SCIP_READERROR;
    }
    if( nvars <= 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of variables <%d> (must be positive)", nvars);
-      readError(linecount, s);
-      return SCIP_PARSEERROR;
+      readError(scip, linecount, s);
+      return SCIP_READERROR;
    }
    if( nclauses <= 0 )
    {
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of clauses <%d> (must be positive)", nclauses);
-      readError(linecount, s);
-      return SCIP_PARSEERROR;
+      readError(scip, linecount, s);
+      return SCIP_READERROR;
    }
 
    /* get parameter values */
@@ -200,7 +205,7 @@ SCIP_RETCODE readCnf(
    {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x%d", v+1);
       SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
-            NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }
@@ -210,7 +215,7 @@ SCIP_RETCODE readCnf(
    clauselen = 0;
    do
    {
-      retcode = readCnfLine(file, line, sizeof(line), &linecount);
+      retcode = readCnfLine(scip, file, line, sizeof(line), &linecount);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
 
@@ -223,8 +228,8 @@ SCIP_RETCODE readCnf(
             if( sscanf(tok, "%d", &v) != 1 )
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);
-               readError(linecount, s);
-               retcode = SCIP_PARSEERROR;
+               readError(scip, linecount, s);
+               retcode = SCIP_READERROR;
                goto TERMINATE;
             }
 
@@ -233,7 +238,7 @@ SCIP_RETCODE readCnf(
             {
                /* end of clause: construct clause and add it to SCIP */
                if( clauselen == 0 )
-                  readWarning(linecount, "empty clause detected in line -- problem infeasible");
+                  readWarning(scip, linecount, "empty clause detected in line -- problem infeasible");
 
                clausenum++;
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
@@ -277,8 +282,8 @@ SCIP_RETCODE readCnf(
             {
                if( clauselen >= nvars )
                {
-                  readError(linecount, "too many literals in clause");
-                  retcode = SCIP_PARSEERROR;
+                  readError(scip, linecount, "too many literals in clause");
+                  retcode = SCIP_READERROR;
                   goto TERMINATE;
                }
          
@@ -299,8 +304,8 @@ SCIP_RETCODE readCnf(
             else
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid variable number <%d>", ABS(v));
-               readError(linecount, s);
-               retcode = SCIP_PARSEERROR;
+               readError(scip, linecount, s);
+               retcode = SCIP_READERROR;
                goto TERMINATE;
             }
 
@@ -314,13 +319,13 @@ SCIP_RETCODE readCnf(
    /* check for additional literals */
    if( clauselen > 0 )
    {
-      SCIPwarningMessage("found %d additional literals after last clause\n", clauselen);
+      SCIPwarningMessage(scip, "found %d additional literals after last clause\n", clauselen);
    }
 
    /* check number of clauses */
    if( clausenum != nclauses )
    {
-      SCIPwarningMessage("expected %d clauses, but found %d\n", nclauses, clausenum);
+      SCIPwarningMessage(scip, "expected %d clauses, but found %d\n", nclauses, clausenum);
    }
 
  TERMINATE:
@@ -345,6 +350,21 @@ SCIP_RETCODE readCnf(
 /*
  * Callback methods
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyCnf)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderCnf(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeCnf NULL
@@ -372,7 +392,7 @@ SCIP_DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* read cnf file */
    retcode = readCnf(scip, f);
@@ -406,7 +426,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
 
    /* include cnf reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeCnf, readerReadCnf, readerWriteCnf, readerdata) );
+         readerCopyCnf,
+         readerFreeCnf, readerReadCnf, readerWriteCnf, 
+         readerdata) );
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

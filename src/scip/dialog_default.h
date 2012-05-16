@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.h
+ * @ingroup DIALOGS
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  */
@@ -37,6 +38,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu);
 /** standard menu dialog execution method, that doesn't display it's help screen */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
+
+/** dialog execution method for the change add constraint */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons);
+
+/** dialog execution method for the change bounds command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds);
+
+/** dialog execution method for the freetransproblem command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeFreetransproblem);
 
 /** dialog execution method for the checksol command */
 extern
@@ -74,6 +87,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
 
+/** dialog execution method for the display nlpi command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNlpi);
+
 /** dialog execution method for the display parameters command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters);
@@ -81,6 +98,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters);
 /** dialog execution method for the display presolvers command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers);
+
+/** dialog execution method for the display pricer command */
+extern  
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPricers);
 
 /** dialog execution method for the display problem command */
 extern
@@ -93,6 +114,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators);
 /** dialog execution method for the display readers command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders);
+
+/** dialog execution method for the display relaxators command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayRelaxators);
 
 /** dialog execution method for the display separators command */
 extern
@@ -117,6 +142,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue);
 /** dialog execution method for the display varbranchstatistics command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics);
+
+/** dialog execution method for the display LP solution quality command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLPSolutionQuality);
 
 /** dialog execution method for the display transsolution command */
 extern
@@ -181,6 +209,66 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
 /** dialog execution method for the set branching priority command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
+
+/** dialog execution method for the set heuristics aggressive command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
+
+/** dialog execution method for the set heuristics fast command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
+
+/** dialog execution method for the set heuristics off command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
+
+/** dialog execution method for the set presolving aggressive command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
+
+/** dialog execution method for the set presolving fast command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
+
+/** dialog execution method for the set presolving off command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
+
+/** dialog execution method for the set separating aggressive command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive);
+
+/** dialog execution method for the set separating fast command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast);
+
+/** dialog execution method for the set separating off command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff);
+
+/** dialog execution method for the set emphasis counter command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter);
+
+/** dialog execution method for the set emphasis cpsolver command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver);
+
+/** dialog execution method for the set emphasis easy CIP command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip);
+
+/** dialog execution method for the set emphasis feasibility command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility);
+
+/** dialog execution method for the set emphasis hard LP command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp);
+
+/** dialog execution method for the set emphasis optimality command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 
 /** dialog execution method for the set limits objective command */
 extern

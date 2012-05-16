@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,7 +60,11 @@
 #include <ClpPrimalColumnSteepest.hpp>
 #include <ClpDualRowSteepest.hpp>
 #include <CoinIndexedVector.hpp>
+#include <ClpConfig.h>
+#ifndef CLP_VERSION
 #include <config_clp.h>
+#define CLP_VERSION VERSION
+#endif
 
 #include <iostream>
 #include <cassert>
@@ -69,7 +73,7 @@
 
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 
 /* in C++ we have to use "0" instead of "(void*)0" */
@@ -82,6 +86,8 @@
 static int fileNr = 0;
 #endif
 
+/* bound for accepting primal or dual sum of infeasibilities */
+#define SUMINFEASBOUND   1.0e-3
 
 /** LP interface for Clp */
 struct SCIP_LPi
@@ -417,8 +423,6 @@ void unsetFastmipClpParameters(
  * Miscellaneous Methods
  */
 
-static char clpname[SCIP_MAXSTRLEN];
-
 /**@name Miscellaneous Methods */
 /**@{ */
 
@@ -428,8 +432,15 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   snprintf(clpname, SCIP_MAXSTRLEN, "Clp "VERSION"");
-   return clpname;
+   return "Clp "CLP_VERSION;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "COIN-OR Linear Programming Solver developed by J. Forrest et.al. (projects.coin-or.org/Clp)";
 }
 
 /** gets pointer for LP solver - use only with great care */
@@ -454,6 +465,7 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
@@ -585,7 +597,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    ClpSimplex* clp = lpi->clp;
 
    // copy beg-array
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
    BMScopyMemoryArray(mybeg, beg, ncols);
    mybeg[ncols] = nnonz;   // add additional entry at end
@@ -652,7 +664,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    int numCols = lpi->clp->getNumCols();
 
    // copy beg-array (if not 0)
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
 
    // if columns are not empty
@@ -703,7 +715,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    // Current Clp version (1.8) can't delete a range of columns; we have to use deleteColumns (see SCIPlpiDelColset)
    int num = lastcol-firstcol+1;
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, num) );;
 
    // fill array with interval
@@ -735,7 +747,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    // transform dstat information
    int ncols = lpi->clp->getNumCols();
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, ncols) );
    int cnt = 0;
    for (int j = 0; j < ncols; ++j)
@@ -791,7 +803,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    // store number of rows for later use
    int numRows = lpi->clp->getNumRows();
 
-   int* mybeg;
+   int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &mybeg, nrows + 1) );
 
    if ( nnonz != 0 )
@@ -842,7 +854,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    // Current Clp version (1.8) can't delete a range of rows; we have to use deleteRows (see SCIPlpiDelRowset)
    int num = lastrow-firstrow+1;
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, num) );
 
    // fill array with interval
@@ -875,7 +887,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    // transform dstat information
    int nrows = lpi->clp->getNumRows();
-   int* which;
+   int* which = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &which, nrows) );
    int cnt = 0;
    for (int i = 0; i < nrows; ++i)
@@ -1424,6 +1436,38 @@ SCIP_RETCODE SCIPlpiGetRows(
 }
 
 
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
+
+/** gets row names */
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
+
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
 SCIP_RETCODE SCIPlpiIgnoreInstability(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1750,9 +1794,27 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return SCIP_OKAY;
 }
 
+/** start strong branching - call before any strongbranching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing; in the future: use code as in OSI
+   return SCIP_OKAY;
+}
 
-/** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+/** end strong branching - call after any strongbranching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   // currently do nothing; in the future: use code as in OSI
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one arbitrary candidate */
+static
+SCIP_RETCODE lpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -1780,15 +1842,15 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    // set up output arrays
    int ncols = clp->numberColumns();
    assert( 0 <= col && col < ncols );
-   double** outputSolution;
+   double** outputSolution = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2) );
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[0], ncols) );
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[1], ncols) );
 
-   int* outputStatus;
+   int* outputStatus = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputStatus, 2) );
 
-   int* outputIterations;
+   int* outputIterations = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &outputIterations, 2) );
 
    // set iteration limit
@@ -1909,6 +1971,268 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    return SCIP_OKAY;
 }
 
+/** performs strong branching iterations on given arbitrary candidates */
+static
+SCIP_RETCODE lpiStrongbranches(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiStrongbranches() on %d variables (%d iterations)\n", ncols, itlim);
+
+   assert( lpi != 0 );
+   assert( lpi->clp != 0 );
+   assert( cols != 0 );
+   assert( psols != 0 );
+   assert( down != 0 );
+   assert( up != 0 );
+   assert( downvalid != 0 );
+   assert( upvalid != 0 );
+
+   ClpSimplex* clp = lpi->clp;
+
+   // set up output arrays
+   int n = clp->numberColumns();
+   assert( 0 < ncols && ncols <= n );
+   double** outputSolution = NULL;
+   SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2*ncols) );
+   for (int j = 0; j < 2*ncols; ++j)
+   {
+      SCIP_ALLOC( BMSallocMemoryArray( &(outputSolution[j]), n) );
+   }
+
+   int* outputStatus = NULL;
+   SCIP_ALLOC( BMSallocMemoryArray(&outputStatus, 2*ncols) );
+
+   int* outputIterations = NULL;
+   SCIP_ALLOC( BMSallocMemoryArray(&outputIterations, 2*ncols) );
+
+   // set iteration limit
+   int iterlimit = clp->maximumIterations();
+   clp->setMaximumIterations(itlim);
+
+   // store objective value
+   double objval = clp->objectiveValue();
+
+   // store special options for later reset
+   int specialoptions = clp->specialOptions();
+
+   /** Clp special options:
+    *       1 - Don't keep changing infeasibility weight
+    *       2 - Keep nonLinearCost round solves
+    *       4 - Force outgoing variables to exact bound (primal)
+    *       8 - Safe to use dense initial factorization
+    *      16 - Just use basic variables for operation if column generation
+    *      32 - Create ray even in BAB
+    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+    *     128 - Switch off all matrix sanity checks
+    *     256 - No row copy
+    *     512 - If not in values pass, solution guaranteed, skip as much as possible
+    *    1024 - In branch and bound
+    *    2048 - Don't bother to re-factorize if < 20 iterations
+    *    4096 - Skip some optimality checks
+    *    8192 - Do Primal when cleaning up primal
+    *   16384 - In fast dual (so we can switch off things)
+    *   32768 - called from Osi
+    *   65536 - keep arrays around as much as possible (also use maximumR/C)
+    *  131072 - transposeTimes is -1.0 and can skip basic and fixed
+    *  262144 - extra copy of scaled matrix
+    *  524288 - Clp fast dual
+    * 1048576 - don't need to finish dual (can return 3)
+    *  NOTE   - many applications can call Clp but there may be some short cuts
+    *           which are taken which are not guaranteed safe from all applications.
+    *           Vetted applications will have a bit set and the code may test this
+    *           At present I expect a few such applications - if too many I will
+    *           have to re-think.  It is up to application owner to change the code
+    *           if she/he needs these short cuts.  I will not debug unless in Coin
+    *           repository.  See COIN_CLP_VETTED comments.
+    *  0x01000000 is Cbc (and in branch and bound)
+    *  0x02000000 is in a different branch and bound
+    *
+    *  2048 does not seem to work
+    *  262144 does not seem to work
+    */
+#ifndef NDEBUG
+   // in debug mode: leave checks on
+   clp->setSpecialOptions(64|512|1024);
+#else
+   clp->setSpecialOptions(64|128|512|1024|4096);
+#endif
+
+   /* 'startfinish' options for strong branching:
+    *  1 - do not delete work areas and factorization at end
+    *  2 - use old factorization if same number of rows
+    *  4 - skip as much initialization of work areas as possible
+    *      (based on whatsChanged in clpmodel.hpp) ** work in progress
+    *
+    *  4 does not seem to work in strong branching ...
+    */
+   int startFinishOptions = 1;
+   if ( lpi->validFactorization )
+      startFinishOptions = startFinishOptions | 2;
+
+   // set new lower and upper bounds for variables
+   for (int j = 0; j < ncols; ++j)
+   {
+      assert( 0 <= cols[j] && cols[j] < n );
+      down[j] = EPSCEIL(psols[j] - 1.0, 1e-06);
+      up[j]   = EPSFLOOR(psols[j] + 1.0, 1e-06);
+
+      // The bounds returned by CLP seem to be valid using the above options
+      downvalid[j] = TRUE;
+      upvalid[j] = TRUE;
+   }
+
+   /** For strong branching.  On input lower and upper are new bounds while
+    *  on output they are change in objective function values (>1.0e50
+    *  infeasible).  Return code is
+    *   0 if nothing interesting,
+    *  -1 if infeasible both ways and
+    *  +1 if infeasible one way (check values to see which one(s))
+    *  -2 if bad factorization
+    * Solutions are filled in as well - even down, odd up - also status and number of iterations
+    *
+    * The bools are:
+    *   bool stopOnFirstInfeasible
+    *   bool alwaysFinish
+    *
+    * At the moment: we need alwaysFinish to get correct bounds.
+    */
+   int res = clp->strongBranching(ncols, cols, up, down, outputSolution, outputStatus, outputIterations, false, true, startFinishOptions);
+
+   // reset special options
+   clp->setSpecialOptions(specialoptions);
+
+   lpi->validFactorization = true;
+
+   for (int j = 0; j < ncols; ++j)
+   {
+      down[j] += objval;
+      up[j] += objval;
+
+      // correct iteration count
+      if (iter)
+         *iter += outputIterations[2*j] + outputIterations[2*j+1];
+
+      BMSfreeMemoryArray(&outputSolution[2*j]);
+      BMSfreeMemoryArray(&outputSolution[2*j+1]);
+   }
+
+   // reset iteration limit
+   clp->setMaximumIterations(iterlimit);
+
+   // free local memory
+   BMSfreeMemoryArray( &outputStatus );
+   BMSfreeMemoryArray( &outputIterations );
+   BMSfreeMemoryArray( &outputSolution );
+
+   if ( res == -2 )
+      return SCIP_LPERROR;
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   if ( iter != NULL )
+      *iter = 0;
+
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   if ( iter != NULL )
+      *iter = 0;
+
+   /* pass call on to lpiStrongbranches() */
+   SCIP_CALL( lpiStrongbranches(lpi, cols, ncols, psols, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1944,8 +2268,30 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    assert(primalfeasible != 0);
    assert(dualfeasible != 0);
 
-   *primalfeasible = lpi->clp->primalFeasible();
-   *dualfeasible   = lpi->clp->dualFeasible();
+   if ( lpi->clp->primalFeasible() )
+      *primalfeasible = TRUE;
+   else
+      *primalfeasible = FALSE;
+
+   if ( lpi->clp->dualFeasible() )
+      *dualfeasible = TRUE;
+   else
+      *dualfeasible = FALSE;
+
+   // say feasible if deviation is small
+   if (lpi->clp->status()==0 && ( ! (*primalfeasible) || ! (*dualfeasible)) ) 
+   {
+      if ( !(*primalfeasible) && lpi->clp->sumPrimalInfeasibilities() < SUMINFEASBOUND ) 
+      {
+         lpi->clp->setNumberPrimalInfeasibilities(0);
+         *primalfeasible = TRUE;
+      }
+      if ( !(*dualfeasible) && lpi->clp->sumDualInfeasibilities() < SUMINFEASBOUND)
+      {
+         lpi->clp->setNumberDualInfeasibilities(0);
+         *dualfeasible = TRUE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2046,9 +2392,9 @@ SCIP_Bool SCIPlpiExistsDualRay(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" (see above), (but is
-    * not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
+    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
+   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0 );
 }
 
 
@@ -2064,9 +2410,21 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" (see above), (but is
-    * not necessarily dual feasible), see ClpModel::infeasibilityRay */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   /* Clp assumes to have a dual ray whenever it concludes "primal infeasible" and the algorithm was
+    * the dual simplex, (but is not necessarily dual feasible), see ClpModel::infeasibilityRay */
+   if ( lpi->clp->rayExists() )
+   {
+      if ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 && lpi->clp->algorithm() < 0)
+         return TRUE;
+      else 
+      {
+         if ( lpi->clp->status() != 2 || lpi->clp->algorithm() <= 0 ) 
+            lpi->clp->deleteRay();
+         return FALSE;
+      }
+   } 
+   else
+      return FALSE;
 }
 
 
@@ -2382,6 +2740,24 @@ SCIP_RETCODE SCIPlpiGetIterations(
    return SCIP_OKAY;
 }
 
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -2490,8 +2866,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
-   assert(cstat != 0);
-   assert(rstat != 0);
 
    invalidateSolution(lpi);
 
@@ -2502,6 +2876,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lhs = clp->getRowLower();
    const double* rhs = clp->getRowUpper();
+
+   assert( rstat != 0 || clp->numberRows() == 0 );
    for( int i = 0; i < clp->numberRows(); ++i )
    {
       int status = rstat[i];
@@ -2537,6 +2913,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    const double* lb = clp->getColLower();
    const double* ub = clp->getColUpper();
+
+   assert( cstat != 0 || clp->numberColumns() == 0 );
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = cstat[j];
@@ -2606,9 +2984,20 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int nrows = clp->numberRows();
    int ncols = clp->numberColumns();
 
-   int* idx;
+   int* idx = NULL;
    SCIP_ALLOC( BMSallocMemoryArray(&idx, nrows) );
-   clp->getBasics(idx);
+
+   /* If secondaryStatus == 6, clp says the LP is empty. Mose likely this happened, because the
+      matrix is empty, i.e., all rows were redundant/empty. In this case, we construct a basis
+      consisting of slack variables. */
+   if ( clp->secondaryStatus() == 6 )
+   {
+      assert( clp->getNumElements() == 0 );
+      for (int i = 0; i < nrows; ++i)
+	 idx[i] = ncols + i;
+   }
+   else
+      clp->getBasics(idx);
 
    for (int i = 0; i < nrows; ++i)
    {
@@ -2806,6 +3195,22 @@ SCIP_RETCODE SCIPlpiSetState(
    return SCIP_OKAY;
 }
 
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   lpi->clp->allSlackBasis(true);
+   lpi->validFactorization = false;
+
+   return SCIP_OKAY;
+}
+
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2833,7 +3238,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    return (lpistate != NULL);
 }
 
-/** reads LP state (like basis information from a file */
+/** reads LP state (like basis information) from a file */
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,            /**< LP interface structure */
    const char*           fname           /**< file name */
@@ -3050,7 +3455,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
-      return SCIP_PARAMETERUNKNOWN; // ?????????????????
+      return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 *dval = lpi->clp->primalObjectiveLimit();
@@ -3095,7 +3500,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
-      return SCIP_PARAMETERUNKNOWN; // ?????????????????
+      return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
 	 lpi->clp->setPrimalObjectiveLimit(dval);

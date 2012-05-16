@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -202,7 +202,8 @@ TCLIQUE_Bool tcliqueLoadFile(
    TCLIQUE_GRAPH**  tcliquegraph,       /**< pointer to store graph data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
-   char*            probname            /**< buffer to store the name of the problem */
+   char*            probname,           /**< buffer to store the name of the problem */
+   int              sizeofprobname      /**< size of buffer to store the name of the problem */
    );
 
 /** saves graph data structure to file */
@@ -279,6 +280,7 @@ void tcliqueMaxClique(
    int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int*             ntreenodes,         /**< pointer to store the number of used tree nodes (or NULL) */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    );
 

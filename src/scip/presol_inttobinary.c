@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_inttobinary.c
- * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
  */
@@ -25,13 +24,12 @@
 #include <string.h>
 
 #include "scip/presol_inttobinary.h"
-#include "scip/pub_misc.h"
 
 
 #define PRESOL_NAME            "inttobinary"
 #define PRESOL_DESC            "converts integer variables with domain [a,a+1] to binaries"
 #define PRESOL_PRIORITY        +7000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS              -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
@@ -40,6 +38,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeInttobinary NULL
@@ -74,6 +87,9 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
 
    /* get the problem variables */
    scipvars = SCIPgetVars(scip);
@@ -117,18 +133,29 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          /* create binary variable */
          (void) SCIPsnprintf(binvarname, SCIP_MAXSTRLEN, "%s_bin", SCIPvarGetName(vars[v]));
          SCIP_CALL( SCIPcreateVar(scip, &binvar, binvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-               SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );
 
          /* aggregate integer and binary variable */
          SCIP_CALL( SCIPaggregateVars(scip, vars[v], binvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
-         assert(!infeasible);
-         assert(redundant);
-         assert(aggregated);
-         
+
          /* release binary variable */
          SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
 
+         /* it can be the case that this aggregation detects an infeasibility; for example, during the copy of the
+          * variable bounds from the integer variable to the binary variable, infeasibility can be detected; this can
+          * happen because an upper bound or a lower bound of such a variable bound variable was "just" changed and the
+          * varbound constraint handler, who would detect that infeasibility (since it was creating it from a varbound
+          * constraint), was called before that bound change was detected due to the presolving priorities;
+          */
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+            
+         assert(redundant);
+         assert(aggregated);
          (*nchgvartypes)++;
          *result = SCIP_SUCCESS;
       }
@@ -160,6 +187,7 @@ SCIP_RETCODE SCIPincludePresolInttobinary(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyInttobinary,
          presolFreeInttobinary, presolInitInttobinary, presolExitInttobinary, 
          presolInitpreInttobinary, presolExitpreInttobinary, presolExecInttobinary,
          presoldata) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -100,10 +100,11 @@ using namespace scip;
 using namespace tsp;
 using namespace std;
 
+/** creates and runs a SCIP instance with default and TSP plugins */
 static
 SCIP_RETCODE runSCIP(
-   int                   argc,
-   char**                argv
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP* scip = NULL;
@@ -118,11 +119,11 @@ SCIP_RETCODE runSCIP(
 
    /* include TSP specific plugins */
    SCIP_CALL( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );
-   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(), TRUE) ); 
-   SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(), TRUE) );
-   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFrats(), TRUE) );
+   SCIP_CALL( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(scip), TRUE) ); 
+   SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(scip), TRUE) );
+   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFrats(scip), TRUE) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -146,10 +147,10 @@ SCIP_RETCODE runSCIP(
    return SCIP_OKAY;
 }
 
-int
-main(
-   int                   argc,
-   char**                argv
+/** main method starting TSP code */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;
@@ -157,7 +158,7 @@ main(
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      SCIPprintError(retcode);
       return -1;
    }
 

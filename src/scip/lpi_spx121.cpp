@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -109,11 +109,15 @@ public:
 
    void setProbname(const char* probname)
    {
+      int len;
+
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      spx_alloc(m_probname, strlen(probname) + 1);
-      strcpy(m_probname, probname);
+      len = (int)strlen(probname);
+      spx_alloc(m_probname, len + 1);
+      strncpy(m_probname, probname, len);
+      m_probname[len] = '\0';
    }
 
    Real getObjLoLimit() const
@@ -423,7 +427,7 @@ void invalidateSolution(SCIP_LPI* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[SCIP_MAXSTRLEN];
+static char spxname[100];
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -437,8 +441,16 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   sprintf(spxname, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)";
 }
 
 /** gets pointer for LP solver - use only with great care */
@@ -1223,6 +1235,36 @@ SCIP_RETCODE SCIPlpiGetRows(
    return SCIP_OKAY;
 }
 
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
+/** gets row names */
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
 SCIP_RETCODE SCIPlpiIgnoreInstability(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1419,8 +1461,27 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    return spxSolve(lpi);
 }
 
+/** start strong branching - call before any strongbranching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   /* do nothing */
+   return SCIP_OKAY;
+}
+
+/** end strong branching - call after any strongbranching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   /* do nothing */
+   return SCIP_OKAY;
+}
+
 /** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+static
+SCIP_RETCODE lpiStrongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< current primal solution value of column */
@@ -1454,7 +1515,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    assert(downvalid != NULL);
    assert(upvalid != NULL);
 
-   /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
+   /** remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
    rowstat = new SoPlex::VarStatus[spx->nRows()];
    colstat = new SoPlex::VarStatus[spx->nCols()]; 
@@ -1567,6 +1628,120 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    return SCIP_OKAY;
 }
 
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   assert( iter != NULL );
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   assert( down != NULL );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   for (int j = 0; j < ncols; ++j)
+   {
+      /* pass call on to lpiStrongbranch() */
+      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+   }
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   /* pass call on to lpiStrongbranch() */
+   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   assert( iter != NULL );
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   assert( down != NULL );
+
+   if ( iter != NULL )
+      *iter = 0;
+
+   for (int j = 0; j < ncols; ++j)
+   {
+      /* pass call on to lpiStrongbranch() */
+      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+   }
+   return SCIP_OKAY;
+}
 /**@} */
 
 
@@ -1943,6 +2118,26 @@ SCIP_RETCODE SCIPlpiGetIterations(
    return SCIP_OKAY;
 }
 
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetRealSolQuality()\n");
+
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -2166,7 +2361,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    Vector x(lpi->spx->nRows(), coef); /* column of B^-1 has nrows entries */
    DVector e(lpi->spx->nRows());
 
-   /**@todo make this faster by pregenerating all dense unit vectors */
+   /** make this faster by pregenerating all dense unit vectors */
    e = lpi->spx->unitVector(c);
 
    /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
@@ -2331,12 +2526,27 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* extend the basis to the current LP */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /** this has to be corrected for lb = -infinity */
    for( i = lpistate->nrows; i < lpnrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
+
+   return SCIP_OKAY;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   SCIPdebugMessage("calling SCIPlpiClearState()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->reLoad();
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.c
- * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
+ *
+ * This heuristic takes a solution from somewhere else via the function SCIPheurPassSolTrySol(). It
+ * then tries to commit this solution. It is mainly used by cons_indicator, which tries to correct a
+ * given solution, but cannot directly submit this solution, because it is a constraint handler and
+ * not a heuristic.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,7 +38,8 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -47,7 +52,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL*      sol;                /**< storing solution passed to heuristic (NULL if none) */
+   SCIP_SOL*      trysol;             /**< storing solution passed to heuristic which has to tried (NULL if none) */
+   SCIP_SOL*      addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
+   SCIP_Bool      rec;                /**< whether we are within our own call */
 };
 
 
@@ -57,10 +64,23 @@ struct SCIP_HeurData
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyTrySol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurTrySol(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeTrysol)
+SCIP_DECL_HEURFREE(heurFreeTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -80,9 +100,9 @@ SCIP_DECL_HEURFREE(heurFreeTrysol)
 }
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolTrysol)
+SCIP_DECL_HEUREXITSOL(heurExitTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -90,15 +110,21 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTrysol)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
 
-   SCIPdebugMessage("exitsol method of trysol primal heuristic.\n");
+   SCIPdebugMessage("exit method of trysol primal heuristic.\n");
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
    /* free solution if one is still present */
-   if ( heurdata->sol != NULL )
-      SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+   if( heurdata->trysol != NULL )
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->trysol) );
+   assert( heurdata->trysol == NULL );
+
+   /* free solution if one is still present */
+   if( heurdata->addsol != NULL )
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->addsol) );
+   assert( heurdata->trysol == NULL );
 
    return SCIP_OKAY;
 }
@@ -106,10 +132,13 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTrysol)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecTrysol)
+SCIP_DECL_HEUREXEC(heurExecTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool stored;
+#ifdef SCIP_DEBUG
+   SCIP_Real obj;
+#endif
 
    assert( heur != NULL );
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
@@ -123,26 +152,60 @@ SCIP_DECL_HEUREXEC(heurExecTrysol)
    assert(heurdata != NULL);
 
    /* only run if solution present */
-   if ( heurdata->sol == NULL )
+   if( heurdata->addsol == NULL && heurdata->trysol == NULL )
       return SCIP_OKAY;
 
    SCIPdebugMessage("exec method of trysol primal heuristic.\n");
    *result = SCIP_DIDNOTFIND;
+   heurdata->rec = TRUE;
 
-   /* try solution and free it - check everything, because we are not sure */
-   SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, TRUE, TRUE, TRUE, &stored) );
-   assert( heurdata->sol == NULL );
+   if( heurdata->trysol != NULL )
+   {
+      /* try solution and free it - check everything, because we are not sure */
+#ifdef SCIP_DEBUG
+      obj = SCIPgetSolOrigObj(scip, heurdata->trysol);
+#endif
 
-   if ( stored )
-      *result = SCIP_FOUNDSOL;
+      SCIP_CALL( SCIPtrySolFree(scip, &heurdata->trysol, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+      if( stored )
+      {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
+#endif
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   if( heurdata->addsol != NULL )
+   {
+#ifdef SCIP_DEBUG
+      obj = SCIPgetSolOrigObj(scip, heurdata->addsol);
+#endif
+
+      SCIP_CALL( SCIPaddSolFree(scip, &heurdata->addsol, &stored) );
+
+      if( stored )
+      {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("Found feasible solution of value %g.\n", obj);
+#endif
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   assert( heurdata->trysol == NULL );
+   assert( heurdata->addsol == NULL );
+
+   heurdata->rec = FALSE;
 
    return SCIP_OKAY;
 }
 
 
-#define heurInitTrysol NULL
-#define heurExitTrysol NULL
-#define heurInitsolTrysol NULL
+#define heurInitTrySol NULL
+#define heurExitsolTrySol NULL
+#define heurInitsolTrySol NULL
 
 
 /*
@@ -158,12 +221,16 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->sol = NULL;
+   heurdata->trysol = NULL;
+   heurdata->addsol = NULL;
+   heurdata->rec = FALSE;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, heurFreeTrysol, heurInitTrysol, heurExitTrysol,
-         heurInitsolTrysol, heurExitsolTrysol, heurExecTrysol, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
+         heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
+         heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
+         heurdata) );
 
    return SCIP_OKAY;
 }
@@ -188,10 +255,60 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    assert(heurdata != NULL);
 
    /* only store solution if we are not within our own SCIPtrySol() call */
-   if ( heurdata->sol == NULL )
+   if( ! heurdata->rec )
    {
-      SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->sol, sol) );
-      SCIPsolSetHeur(heurdata->sol, heur);
+      if( heurdata->trysol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->trysol)) )
+      {
+         if( heurdata->trysol != NULL )
+         {
+            /* free previous solution */
+            SCIP_CALL( SCIPfreeSol(scip, &heurdata->trysol) );
+         }
+
+         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
+         SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->trysol, sol) );
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->trysol) );
+         SCIPsolSetHeur(heurdata->trysol, heur);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** pass solution to trysol heuristic which just gets added (without checking feasibility */
+SCIP_RETCODE SCIPheurPassSolAddSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< trysol heuristic */
+   SCIP_SOL*             sol                 /**< solution to be passed */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert( scip != NULL );
+   assert( heur != NULL );
+   assert( sol != NULL );
+   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* only store solution if we are not within our own SCIPtrySol() call */
+   if( ! heurdata->rec )
+   {
+      if( heurdata->addsol == NULL || SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->addsol)) )
+      {
+         if( heurdata->addsol != NULL )
+         {
+            /* free previous solution */
+            SCIP_CALL( SCIPfreeSol(scip, &heurdata->addsol) );
+         }
+
+         SCIPdebugMessage("Received solution of value %g.\n", SCIPgetSolOrigObj(scip, sol));
+         SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->addsol, sol) );
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->addsol) );
+         SCIPsolSetHeur(heurdata->addsol, heur);
+      }
    }
 
    return SCIP_OKAY;

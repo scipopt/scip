@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.h
+ * @ingroup PROPAGATORS
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -47,7 +48,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable which we want sort */
    int                   nvars,              /**< number of variables */
-   SCIP_HASHMAP*         varHashmap,         /**< mapping a variable to its posiotion in the (used) variable array, or NULL */    
+   SCIP_HASHMAP*         varHashmap,         /**< mapping a variable to its position in the (used) variable array, or NULL */    
    SCIP_VAR**            usedvars,           /**< array of variables which are involved in the propagation, or NULL */
    int*                  nusedvars,          /**< number of variables which are involved in the propagation, or NULL */
    SCIP_VAR**            topovars,           /**< array where the topological sorted variables are stored */
@@ -55,7 +56,7 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
    SCIP_Bool             lowerbound          /**< topological sorted with respect to the variable lower bounds, otherwise variable upper bound */
    );
 
-/** returns TRUE if the propagater has the status that all variable lower and upper bounds are propgated */
+/** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
 extern
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                 /**< SCIP data structure */
@@ -64,7 +65,9 @@ SCIP_Bool SCIPisPropagatedVbounds(
 /** performs propagation of variables lower and upper bounds */
 extern
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             force,               /**< should domain changes be forced */
+   SCIP_RESULT*          result               /**< pointer to store result */
    );
 
 #ifdef __cplusplus

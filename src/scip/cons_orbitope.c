@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,16 +33,35 @@
  *
  * Orbitopal Fixing@n
  * Volker Kaibel, Matthias Peinhardt, and Marc E. Pfetsch,@n
- * Proc. IPCO 2007
+ * Discrete Optimization 8, No. 4, 595-610 (2011)
+ * (A preliminary version appears in Proc. IPCO 2007.)
  *
  * In this paper a linear time propagation algorithm is described, a variant of which is implemented
- * here.
+ * here. The implemented variant does not run in linear time, but is very fast in practice.
+ *
+ * <table>
+ *   <caption>translation table</caption>
+ *   <tr><td>here</td><td>paper</td></tr>
+ *   <tr><td></td><td></td></tr>
+ *   <tr><td>nspcons      </td><td>p       </td></tr>
+ *   <tr><td>nblocks      </td><td>q       </td></tr>
+ *   <tr><td>vars         </td><td>x       </td></tr>
+ *   <tr><td>vals         </td><td>A^\\star</td></tr>
+ *   <tr><td>weights      </td><td>\\omega </td></tr>
+ *   <tr><td>cases        </td><td>\\tau   </td></tr>
+ *   <tr><td>fixtriangle  </td><td>--      </td></tr>
+ *   <tr><td>resolveprop  </td><td>--      </td></tr>
+ *   <tr><td>firstnonzeros</td><td>\\mu    </td></tr>
+ *   <tr><td>lastones     </td><td>\\alpha </td></tr>
+ *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
+ * </table>
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/cons_orbitope.h"
 
@@ -62,29 +81,11 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+
 
 /*
  * Data structures
- */
-
-/* ###############################################################################
- * ######                 TRANSLATION TABLE FOR VARIABLE NAMES               #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###### |     HERE      |    COLORING     |    BHCOUNT     |    PAPER    | #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###### | nspcons       |  n_             | m              | p           | #####
- * ###### | nblocks       |  maxColors_     | n              | q           | #####
- * ###### | vars          |  XVars_         | xvars          | x           | #####
- * ###### | vals          |  XVals_         | xvals          | A^\star     | #####
- * ###### | weights       |  A_             | A              | \omega      | #####
- * ###### | cases         |  T_             | T              | \tau        | #####
- * ###### | fixtriangle   |  fixTriangle_   | fixtriangle    |     --      | #####
- * ###### | resolveprop   |  resolveProp_   | resolveProp    |     --      | #####
- * ###### | firstnonzeros |  Mu_            | Mu             | \mu         | #####
- * ###### | lastones      |  Alpha_         | Alpha          | \alpha      | #####
- * ###### | frontiersteps |  S              | Gamma          | \Gamma      | #####
- * ###### +---------------+-----------------+----------------+-------------+ #####
- * ###############################################################################
  */
 
 /** constraint data for orbitope constraints */
@@ -100,7 +101,7 @@ struct SCIP_ConsData
    int                   nblocks;            /**< number of symmetric variable blocks             <=> q     */
    SCIP_Bool             ispart;             /**< whether we deal with the partitioning case (packing otherwise) */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                           */
-   SCIP_Bool             isTriangleFixed;    /**< has the upper right triangle already been fixed to zero?  */
+   SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already been fixed to zero?  */
 };
 
 
@@ -126,10 +127,10 @@ SCIP_RETCODE consdataFree(
    q = (*consdata)->nblocks;
    for (i = 0; i < p; ++i)
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);  /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);     /*lint !e866*/
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
@@ -145,6 +146,7 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
+
 /** creates orbitope constraint data */
 static
 SCIP_RETCODE consdataCreate(
@@ -153,7 +155,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR***           vars,               /**< variables array, must have size nspcons x nblocks       */
    int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_Bool             ispart,             /**< deal with the partitioning case (packing otherwise)     */
    SCIP_Bool             resolveprop         /**< should propagation be resolved?                         */
    )
 {
@@ -170,10 +172,10 @@ SCIP_RETCODE consdataCreate(
 
    for (i = 0; i < nspcons; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], nblocks) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], nblocks) );                 /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
    }
 
    (*consdata)->tmpvals = NULL;
@@ -182,7 +184,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nblocks = nblocks;
    (*consdata)->ispart  = ispart;
    (*consdata)->resolveprop = resolveprop;
-   (*consdata)->isTriangleFixed = FALSE;
+   (*consdata)->istrianglefixed = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -200,14 +202,12 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-
-
 #ifdef PRINT_MATRIX
-/* debug method, prints variable matrix */
+/** debug method, prints variable matrix */
 static
 void printMatrix(
    SCIP_CONSDATA*        consdata            /**< the constraint data     */
-)
+   )
 {
    int i;
    int j;
@@ -224,9 +224,9 @@ void printMatrix(
    {
       for (j = 0; j < consdata->nblocks; ++j)
       {
-	 if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            printf("%1.0f",SCIPvarGetUbLocal(consdata->vars[i][j]));
-	 else
+         if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
+            printf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
+         else
             printf(" ");
       }
       printf("|\n");
@@ -247,8 +247,7 @@ SCIP_RETCODE printSCI(
    int   q,                   /**< number of columns */
    int** cases,               /**< SCI dynamic programming table */
    int i,                     /**< row position of bar */
-   int j,                     /**< column position of bar */
-   SCIP_Bool isTriangleFixed  /**< has the upper right triangle been fixed? */
+   int j                      /**< column position of bar */
    )
 {
    int k;
@@ -262,7 +261,7 @@ SCIP_RETCODE printSCI(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) );
       for (l = 0; l < q; ++l)
-	 M[k][l] = 0;
+         M[k][l] = 0;
    }
 
    /* first add bar */
@@ -283,15 +282,15 @@ SCIP_RETCODE printSCI(
 
       /* if case 1 */
       if ( cases[p1][p2] == 1 )
-	 --p2;   /* decrease column */
+         --p2;   /* decrease column */
       else
       {
-	 /* case 2 or 3: */
-	 assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-	 assert( M[p1][p2] == 0 );
-	 M[p1][p2] = -1;
-	 if ( cases[p1][p2] == 3 )
-	    break;
+         /* case 2 or 3: */
+         assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+         assert( M[p1][p2] == 0 );
+         M[p1][p2] = -1;
+         if ( cases[p1][p2] == 3 )
+            break;
       }
       --p1;  /* decrease row */
    }
@@ -307,18 +306,26 @@ SCIP_RETCODE printSCI(
    {
       for (l = 0; l < q; ++l)
       {
-	 if ( isTriangleFixed && l > k )
-	    SCIPinfoMessage(scip, 0, "*");
-	 else
-	 {
-	    switch (M[k][l])
-	    {
-	    case 1: SCIPinfoMessage(scip, 0, "+"); break;
-	    case -1: SCIPinfoMessage(scip, 0, "-");; break;
-	    case 0: SCIPinfoMessage(scip, 0, "#");; break;
-	    default: abort();
-	    }
-	 }
+         if ( l > k )
+            SCIPinfoMessage(scip, 0, "*");
+         else
+         {
+            switch (M[k][l])
+            {
+            case 1: 
+               SCIPinfoMessage(scip, 0, "+"); 
+               break;
+            case -1: 
+               SCIPinfoMessage(scip, 0, "-");
+               break;
+            case 0: 
+               SCIPinfoMessage(scip, 0, "#");
+               break;
+            default:
+               SCIPerrorMessage("unexpected matrix entry <%d>: should be -1, 0 or +1\n", M[k][l]);
+               SCIPABORT();
+            }
+         }
       }
       SCIPinfoMessage(scip, 0, "\n");
    }
@@ -357,21 +364,24 @@ void copyValues(
    for (i = 0; i < consdata->nspcons; ++i)
    {
       for (j = 0; j < consdata->nblocks; ++j)
-	 consdata->vals[i][j] = SCIPgetSolVal(scip, sol, consdata->vars[i][j]);
+         consdata->vals[i][j] = SCIPgetSolVal(scip, sol, consdata->vars[i][j]);
    }
 }
 
 
 /** compute the dynamic programming table for SC
  *
- * Build up dynamic programming table in order to find SCs with minimum weight.
+ *  Build up dynamic programming table in order to find SCs with minimum weight.
  *
- * The method here works for the general case in which the variables in the
- * top right triangle are not necessarily fixed.
+ *  The method here works for the general case in which the variables in the
+ *  top right triangle are not necessarily fixed.
  *
- * The values of the minimal SCIs are stored in @a weights.
- * The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
- * Here, 3 means that we have reached the upper limit.
+ *  The values of the minimal SCIs are stored in @a weights.
+ *  The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
+ *  Here, 3 means that we have reached the upper limit.
+ * 
+ *  We assume that the upper right triangle is fixed to 0. Hence we can perform the computation a
+ *  bit more efficient.
  */
 static
 void computeSCTable(
@@ -383,6 +393,8 @@ void computeSCTable(
    SCIP_Real**           vals                /**< current solution                                          */
    )
 {
+   SCIP_Real minvalue;
+   int diagsize;
    int i;
    int j;
 
@@ -396,115 +408,39 @@ void computeSCTable(
    {
       for (j = 0; j < nblocks; ++j)
       {
-	 if (i >= j)
-	 {
-	    weights[i][j] = -1.0;
-	    cases[i][j] = -1;
-	 }
+         if ( i >= j )
+         {
+            weights[i][j] = -1.0;
+            cases[i][j] = -1;
+         }
       }
    }
 #endif
 
-   /* init first row */
-   for (j = 0; j < nblocks; ++j)
-   {
-      weights[0][j] = vals[0][j];
-      cases[0][j] = 3;
-   }
-
-   /* init first column */
-   for (i = 1; i < nspcons; ++i)
-   {
-      weights[i][0] = weights[i-1][0] + vals[i][0];
-      cases[i][0] = 2;  /* second case */
-   }
-
-   /* start building the table */
-   for (i = 1; i < nspcons; ++i)
-   {
-      for (j = 1; j < nblocks; ++j)
-      {
-         SCIP_Real weightleft;
-         SCIP_Real weightright;
-
-	 assert( cases[i-1][j] != -1 );
-	 assert( cases[i-1][j-1] != -1 );
-
-	 weightleft = weights[i-1][j-1];
-	 weightright = vals[i][j] + weights[i-1][j];
-
-	 /* For first column: cannot take left possibility */
-	 if ( SCIPisLT(scip, weightleft, weightright) )
-	 {
-	    weights[i][j] = weightleft;
-	    cases[i][j] = 1;
-	 }
-	 else
-	 {
-	    weights[i][j] = weightright;
-	    cases[i][j] = 2;
-	 }
-      }
-   }
-}
-
-
-/**
- * This is a variant of computeSCTable, where we assume that the upper right triangle
- * is fixed to 0. Hence we can perform the computation a bit more efficient.
- */
-static
-void computeSCTableFixTriangle(
-   SCIP*                 scip,               /**< SCIP pointer                                              */
-   int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p   */
-   int                   nblocks,            /**< number of symmetric variable blocks               <=> q   */
-   SCIP_Real**           weights,            /**< SC weight table                                           */
-   int**                 cases,              /**< indicator of the SC cases                                 */
-   SCIP_Real**           vals                /**< current solution                                          */
-   )
-{
-   SCIP_Real minvalue;
-   int i;
-   int j;
-
-   assert( weights != NULL );
-   assert( cases != NULL );
-   assert( vals != NULL );
-
-#ifndef NDEBUG
-   /* for debuging */
-   for (i = 0; i < nspcons; ++i)
-   {
-      for (j = 0; j < nblocks; ++j)
-      {
-	 if ( i >= j )
-	 {
-	    weights[i][j] = -1.0;
-	    cases[i][j] = -1;
-	 }
-      }
-   }
-#endif
-
-   /* init diagonal */
+   /* initialize diagonal */
    minvalue = vals[0][0];
    weights[0][0] = minvalue;
    cases[0][0] = 3;
 
-   for (j = 1; j < nblocks; ++j)
+   /* get last row of triangle */
+   diagsize = nblocks;
+   if ( nspcons < nblocks )
+      diagsize = nspcons;
+
+   for (j = 1; j < diagsize; ++j)
    {
       /* use LT to move entry as far to the left as possible */
       if ( SCIPisLT(scip, vals[j][j], minvalue) )
       {
          minvalue = vals[j][j];
-	 cases[j][j] = 3;
+         cases[j][j] = 3;
       }
       else
-	 cases[j][j] = 1;
+         cases[j][j] = 1;
       weights[j][j] = minvalue;
    }
 
-   /* init first column */
+   /* initialize first column */
    for (i = 1; i < nspcons; ++i)
    {
       weights[i][0] = weights[i-1][0] + vals[i][0];
@@ -517,25 +453,25 @@ void computeSCTableFixTriangle(
       for (j = 1; j < nblocks && j < i; ++j)
       {
          SCIP_Real weightleft;
-	 SCIP_Real weightright;
+         SCIP_Real weightright;
 
-	 assert( cases[i-1][j] != -1 );
-	 assert( cases[i-1][j-1] != -1 );
+         assert( cases[i-1][j] != -1 );
+         assert( cases[i-1][j-1] != -1 );
 
-	 weightleft = weights[i-1][j-1];
-	 weightright = vals[i][j] + weights[i-1][j];
+         weightleft = weights[i-1][j-1];
+         weightright = vals[i][j] + weights[i-1][j];
 
-	 /* For first column: cannot take left possibility */
-	 if ( SCIPisLT(scip, weightleft, weightright) )
-	 {
-	    weights[i][j] = weightleft;
-	    cases[i][j] = 1;
-	 }
-	 else
-	 {
-	    weights[i][j] = weightright;
-	    cases[i][j] = 2;
-	 }
+         /* For first column: cannot take left possibility */
+         if ( SCIPisLT(scip, weightleft, weightright) )
+         {
+            weights[i][j] = weightleft;
+            cases[i][j] = 1;
+         }
+         else
+         {
+            weights[i][j] = weightright;
+            cases[i][j] = 2;
+         }
       }
    }
 }
@@ -583,10 +519,8 @@ SCIP_RETCODE separateSCIs(
    cases = consdata->cases;
 
    /* compute table if necessary (i.e., not computed before) */
-   if ( consdata->isTriangleFixed )
-      computeSCTableFixTriangle(scip, nspcons, nblocks, weights, cases, vals);
-   else
-      computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+   assert( consdata->istrianglefixed );
+   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
    /* loop through rows */
    for (i = 1; i < nspcons; ++i)
@@ -596,20 +530,20 @@ SCIP_RETCODE separateSCIs(
 
       bar = 0.0;
       lastcolumn = nblocks - 1;
-      if ( consdata->isTriangleFixed && lastcolumn > i )
-	 lastcolumn = i;
+      if ( lastcolumn > i )
+         lastcolumn = i;
 
       /* traverse row from right to left: */
       /* j >= 2, since for j = 1 we look at column 0, which is uninteresting due to the one at position (0,0) */
       for (j = lastcolumn; j > 1; --j)
       {
-	 bar += vals[i][j];
+         bar += vals[i][j];
 
-	 /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
-	 if ( SCIPisEfficacious(scip, bar - weights[i-1][j-1]) )
-	 {
+         /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
+         if ( SCIPisEfficacious(scip, bar - weights[i-1][j-1]) )
+         {
             SCIP_Real weight;
-	    SCIP_ROW* row;
+            SCIP_ROW* row;
 #ifdef SCIP_DEBUG
             char name[SCIP_MAXSTRLEN];
 #endif
@@ -618,92 +552,90 @@ SCIP_RETCODE separateSCIs(
             int p2;
 
             nvars = 0;
-	    p1 = i-1;
-	    p2 = j-1;
-	    weight = 0.0;
+            p1 = i-1;
+            p2 = j-1;
+            weight = 0.0;
 
-	    /* first add bar */
-	    for (l = j; l <= lastcolumn; ++l)
-	    {
-	       tmpvars[nvars] = vars[i][l];
-	       tmpvals[nvars] = 1.0;
-	       nvars++;
-	    }
+            /* first add bar */
+            for (l = j; l <= lastcolumn; ++l)
+            {
+               tmpvars[nvars] = vars[i][l];
+               tmpvals[nvars] = 1.0;
+               nvars++;
+            }
 
-	    /* then add shifted column */
-	    do
-	    {
-	       assert( cases[p1][p2] != -1 );
-	       assert( p1 >= 0 && p1 < i );
-	       assert( p2 >= 0 && p2 < j );
+            /* then add shifted column */
+            do
+            {
+               assert( cases[p1][p2] != -1 );
+               assert( p1 >= 0 && p1 < i );
+               assert( p2 >= 0 && p2 < j );
 
-	       /* if case 1 */
-	       if (cases[p1][p2] == 1)
-		  p2--;   /* decrease column */
-	       else
-	       {
-		  /* case 2 or 3: */
-		  assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-		  tmpvars[nvars] = vars[p1][p2];
-		  tmpvals[nvars] = -1.0;
-		  nvars++;
-		  weight += vals[p1][p2];
-		  if ( cases[p1][p2] == 3 )
-		     break;
-	       }
-	       p1--;  /* decrease row */
-	    }
-	    while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
-	    assert( cases[p1][p2] == 3 );
+               /* if case 1 */
+               if (cases[p1][p2] == 1)
+                  p2--;   /* decrease column */
+               else
+               {
+                  /* case 2 or 3: */
+                  assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+                  tmpvars[nvars] = vars[p1][p2];
+                  tmpvals[nvars] = -1.0;
+                  nvars++;
+                  weight += vals[p1][p2];
+                  if ( cases[p1][p2] == 3 )
+                     break;
+               }
+               p1--;  /* decrease row */
+            }
+            while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
+            assert( cases[p1][p2] == 3 );
 
-	    /* generate cut */
+            /* generate cut */
 #ifdef SCIP_DEBUG
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
+            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
-	    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
-	    /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
-	    SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-	    SCIP_CALL( SCIPreleaseRow(scip, &row) );
-	    ++(*ncuts);
+            SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
+            /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            ++(*ncuts);
 
 #ifdef SHOW_SCI
-	    SCIP_CALL( printSCI(scip, nspcons, nblocks, cases, i, j, consdata->isTriangleFixed) );
+            SCIP_CALL( printSCI(scip, nspcons, nblocks, cases, i, j) );
 #endif
 
-	    assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
-	 }
+            assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
+         }
       }
    }
    return SCIP_OKAY;
 }
 
 
-/* propagation method for a single orbitope constraint */
+/** propagation method for a single orbitope constraint */
 static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< and constraint to be processed */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
    int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
+   SCIP_Bool ispart;
    int* firstnonzeros;
    int* lastones;
    int* frontiersteps;
-
-   int i;
-   int j;
+   int lastoneprevrow;
    int nspcons;
    int nblocks;
    int nsteps;
-   int lastoneprevrow;
-
-   SCIP_Bool ispart;
+   int i;
+   int j;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -716,8 +648,6 @@ SCIP_RETCODE propagateCons(
    assert( consdata->nblocks > 0 );
    assert( consdata->vars != NULL );
 
-   SCIPdebugMessage("Propagation via orbitopal fixing ...\n");
-
    *nfixedvars = 0;
 
    nspcons = consdata->nspcons;
@@ -726,26 +656,45 @@ SCIP_RETCODE propagateCons(
    ispart = consdata->ispart;
 
    /* fix upper right triangle if still necessary */
-   if ( ! consdata->isTriangleFixed )
+   if ( ! consdata->istrianglefixed )
    {
-      assert( *nfixedvars == 0 ); /* to make sure count below is correct */
-      for (i = 0; i < nblocks; ++i)
+      int diagsize = nblocks;
+      SCIP_Bool fixed;
+
+      /* get last row of triangle */
+      if ( nspcons < nblocks )
+         diagsize = nspcons;
+
+      /* fix variables to 0 */
+      for (i = 0; i < diagsize; ++i)
       {
-	 for (j = i+1; j < nblocks; ++j)
-	 {
-	    SCIP_Bool tightened;
-	    SCIP_CALL( SCIPtightenVarUb(scip, vars[i][j], 0.0, FALSE, infeasible, &tightened) );
-	    if ( tightened )
-	       ++(*nfixedvars);
-	 }
+         for (j = i+1; j < nblocks; ++j)
+         {
+            SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, infeasible, &fixed) );
+
+            if ( *infeasible )
+            {
+               SCIPdebugMessage("The problem is infeasible: some variable in the upper right triangle is fixed to 1.\n");
+               return SCIP_OKAY;
+            }
+
+            if ( fixed )
+               ++(*nfixedvars);
+         }
       }
       if ( *nfixedvars > 0 )
       {
-	 SCIPdebugMessage("Fixed upper right triangle to 0 (fixed vars: %d).\n", *nfixedvars);
+         SCIPdebugMessage("<%s>: Fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), *nfixedvars);
       }
-      consdata->isTriangleFixed = TRUE;
+      else
+      {
+         SCIPdebugMessage("<%s>: Upper right triangle already fixed to 0.\n", SCIPconsGetName(cons));
+      }
+
+      consdata->istrianglefixed = TRUE;
    }
 
+   /* prepare further propagation */
    SCIP_CALL( SCIPallocBufferArray(scip, &firstnonzeros, nspcons) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lastones, nspcons) );
    SCIP_CALL( SCIPallocBufferArray(scip, &frontiersteps, nblocks) );
@@ -758,6 +707,16 @@ SCIP_RETCODE propagateCons(
    /* propagate */
    lastoneprevrow = 0;
    lastones[0] = 0;
+
+   if ( ! ispart )
+   {
+      /* packing case: if entry (0,0) is fixed to 0 */
+      if ( SCIPvarGetUbLocal(vars[0][0]) < 0.5 )
+      {
+         lastoneprevrow = -1;
+         lastones[0] = -1;
+      }
+   }
    nsteps = 0;
 
    for (i = 1; i < nspcons; ++i)
@@ -770,25 +729,38 @@ SCIP_RETCODE propagateCons(
       /* last column considered as part of the bar: */
       lastcolumn = nblocks - 1;
       if ( lastcolumn > i )
-	 lastcolumn = i;
+         lastcolumn = i;
 
-      /* find first position not fixed to zero */
+      /* find first position not fixed to 0 (partitioning) or fixed to 1 (packing) */
       firstnonzeroinrow = -1;
       for (j = 0; j <= lastcolumn; ++j)
       {
-	 /* if variable is not fixed to zero */
-	 if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-	 {
-	    firstnonzeroinrow = j;
-	    break;
-	 }
+         if ( ispart )
+         {
+            /* partitioning case: if variable is not fixed to 0 */
+            if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+            {
+               firstnonzeroinrow = j;
+               break;
+            }
+         }
+         else
+         {
+            /* packing case: if variable is fixed to 1 */
+            if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+            {
+               firstnonzeroinrow = j;
+               break;
+            }
+         }
       }
-      /* if all variables are fixed to zero - should not happen in the partitioning case */
+      /* if all variables are fixed to 0 in the partitioning case - should not happen */
       if ( firstnonzeroinrow == -1 && ispart )
       {
-	 SCIPdebugMessage(" -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
-	 *infeasible = TRUE;
-	 goto TERMINATE;
+         SCIPdebugMessage(" -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
+         *infeasible = TRUE;
+         /* conflict should be analyzed by setppc constraint handler */
+         goto TERMINATE;
       }
       firstnonzeros[i] = firstnonzeroinrow;
       assert( !ispart || firstnonzeroinrow >= 0 );
@@ -796,67 +768,163 @@ SCIP_RETCODE propagateCons(
 
       /* compute rightmost possible position for a 1 */
       lastoneinrow = -1;
-      assert( 0 <= lastoneprevrow && lastoneprevrow <= lastcolumn );
+      assert( !ispart || 0 <= lastoneprevrow );
+      assert( lastoneprevrow <= lastcolumn );
 
-      /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to zero */
+      /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
       infrontier = FALSE;
       if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 )
-	 lastoneinrow = lastoneprevrow;
+         lastoneinrow = lastoneprevrow;
       else
       {
-	 lastoneinrow = lastoneprevrow + 1;
-	 frontiersteps[nsteps] = i;
-         nsteps++;
-	 infrontier = TRUE;
+         lastoneinrow = lastoneprevrow + 1;
+         frontiersteps[nsteps++] = i;
+         infrontier = TRUE;
       }
 
       /* store lastoneinrow */
+      assert( !ispart || 0 <= lastoneinrow );
+      assert( lastoneinrow <= lastcolumn );
       lastones[i] = lastoneinrow;
 
-      /* check whether we are infeasible (only for partitioning case) */
-      if ( firstnonzeroinrow > lastoneinrow && ispart )
+      /* check whether we are infeasible */
+      if ( firstnonzeroinrow > lastoneinrow )
       {
-	 SCIPdebugMessage(" -> Infeasible node: row %d, rightmost nonzero at %d, rightmost 1 at %d\n",
-            i, firstnonzeroinrow, lastoneinrow);
-	 *infeasible = TRUE;
+         int k;
+
+#ifdef SCIP_DEBUG
+         if ( ispart )
+         {
+            SCIPdebugMessage(" -> Infeasible node: row %d, leftmost nonzero at %d, rightmost 1 at %d\n",
+               i, firstnonzeroinrow, lastoneinrow);
+         }
+         else
+         {
+            SCIPdebugMessage(" -> Infeasible node: row %d, 1 at %d, rightmost position for 1 at %d\n",
+               i, firstnonzeroinrow, lastoneinrow);
+         }
+#endif
+         /* check if conflict analysis is applicable */
+         if ( SCIPisConflictAnalysisApplicable(scip) )
+         {
+            /* conflict analysis only applicable in SOLVING stage */
+            assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip) );
+
+            /* perform conflict analysis */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
+            for (j = 0; j <= lastcolumn; ++j)
+            {
+               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                  break;
+               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+                  break;
+
+               /* at this point the variable should be fixed to 0 */
+               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+            }
+
+            /* add bounds that result in the last one - check top left entry for packing case */
+            if ( ! ispart && lastones[0] == -1 )
+            {
+               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+            }
+
+            /* add bounds that result in the last one - pass through rows */
+            for (k = 1; k < i; ++k)
+            {
+               int l;
+               l = lastones[k] + 1;
+
+               /* if the frontier has not moved and we are not beyond the matrix boundaries */
+               if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+               {
+                  assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+               }
+            }
+            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+         }
+
+         *infeasible = TRUE;
          goto TERMINATE;
       }
 
-      /* fix entries beyond the last possible position for a one in the row to zero (see Lemma 1 in the paper) */
+      /* fix entries beyond the last possible position for a 1 in the row to 0 (see Lemma 1 in the paper) */
       for (j = lastoneinrow+1; j <= lastcolumn; ++j)
       {
-	 /* if the entry is not yet fixed to zero */
-	 if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-	 {
+         /* if the entry is not yet fixed to 0 */
+         if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+         {
             SCIP_Bool tightened;
             int inferInfo;
 
-	    SCIPdebugMessage(" -> Fixing entry (%d,%d) to 0.\n", i, j);
+            SCIPdebugMessage(" -> Fixing entry (%d,%d) to 0.\n", i, j);
 
-	    tightened = FALSE;
+            tightened = FALSE;
 
-	    /* fix variable to 0 and store position of (i,lastoneinrow+1) for conflict resolution */
-	    inferInfo = i * nblocks + lastoneinrow + 1;
+            /* fix variable to 0 and store position of (i,lastoneinrow+1) for conflict resolution */
+            inferInfo = i * nblocks + lastoneinrow + 1;
             /* correction according to Lemma 1 in the paper (second part): store (i,lastoneinrow+2) */
-	    if ( !infrontier )
-	       ++inferInfo;
-	    SCIP_CALL( SCIPinferBinvarCons(scip, vars[i][j], FALSE, cons, inferInfo, infeasible, &tightened) );
+            if ( !infrontier )
+               ++inferInfo;
+            SCIP_CALL( SCIPinferBinvarCons(scip, vars[i][j], FALSE, cons, inferInfo, infeasible, &tightened) );
 
-	    /* if entry is fixed to one -> infeasible node */
-	    if ( infeasible )
-	    {
-	       SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
+            /* if entry is fixed to one -> infeasible node */
+            if ( *infeasible )
+            {
+               SCIPdebugMessage(" -> Infeasible node: row %d, 1 in column %d beyond rightmost position %d\n", i, j, lastoneinrow);
+               /* check if conflict analysis is applicable */
+               if( SCIPisConflictAnalysisApplicable(scip) )
+               {
+                  int k;
+
+                  /* conflict analysis only applicable in SOLVING stage */
+                  assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPinProbing(scip));
+
+                  /* perform conflict analysis */
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+                  /* add current bound */
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+
+                  /* add bounds that result in the last one - check top left entry for packing case */
+                  if ( ! ispart && lastones[0] == -1 )
+                  {
+                     assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+                  }
+
+                  /* add bounds that result in the last one - pass through rows */
+                  for (k = 1; k < i; ++k)
+                  {
+                     int l;
+                     l = lastones[k] + 1;
+
+                     /* if the frontier has not moved and we are not beyond the matrix boundaries */
+                     if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+                     {
+                        assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
+                     }
+                  }
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+               }
+
                goto TERMINATE;
-	    }
-	    if ( tightened )
-	       ++(*nfixedvars);
-	 }
+            }
+            if ( tightened )
+               ++(*nfixedvars);
+         }
       }
 
       lastoneprevrow = lastoneinrow;
    }
 
-   /* loop through rows in frontiersteps (a.k.a. gamma) */
+   /* check whether fixing any entry to 0 results in a contradiction -> loop through rows in frontiersteps (a.k.a. gamma) */
    for (j = 0; j < nsteps; ++j)
    {
       int s;
@@ -864,50 +932,52 @@ SCIP_RETCODE propagateCons(
 
       s = frontiersteps[j];
       lastoneinrow = lastones[s];
+      /* note for packing case: if we are in a frontier step then lastoneinrow >= 0 */
+      assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
 
-      /* if entry is not fixed to 1 */
-      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 )
+      /* if entry is not fixed */
+      if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 && SCIPvarGetUbLocal(vars[s][lastoneinrow]) > 0.5 )
       {
-	 int betaprev;
-	 betaprev = lastoneinrow - 1;
+         int betaprev;
+         betaprev = lastoneinrow - 1;
 
-	 /* loop through rows below s */
-	 for (i = s+1; i < nspcons; ++i)
-	 {
-	    int beta;
+         /* loop through rows below s */
+         for (i = s+1; i < nspcons; ++i)
+         {
+            int beta;
             beta = -2;
 
-	    if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
-	       beta = betaprev;
-	    else
-	       beta = betaprev + 1;
-	    assert( -1 <= beta && beta < nblocks );  /* beta == -1 possible???? */
+            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
+               beta = betaprev;
+            else
+               beta = betaprev + 1;
+            assert( -1 <= beta && beta < nblocks );
 
-	    if ( firstnonzeros[i] > beta )
-	    {
+            if ( firstnonzeros[i] > beta )
+            {
                SCIP_Bool tightened;
                int inferInfo;
 
-	       /* can fix (s,alpha) to 1
-                * (do not need to fix other entries to 0 in partitioning case , since they will be
+               /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1
+                * (do not need to fix other entries to 0, since they will be
                 * automatically fixed by SCIPtightenVarLb.)
                 */
-	       assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
-	       SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
+               assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
+               SCIPdebugMessage(" -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
 
-	       tightened = FALSE;
+               tightened = FALSE;
 
-               /* store position (i,firstnonzeros[i]) ??? Allgemeingueltig? */
-	       inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
-	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
+               /* store position (i,firstnonzeros[i]) */
+               inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
 
-	       assert( !(*infeasible) );
-	       if ( tightened )
-		  ++(*nfixedvars);
-	       break;
-	    }
-	    betaprev = beta;
-	 }
+               assert( !(*infeasible) );
+               if ( tightened )
+                  ++(*nfixedvars);
+               break;
+            }
+            betaprev = beta;
+         }
       }
    }
 
@@ -920,24 +990,24 @@ SCIP_RETCODE propagateCons(
 }
 
 
-/**< Propagation conflict resolving method of propagator
+/** Propagation conflict resolving method of propagator
  *
- * In this function we use that the propagation method above implicitly propagates SCIs, i.e., every
- * fixing can also be gotten via an SCI-fixing.
+ *  In this function we use that the propagation method above implicitly propagates SCIs, i.e., every
+ *  fixing can also be gotten via an SCI-fixing.
  *
- * Since the storage of an integer is not enough to store the complete information about the fixing
- * nor a complete shifted column, we have to use the lineartime algorithm for SCIs.
+ *  Since the storage of an integer is not enough to store the complete information about the fixing
+ *  nor a complete shifted column, we have to use the linear time algorithm for SCIs.
  *
- * The inferinfo integer is set by as follows:
+ *  The inferinfo integer is set as follows:
  *
- * - If a shifted column is fixed to 0 and the corresponding bar does not necessarily have value 1
- *   then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
- *   bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
- *   above.)
+ *  - If a shifted column is fixed to 0 and the corresponding bar does not necessarily has value 1
+ *    then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
+ *    bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
+ *    above).
  *
- * - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
- *   1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
- *   Proposition 1 (2c).
+ *  - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
+ *    1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
+ *    Proposition 1 (2c).
  */
 static
 SCIP_RETCODE resolvePropagation(
@@ -954,6 +1024,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_Real** vals;
    SCIP_Real** weights;
    SCIP_VAR*** vars;
+   SCIP_Bool ispart;
    int** cases;
 
    int i;
@@ -972,16 +1043,20 @@ SCIP_RETCODE resolvePropagation(
    assert( consdata->vals != NULL );
    assert( consdata->weights != NULL );
    assert( consdata->cases != NULL );
-   assert( consdata->isTriangleFixed );
+   assert( consdata->istrianglefixed );
+
+   *result = SCIP_DIDNOTFIND;
+   if ( ! consdata->resolveprop )
+      return SCIP_OKAY;
 
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
    vals = consdata->vals;
    weights = consdata->weights;
+   ispart = consdata->ispart;
    cases = consdata->cases;
 
-   *result = SCIP_DIDNOTFIND;
    SCIPdebugMessage("Propagation resolution method of orbitope constraint using orbitopal fixing\n");
 
    /* fill table */
@@ -992,20 +1067,20 @@ SCIP_RETCODE resolvePropagation(
       /* last column considered as part of the bar: */
       lastcolumn = nblocks - 1;
       if ( lastcolumn > i )
-	 lastcolumn = i;
+         lastcolumn = i;
       for (j = 0; j <= lastcolumn; ++j)
       {
-	 /* if the variable was fixed to zero at conflict time */
-	 if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
-	    vals[i][j] = 0.0;
-	 else
-	 {
-	    /* if the variable was fixed to one at conflict time */
-	    if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
-	       vals[i][j] = 2.0;
-	    else
-	       vals[i][j] = 1.0;
-	 }
+         /* if the variable was fixed to zero at conflict time */
+         if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+            vals[i][j] = 0.0;
+         else
+         {
+            /* if the variable was fixed to one at conflict time */
+            if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
+               vals[i][j] = 2.0;
+            else
+               vals[i][j] = 1.0;
+         }
       }
    }
 
@@ -1015,8 +1090,8 @@ SCIP_RETCODE resolvePropagation(
 #endif
 
    /* computation of table: this now minimizes the value of the shifted column */
-   assert( consdata->isTriangleFixed );
-   computeSCTableFixTriangle(scip, nspcons, nblocks, weights, cases, vals);
+   assert( consdata->istrianglefixed );
+   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
    /* if we fixed variables in the bar to zero */
    assert( inferinfo >= 0 && inferinfo < 2 * nspcons * nblocks );
@@ -1046,30 +1121,30 @@ SCIP_RETCODE resolvePropagation(
       p2 = j-1;
       do
       {
-	 assert( cases[p1][p2] != -1 );
-	 assert( p1 >= 0 && p1 < i );
-	 assert( p2 >= 0 && p2 < j );
+         assert( cases[p1][p2] != -1 );
+         assert( p1 >= 0 && p1 < i );
+         assert( p2 >= 0 && p2 < j );
 
-	 /* if case 1 */
-	 if ( cases[p1][p2] == 1 )
-	    --p2;   /* decrease column */
-	 else
-	 {
-	    /* case 2 or 3: */
-	    assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-	    assert( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
-	    SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
-	    *result = SCIP_SUCCESS;
+         /* if case 1 */
+         if ( cases[p1][p2] == 1 )
+            --p2;   /* decrease column */
+         else
+         {
+            /* case 2 or 3: */
+            assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+            assert( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
+            *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
-	    (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-	    (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
 
-	    if ( cases[p1][p2] == 3 )
-	       break;
-	 }
-	 --p1;  /* decrease row */
+            if ( cases[p1][p2] == 3 )
+               break;
+         }
+         --p1;  /* decrease row */
       }
       while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
       assert( cases[p1][p2] == 3 );
@@ -1083,14 +1158,14 @@ SCIP_RETCODE resolvePropagation(
       int k;
       int p1;
       int p2;
+#ifndef NDEBUG
       int pos1;
       int pos2;
+#endif
 #ifdef SCIP_DEBUG
       char str[SCIP_MAXSTRLEN];
       char tmpstr[SCIP_MAXSTRLEN];
 #endif
-
-      assert( consdata->ispart );
 
       /* if we fixed a variable in the SC to 1 */
       inferinfo -= nspcons * nblocks;
@@ -1109,66 +1184,97 @@ SCIP_RETCODE resolvePropagation(
 
       p1 = i-1;
       p2 = j-1;
+#ifndef NDEBUG
       pos1 = -1;
       pos2 = -1;
+#endif
       do
       {
-	 assert( cases[p1][p2] != -1 );
-	 assert( p1 >= 0 && p1 < i );
-	 assert( p2 >= 0 && p2 < j );
+         assert( cases[p1][p2] != -1 );
+         assert( p1 >= 0 && p1 < i );
+         assert( p2 >= 0 && p2 < j );
 
-	 /* if case 1 */
-	 if ( cases[p1][p2] == 1 )
-	    --p2;   /* decrease column */
-	 else
-	 {
-	    /* case 2 or 3: */
-	    assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-	    if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
-	    {
-	       SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
-	       *result = SCIP_SUCCESS;
+         /* if case 1 */
+         if ( cases[p1][p2] == 1 )
+            --p2;   /* decrease column */
+         else
+         {
+            /* case 2 or 3: reason are formed by variables in SC fixed to 0 */
+            assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+            if ( SCIPvarGetUbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 )
+            {
+               SCIP_CALL( SCIPaddConflictUb(scip, vars[p1][p2], bdchgidx) );
+               *result = SCIP_SUCCESS;
 
 #ifdef SCIP_DEBUG
-	       (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-	       (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+               (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
+               (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
-	    }
-	    else
-	    {
-	       assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
-	       assert( pos1 == -1 && pos2 == -1 );
-	       pos1 = p1;
-	       pos2 = p2;
-	    }
-	    if ( cases[p1][p2] == 3 )
-	       break;
-	 }
-	 --p1;  /* decrease row */
+            }
+#ifndef NDEBUG
+            else
+            {
+               assert( SCIPvarGetLbAtIndex(vars[p1][p2], bdchgidx, FALSE) < 0.5 );
+               assert( pos1 == -1 && pos2 == -1 );
+               pos1 = p1;
+               pos2 = p2;
+            }
+#endif
+            if ( cases[p1][p2] == 3 )
+               break;
+         }
+         --p1;  /* decrease row */
       }
-      while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
+      while ( p1 >= 0 );   /* should always be true, i.e., the break should end the loop */
       assert( cases[p1][p2] == 3 );
       assert( pos1 >= 0 && pos2 >= 0 );
 
-      /* add variables before the bar */
-#ifdef SCIP_DEBUG
-      (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
-      (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
-#endif
-      for (k = 0; k < j; ++k)
+      /* distinguish partitioning/packing */
+      if ( ispart )
       {
-	 assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
-	 SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
-	 *result = SCIP_SUCCESS;
+         /* partitioning case */
 #ifdef SCIP_DEBUG
-	 (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
-	 (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+         (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
+         (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
 #endif
-      }
+         /* add variables before the bar in the partitioning case */
+         for (k = 0; k < j; ++k)
+         {
+            assert( SCIPvarGetUbAtIndex(vars[i][k], bdchgidx, FALSE) < 0.5 );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i][k], bdchgidx) );
+            *result = SCIP_SUCCESS;
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+#endif
+         }
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("%s\n", str);
+         SCIPdebugMessage("%s\n", str);
 #endif
+      }
+      else
+      {
+         /* packing case */
+         int lastcolumn;
+
+         /* last column considered as part of the bar: */
+         lastcolumn = nblocks - 1;
+         if ( lastcolumn > i )
+            lastcolumn = i;
+
+         /* search for variable in the bar that is fixed to 1 in the packing case */
+         for (k = j; k <= lastcolumn; ++k)
+         {
+            if ( SCIPvarGetLbAtIndex(vars[i][k], bdchgidx, FALSE) > 0.5 )
+            {
+               SCIP_CALL( SCIPaddConflictLb(scip, vars[i][k], bdchgidx) );
+               *result = SCIP_SUCCESS;
+               SCIPdebugMessage("   and variable x[%d][%d] fixed to 1.\n", i, k);
+               break;
+            }
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -1179,34 +1285,37 @@ SCIP_RETCODE resolvePropagation(
  * Callback methods of constraint handler
  */
 
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_CONSFREE(consFreeOrbitope)
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
+ 
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
+
+
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+#define consFreeOrbitope NULL
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-static
-SCIP_DECL_CONSINIT(consInitOrbitope)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
+#define consInitOrbitope NULL
+
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-static
-SCIP_DECL_CONSEXIT(consExitOrbitope)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
+#define consExitOrbitope NULL
+
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #define consInitpreOrbitope NULL
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreOrbitope NULL
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -1261,7 +1370,7 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpOrbitope NULL
 
 
@@ -1269,36 +1378,35 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 static
 SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 {  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
 
-   /* If solution is not integer */
+   /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
-      int ncuts;
+      int ncuts = 0;
       int c;
 
       *result = SCIP_DIDNOTFIND;
 
-      ncuts = 0;
       /* loop through constraints */
       for (c = 0; c < nusefulconss; c++)
       {
-	 SCIP_CONSDATA* consdata;
+         SCIP_CONSDATA* consdata;
 
-	 assert( conss[c] != NULL );
+         assert( conss[c] != NULL );
 
          /* get data of constraint */
          consdata = SCIPconsGetData(conss[c]);
          assert( consdata != NULL );
 
-	 /* get solution */
-	 copyValues(scip, consdata, NULL);
-	 SCIPdebugMessage("Separating SCIs for orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         /* get solution */
+         copyValues(scip, consdata, NULL);
+         SCIPdebugMessage("Separating SCIs for orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* separate */
          SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
@@ -1307,7 +1415,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
       if ( ncuts > 0 )
       {
          SCIPdebugMessage("Separated %d SCIs.\n", ncuts);
-	 *result = SCIP_SEPARATED;
+         *result = SCIP_SEPARATED;
       }
       else
       {
@@ -1323,49 +1431,42 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 {  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   int ncuts = 0;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DIDNOTFIND;
 
-   /* If solution is not integer */
-   if ( SCIPgetNLPBranchCands(scip) > 0 )
+   /* loop through constraints */
+   for (c = 0; c < nusefulconss; c++)
    {
-      int ncuts;
-      int c;
+      SCIP_CONSDATA* consdata;
 
-      *result = SCIP_DIDNOTFIND;
+      /* get data of constraint */
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
 
-      ncuts = 0;
-      /* loop through constraints */
-      for (c = 0; c < nusefulconss; c++)
-      {
-	 SCIP_CONSDATA* consdata;
+      /* get solution */
+      copyValues(scip, consdata, sol);
+      SCIPdebugMessage("Separating SCIs (solution) for orbitope constraint <%s> \n", SCIPconsGetName(conss[c]));
 
-         /* get data of constraint */
-	 assert( conss[c] != NULL );
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
+      /* separate */
+      SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+   }
 
-	 /* get solution */
-         copyValues(scip, consdata, sol);
-	 SCIPdebugMessage("Separating SCIs (solution) for orbitope constraint <%s> \n", SCIPconsGetName(conss[c]));
-
-         /* separate */
-         SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
-      }
-
-      if ( ncuts > 0 )
-      {
-         SCIPdebugMessage("Separated %d SCIs.\n", ncuts);
-	 *result = SCIP_SEPARATED;
-      }
-      else
-      {
-         SCIPdebugMessage("No violated SCI found.\n");
-      }
+   if ( ncuts > 0 )
+   {
+      SCIPdebugMessage("Separated %d SCIs.\n", ncuts);
+      *result = SCIP_SEPARATED;
+   }
+   else
+   {
+      SCIPdebugMessage("No violated SCI found.\n");
    }
 
    return SCIP_OKAY;
@@ -1376,16 +1477,15 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 {  /*lint --e{715}*/
-   int ncuts;
+   int ncuts = 0;
    int c;
 
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
-   ncuts = 0;
 
    /* we have a negative priority, so we should come after the integrality conshdlr */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
@@ -1472,37 +1572,35 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       SCIPdebugMessage("Enforcing (pseudo solutions) for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
 
       /* compute table */
-      if ( consdata->isTriangleFixed )
-         computeSCTableFixTriangle(scip, nspcons, nblocks, weights, cases, vals);
-      else
-         computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+      assert( consdata->istrianglefixed );
+      computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
       /* loop through rows */
       for (i = 1; i < nspcons; ++i)
       {
-	 SCIP_Real bar;
-	 int lastcolumn;
+         SCIP_Real bar = 0.0;
+         int lastcolumn;
 
-	 lastcolumn = nblocks - 1;
-         bar = 0.0;
-	 /* last column considered as part of the bar: */
-	 if ( consdata->isTriangleFixed && lastcolumn > i )
-	    lastcolumn = i;
+         lastcolumn = nblocks - 1;
 
-	 /* traverse row from right to left */
-	 for (j = lastcolumn; j > 1; --j)
-	 {
-	    bar += vals[i][j];
-	    assert( SCIPisIntegral(scip, vals[i][j]) );
+         /* last column considered as part of the bar: */
+         if ( lastcolumn > i )
+            lastcolumn = i;
 
-	    /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
-	    if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
-	    {
-	       SCIPdebugMessage("Solution is infeasible.\n");
-	       *result = SCIP_INFEASIBLE;
-	       return SCIP_OKAY;
-	    }
-	 }
+         /* traverse row from right to left */
+         for (j = lastcolumn; j > 1; --j)
+         {
+            bar += vals[i][j];
+            assert( SCIPisIntegral(scip, vals[i][j]) );
+
+            /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
+            if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
+            {
+               SCIPdebugMessage("Solution is infeasible.\n");
+               *result = SCIP_INFEASIBLE;
+               return SCIP_OKAY;
+            }
+         }
       }
    }
 
@@ -1522,6 +1620,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
+
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
@@ -1530,10 +1629,10 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
       SCIP_Real** vals;
       SCIP_Real** weights;
       int** cases;
-      int i;
-      int j;
       int nspcons;
       int nblocks;
+      int i;
+      int j;
 
       /* get data of constraint */
       assert( conss[c] != 0 );
@@ -1558,79 +1657,109 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
       copyValues(scip, consdata, sol);
       SCIPdebugMessage("Checking orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
+      /* check upper right triangle (if not yet fixed to zero or in debug mode */
+#ifdef NDEBUG
+      if ( ! consdata->istrianglefixed )
+#endif
+      {
+         int diagsize;
+
+         /* get last row of triangle */
+         diagsize = nblocks;
+         if ( nspcons < nblocks )
+            diagsize = nspcons;
+
+         /* check variables */
+         for (i = 0; i < diagsize; ++i)
+         {
+            for (j = i+1; j < nblocks; ++j)
+            {
+               if ( ! SCIPisFeasZero(scip, vals[i][j]) )
+               {
+                  if ( printreason )
+                     SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
+                  *result = SCIP_INFEASIBLE;
+                  return SCIP_OKAY;
+               }
+            }
+         }
+      }
+
       /* compute table */
-      if ( consdata->isTriangleFixed )
-         computeSCTableFixTriangle(scip, nspcons, nblocks, weights, cases, vals);
-      else
-         computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+      computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
 
       /* loop through rows */
       for (i = 1; i < nspcons; ++i)
       {
-	 SCIP_Real bar;
-	 int lastcolumn;
+         SCIP_Real bar;
+         int lastcolumn;
 
-	 lastcolumn = nblocks - 1;
+         lastcolumn = nblocks - 1;
          bar = 0.0;
-	 /* last column considered as part of the bar: */
-	 if ( consdata->isTriangleFixed && lastcolumn > i )
-	    lastcolumn = i;
+         /* last column considered as part of the bar: */
+         if ( lastcolumn > i )
+            lastcolumn = i;
 
-	 /* traverse row from right to left */
-	 for (j = lastcolumn; j > 1; --j)
-	 {
-	    bar += vals[i][j];
-	    assert( SCIPisFeasIntegral(scip, vals[i][j]) );
+         /* traverse row from right to left */
+         for (j = lastcolumn; j > 1; --j)
+         {
+            bar += vals[i][j];
+            assert( SCIPisFeasIntegral(scip, vals[i][j]) );
 
-	    /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
-	    if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
-	    {
-	       SCIPdebugMessage("Solution is infeasible.\n");
-	       *result = SCIP_INFEASIBLE;
+            /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
+            if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
+            {
+               SCIPdebugMessage("Solution is infeasible.\n");
+               *result = SCIP_INFEASIBLE;
 
-	       if ( printreason )
-	       {
-		  int l;
-		  int p1;
-		  int p2;
+               if ( printreason )
+               {
+                  int l;
+                  int p1;
+                  int p2;
 
-		  SCIPinfoMessage(scip, NULL, "violated SCI: ");
+                  SCIPinfoMessage(scip, NULL, "violated SCI: bar(");
 
-		  /* first output bar */
-		  for (l = j; l < nblocks; ++l)
-		     SCIPinfoMessage(scip, NULL, "<%s> ", SCIPvarGetName(vars[i][l]));
+                  /* first output bar */
+                  for (l = j; l < nblocks; ++l)
+                     SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[i][l]), consdata->vals[i][l]);
 
-		  /* output shifted column */
-		  p1 = i-1;
-		  p2 = j-1;
-		  do
-		  {
-		     assert( cases[p1][p2] != -1 );
-		     assert( p1 >= 0 && p1 < i );
-		     assert( p2 >= 0 && p2 < j );
+                  SCIPinfoMessage(scip, NULL, ")  SC(");
 
-		     /* if case 1 */
-		     if (cases[p1][p2] == 1)
-			--p2;   /* decrease column */
-		     else
-		     {
-			/* case 2 or 3: */
-			assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-			SCIPinfoMessage(scip, NULL, "<%s> ", SCIPvarGetName(vars[p1][p2]));
-			if ( cases[p1][p2] == 3 )
-			   break;
-		     }
-		     --p1;  /* decrease row */
-		  }
-		  while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
-		  assert( cases[p1][p2] == 3 );
-	       }
+                  /* output shifted column */
+                  p1 = i-1;
+                  p2 = j-1;
+                  do
+                  {
+                     assert( cases[p1][p2] != -1 );
+                     assert( p1 >= 0 && p1 < i );
+                     assert( p2 >= 0 && p2 < j );
 
-	       return SCIP_OKAY;
-	    }
-	 }
+                     /* if case 1 */
+                     if (cases[p1][p2] == 1)
+                        --p2;   /* decrease column */
+                     else
+                     {
+                        /* case 2 or 3: */
+                        assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+                        SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[p1][p2]), consdata->vals[p1][p2]);
+                        if ( cases[p1][p2] == 3 )
+                           break;
+                     }
+                     --p1;  /* decrease row */
+                  }
+                  while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
+                  assert( cases[p1][p2] == 3 );
+
+                  SCIPinfoMessage(scip, NULL, ")");
+               }
+
+               return SCIP_OKAY;
+            }
+         }
       }
    }
+   SCIPdebugMessage("Solution is feasible.\n");
 
    return SCIP_OKAY;
 }
@@ -1640,21 +1769,25 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 static
 SCIP_DECL_CONSPROP(consPropOrbitope)
 {  /*lint --e{715}*/
-   SCIP_Bool infeasible;
-   int nfixedvars;
-   int i;
+   SCIP_Bool infeasible = FALSE;
+   int nfixedvars = 0;
+   int c;
 
+   assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   nfixedvars = 0;
-   infeasible = FALSE;
+   *result = SCIP_DIDNOTRUN;
 
    /* propagate all useful constraints */
-   for (i = 0; i < nusefulconss && !infeasible; ++i)
+   for (c = 0; c < nusefulconss && !infeasible; ++c)
    {
-      SCIP_CALL( propagateCons(scip, conss[i], &infeasible, &nfixedvars) );
+      assert( conss[c] != 0 );
+
+      SCIPdebugMessage("Propagation of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars) );
    }
 
    /* return the correct result */
@@ -1668,7 +1801,7 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
       *result = SCIP_REDUCEDDOM;
       SCIPdebugMessage("Propagated %d variables via orbitopal fixing.\n", nfixedvars);
    }
-   else
+   else if ( nusefulconss > 0 )
    {
       *result = SCIP_DIDNOTFIND;
       SCIPdebugMessage("Propagation via orbitopal fixing did not find anything.\n");
@@ -1682,8 +1815,9 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 static
 SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible = FALSE;
+   int noldfixedvars;
    int c;
-   int oldnfixedvars;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1691,67 +1825,42 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
+   noldfixedvars = *nfixedvars;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   /* propagate all useful constraints */
+   for (c = 0; c < nconss && !infeasible; ++c)
    {
-      SCIP_CONSDATA* consdata;
-      SCIP_VAR*** vars;
+      int nfixed = 0;
 
-      /* get data of constraint */
       assert( conss[c] != 0 );
-      consdata = SCIPconsGetData(conss[c]);
 
-      assert( consdata != NULL );
+      SCIPdebugMessage("Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      /* fix upper right triangle if still necessary */
-      if ( ! consdata->isTriangleFixed )
-      {
-	 int i;
-	 int j;
-	 int nblocks;
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed) );
+      *nfixedvars += nfixed;
+   }
 
-	 assert( consdata->nblocks > 0 );
-	 assert( consdata->vars != NULL );
-
-	 nblocks = consdata->nblocks;
-	 vars = consdata->vars;
-
-	 /* fix variables to 0 */
-	 for (i = 0; i < nblocks; ++i)
-	 {
-	    for (j = i+1; j < nblocks; ++j)
-	    {
-	       SCIP_Bool infeasible;
-	       SCIP_Bool fixed;
-
-	       SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, &infeasible, &fixed) );
-
-	       if ( infeasible )
-	       {
-		  SCIPdebugMessage("The problem is infeasible: some variable in the upper right triangle is fixed to 1.\n");
-		  *result = SCIP_CUTOFF;
-		  return SCIP_OKAY;
-	       }
-
-	       if ( fixed )
-		  ++(*nfixedvars);
-	    }
-	 }
-	 if ( *nfixedvars - oldnfixedvars > 0 )
-	 {
-	    SCIPdebugMessage("<%s>: Fixed upper right triangle to 0 (fixed vars: %d).\n",
-	       SCIPconsGetName(conss[c]), *nfixedvars - oldnfixedvars);
-	    *result = SCIP_SUCCESS;
-	 }
-	 consdata->isTriangleFixed = TRUE;
-      }
+   if ( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+      SCIPdebugMessage("Presolving detected infeasibility.\n");
+   }
+   else if ( *nfixedvars > noldfixedvars )
+   {
+      *result = SCIP_SUCCESS;
+   }
+   else if ( nconss > 0 )
+   {
+      *result = SCIP_DIDNOTFIND;
+      SCIPdebugMessage("Presolving via orbitopal fixing did not find anything.\n");
    }
 
    return SCIP_OKAY;
 }
 
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreOrbitope NULL
 
 
 /** propagation conflict resolving method of constraint handler */
@@ -1802,7 +1911,7 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
    for (i = 0; i < nspcons; ++i)
    {
       for (j = 0; j < nblocks; ++j)
-	 SCIP_CALL( SCIPaddVarLocks(scip, vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocks(scip, vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -1823,6 +1932,10 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
 
 /** constraint disabling notification method of constraint handler */
 #define consDisableOrbitope NULL
+
+
+/** variable deletion method of constraint handler */
+#define consDelvarsOrbitope NULL
 
 
 /** constraint display method of constraint handler */
@@ -1851,7 +1964,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
    nblocks = consdata->nblocks;
    vars = consdata->vars;
 
-   SCIPdebugMessage("Printing method for oribitope constraint handler\n");
+   SCIPdebugMessage("Printing method for orbitope constraint handler\n");
 
    if ( consdata->ispart )
       SCIPinfoMessage(scip, file, "partOrbitope(");
@@ -1862,24 +1975,257 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
    {
       for (j = 0; j < nblocks; ++j)
       {
-	 if ( j > 0 )
-	    SCIPinfoMessage(scip, file, ",");
-	 SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(vars[i][j]));
+         if ( j > 0 )
+            SCIPinfoMessage(scip, file, ",");
+         SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(vars[i][j]));
       }
       if ( i < nspcons-1 )
-	 SCIPinfoMessage(scip, file, ";");
+         SCIPinfoMessage(scip, file, ".");
    }
    SCIPinfoMessage(scip, file, ")");
 
    return SCIP_OKAY;
 }
 
+
 /** constraint copying method of constraint handler */
-#define consCopyOrbitope NULL
+static
+SCIP_DECL_CONSCOPY(consCopyOrbitope)
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR*** sourcevars;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int nspcons;
+   int nblocks;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+
+   *valid = TRUE;
+
+   SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+   assert(sourcedata->nspcons > 0);
+   assert(sourcedata->nblocks > 0);
+   assert(sourcedata->vars != NULL);
+
+   nspcons = sourcedata->nspcons;
+   nblocks = sourcedata->nblocks;
+   sourcevars = sourcedata->vars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
+   for (i = 0; i < nspcons && *valid; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );  /*lint !e866*/
+
+      for (j = 0; j < nblocks && *valid; ++j)
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
+         assert(!(*valid) || vars[i][j] != NULL);
+      }
+   }
+   
+   /* only create the target constraint, if all variables could be copied */
+   if ( *valid )
+   {
+      /* create copied constraint */
+      if ( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+      
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
+            vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+   
+   for (i = 0; i < nspcons; ++i)
+      SCIPfreeBufferArray(scip, &vars[i]);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 
 /** constraint parsing method of constraint handler */
-#define consParseOrbitope NULL
+static
+SCIP_DECL_CONSPARSE(consParseOrbitope)
+{  /*lint --e{715}*/
+   const char* s;
+   SCIP_Bool ispart;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR*** vars;
+   SCIP_VAR* var;
+   int nspcons;
+   int maxnspcons;
+   int nblocks;
+   int maxnblocks;
+   int k;
+   int j;
 
+   assert( success != NULL );
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace((unsigned char)*s) )
+      ++s;
+
+   ispart = FALSE;
+   if ( strncmp(s, "partOrbitope(", 13) == 0 )
+      ispart = TRUE;
+   else
+   {
+      if ( strncmp(s, "packOrbitope(", 13) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"partOrbitope\" or \"packOrbitope\": %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   s += 13;
+
+   /* loop through string */
+   nspcons = 0;
+   nblocks = 0;
+   maxnspcons = 10;
+   maxnblocks = 10;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnspcons) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(vars[0]), maxnblocks) );
+
+   j = 0;
+   do
+   {
+      /* find variable name */
+      k = 0;
+      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '.' && *s != ')' )
+         varname[k++] = *s++;
+      varname[k] = '\0';
+
+      /* get variable */
+      var = SCIPfindVar(scip, varname);
+      if ( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      vars[nspcons][j++] = var;
+
+      if ( j > nblocks )
+      {
+         int newsize;
+
+         if ( nspcons > 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variables per row do not match.\n");
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+
+         nblocks = j;
+         newsize = SCIPcalcMemGrowSize(scip, nblocks);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons]), newsize) );    /*lint !e866*/
+         maxnblocks = newsize;
+         assert( nblocks <= maxnblocks );
+      }
+
+      /* skip white space and ',' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+         ++s;
+      
+      /* begin new row if required */
+      if ( *s == '.' )
+      {
+         ++nspcons;
+         ++s;
+
+         if ( nspcons > maxnspcons )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, nspcons);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
+            maxnspcons = newsize;
+         }
+         assert( nspcons <= maxnspcons );
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons]), nblocks) );  /*lint !e866*/
+         j = 0;
+      }
+   }
+   while ( *s != ')' );
+   ++nspcons;
+
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, TRUE, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   for (k = 0; k < nspcons; ++k)
+      SCIPfreeBufferArray(scip, &vars[k]);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsOrbitope)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( success != NULL );
+   assert( vars != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   if ( varssize < consdata->nblocks * consdata->nspcons )
+      (*success) = FALSE;
+   else
+   {
+      int cnt = 0;
+      int i;
+      int j;
+
+      for (i = 0; i < consdata->nspcons; ++i)
+      {
+         for (j = 0; j < consdata->nblocks; ++j)
+            vars[cnt++] = consdata->vars[i][j];
+      }
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsOrbitope)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   (*nvars) = consdata->nblocks * consdata->nspcons;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -1901,13 +2247,16 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyOrbitope,
          consFreeOrbitope, consInitOrbitope, consExitOrbitope,
          consInitpreOrbitope, consExitpreOrbitope, consInitsolOrbitope, consExitsolOrbitope,
          consDeleteOrbitope, consTransOrbitope, consInitlpOrbitope,
          consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
          consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
          consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consPrintOrbitope, consCopyOrbitope, consParseOrbitope, conshdlrdata) );
+         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope,
+         consGetVarsOrbitope, consGetNVarsOrbitope, conshdlrdata) );
 
    /* add orbitope constraint handler parameters */
 
@@ -1915,7 +2264,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 }
 
 
-/** creates and captures a orbitope constraint */
+/** creates and captures a orbitope constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -1942,7 +2294,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -1967,23 +2319,37 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    /* run some checks */
 #ifndef NDEBUG
    {
+      SCIP_Real obj;
       int i;
       int j;
       for (i = 0; i < nspcons; ++i)
       {
-	 SCIP_Real obj;
-	 for (j = 0; j < nblocks; ++j)
-	 {
-	    /* all variables need to be binary */
-	    assert( SCIPvarGetType(vars[i][j]) == SCIP_VARTYPE_BINARY );
-	    if ( j == 0 )
-	       obj = SCIPvarGetObj(vars[i][j]);
-	    else
-	    {
-	       /* all variables in a row should have the same objective */
-	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );    /*lint !e644*/
-	    }
-	 }
+         /* initialize obj to infinity */
+         obj = SCIPinfinity(scip);
+         for (j = 0; j < nblocks; ++j)
+         {
+            SCIP_Bool fixedZero;
+            SCIP_VAR* var;
+
+            var = vars[i][j];
+            assert(var != NULL);
+
+            /* all variables need to be binary */
+            assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+
+            /* fixed variables have obj = 0; for variables fixed to 0, we assume that there is no
+               problem (but we cannot always check it, e.g., when in the original problem
+               variables were fixed and this problem was copied.) */
+            fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
+
+            /* check whether all variables in a row have the same objective */
+            if ( ! fixedZero && SCIPisInfinity(scip, obj) )
+               obj = SCIPvarGetObj(var);
+            else
+            {
+               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
+            }
+         }
       }
    }
 #endif

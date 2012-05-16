@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,6 +81,12 @@ void SCIPheurSetTimingmask(
    SCIP_HEURTIMING       timingmask          /**< new timing mask of heuristic */
    );
 
+/** does the heuristic use a secondary SCIP instance? */
+extern
+SCIP_Bool SCIPheurUsesSubscip(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 /** gets priority of primal heuristic */
 extern
 int SCIPheurGetPriority(
@@ -91,6 +97,13 @@ int SCIPheurGetPriority(
 extern
 int SCIPheurGetFreq(
    SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** sets frequency of primal heuristic */
+extern
+void SCIPheurSetFreq(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   freq                /**< new frequency of heuristic */
    );
 
 /** gets frequency offset of primal heuristic */
@@ -126,6 +139,12 @@ SCIP_Longint SCIPheurGetNBestSolsFound(
 /** is primal heuristic initialized? */
 extern
 SCIP_Bool SCIPheurIsInitialized(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** gets time in seconds used in this heuristic for setting up for next stages */
+extern
+SCIP_Real SCIPheurGetSetupTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 

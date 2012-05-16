@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,19 +38,13 @@ using namespace std;
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-SCIP_RETCODE HeurFrats::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURFREE(HeurFrats::scip_free)
 {
    return SCIP_OKAY;
 }
    
 /** initialization method of primal heuristic (called after problem was transformed) */
-SCIP_RETCODE HeurFrats::scip_init(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINIT(HeurFrats::scip_init)
 {
    ProbDataTSP*   probdata;  
 
@@ -70,10 +64,7 @@ SCIP_RETCODE HeurFrats::scip_init(
 }
    
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-SCIP_RETCODE HeurFrats::scip_exit(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXIT(HeurFrats::scip_exit)
 {
    /* free everything which was created in scip_init */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -88,10 +79,7 @@ SCIP_RETCODE HeurFrats::scip_exit(
  *  The primal heuristic may use this call to initialize its branch and bound specific data.
  *
  */
-SCIP_RETCODE HeurFrats::scip_initsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINITSOL(HeurFrats::scip_initsol)
 {
    return SCIP_OKAY;
 }
@@ -101,21 +89,13 @@ SCIP_RETCODE HeurFrats::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
-SCIP_RETCODE HeurFrats::scip_exitsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXITSOL(HeurFrats::scip_exitsol)
 {
    return SCIP_OKAY;
 }
    
 /** execution method of primal heuristic */
-SCIP_RETCODE HeurFrats::scip_exec(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur,               /**< the primal heuristic itself */
-   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
-   SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
-   )
+SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
 {  /*lint --e{715}*/
 
    SCIP_SOL* newsol;
@@ -175,7 +155,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
       {
          while( edge != NULL )
          {
-            /* update, if an edge has a better LP value AND was not visited yet AND was not globally dixed to zero */
+            /* update, if an edge has a better LP value AND was not visited yet AND was not globally fixed to zero */
             if( SCIPgetSolVal(scip, sol, edge->var) > bestval && !visited[edge->adjac->id] 
                && SCIPvarGetUbGlobal(edge->var) == 1.0 )
             {
@@ -234,7 +214,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
       
       success = FALSE;
       /* due to construction we already know, that the solution will be feasible */
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }
@@ -243,4 +223,10 @@ SCIP_RETCODE HeurFrats::scip_exec(
    SCIPfreeBufferArray(scip, &visited);
    
    return SCIP_OKAY;
+}
+
+/** clone method which will be used to copy a objective plugin */
+SCIP_DECL_HEURCLONE(scip::ObjCloneable* HeurFrats::clone)
+{
+   return new HeurFrats(scip);
 }

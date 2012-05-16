@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_boundshift.c
- * @ingroup PRESOLVERS
  * @brief  presolver that converts variables with domain [a,b] to variables with domain [0,b-a]
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -79,6 +78,21 @@ void initPresoldata(
  * Callback methods of presolver
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolBoundshift(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
@@ -140,11 +154,13 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    if( nvars == 0 )
       return SCIP_OKAY;
    
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
-   /* copy the integer variables into an own array, since adding new
-    * integer variables affects the left-most slots in the array and
-    * thereby interferes with our search loop
+   /* copy the integer variables into an own array, since adding new integer variables affects the left-most slots in
+    * the array and thereby interferes with our search loop
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nvars) );
    
@@ -155,7 +171,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
       /* get current variable's bounds */
       lb = SCIPvarGetLbGlobal(var);
@@ -164,11 +180,11 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
-      if (presoldata->integer && !SCIPisIntegral(scip, ub - lb)) 
+      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) ) 
          continue;
 
       /* check if bounds are shiftable */
-      if ( !SCIPisEQ(scip, lb, 0.0) &&                          /* lower bound != 0.0 */
+      if( !SCIPisEQ(scip, lb, 0.0) &&                           /* lower bound != 0.0 */
          SCIPisLT(scip, ub, SCIPinfinity(scip)) &&              /* upper bound != infinity */
          SCIPisGT(scip, lb, -SCIPinfinity(scip)) &&             /* lower bound != -infinity */
 #if 0
@@ -187,13 +203,13 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          /* create new variable */
          (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, 0.0, (ub - lb), 0.0, SCIPvarGetType(var),
-               SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-         /* aggregate old variable and with new variable */
-         if (presoldata->flipping)
+         /* aggregate old variable with new variable */
+         if( presoldata->flipping )
          {
-            if ( REALABS(ub) < REALABS(lb) )
+            if( REALABS(ub) < REALABS(lb) )
             {
                SCIP_CALL( SCIPaggregateVars(scip, var, newvar, 1.0, 1.0, ub, &infeasible, &redundant, &aggregated) );
             }
@@ -246,6 +262,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyBoundshift,
          presolFreeBoundshift, presolInitBoundshift, presolExitBoundshift, 
          presolInitpreBoundshift, presolExitpreBoundshift, presolExecBoundshift,
          presoldata) );

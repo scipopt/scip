@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for branching rules
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for branching rules implemented in C.
+ *
+ *  - \ref BRANCH "Instructions for implementing a branching rule"
+ *  - \ref PRIMALHEURISTICS "List of available branching rule"
+ *  - \ref scip::ObjBranchrule "C++ wrapper class"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,6 +42,14 @@ typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate stora
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
 typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */
 
+
+/** copy method for branchrule plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ */
+#define SCIP_DECL_BRANCHCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** destructor of branching method to free user data (called when SCIP is exiting)
  *
@@ -104,7 +118,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
 #define SCIP_DECL_BRANCHEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 
-/** branching execution method for relaxation solutions
+/** branching execution method for external candidates
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -121,7 +135,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define SCIP_DECL_BRANCHEXECREL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
+#define SCIP_DECL_BRANCHEXECEXT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 
 /** branching execution method for not completely fixed pseudo solutions

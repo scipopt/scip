@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,6 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/lp.h"
@@ -31,6 +30,7 @@
 #include "scip/prob.h"
 #include "scip/tree.h"
 #include "scip/pricestore.h"
+#include "scip/pub_message.h"
 
 #include "scip/struct_pricestore.h"
 
@@ -171,6 +171,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_VAR*             var,                /**< priced variable */
    SCIP_Real             score,              /**< pricing score of variable (the larger, the better the variable) */
@@ -183,6 +184,15 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    assert(pricestore != NULL);
    assert(set != NULL);
    assert(var != NULL);
+
+#ifndef NDEBUG
+   /* check if we add this variables to the same scip, where we created it */
+   if( var->scip != set->scip )
+   {
+      SCIPerrorMessage("try to add a variable of another scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
 
    SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%u)\n", 
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->initiallp);
@@ -206,7 +216,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
       /* if the array consists of "maxpricevars" variables, release the worst variables */
       if( pricestore->nvars == maxpricevars )
       {
-         SCIP_CALL( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], blkmem, set, lp) );
+         SCIP_CALL( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], blkmem, set, eventqueue, lp) );
          pricestore->nvars--;
       }
       assert(pricestore->nvars < maxpricevars);
@@ -317,12 +327,12 @@ SCIP_RETCODE addBoundViolated(
       SCIP_Real bestbound;
 
       /* add variable, if zero is not best bound w.r.t. objective function */
-      bestbound = SCIPvarGetBestBound(var);
+      bestbound = SCIPvarGetBestBoundLocal(var);
       if( !SCIPsetIsZero(set, bestbound) )
       {
          SCIPdebugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
-         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 
+         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
@@ -418,15 +428,15 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
-                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
+                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
                    * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
                    * inequality most feasible solution) x' defined by 
                    *    x'_i = ub_i, if y^T A_i > 0
                    *    x'_i = lb_i, if y^T A_i <= 0.
-                   * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
+                   * Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0
                    */
                   feasibility = -SCIPcolGetFarkasValue(col, stat, lp);
-                  SCIPdebugMessage("  <%s> farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
+                  SCIPdebugMessage("  <%s> Farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                else
                {
@@ -445,7 +455,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                 */
                if( !SCIPsetIsPositive(set, feasibility) )
                {
-                  SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, -feasibility / (col->len+1), root) );
+                  SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;
                   nfoundvars++;
                }
@@ -466,6 +476,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< LP data */
@@ -536,7 +547,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
-      SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, eventqueue, lp) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -580,7 +591,7 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
       SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );
-      SCIP_CALL( SCIPvarRelease(&pricestore->bdviolvars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&pricestore->bdviolvars[v], blkmem, set, eventqueue, lp) );
    }
    pricestore->naddedbdviolvars = 0;
    pricestore->nbdviolvars = 0;

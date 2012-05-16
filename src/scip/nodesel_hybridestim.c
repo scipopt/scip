@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_hybridestim.c
- * @ingroup NODESELECTORS
  * @brief  node selector for hybrid best estimate / best bound search
  * @author Tobias Achterberg
  */
@@ -86,6 +85,20 @@ SCIP_Real getNodeselScore(
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyHybridestim)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselHybridestim(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
@@ -272,11 +285,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
 
    score1 = getNodeselScore(node1, nodeseldata->estimweight);
    score2 = getNodeselScore(node2, nodeseldata->estimweight);
-   if( SCIPisLT(scip, score1, score2) )
-      return -1;
-   else if( SCIPisGT(scip, score1, score2) )
-      return +1;
-   else
+   if( (SCIPisInfinity(scip,  score1) && SCIPisInfinity(scip,  score2)) ||
+       (SCIPisInfinity(scip, -score1) && SCIPisInfinity(scip, -score2)) ||
+       SCIPisEQ(scip, score1, score2) )
    {
       SCIP_NODETYPE nodetype1;
       SCIP_NODETYPE nodetype2;
@@ -306,6 +317,12 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
             return 0;
       }
    }
+
+   if( SCIPisLT(scip, score1, score2) )
+      return -1;
+
+   assert(SCIPisGT(scip, score1, score2));
+   return +1;
 }
 
 
@@ -328,6 +345,7 @@ SCIP_RETCODE SCIPincludeNodeselHybridestim(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyHybridestim,
          nodeselFreeHybridestim, nodeselInitHybridestim, nodeselExitHybridestim, 
          nodeselInitsolHybridestim, nodeselExitsolHybridestim, nodeselSelectHybridestim, nodeselCompHybridestim,
          nodeseldata) );

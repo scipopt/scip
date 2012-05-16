@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,16 +42,25 @@ extern "C" {
 extern
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive);
 
+/** copies the given display to a new scip */
+extern
+SCIP_RETCODE SCIPdispCopyInclude(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a display column */
 extern
 SCIP_RETCODE SCIPdispCreate(
    SCIP_DISP**           disp,               /**< pointer to store display column */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of display column */
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -62,7 +71,7 @@ SCIP_RETCODE SCIPdispCreate(
    int                   width,              /**< width of display column (no. of chars used) */
    int                   priority,           /**< priority of display column */
    int                   position,           /**< relative position of display column */
-   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbor? */
    );
 
 /** frees memory of display column */
@@ -112,6 +121,7 @@ SCIP_RETCODE SCIPdispOutput(
 extern
 SCIP_RETCODE SCIPdispPrintLine(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */

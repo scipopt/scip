@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,12 +48,6 @@ extern "C" {
  * Column methods
  */
 
-/** output column to file stream */
-extern
-void SCIPcolPrint(
-   SCIP_COL*             col,                /**< LP column */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   );
 
 /** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
@@ -110,8 +104,8 @@ SCIP_Real SCIPcolGetMaxPrimsol(
    SCIP_COL*             col                 /**< LP column */
    );
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
- *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current SCIP_LP
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_ZERO for columns not in the current SCIP_LP
  */
 extern
 SCIP_BASESTAT SCIPcolGetBasisStatus(
@@ -224,7 +218,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral
-#define SCIPcolIsRemovable(col)        (col)->removable
+#define SCIPcolIsRemovable(col)         (col)->removable
 #define SCIPcolGetLPPos(col)            (col)->lppos
 #define SCIPcolGetLPDepth(col)          (col)->lpdepth
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
@@ -246,7 +240,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
  * Row methods
  */
 
-/** comparison method for sorting variables by non-decreasing index */
+/** comparison method for sorting rows by non-decreasing index */
 extern
 SCIP_DECL_SORTPTRCOMP(SCIProwComp);
 
@@ -271,7 +265,7 @@ SCIP_Real SCIProwGetScalarProduct(
 
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
  *  p = |v*w|/(|v|*|w|);
- *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ *  the hyperplanes are parallel, iff p = 1, they are orthogonal, iff p = 0
  */
 extern
 SCIP_Real SCIProwGetParallelism(
@@ -289,13 +283,6 @@ SCIP_Real SCIProwGetOrthogonality(
    SCIP_ROW*             row1,               /**< first LP row */
    SCIP_ROW*             row2,               /**< second LP row */
    char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
-   );
-
-/** output row to file stream */
-extern
-void SCIProwPrint(
-   SCIP_ROW*             row,                /**< LP row */
-   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
@@ -345,7 +332,7 @@ SCIP_Real SCIProwGetConstant(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets euclidean norm of row vector */
+/** gets Euclidean norm of row vector */
 extern
 SCIP_Real SCIProwGetNorm(
    SCIP_ROW*             row                 /**< LP row */
@@ -375,7 +362,7 @@ SCIP_Real SCIProwGetDualsol(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** gets the dual farkas coefficient of a row in an infeasible LP */
+/** gets the dual Farkas coefficient of a row in an infeasible LP */
 extern
 SCIP_Real SCIProwGetDualfarkas(
    SCIP_ROW*             row                 /**< LP row */
@@ -398,6 +385,12 @@ const char* SCIProwGetName(
 /** gets unique index of row */
 extern
 int SCIProwGetIndex(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** gets age of row */
+extern
+int SCIProwGetAge(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -469,6 +462,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetBasisStatus(row)      (row)->basisstatus
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
+#define SCIProwGetAge(row)            (row)->age
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable

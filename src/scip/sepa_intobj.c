@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_intobj.c
- * @ingroup SEPARATORS
  * @brief  integer objective value separator
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -22,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_intobj.h"
 
@@ -31,6 +31,7 @@
 #define SEPA_PRIORITY              -100
 #define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define EVENTHDLR_NAME         "intobj"
@@ -115,7 +116,7 @@ SCIP_RETCODE createObjRow(
       if( sepadata->objvar == NULL )
       {
          SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
          SCIP_CALL( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
       }
@@ -161,7 +162,7 @@ SCIP_RETCODE createObjRow(
       SCIP_CALL( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
       SCIPdebugMessage("created objective value row: ");
-      SCIPdebug(SCIPprintRow(scip, sepadata->objrow, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, sepadata->objrow, NULL) ) );
    }
 
    return SCIP_OKAY;
@@ -183,8 +184,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Bool tightened;
 
    assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    /* if the objective value may be fractional, we cannot do anything */
    if( !SCIPisObjIntegral(scip) )
@@ -246,6 +246,20 @@ SCIP_RETCODE separateCuts(
 /*
  * Callback methods of separator
  */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyIntobj)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -315,6 +329,21 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -325,6 +354,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
@@ -367,7 +399,7 @@ SCIP_DECL_EVENTEXIT(eventExitIntobj)
 /** frees specific event data */
 #define eventDeleteIntobj NULL
 
-/** execution methode of objective change event handler */
+/** execution method of objective change event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecIntobj)
 {  /*lint --e{715}*/
@@ -431,8 +463,9 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    SCIP_CALL( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyIntobj, sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, 
          sepaExeclpIntobj, sepaExecsolIntobj,
          sepadata) );
@@ -440,6 +473,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    /* include event handler for objective change events */
    eventhdlrdata = (SCIP_EVENTHDLRDATA*)sepadata;
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+         NULL,
          eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
          eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
          eventhdlrdata) );

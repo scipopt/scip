@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,17 +13,22 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**@file   probdata_lop.h
+ * @brief  handling of data needed for solving linear ordering problems
+ * @author Marc Pfetsch
+ */
+
 #include "probdata_lop.h"
 
 #include "cons_linearordering.h"
-#include "scip/misc.h"
+#include <scip/misc.h>
 
 
 struct SCIP_ProbData
 {
-   int n;             /**< number of elements */
-   SCIP_Real** W;     /**< weight matrix */
-   SCIP_VAR*** Vars;  /**< variables */
+   int                   n;                  /**< number of elements */
+   SCIP_Real**           W;                  /**< weight matrix */
+   SCIP_VAR***           vars;               /**< variables */
 };
 
 
@@ -33,26 +38,26 @@ struct SCIP_ProbData
 /** delete problem data */
 static
 SCIP_DECL_PROBDELORIG(probdelorigLOP)
-{
+{  /*lint --e{831} */
    int i, j;
 
-   assert(probdata != NULL);
-   assert(*probdata != NULL);
+   assert( probdata != NULL );
+   assert( *probdata != NULL );
 
    /* free matrix and release and free variables */
    assert( (*probdata)->W != NULL );
-   assert( (*probdata)->Vars != NULL );
+   assert( (*probdata)->vars != NULL );
    for (i = 0; i < (*probdata)->n; ++i)
    {
       for (j = 0; j < (*probdata)->n; ++j)
       {
 	 if (j != i)
-	    SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->Vars[i][j]) );
+	    SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i][j]) );
       }
-      SCIPfreeMemoryArray(scip, &(*probdata)->Vars[i]);
+      SCIPfreeMemoryArray(scip, &(*probdata)->vars[i]);
       SCIPfreeMemoryArray(scip, &((*probdata)->W[i]));
    }
-   SCIPfreeMemoryArray(scip, &(*probdata)->Vars);
+   SCIPfreeMemoryArray(scip, &(*probdata)->vars);
    SCIPfreeMemoryArray(scip, &((*probdata)->W));
 
    /* free probdata */
@@ -68,6 +73,59 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 #define probexitsolLOP NULL
 
 
+/** copies user data of source SCIP for the target SCIP */
+static
+SCIP_DECL_PROBCOPY(probcopyLOP)
+{
+   int n;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( sourcescip != NULL );
+   assert( sourcedata != NULL );
+   assert( targetdata != NULL );
+
+   /* set up data */
+   SCIP_CALL( SCIPallocMemory(scip, targetdata) );
+
+   n = sourcedata->n;
+   (*targetdata)->n = n;
+
+   /* set matrices */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W), n) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars), n) );
+
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars[i]), n) );
+
+      for( j = 0; j < n; ++j )
+      {
+         if( i != j )
+         {
+            SCIP_VAR* var;
+            SCIP_Bool success;
+            
+	    SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->vars[i][j], &var) );
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->vars[i][j]), varmap, consmap, global, &success) );
+            assert(success);
+            assert((*targetdata)->vars[i][j] != NULL);
+
+            SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->vars[i][j]) );
+         }
+         else
+            (*targetdata)->vars[i][j] = NULL;
+      }
+   }
+
+   *result = SCIP_SUCCESS;
+   
+   return SCIP_OKAY;
+}
+
+
 
 
 /* ----------------- auxiliary functions ------------------------ */
@@ -81,9 +139,9 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
  */
 static
 SCIP_RETCODE LOPreadFile(
-   SCIP*        scip,          /**< SCIP data structure */
-   const char*  filename,      /**< name of file to read */
-   SCIP_PROBDATA* probdata     /**< problem data to be filled */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of file to read */
+   SCIP_PROBDATA*        probdata            /**< problem data to be filled */
    )
 {
    int i, j;
@@ -112,13 +170,13 @@ SCIP_RETCODE LOPreadFile(
       return SCIP_READERROR;
    }
    assert( 0 < n );
-   SCIPmessagePrintInfo("Number of elements: %d\n\n", n);
+   SCIPinfoMessage(scip, NULL, "Number of elements:\t%d\n\n", n);
    probdata->n = n;
 
    /* set up matrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &W, n) );
    for (i = 0; i < n; ++i)
-      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &(W[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(W[i]), n) );
    probdata->W = W;
 
    /* read matrix */
@@ -142,26 +200,20 @@ SCIP_RETCODE LOPreadFile(
 }
 
 
-
-
-
-/* ----------------- outside interface functions ------------------------ */
-
 /** get problem name
  *
  *  Returns NULL on error
  */
 static
-int getProblemName(
-		   const char* filename,   /**< input filename */
-		   char* probname,         /**< output problemname */
-		   int maxSize             /**< maximum size of probname */
-		   )
+SCIP_RETCODE getProblemName(
+   const char*           filename,           /**< input filename */
+   char*                 probname,           /**< output problemname */
+   int                   maxSize             /**< maximum size of probname */
+   )
 {
    int i = 0;
-   int l = -1;
-   int result = 1;
    int j = 0;
+   int l;
 
    /* first find end of string */
    while ( filename[i] != 0)
@@ -181,7 +233,7 @@ int getProblemName(
    }
 
    /* correct counter */
-   if ((filename[i] == '/') || (filename[i] != '\\'))
+   if ((filename[i] == '/') || (filename[i] == '\\'))
       ++i;
 
    /* copy name */
@@ -189,15 +241,16 @@ int getProblemName(
    {
       probname[j++] = filename[i++];
       if (j > maxSize-1)
-      {
-	 result = 0;
-	 break;
-      }
+	 return SCIP_ERROR;
    }
    probname[j] = 0;
-   return result;
+
+   return SCIP_OKAY;
 }
 
+
+
+/* ----------------- public interface functions ------------------------ */
 
 
 /** create linear ordering problem instance */
@@ -213,16 +266,17 @@ SCIP_RETCODE LOPcreateProb(
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
 
    /* take filename as problem name */
-   getProblemName(filename, probname, SCIP_MAXSTRLEN);
+   SCIP_CALL( getProblemName(filename, probname, SCIP_MAXSTRLEN) );
 
-   SCIPmessagePrintInfo("Problem name: %s\n\n", probname);
+   SCIPinfoMessage(scip, NULL, "File name:\t\t%s\n", filename);
+   SCIPinfoMessage(scip, NULL, "Problem name:\t\t%s\n", probname);
 
    /* read file */
    SCIP_CALL( LOPreadFile(scip, filename, probdata) );
-   probdata->Vars = NULL;
+   probdata->vars = NULL;
 
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
-			     probinitsolLOP, probexitsolLOP, probdata) );
+	 probinitsolLOP, probexitsolLOP, probcopyLOP, probdata) );
 
    return SCIP_OKAY;
 }
@@ -242,33 +296,33 @@ SCIP_RETCODE LOPgenerateModel(
    assert( probdata != NULL );
 
    /* generate variables */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->Vars, probdata->n) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, probdata->n) );
    for (i = 0; i < probdata->n; ++i)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->Vars[i]), probdata->n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->vars[i]), probdata->n) );
       for (j = 0; j < probdata->n; ++j)
       {
 	 if (j != i)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
-	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->Vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
-				     TRUE, FALSE, NULL, NULL, NULL, NULL));
-	    SCIP_CALL( SCIPaddVar(scip, probdata->Vars[i][j]) );
+	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
+	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
+		  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
+	    SCIP_CALL( SCIPaddVar(scip, probdata->vars[i][j]) );
 	 }
 	 else
-	    probdata->Vars[i][j] = NULL;
+	    probdata->vars[i][j] = NULL;
       }
    }
 
    /* generate linear ordering constraint */
-   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
-					   FALSE, FALSE, FALSE, FALSE));
+   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", probdata->n, probdata->vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+	 FALSE, FALSE, FALSE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* set maximization */
-   SCIP_CALL_ABORT( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
 
    return SCIP_OKAY;
 }
@@ -280,23 +334,25 @@ SCIP_RETCODE LOPevalSolution(
    )
 {
    SCIP_PROBDATA* probdata;
-   int i, j, n;
-   SCIP_VAR*** Vars;
+   SCIP_VAR*** vars;
    SCIP_SOL* sol;
-   SCIP_Real* outDegree;
+   int* outDegree;
    int* indices;
+   int i;
+   int j;
+   int n;
 
    /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert( probdata != NULL );
-   assert( probdata->Vars != NULL );
+   assert( probdata->vars != NULL );
 
    n = probdata->n;
-   Vars = probdata->Vars;
+   vars = probdata->vars;
    sol = SCIPgetBestSol(scip);
 
    if ( sol == NULL )
-      printf("No solution found.\n");
+      printf("\nNo solution found.\n");
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &outDegree, n) );
@@ -312,17 +368,17 @@ SCIP_RETCODE LOPevalSolution(
 	    if (j == i)
 	       continue;
 
-	    val = SCIPgetSolVal(scip, sol, Vars[i][j]);
+	    val = SCIPgetSolVal(scip, sol, vars[i][j]);
 	    assert( SCIPisIntegral(scip, val) );
 	    if ( val < 0.5 )
 	       ++deg;
 	 }
-	 outDegree[i] = (SCIP_Real) deg;
+	 outDegree[i] = deg;
 	 indices[i] = i;
       }
 
       /* sort such that degrees are non-decreasing */
-      SCIPsortRealPtr(outDegree, (void**) indices, n);
+      SCIPsortIntInt(outDegree, indices, n);
 
       /* output */
       printf("\nFinal order:\n");

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,98 +20,248 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
+#include <string.h>
+
+#include <scip/scip.h>
+#include <scip/scipdefplugins.h>
 
 #include "probdata_lop.h"
 #include "cons_linearordering.h"
 
 
-/** read parameters from a file */
+/** read comand line arguments */
 static
-SCIP_RETCODE readParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< parameter file name, or NULL */
+SCIP_Bool readArguments(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char**          filename,           /**< file name from arguments */
+   const char**          settingsname,       /**< name of settings file */
+   SCIP_Real*            timelimit,          /**< time limit read from arguments */
+   SCIP_Real*            memlimit,           /**< memory limit read from arguments */
+   SCIP_Longint*         nodelimit,          /**< node limit read from arguments */
+   int*                  dispfreq            /**< display frequency */
    )
 {
-   if (filename != NULL)
+   int i;
+   char usage[256];
+   int status;
+
+   assert( argc > 0 );
+   assert( argv != NULL );
+   assert( filename != NULL );
+   assert( settingsname != NULL );
+   assert( timelimit != NULL );
+   assert( memlimit != NULL );
+   assert( nodelimit != NULL );
+   assert( dispfreq != NULL );
+
+   /* init usage text */
+   status = snprintf(usage, 255, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+   assert( 0 <= status && status < 256 );
+
+   /* init arguments */
+   *timelimit = 1e20;
+   *memlimit = 1e20;
+   *nodelimit = SCIP_LONGINT_MAX;
+   *filename = NULL;
+   *settingsname = NULL;
+   *dispfreq = -1;
+
+   /* check all arguments */
+   for (i = 1; i < argc; ++i)
    {
-      if( SCIPfileExists(filename) )
+      if ( ! strcmp(argv[i], "-s") )
       {
-         printf("reading parameter file <%s>\n", filename);
-         SCIP_CALL( SCIPreadParams(scip, filename) );
+         if ( *settingsname != NULL )
+         {
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         if ( i == argc-1 )
+         {
+            SCIPinfoMessage(scip, NULL, "Error: No setting file name supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         ++i;
+         *settingsname = argv[i];
+         assert( i < argc );
+      }
+      /* check for time limit */
+      else if ( ! strcmp(argv[i], "-t") )
+      {
+         if ( i == argc-1 )
+         {
+            SCIPinfoMessage(scip, NULL, "No time limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         ++i;
+         *timelimit = atof(argv[i]);
+         assert( i < argc );
+      }
+      /* check for memory limit */
+      else if ( ! strcmp(argv[i], "-m") )
+      {
+         if ( i == argc-1 )
+         {
+            SCIPinfoMessage(scip, NULL, "No memory limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         ++i;
+         *memlimit = atof(argv[i]);
+         assert( i < argc );
+      }
+      /* check for node limit */
+      else if ( ! strcmp(argv[i], "-n") )
+      {
+         if ( i == argc-1 )
+         {
+            SCIPinfoMessage(scip, NULL, "No node limit supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         ++i;
+         *nodelimit = atof(argv[i]);
+         assert( i < argc );
+      }
+      /* check for display frequency */
+      else if ( ! strcmp(argv[i], "-d") )
+      {
+         if ( i == argc-1 )
+         {
+            SCIPinfoMessage(scip, NULL, "No display frequency supplied.\n");
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         ++i;
+         *dispfreq = atoi(argv[i]);
+         assert( i < argc );
       }
       else
       {
-         printf("parameter file <%s> not found.\n", filename);
-	 return SCIP_NOFILE;
+         /* if filename is already specified */
+         if ( *filename != NULL )
+         {
+            SCIPinfoMessage(scip, NULL, "%s\n", usage);
+            return FALSE;
+         }
+         *filename = argv[i];
       }
    }
-   else
+
+   if ( *filename == NULL )
    {
-      printf("parameter file empty.\n");
-      return SCIP_NOFILE;
+      SCIPinfoMessage(scip, NULL, "No filename supplied.\n");
+      SCIPinfoMessage(scip, NULL, "%s\n", usage);
+      return FALSE;
    }
 
-   return SCIP_OKAY;
+   return TRUE;
 }
 
 
-
-
+/** main function, which starts the solution of the linear ordering problem */
 int main(
-	 int    argc,
-	 char** argv
-	 )
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
+   )
 {
    SCIP* scip = NULL;
-
-   /* check paramters */
-   if (argc < 2 || argc > 3)
-   {
-      printf("usage: %s <LOP file> [<parameter file>]\n", argv[0]);
-      return 1;
-   }
-
-   /* output version information */
-   SCIPprintVersion(NULL);
-   printf("\n");
+   const char* filename;
+   const char* settingsname;
+   SCIP_Real timelimit;
+   SCIP_Real memlimit;
+   SCIP_Longint nodelimit;
+   int dispfreq;
+   int errorcode;
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include default SCIP plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   /* parse command line arguments */
+   if( readArguments(scip, argc, argv, &filename, &settingsname, &timelimit, &memlimit, &nodelimit, &dispfreq) )
+   {
+      assert( filename != NULL );
 
-   /* include linear ordering constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
+      errorcode = 0;
 
-   /* read parameters if requested */
-   if( argc == 3 )
-      SCIP_CALL( readParams(scip, argv[2]) );
+      /* output version information */
+      SCIPinfoMessage(scip, NULL, "Solving the linear ordering problem using SCIP.\n");
+      SCIPinfoMessage(scip, NULL, "\n");
 
-   /* read problem data */
-   SCIP_CALL( LOPcreateProb(scip, argv[1]) );
+      SCIPprintVersion(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
 
-   /* generate linear ordering model */
-   LOPgenerateModel(scip);
+      /* include default SCIP plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* print model */
-   if ( LOPgetNElements(scip) <= 10 )
-      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+      /* include linear ordering constraint handler */
+      SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
 
-   /* solve the model */
-   SCIP_CALL( SCIPsolve(scip) );
+      /* set time, node, and memory limit */
+      if ( ! SCIPisInfinity(scip, timelimit) )
+      {
+         SCIPinfoMessage(scip, NULL, "parameter <limits/time> set to %g\n", timelimit);
+         SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
+      }
+      if ( ! SCIPisInfinity(scip, memlimit) )
+      {
+         SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", memlimit) );
+      }
+      if ( nodelimit < SCIP_LONGINT_MAX )
+      {
+         SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", nodelimit) );
+      }
+      if ( dispfreq >= 0 )
+      {
+         SCIP_CALL( SCIPsetIntParam(scip, "display/freq", dispfreq) );
+      }
 
-   /* print statistics */
-   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+      /* check for parameters */
+      if ( settingsname != NULL )
+      {
+         if ( SCIPfileExists(settingsname) )
+         {
+            SCIPinfoMessage(scip, NULL, "reading parameter file <%s> ...\n\n", settingsname);
+            SCIP_CALL( SCIPreadParams(scip, settingsname) );
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "parameter file <%s> not found - using default parameters.\n", settingsname);
+         }
+      }
 
-   /* SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );*/
-   SCIP_CALL( LOPevalSolution(scip) );
+      /* read problem data */
+      SCIP_CALL( LOPcreateProb(scip, argv[1]) );
+
+      /* generate linear ordering model */
+      SCIP_CALL( LOPgenerateModel(scip) );
+
+      /* print model */
+      if ( LOPgetNElements(scip) <= 10 )
+      {
+         SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+         SCIPinfoMessage(scip, NULL, "\n");
+      }
+
+      /* solve the model */
+      SCIP_CALL( SCIPsolve(scip) );
+
+      /* print statistics */
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+
+      /* SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );*/
+      SCIP_CALL( LOPevalSolution(scip) );
+   }
+   else
+      errorcode = 1;
 
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
 
-   return 0;
+   return errorcode;
 }

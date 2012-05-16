@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,13 +15,43 @@
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for quadratic constraints
+ * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * 
  * This constraint handler handles constraints of the form
  * \f[
- *   \ell \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq u  
+ *   \textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}
  * \f]
+ *
+ * Constraints are enforced by separation, domain propagation, and spatial branching.
+ *
+ * For semidefinite matrices \f$A=(a_{i,j})_{i,j}\f$, cuts based on linearization of \f$\langle x, Ax\rangle\f$ are implemented.
+ * For underestimating a non-convex term, McCormick underestimators and secants for univariate concave quadratic terms are implemented.
+ * If \f$\langle x, Ax\rangle\f$ is factorable (i.e., can be written as product of two linear functions),
+ * specialized separation techniques (e.g., lifted tangent inequalities) that take the constraint sides into account are applied.
+ *
+ * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
+ * Further, domain propagation is applied.
+ *
+ * During presolve, variable products which contain binary variables may be reformulated into linear constraints, thereby introducing new variables.
+ *
+ * See also
+ * @par
+ * Timo Berthold and Stefan Heinz and Stefan Vigerske@n
+ * <a href="http://dx.doi.org/10.1007/978-1-4614-1927-3">Extending a CIP framework to solve MIQCPs</a>@n
+ * In: Jon Lee and Sven Leyffer (eds.),
+ *     Mixed-integer nonlinear optimization: Algorithmic advances and applications,
+ *     IMA volumes in Mathematics and its Applications, volume 154, 427-444, 2012.
+ *
+ * @par
+ * Stefan Vigerske@n
+ * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
+ * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
+ *
+ * @par
+ * Pietro Belotti and Andrew J. Miller and Mahdi Namazifar@n
+ * Linear inequalities for bounded products of variables@n
+ * SIAG/OPT Views-and-News 22:1, 1-8, 2011.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,18 +60,51 @@
 #define __SCIP_CONS_QUADRATIC_H__
 
 #include "scip/scip.h"
-#include "scip/type_nlpi.h"
+#include "scip/intervalarith.h"
+#include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-   
-typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
+
+/** data structure to store a single term associated to a quadratic variable
+ */
+struct SCIP_QuadVarTerm
+{
+   SCIP_VAR*             var;                /**< quadratic variable */
+   SCIP_Real             lincoef;            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
+
+   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
+   int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
+   int*                  adjbilin;           /**< indices of associated bilinear terms */
+
+   SCIP_EVENTDATA*       eventdata;          /**< event data for bound change events */
+};
+typedef struct SCIP_QuadVarTerm SCIP_QUADVARTERM;
+
+/** data structure to store a single bilinear term (similar to SCIP_QUADELEM)
+ * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
+ */
+struct SCIP_BilinTerm
+{
+   SCIP_VAR*             var1;
+   SCIP_VAR*             var2;
+   SCIP_Real             coef;
+};
+typedef struct SCIP_BilinTerm SCIP_BILINTERM;
+
 
 /** upgrading method for quadratic constraints into more specific constraints
  * 
- * the method might also upgrade only one side of a quadratic constraint
- * if both sides are upgraded into the same constraint, then upgdconslhs and upgdconsrhs should be set to the same pointer 
+ * the method might upgrade a quadratic constraint into a set of quadratic constraints
+ * the caller provided an array upgdconss to store upgrade constraints
+ * the length of upgdconss is given by upgdconsssize
+ * if an upgrade is not possible, set *nupgdconss to zero
+ * if more than upgdconsssize many constraints shall replace cons, the function
+ * should return the required number as negated value in *nupgdconss
+ * i.e., if cons should be replaced by 3 constraints, the function should set
+ * *nupgdconss to -3 and return with SCIP_OKAY
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -55,12 +118,13 @@ typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constra
  *  - ncontlin        : number of continuous variables in linear part
  *  - ncontquad       : number of continuous variables in quadratic part
  *  - integral        : TRUE iff constraints activity value is always integral
- *  - upgdconslhs     : pointer to store the upgrade for the quadratic constraint w.r.t. the left  hand side 
- *  - upgdconsrhs     : pointer to store the upgrade for the quadratic constraint w.r.t. the right hand side
+ *  - nupgdconss      : pointer to store number of constraints that replace this constraint
+ *  - upgdconss       : array to store constraints that replace this constraint
+ *  - upgdconsssize   : length of the provided upgdconss array
  */
 #define SCIP_DECL_QUADCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
-   int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
-   SCIP_Bool integral, SCIP_CONS** upgdconslhs, SCIP_CONS** upgdconsrhs)
+      int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
+      SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
 /** creates the handler for quadratic constraints and includes it in SCIP */
 extern
@@ -68,12 +132,13 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** includes a quadratic constraint update method into the quadratic constraint handler */
+/** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 extern
 SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP*                   scip,               /**< SCIP data structure */
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),    /**< method to call for upgrading quadratic constraint */
    int                     priority,           /**< priority of upgrading method */
+   SCIP_Bool               active,             /**< should the upgrading method be active by default? */
    const char*             conshdlrname        /**< name of the constraint handler */
    );
 
@@ -81,9 +146,11 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
  * 
  *  The constraint should be given in the form
  *  \f[
- *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
+ *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_j z_j \leq u,
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
 SCIP_RETCODE SCIPcreateConsQuadratic(
@@ -116,7 +183,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
@@ -125,8 +192,10 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  * 
  * The constraint should be given in the form
  * \f[
- * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
  * \f]
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
 SCIP_RETCODE SCIPcreateConsQuadratic2(
@@ -134,19 +203,13 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) or NULL if nlinvars == 0 */ 
-   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) or NULL if nlinvars == 0 */ 
-   int                   nquadvars,          /**< number of quadratic terms (m) */
-   SCIP_VAR**            quadvars,           /**< array with variables in quadratic terms (y_j) or NULL if nquadvars == 0 */
-   SCIP_Real*            quadlincoefs,       /**< array with linear coefficients of quadratic variables (b_j) or NULL if nquadvars == 0 */
-   SCIP_Real*            quadsqrcoefs,       /**< array with coefficients of square terms of quadratic variables (a_j) or NULL if nquadterms == 0 */
-   int*                  nadjbilin,          /**< number of bilinear terms where the variable is involved or NULL if nquadterms == 0 */
-   int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved or NULL if nquadterms == 0 */
-   int                   nbilin,             /**< number of bilinear terms (p) */
-   SCIP_VAR**            bilinvars1,         /**< array with first variables in bilinear term (v_k) or NULL if nbilin == 0 */
-   SCIP_VAR**            bilinvars2,         /**< array with second variables in bilinear term (w_k) or NULL if nbilin == 0 */
-   SCIP_Real*            bilincoefs,         /**< array with coefficients of bilinear term (c_k) or NULL if nbilin == 0 */
-   SCIP_Real             lhs,                /**< constraint left hand side (l) */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */ 
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */ 
+   int                   nquadvarterms,      /**< number of quadratic terms (m) */
+   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
+   int                   nbilinterms,        /**< number of bilinear terms (p) */
+   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
+   SCIP_Real             lhs,                /**< constraint left hand side (ell) */
    SCIP_Real             rhs,                /**< constraint right hand side (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
@@ -157,6 +220,82 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
+   );
+
+/** Adds a constant to the constraint function, that is, subtracts a constant from both sides */
+extern
+void SCIPaddConstantQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real             constant            /**< constant to subtract from both sides */
+   );
+
+/** Adds a linear variable with coefficient to a quadratic constraint.
+ */
+extern
+SCIP_RETCODE SCIPaddLinearVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient of variable */
+   );
+
+/** Adds a quadratic variable with linear and square coefficient to a quadratic constraint.
+ */
+extern
+SCIP_RETCODE SCIPaddQuadVarQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             lincoef,            /**< linear coefficient of variable */
+   SCIP_Real             sqrcoef             /**< square coefficient of variable */
+   );
+
+/** Adds a linear coefficient for a quadratic variable.
+ *
+ * Variable will be added with square coefficient 0.0 if not existing yet.
+ */
+extern
+SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to linear coefficient of variable */
+   );
+
+/** Adds a square coefficient for a quadratic variable.
+ *
+ * Variable will be added with linear coefficient 0.0 if not existing yet.
+ */
+extern
+SCIP_RETCODE SCIPaddSquareCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< value to add to square coefficient of variable */
+   );
+
+/** Adds a bilinear term to a quadratic constraint.
+ *
+ * Variables will be added with linear and square coefficient 0.0 if not existing yet.
+ * If variables are equal, only the square coefficient of the variable is updated.
+ */
+extern
+SCIP_RETCODE SCIPaddBilinTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_VAR*             var2,               /**< second variable */
+   SCIP_Real             coef                /**< coefficient of bilinear term */
+   );
+
+/** Gets the quadratic constraint as a nonlinear row representation.
+ */
+extern
+SCIP_RETCODE SCIPgetNlRowQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< a buffer where to store pointer to nonlinear row */
    );
 
 /** Gets the number of variables in the linear part of a quadratic constraint.
@@ -176,23 +315,6 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the number of variables in the quadratic part of a quadratic constraint.
- */
-extern
-int SCIPgetNQuadVarsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the variables in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
- */
-extern
-SCIP_VAR** SCIPgetQuadVarsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
 /** Gets the coefficients in the linear part of a quadratic constraint.
  *  Length is given by SCIPgetNQuadVarsQuadratic.
  */
@@ -202,25 +324,43 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the linear coefficients in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
+/** Gets the number of quadratic variable terms of a quadratic constraint.
  */
 extern
-SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
+int SCIPgetNQuadVarTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the square coefficients in the quadratic part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
+/** Gets the quadratic variable terms of a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarTermsQuadratic.
  */
 extern
-SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
+SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the number of bilinear terms in a quadratic constraint.
+/** Ensures that quadratic variable terms are sorted. */
+extern
+SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** Finds the position of a quadratic variable term for a given variable.
+ *
+ * @note If the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ */
+extern
+SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to search for */
+   int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
+   );
+
+/** Gets the number of bilinear terms of a quadratic constraint.
  */
 extern
 int SCIPgetNBilinTermsQuadratic(
@@ -228,47 +368,11 @@ int SCIPgetNBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the first variables in the bilinear terms in a quadratic constraint.
+/** Gets the bilinear terms of a quadratic constraint.
  *  Length is given by SCIPgetNBilinTermQuadratic.
  */
 extern
-SCIP_VAR** SCIPgetBilinVars1Quadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the second variables in the bilinear terms in a quadratic constraint.
- *  Length is given by SCIPgetNBilinTermQuadratic.
- */
-extern
-SCIP_VAR** SCIPgetBilinVars2Quadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets the coefficients of the bilinear terms in a quadratic constraint.
- *  Length is given by SCIPgetNBilinTermQuadratic.
- */
-extern
-SCIP_Real* SCIPgetBilinCoefsQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets for each quadratic variable the number of bilinear terms in which the variable is involved in a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic
- */
-extern
-int* SCIPgetNAdjBilinQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** Gets for each quadratic variable the indices of bilinear terms in which the variable is involved in a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic, length of each entry is given by SCIPgetNAdjBilinQuadratic.
- */
-extern
-int** SCIPgetAdjBilinQuadratic(
+SCIP_BILINTERM* SCIPgetBilinTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
@@ -289,6 +393,14 @@ SCIP_Real SCIPgetRhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet.
+ */
+extern
+SCIP_RETCODE SCIPcheckCurvatureQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex.
  */
 extern
@@ -305,7 +417,7 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** Gets the violation of a constraint by a solution */
+/** Gets the violation of a constraint by a solution. */
 extern
 SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -313,20 +425,16 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
    SCIP_Real*            violation           /**< buffer to store violation of constraint */
    );
-   
 
-/** NLPI initialization method of constraint handler
- * 
- *  The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
- */
+/** Adds the constraint to an NLPI problem. */
 extern
-SCIP_RETCODE SCIPconsInitNlpiQuadratic(
+SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
-   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_CONS**           conss,              /**< quadratic constraints */
-   SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< NLPI problem where to add constraint */
+   SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
 #ifdef __cplusplus

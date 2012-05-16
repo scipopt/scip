@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,6 +65,17 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/** gets time in seconds used in this event handler for setting up for next stages */
+extern
+SCIP_Real SCIPeventhdlrGetSetupTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   );
+
+/** gets time in seconds used in this event handler */
+extern
+SCIP_Real SCIPeventhdlrGetTime(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
+   );
 
 
 /*
@@ -77,7 +88,8 @@ SCIP_EVENTTYPE SCIPeventGetType(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets variable for a variable event (var added, var deleted, var fixed, objective value or domain change) */
+/** gets variable for a variable event (var added, var deleted, var fixed, 
+ *  objective value or domain change, domain hole added or removed) */
 extern
 SCIP_VAR* SCIPeventGetVar(
    SCIP_EVENT*           event               /**< event */
@@ -116,6 +128,72 @@ SCIP_NODE* SCIPeventGetNode(
 /** gets solution for a primal solution event */
 extern
 SCIP_SOL* SCIPeventGetSol(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets the left bound of open interval in the hole */
+extern
+SCIP_Real SCIPeventGetHoleLeft(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets the right bound of open interval in the hole */
+extern
+SCIP_Real SCIPeventGetHoleRight(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets row for a row event */
+extern
+SCIP_ROW* SCIPeventGetRow(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets column for a row change coefficient event */
+extern
+SCIP_COL* SCIPeventGetRowCol(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old coefficient value for a row change coefficient event */
+extern
+SCIP_Real SCIPeventGetRowOldCoefVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new coefficient value for a row change coefficient event */
+extern
+SCIP_Real SCIPeventGetRowNewCoefVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old constant value for a row change constant event */
+extern
+SCIP_Real SCIPeventGetRowOldConstVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new constant value for a row change constant event */
+extern
+SCIP_Real SCIPeventGetRowNewConstVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets side for a row change side event */
+extern
+SCIP_SIDETYPE SCIPeventGetRowSide(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old side value for a row change side event */
+extern
+SCIP_Real SCIPeventGetRowOldSideVal(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new side value for a row change side event */
+extern
+SCIP_Real SCIPeventGetRowNewSideVal(
    SCIP_EVENT*           event               /**< event */
    );
 

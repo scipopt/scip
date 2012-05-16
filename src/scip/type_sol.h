@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,12 +30,13 @@ extern "C" {
 /** origin of solution: where to retrieve uncached elements */
 enum SCIP_SolOrigin
 {
-   SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-chached elements are zero */
+   SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-cached elements are zero */
    SCIP_SOLORIGIN_ZERO      = 1,        /**< all non-cached elements in solution are equal to zero */
    SCIP_SOLORIGIN_LPSOL     = 2,        /**< all non-cached elements in solution are equal to current LP solution */
-   SCIP_SOLORIGIN_RELAXSOL  = 3,        /**< all non-cached elements in solution are equal to current relaxation solution */
-   SCIP_SOLORIGIN_PSEUDOSOL = 4,        /**< all non-cached elements in solution are equal to current pseudo solution */
-   SCIP_SOLORIGIN_UNKNOWN   = 5         /**< all non-cached elements in solution are unknown; they have to be treated
+   SCIP_SOLORIGIN_NLPSOL    = 3,        /**< all non-cached elements in solution are equal to current NLP solution */
+   SCIP_SOLORIGIN_RELAXSOL  = 4,        /**< all non-cached elements in solution are equal to current relaxation solution */
+   SCIP_SOLORIGIN_PSEUDOSOL = 5,        /**< all non-cached elements in solution are equal to current pseudo solution */
+   SCIP_SOLORIGIN_UNKNOWN   = 6         /**< all non-cached elements in solution are unknown; they have to be treated
                                          *   as being an arbitrary value in the variable's bounds
                                          */
 };

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,8 +36,7 @@ extern "C" {
 struct SCIP_Mem
 {
    BMS_BLKMEM*           setmem;             /**< memory blocks for parameter settings */
-   BMS_BLKMEM*           probmem;            /**< memory blocks for original problem */
-   BMS_BLKMEM*           solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
+   BMS_BLKMEM*           probmem;            /**< memory blocks for original problem and solution process: preprocessing, bab-tree, ... */
 };
 
 #ifdef __cplusplus

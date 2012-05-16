@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,10 +74,68 @@ struct SCIP_EventBdChg
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 
+/** data for domain hole events */
+struct SCIP_EventHole
+{
+   SCIP_Real             left;               /**< left bound of open interval in hole */
+   SCIP_Real             right;              /**< right bound of open interval in hole */
+   SCIP_VAR*             var;                /**< variable for which a hole was removed */
+};
+
 /** data for implication added events */
 struct SCIP_EventImplAdd
 {
    SCIP_VAR*             var;                /**< variable for which the lock numbers were changed */
+};
+
+/** data for row addition to separation storage events */
+struct SCIP_EventRowAddedSepa
+{
+   SCIP_ROW*             row;                /**< row that was added to separation storage */
+};
+
+/** data for row deletion from separation storage events */
+struct SCIP_EventRowDeletedSepa
+{
+   SCIP_ROW*             row;                /**< row that was deleted from separation storage */
+};
+
+/** data for row addition to LP events */
+struct SCIP_EventRowAddedLP
+{
+   SCIP_ROW*             row;                /**< row that was added to the LP */
+};
+
+/** data for row deletion from LP events */
+struct SCIP_EventRowDeletedLP
+{
+   SCIP_ROW*             row;                /**< row that was deleted from the LP */
+};
+
+/** data for row coefficient change events */
+struct SCIP_EventRowCoefChanged
+{
+   SCIP_ROW*             row;                /**< row which coefficient has changed */
+   SCIP_COL*             col;                /**< column which coefficient has changed */
+   SCIP_Real             oldval;             /**< old value of coefficient */
+   SCIP_Real             newval;             /**< new value of coefficient */
+};
+
+/** data for row constant change events */
+struct SCIP_EventRowConstChanged
+{
+   SCIP_ROW*             row;                /**< row which constant has changed */
+   SCIP_Real             oldval;             /**< old value of constant */
+   SCIP_Real             newval;             /**< new value of constant */
+};
+
+/** data for row side change events */
+struct SCIP_EventRowSideChanged
+{
+   SCIP_ROW*             row;                /**< row which side has changed */
+   SCIP_SIDETYPE         side;               /**< which side has changed */
+   SCIP_Real             oldval;             /**< old value of side */
+   SCIP_Real             newval;             /**< new value of side */
 };
 
 /** event data structure */
@@ -85,15 +143,23 @@ struct SCIP_Event
 {
    union
    {
-      SCIP_EVENTVARADDED eventvaradded;      /**< data for variable addition events */
-      SCIP_EVENTVARDELETED eventvardeleted;  /**< data for variable deletion events */
-      SCIP_EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
-      SCIP_EVENTVARUNLOCKED eventvarunlocked;/**< data for locks change events */
-      SCIP_EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
-      SCIP_EVENTBDCHG    eventbdchg;         /**< data for bound change events */
-      SCIP_EVENTIMPLADD  eventimpladd;       /**< data for implication added events */
-      SCIP_NODE*         node;               /**< data for node and LP events */
-      SCIP_SOL*          sol;                /**< data for primal solution events */
+      SCIP_EVENTVARADDED eventvaradded;       /**< data for variable addition events */
+      SCIP_EVENTVARDELETED eventvardeleted;   /**< data for variable deletion events */
+      SCIP_EVENTVARFIXED eventvarfixed;       /**< data for variable fixing events */
+      SCIP_EVENTVARUNLOCKED eventvarunlocked; /**< data for locks change events */
+      SCIP_EVENTOBJCHG   eventobjchg;         /**< data for objective value change events */
+      SCIP_EVENTBDCHG    eventbdchg;          /**< data for bound change events */
+      SCIP_EVENTHOLE     eventhole;           /**< data for domain hole events */
+      SCIP_EVENTIMPLADD  eventimpladd;        /**< data for implication added events */
+      SCIP_EVENTROWADDEDSEPA eventrowaddedsepa; /**< data for row addition to separation storage events */
+      SCIP_EVENTROWDELETEDSEPA eventrowdeletedsepa; /**< data for row deletion from separation storage events */
+      SCIP_EVENTROWADDEDLP eventrowaddedlp;   /**< data for row addition to LP events */
+      SCIP_EVENTROWDELETEDLP eventrowdeletedlp; /**< data for row deletion from LP events */
+      SCIP_EVENTROWCOEFCHANGED eventrowcoefchanged; /**< data for row coefficient change events */
+      SCIP_EVENTROWCONSTCHANGED eventrowconstchanged; /**< data for row constant change events */
+      SCIP_EVENTROWSIDECHANGED eventrowsidechanged; /**< data for row side change events */
+      SCIP_NODE*         node;                /**< data for node and LP events */
+      SCIP_SOL*          sol;                 /**< data for primal solution events */
    } data;
    SCIP_EVENTTYPE        eventtype;          /**< type of event */
 };
@@ -119,6 +185,7 @@ struct SCIP_Eventhdlr
 {
    char*                 name;               /**< name of event handler */
    char*                 desc;               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy));     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */
@@ -127,6 +194,8 @@ struct SCIP_Eventhdlr
    SCIP_DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
    SCIP_DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
    SCIP_EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this event handler for the next stages */
+   SCIP_CLOCK*           eventtime;          /**< time spend in this event handler execution method */
    SCIP_Bool             initialized;        /**< is event handler initialized? */
 };
 

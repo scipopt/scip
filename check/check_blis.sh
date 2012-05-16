@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -60,7 +60,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`./getlastprob.awk $OUTFILE`
+    LASTPROB=`awk -f getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -86,52 +86,52 @@ echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 rm -f $TMPFILE
 
-for i in `cat $TSTNAME.test`
+for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+            echo @05 TIMELIMIT: $TIMELIMIT
             if test $SETNAME != "default"
             then
                cp $SETTINGS $TMPFILE
             else
                echo > $TMPFILE
             fi
-	    if test $FEASTOL != "default"
-	    then
+            if test $FEASTOL != "default"
+            then
                 echo "integerTol $FEASTOL"            >> $TMPFILE
-	    fi
-	    if test $MIPGAP != "default"
-	    then
-               echo "optimalRelGap $MIPGAP"           >> $TMPFILE
-	    fi
+            fi
+            echo "optimalRelGap 0.0"                  >> $TMPFILE
             echo Alps_timeLimit $TIMELIMIT            >> $TMPFILE
             echo Alps_nodeLimit $NODELIMIT            >> $TMPFILE
 #$MEMLIMIT not supported (version 0.91)
 #$THREADS not supported (version 0.91)
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $BLISBIN -Alps_instance $i -param $TMPFILE" 2>>$ERRFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $BLISBIN -Alps_instance $i -param $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
@@ -141,9 +141,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if test -f $TSTNAME.solu
-then
-    awk -f check_blis.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-else
-    awk -f check_blis.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-fi
+./evalcheck_blis.sh $OUTFILE

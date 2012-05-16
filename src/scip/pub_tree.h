@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -69,7 +69,7 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize       /**< available slots in arrays */
    );
 
-/*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
+/**  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
  *  sorted by the nodes, starting from the current node going up to the root */
 extern
 void SCIPnodeGetAncestorBranchingPath(
@@ -84,8 +84,23 @@ void SCIPnodeGetAncestorBranchingPath(
                                                * branchings performed at the parent of node always start at position 0. For single variable branching,
                                                * nodeswitches[i] = i holds
                                                */
-   int*                  nnodes,              /* number of nodes in the nodeswitch array */
+   int*                  nnodes,              /**< number of nodes in the nodeswitch array */
    int                   nodeswitchsize       /**< available slots in node switch array */   
+   );
+
+
+/** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
+extern
+SCIP_Bool SCIPnodesSharePath(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
+   );
+
+/** finds the common ancestor node of two given nodes */
+extern
+SCIP_NODE* SCIPnodesGetCommonAncestor(
+   SCIP_NODE*            node1,                /**< node data */
+   SCIP_NODE*            node2                 /**< node data */
    );
 
 
@@ -133,6 +148,11 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    SCIP_NODE*            node                /**< node */
    );
 
+/** gets the parent node of a node in the branch-and-bound tree, if any */
+extern
+SCIP_NODE* SCIPnodeGetParent(
+   SCIP_NODE*            node                /**< node */
+   );
 
 /** returns whether node is in the path to the current node */
 extern
@@ -160,6 +180,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetEstimate(node)       ((node)->estimate)
 #define SCIPnodeGetDomchg(node)         ((node)->domchg)
+#define SCIPnodeGetParent(node)         ((node)->parent)
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_leastinf.h
+ * @ingroup BRANCHINGRULES
  * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
  */
@@ -30,7 +31,7 @@
 extern "C" {
 #endif
 
-/** creates the least infeasible LP braching rule and includes it in SCIP */
+/** creates the least infeasible LP branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */

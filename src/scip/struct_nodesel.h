@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,6 +52,7 @@ struct SCIP_Nodesel
 {
    char*                 name;               /**< name of node selector */
    char*                 desc;               /**< description of node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy));   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */
@@ -59,6 +60,8 @@ struct SCIP_Nodesel
    SCIP_DECL_NODESELEXITSOL((*nodeselexitsol));/**< solving process deinitialization method of node selector */
    SCIP_DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    SCIP_DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this node selector for the next stages */
+   SCIP_CLOCK*           nodeseltime;        /**< node selector execution time */
    SCIP_NODESELDATA*     nodeseldata;        /**< node selector data */
    int                   stdpriority;        /**< priority of the node selector in standard mode */
    int                   memsavepriority;    /**< priority of the node selector in memory saving mode */

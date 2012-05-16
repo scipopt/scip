@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,7 @@ struct SCIP_Heur
    SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
    char*                 name;               /**< name of primal heuristic */
    char*                 desc;               /**< description of primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy));      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */
@@ -47,6 +48,7 @@ struct SCIP_Heur
    SCIP_DECL_HEUREXITSOL ((*heurexitsol));   /**< solving process deinitialization method of primal heuristic */
    SCIP_DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata;           /**< primal heuristics local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this heuristic for the next stages */
    SCIP_CLOCK*           heurclock;          /**< heuristic execution time */
    int                   priority;           /**< priority of the primal heuristic */
    int                   freq;               /**< frequency for calling primal heuristic */
@@ -54,6 +56,7 @@ struct SCIP_Heur
    int                   maxdepth;           /**< maximal depth level to call heuristic at (-1: no limit) */
    int                   delaypos;           /**< position in the delayed heuristics queue, or -1 if not delayed */
    unsigned int          timingmask;         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
 };

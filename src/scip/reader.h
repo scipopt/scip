@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,14 @@
 extern "C" {
 #endif
 
+
+/** copies the given reader to a new scip */
+extern
+SCIP_RETCODE SCIPreaderCopyInclude(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a reader */
 extern
 SCIP_RETCODE SCIPreaderCreate(
@@ -43,6 +51,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -77,6 +86,19 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
+
+/** gets time in seconds used in this reader for reading */
+extern
+SCIP_Real SCIPreaderGetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
+/** resets reading time of reader */
+extern
+SCIP_RETCODE SCIPreaderResetReadingTime(
+   SCIP_READER*          reader              /**< reader */
+   );
+
 
 #ifdef __cplusplus
 }

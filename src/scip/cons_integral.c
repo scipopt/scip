@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_integral.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */
@@ -47,11 +46,29 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
 /*
  * Callback methods
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+ 
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeIntegral NULL
@@ -89,7 +106,7 @@
 #define consTransIntegral NULL
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpIntegral NULL
 
 
@@ -116,7 +133,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
 #ifdef WITH_EXACTSOLVE
    /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
-    * (computed in enfolp method of exactlp constraint handler) 
+    * (computed in enfolp method of exactlp constraint handler) and unbounded root LPs are also handled
+    * in exactlp constraint handler  
     */
    assert(SCIPisExactSolve(scip));
    if( SCIPselectDualBoundMethod(scip, FALSE) == 'e' )
@@ -125,6 +143,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       return SCIP_OKAY;
    }
 #endif
+
+   /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
+    * depending on whether we are able to construct an integral solution; in any case we do not want to branch
+    */
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   {
+      if( SCIPgetNLPBranchCands(scip) == 0 )
+         *result = SCIP_FEASIBLE;
+      else
+         *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
@@ -155,7 +185,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Check method of integrality constraint\n");
+   SCIPdebugMessage("Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
@@ -163,7 +193,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    if( checkintegrality )
    {
-      for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
+      int ninteger;
+
+      ninteger = nbin + nint;
+
+      for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
 
@@ -208,6 +242,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
                SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
                   SCIPvarGetName(vars[v]), solval);
             }
+            break;
          }
 #endif
       }
@@ -276,6 +311,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint disabling notification method of constraint handler */
 #define consDisableIntegral NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelvarsIntegral NULL
+
+
 /** constraint display method of constraint handler */
 #define consPrintIntegral NULL
 
@@ -285,6 +325,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint parsing method of constraint handler */
 #define consParseIntegral NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsIntegral NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsIntegral NULL
 
 
 /*
@@ -304,17 +349,19 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         consFreeIntegral, consInitIntegral, consExitIntegral, 
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyIntegral,
+         consFreeIntegral, consInitIntegral, consExitIntegral,
          consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
          consDeleteIntegral, consTransIntegral, consInitlpIntegral,
-         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
+         consSepalpIntegral, consSepasolIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral,
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
-         consActiveIntegral, consDeactiveIntegral, 
-         consEnableIntegral, consDisableIntegral,
+         consActiveIntegral, consDeactiveIntegral,
+         consEnableIntegral, consDisableIntegral, consDelvarsIntegral,
          consPrintIntegral, consCopyIntegral, consParseIntegral,
-         conshdlrdata) );
+         consGetVarsIntegral, consGetNVarsIntegral, conshdlrdata) );
 
    return SCIP_OKAY;
 }

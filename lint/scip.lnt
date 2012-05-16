@@ -3,9 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-//*                                                                           */
-//*                  2002-2006 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,8 +26,8 @@
 -wlib(1)    // sets the warning level within library headers to 1
             // (no warnings, just syntax errors).  Comment out if you
             // are actually linting library headers.  This
-            // option makes obsolete options of the form -elib(axxx) where
-            // xxx >= 400 which may be retained for historical reasons.
+            // option makes obsolete options of the form -elib(aXYZ) where
+            // XYZ >= 400 which may be retained for historical reasons.
 
 -i./lint/posix
 -i./lint/cpp
@@ -65,6 +63,12 @@
 -emacro(506,SCIPdebugCheckRow) // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)       // Constant value Boolean
+-emacro(685,BMSallocMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSreallocMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocMemoryArrayCPP) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocClearMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSallocBlockMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(685,BMSreallocBlockMemoryArray) // Relational operator always evaluates to 'false'
 
 -esym(578,clock)          // Declaration of symbol hides symbol
 -esym(578,scip)           // Declaration of symbol hides symbol

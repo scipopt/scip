@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,10 +24,8 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/pub_misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -38,6 +36,8 @@
 #include "scip/cons.h"
 #include "scip/scip.h"
 #include "scip/cons_exactlp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -178,6 +178,72 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
+/** creates problem data structure by copying the source problem; 
+ *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+SCIP_RETCODE SCIPprobCopy(
+   SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< problem name */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_PROB*            sourceprob,         /**< source problem structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints */
+   SCIP_Bool             global              /**< create a global or a local copy? */
+   )
+{
+   SCIP_PROBDATA* targetdata;
+   SCIP_RESULT result;
+
+   assert(prob != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(sourcescip != NULL);
+   assert(sourceprob != NULL);
+   assert(varmap != NULL);
+   assert(consmap != NULL);
+
+   result = SCIP_DIDNOTRUN;
+   targetdata = NULL;
+
+   /* create problem and initialize callbacks with NULL */
+   SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
+   
+   /* call user copy callback method */
+   if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
+   {
+      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
+
+      /* evaluate result */
+      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      {
+         SCIPerrorMessage("probdata copying method returned invalid result <%d>\n", result);
+         return SCIP_INVALIDRESULT;
+      }
+
+      assert(targetdata == NULL || result == SCIP_SUCCESS);
+   }
+
+   /* if copying was successful, add data and callbacks */
+   if( result == SCIP_SUCCESS )
+   {
+      assert( targetdata != NULL );
+      (*prob)->probdelorig = sourceprob->probdelorig;
+      (*prob)->probtrans = sourceprob->probtrans;
+      (*prob)->probdeltrans = sourceprob->probdeltrans;
+      (*prob)->probinitsol = sourceprob->probinitsol;
+      (*prob)->probexitsol = sourceprob->probexitsol;
+      (*prob)->probcopy = sourceprob->probcopy;
+      (*prob)->probdata = targetdata;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates problem data structure
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
@@ -192,6 +258,7 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    SCIP_DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata,           /**< user problem data set by the reader */
    SCIP_Bool             transformed         /**< is this the transformed problem? */
    )
@@ -202,6 +269,7 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*prob)->name, name, strlen(name)+1) );
 
    (*prob)->probdata = probdata;
+   (*prob)->probcopy = probcopy;
    (*prob)->probdelorig = probdelorig;
    (*prob)->probtrans = probtrans;
    (*prob)->probdeltrans = probdeltrans;
@@ -229,6 +297,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->deletedvars = NULL;
    (*prob)->deletedvarssize = 0;
    (*prob)->ndeletedvars = 0;
+   (*prob)->nobjvars = 0;
    if( set->misc_useconstable )
    {
       SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem,
@@ -247,6 +316,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objoffset = 0.0;
    (*prob)->objscale = 1.0;
    (*prob)->objlim = SCIP_INVALID;
+   (*prob)->dualbound = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
 
@@ -259,6 +329,7 @@ SCIP_RETCODE SCIPprobFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
@@ -313,7 +384,7 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
-      SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->vars);
 
@@ -321,7 +392,7 @@ SCIP_RETCODE SCIPprobFree(
    for( v = 0; v < (*prob)->nfixedvars; ++v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
-      SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, lp) );
+      SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
 
@@ -329,14 +400,12 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free hash tables for names */
-   if( set->misc_usevartable )
+   if( (*prob)->varnames != NULL )
    {
-      assert((*prob)->varnames != NULL);
       SCIPhashtableFree(&(*prob)->varnames);
    }
-   if( set->misc_useconstable )
+   if( (*prob)->consnames != NULL )
    {
-      assert((*prob)->consnames != NULL);
       SCIPhashtableFree(&(*prob)->consnames);
    }
    BMSfreeMemoryArray(&(*prob)->name);
@@ -351,6 +420,8 @@ SCIP_RETCODE SCIPprobTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -374,13 +445,17 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, NULL, NULL, source->probdeltrans, 
-                  source->probinitsol, source->probexitsol, NULL, TRUE) );
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans, 
+         source->probinitsol, source->probexitsol, source->probcopy, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
       SCIPprobSetObjlim(*target, source->objlim);
+
+   /* transform objective limit */
+   if( source->dualbound < SCIP_INVALID )
+      SCIPprobSetDualbound(*target, source->dualbound);
 
    /* transform and copy all variables to target problem */
    SCIP_CALL( probEnsureVarsMem(*target, set, source->nvars) );
@@ -388,9 +463,10 @@ SCIP_RETCODE SCIPprobTransform(
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
-      SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, NULL) );
+      SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
    assert((*target)->nvars == source->nvars);
+   assert((*target)->nobjvars == SCIPprobGetNObjVars(*target, set));
 
    /* call user data transformation */
    if( source->probtrans != NULL )
@@ -416,7 +492,7 @@ SCIP_RETCODE SCIPprobTransform(
          SCIP_CALL( SCIPconshdlrLockVars(set->conshdlrs[h], set) );
       }
    }
-
+   
    /* in exact solving mode, we can not rely on this integrality check as it is not safe yet */
    if( !set->misc_exactsolve )
    {
@@ -424,8 +500,10 @@ SCIP_RETCODE SCIPprobTransform(
       (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
    }
 
-   /* check, wheter objective value is always integral by inspecting the problem */
-   SCIPprobCheckObjIntegral(*target, set);
+   /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
+    * cutoff bound if primal solution is already known 
+    */
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, blkmem, set, stat, primal, tree, lp, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -452,6 +530,59 @@ SCIP_RETCODE SCIPprobResetBounds(
    return SCIP_OKAY;
 }
 
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int ncontvars;
+   int nvars;
+   int v;
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   nbinvars = prob->nbinvars;
+   nintvars = prob->nintvars;
+   nimplvars = prob->nimplvars;
+   ncontvars = prob->ncontvars;
+
+   assert(vars != NULL);
+   assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+
+   SCIPdebugMessage("entering sorting with respect to original block structure! \n");
+
+   /* sort binaries */
+   if( nbinvars > 0 )
+      SCIPsortPtr((void**)vars, SCIPvarComp, nbinvars);
+
+   /* sort integers */
+   if( nintvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
+
+   /* sort implicit variables */
+   if( nimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+
+   /* sort continuous variables*/
+   if( ncontvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+
+   /* after sorting, the problem index of each variable has to be adjusted */
+   for( v = 0; v < nvars; ++v )
+   {
+      vars[v]->probindex = v;
+      SCIPdebugMessage("Variable: Problem index <%d>, original index <%d> \n", vars[v]->probindex, vars[v]->index);
+   }
+}
 
 
 
@@ -490,6 +621,8 @@ void probInsertVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
+   assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
    /* insert variable in array */
    insertpos = prob->nvars;
@@ -668,13 +801,24 @@ SCIP_RETCODE SCIPprobAddVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
+   assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
+
+#ifndef NDEBUG
+   /* check if we add this variables to the same scip, where we created it */
+   if( var->scip != set->scip )
+   {
+      SCIPerrorMessage("variable belongs to a different scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
 
    /* capture variable */
    SCIPvarCapture(var);
 
    /* allocate additional memory */
    SCIP_CALL( probEnsureVarsMem(prob, set, prob->nvars+1) );
-   
+
    /* insert variable in vars array and mark it to be in problem */
    probInsertVar(prob, var);
 
@@ -701,6 +845,9 @@ SCIP_RETCODE SCIPprobAddVar(
       /* issue VARADDED event */
       SCIP_CALL( SCIPeventCreateVarAdded(&event, blkmem, var) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+
+      /* update the number of variables with non-zero objective coefficient */
+      SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
    }
 
    return SCIP_OKAY;
@@ -711,18 +858,35 @@ SCIP_RETCODE SCIPprobDelVar(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    )
 {
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
+   assert(eventqueue != NULL);
+   assert(deleted != NULL);
    assert(SCIPvarGetProbindex(var) != -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   *deleted = FALSE;
+
+   /* don't remove variables that are not in the problem */
+   /**@todo what about negated variables? should the negation variable be removed instead? */
+   if( SCIPvarGetProbindex(var) == -1 )
+      return SCIP_OKAY;
+
+   /* don't remove the direct counterpart of an original variable from the transformed problem, because otherwise
+    * operations on the original variables would be applied to a NULL pointer
+    */
+   if( SCIPvarIsTransformedOrigvar(var) )
+      return SCIP_OKAY;
+
+   assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPdebugMessage("deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
@@ -736,13 +900,15 @@ SCIP_RETCODE SCIPprobDelVar(
 
       /* issue VARDELETED event */
       SCIP_CALL( SCIPeventCreateVarDeleted(&event, blkmem, var) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
    }
 
    /* remember that the variable should be deleted from the problem in SCIPprobPerformVarDeletions() */
    SCIP_CALL( probEnsureDeletedvarsMem(prob, set, prob->ndeletedvars+1) );
    prob->deletedvars[prob->ndeletedvars] = var;
    prob->ndeletedvars++;
+
+   *deleted = TRUE;
 
    return SCIP_OKAY;
 }
@@ -752,6 +918,8 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -759,6 +927,18 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    int i;
 
    assert(prob != NULL);
+   assert(set != NULL);
+
+   /* delete variables from the constraints;
+    * do this only in solving stage, in presolving, it is already handled by the constraint handlers
+    */
+   if( SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
+   {
+      for( i = 0; i < set->nconshdlrs; ++i )
+      {
+         SCIP_CALL( SCIPconshdlrDelVars(set->conshdlrs[i], blkmem, set, stat) );
+      }
+   }
 
    for( i = 0; i < prob->ndeletedvars; ++i )
    {
@@ -770,11 +950,11 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       if( SCIPvarGetProbindex(var) >= 0 )
       {
          SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
-         
+
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            SCIP_CALL( SCIPvarLoose(var, blkmem, set, prob, lp) );
+            SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
          
          /* update branching candidates and pseudo and loose objective value in the LP */
@@ -794,8 +974,11 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          /* remove variable from vars array and mark it to be not in problem */
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
+         /* update the number of variables with non-zero objective coefficient */
+         SCIPprobUpdateNObjVars(prob, set, SCIPvarGetObj(var), 0.0);
+
          /* release variable */
-         SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, lp) );
+         SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, eventqueue, lp) );
       }
    }
    prob->ndeletedvars = 0;
@@ -920,6 +1103,14 @@ SCIP_RETCODE SCIPprobAddCons(
    assert(cons->addconssetchg == NULL);
    assert(cons->addarraypos == -1);
 
+#ifndef NDEBUG
+   /* check if we add this constraint to the same scip, where we create the constraint */
+   if( cons->scip != set->scip )
+   {
+      SCIPerrorMessage("constraint belongs to different scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
    SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
 
@@ -1072,6 +1263,17 @@ void SCIPprobAddObjoffset(
    prob->objoffset += addval;
 }
 
+/** sets the dual bound on objective function */
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = dualbound;
+}
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 void SCIPprobSetObjlim(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1094,11 +1296,17 @@ void SCIPprobSetObjIntegral(
 }
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
- *  integral objective value
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
-void SCIPprobCheckObjIntegral(
+SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
    SCIP_Real obj;
@@ -1108,19 +1316,19 @@ void SCIPprobCheckObjIntegral(
    
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( prob->objisintegral )
-      return;
-
+      return SCIP_OKAY;
+   
    /* in exact solving mode, we can not rely on the integrality check procedure as it is not safe yet */
    if( set->misc_exactsolve )
       return;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
    if( set->nactivepricers != 0 )
-      return;
+      return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
    if( !SCIPsetIsIntegral(set, prob->objoffset) )
-      return;
+      return SCIP_OKAY;
 
    /* scan through the variables */
    for( v = 0; v < prob->nvars; ++v )
@@ -1142,7 +1350,61 @@ void SCIPprobCheckObjIntegral(
    }
 
    /* objective value is integral, if the variable loop scanned all variables */
-   prob->objisintegral = (v == prob->nvars);
+   if( v == prob->nvars )
+   {
+      prob->objisintegral = TRUE;
+
+      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** update the number of variables with non-zero objective coefficient */
+void SCIPprobUpdateNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value for variable */
+   SCIP_Real             newobj              /**< new objective value for variable */
+   )
+{
+   assert(prob->transformed);
+
+   if( !SCIPsetIsZero(set, oldobj) )
+      prob->nobjvars--;
+
+   if( !SCIPsetIsZero(set, newobj) )
+      prob->nobjvars++;
+
+   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
+}
+
+/** update the dual bound if its better as the current one */
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   )
+{
+   if( prob->dualbound == SCIP_INVALID ) /*lint !e777*/
+      SCIPprobSetDualbound(prob, newbound);
+   else
+   {
+      switch( prob->objsense )
+      {
+      case SCIP_OBJSENSE_MINIMIZE:
+         prob->dualbound = MIN(newbound, prob->dualbound);
+         break;
+
+      case SCIP_OBJSENSE_MAXIMIZE:
+         prob->dualbound = MAX(newbound, prob->dualbound);
+         break;
+
+      default:
+         SCIPerrorMessage("invalid objective sense <%d>\n", prob->objsense);
+         SCIPABORT();
+      }
+   }
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -1172,7 +1434,7 @@ SCIP_RETCODE SCIPprobScaleObj(
       return SCIP_OKAY;
 
    nints = prob->nvars - prob->ncontvars;
-   
+
    /* scan through the continuous variables */
    for( v = nints; v < prob->nvars; ++v )
    {
@@ -1250,7 +1512,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   for( v = 0; v < nints; ++v )
                   {
                      SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(prob->vars[v]), objvals[v]);
-                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, primal, lp, eventqueue, objvals[v]) );
+                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, prob, primal, lp, eventqueue, objvals[v]) );
                   }
                   prob->objoffset *= intscalar;
                   prob->objscale /= intscalar;
@@ -1258,7 +1520,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, prob, tree, lp) );
                }
             }
          }
@@ -1285,13 +1547,13 @@ void SCIPprobStoreRootSol(
    assert(prob != NULL);
    assert(prob->transformed);
 
-   for( v = 0; v < prob->nvars; ++v )
-      SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
-
    if( roothaslp )
    {
+      for( v = 0; v < prob->nvars; ++v )
+         SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
+
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
-      SCIPlpStoreRootObjval(lp, set);
+      SCIPlpStoreRootObjval(lp, set, prob);
    }
 }
 
@@ -1300,10 +1562,7 @@ SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
-{
-   /* check, wheter objective value is always integral */
-   SCIPprobCheckObjIntegral(prob, set);
-
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
@@ -1344,6 +1603,7 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
@@ -1369,7 +1629,7 @@ SCIP_RETCODE SCIPprobExitSolve(
          var = prob->vars[v];
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            SCIP_CALL( SCIPvarLoose(var, blkmem, set, prob, lp) );
+            SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
       }
    }
@@ -1416,6 +1676,26 @@ SCIP_PROBDATA* SCIPprobGetData(
    assert(prob != NULL);
 
    return prob->probdata;
+}
+
+/** returns the number of variables with non-zero objective coefficient */
+int SCIPprobGetNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int nobjvars;
+   int v;
+
+   nobjvars = 0;
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      if( !SCIPsetIsZero(set, SCIPvarGetObj(prob->vars[v])) )
+         nobjvars++;
+   }
+
+   return nobjvars;
 }
 
 /** returns the external value of the given internal objective value */
@@ -1489,8 +1769,9 @@ SCIP_VAR* SCIPprobFindVar(
 
    if( prob->varnames == NULL )
    {
-      SCIPerrorMessage("Cannot find variable if parameter <misc/usevartable> is set to FALSE!\n");
-      SCIPABORT();
+      SCIPerrorMessage("Cannot find variable if variable-names hashtable was disabled (due to parameter <misc/usevartable>)\n");
+      SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
+      return NULL;
    }
 
    return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
@@ -1505,10 +1786,11 @@ SCIP_CONS* SCIPprobFindCons(
    assert(prob != NULL);
    assert(name != NULL);
 
-   if( prob->varnames == NULL )
+   if( prob->consnames == NULL )
    {
-      SCIPerrorMessage("Cannot find constraint if parameter <misc/useconstable> is set to FALSE!\n");
-      SCIPABORT();
+      SCIPerrorMessage("Cannot find constraint if constraint-names hashtable was disabled (due to parameter <misc/useconstable>)\n");
+      SCIPABORT();/*lint --e{527}*/ /* only in debug mode */
+      return NULL;
    }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
@@ -1531,53 +1813,57 @@ SCIP_Bool SCIPprobAllColsInLP(
 /** displays current pseudo solution */
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_VAR* var;
    SCIP_Real solval;
    int v;
-   
+
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(messagehdlr, " <%s>=%.15g", SCIPvarGetName(var), solval);
    }
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(prob != NULL);
 
-   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
 #ifdef WITH_EXACTSOLVE
    assert(set->misc_exactsolve);
    assert(prob->conss != NULL);
    assert(prob->nconss == 1);
-   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
       SCIPgetNInfiniteBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]), 
       SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
-   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
       prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
       set->misc_usefprelax ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
       SCIPgetNSplitconssExactlp(prob->conss[0]));
-   SCIPmessageFPrintInfo(file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
       SCIPgetNIntegralExactlp(prob->conss[0]));
-   SCIPmessageFPrintInfo(file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
 #else
    assert(!set->misc_exactsolve);
-   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
-   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 #endif
+   if( ! prob->transformed )
+      SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

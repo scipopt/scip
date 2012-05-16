@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,14 @@ typedef struct SCIP_Presol SCIP_PRESOL;           /**< presolver data structure 
 typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data */
 
 
+/** copy method for presolver plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - presol          : the presolver itself
+ */
+#define SCIP_DECL_PRESOLCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol)
+
 /** destructor of presolver to free user data (called when SCIP is exiting)
  *
  *  input:
@@ -66,6 +74,8 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call
@@ -73,15 +83,18 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** presolving deinitialization method of presolver (called after presolving has been finished)
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - presol          : the presolver itself
+ *  - isunbounded     : was the problem already declared to be unbounded
+ *  - isinfeasible    : was the problem already declared to be infeasible
  *
  *  output:
  *  - result          : pointer to store the result of the presolving call
@@ -89,9 +102,10 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  possible return values for *result:
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
- *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ *  - SCIP_FEASIBLE   : no infeasibility or unboundedness could be found
  */
-#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, SCIP_Bool isunbounded, \
+      SCIP_Bool isinfeasible, SCIP_RESULT* result)
 
 /** execution method of presolver
  *
@@ -105,20 +119,25 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolver
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolver
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolver
- *  - nnewchgbds      : number of variable bounds tightend since the last call to the presolver
+ *  - nnewchgbds      : number of variable bounds tightened since the last call to the presolver
  *  - nnewholes       : number of domain holes added since the last call to the presolver
  *  - nnewdelconss    : number of deleted constraints since the last call to the presolver
+ *  - nnewaddconss    : number of added constraints since the last call to the presolver
  *  - nnewupgdconss   : number of upgraded constraints since the last call to the presolver
  *  - nnewchgcoefs    : number of changed coefficients since the last call to the presolver
  *  - nnewchgsides    : number of changed left or right hand sides since the last call to the presolver
+ *
+ *  @note the counters state the changes since the last call including the changes of this presolver during its last
+ *        last call
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
  *  - nchgvartypes    : pointer to total number of variable type changes of all presolvers
- *  - nchgbds         : pointer to total number of variable bounds tightend of all presolvers
+ *  - nchgbds         : pointer to total number of variable bounds tightened of all presolvers
  *  - naddholes       : pointer to total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to total number of deleted constraints of all presolvers
+ *  - naddconss       : pointer to total number of added constraints of all presolvers
  *  - nupgdconss      : pointer to total number of upgraded constraints of all presolvers
  *  - nchgcoefs       : pointer to total number of changed coefficients of all presolvers
  *  - nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
@@ -134,11 +153,11 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
-#define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds,              \
-   int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
-   int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides,                 \
-   int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
-   int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
+#define SCIP_DECL_PRESOLEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol, int nrounds, \
+      int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+      int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
+      int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
+      int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

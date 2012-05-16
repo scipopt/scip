@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,24 @@ extern "C" {
  * problem creation
  */
 
+/** creates problem data structure by copying the source problem; 
+ *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+SCIP_RETCODE SCIPprobCopy(
+   SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< problem name */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_PROB*            sourceprob,         /**< source problem structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global              /**< create a global or a local copy? */
+   );
+
 /** creates problem data structure
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
@@ -64,6 +82,7 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_DECL_PROBDELTRANS((*probdeltrans)),  /**< frees user data of transformed problem */
    SCIP_DECL_PROBINITSOL ((*probinitsol)),   /**< solving process initialization method of transformed data */
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
+   SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata,           /**< user problem data set by the reader */
    SCIP_Bool             transformed         /**< is this the transformed problem? */
    );
@@ -75,6 +94,7 @@ SCIP_RETCODE SCIPprobFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    );
 
@@ -85,6 +105,8 @@ SCIP_RETCODE SCIPprobTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -101,7 +123,16 @@ SCIP_RETCODE SCIPprobResetBounds(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-
+/** (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after presolve
+ *  with respect to their original index (within their categories). Adjust the problem index afterwards which is
+ *  supposed to reflect the position in the variable array. This additional (re)sorting is supposed to get more robust
+ *  against the order presolving fixed variables. (We also reobtain a possible block structure induced by the user
+ *  model)
+ */
+extern
+void SCIPprobResortVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 
 /*
@@ -134,9 +165,9 @@ SCIP_RETCODE SCIPprobDelVar(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VAR*             var                 /**< problem variable */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    );
 
 /** actually removes the deleted variables from the problem and releases them */
@@ -145,6 +176,8 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
@@ -216,6 +249,13 @@ void SCIPprobAddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** sets the dual bound on objective function */
+extern
+void SCIPprobSetDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             dualbound           /**< external dual bound */
+   );
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern
 void SCIPprobSetObjlim(
@@ -230,12 +270,18 @@ void SCIPprobSetObjIntegral(
    );
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
- *  integral objective value
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 extern
-void SCIPprobCheckObjIntegral(
+SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -281,6 +327,7 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
@@ -308,6 +355,29 @@ SCIP_RETCODE SCIPprobSetName(
 extern
 SCIP_PROBDATA* SCIPprobGetData(
    SCIP_PROB*            prob                /**< problem */
+   );
+
+/** returns the number of variables with non-zero objective coefficient */
+extern
+int SCIPprobGetNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** update the number of variables with non-zero objective coefficient */
+extern
+void SCIPprobUpdateNObjVars(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value for variable */
+   SCIP_Real             newobj              /**< new objective value for variable */
+   );
+
+/** update the dual bound if its better as the current one */
+extern
+void SCIPprobUpdateDualbound(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
 /** returns the external value of the given internal objective value */
@@ -367,7 +437,8 @@ SCIP_Bool SCIPprobAllColsInLP(
 extern
 void SCIPprobPrintPseudoSol(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** outputs problem statistics */
@@ -375,16 +446,8 @@ extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
-   );
-
-/** outputs problem to file stream */
-extern
-SCIP_RETCODE SCIPprobPrint(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           comment             /**< string which starts a comment line in requested format (or NULL) */
    );
 
 #ifdef __cplusplus

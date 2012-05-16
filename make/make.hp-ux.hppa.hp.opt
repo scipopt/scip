@@ -4,6 +4,7 @@ CFLAGS		+=
 CXXFLAGS	+=	
 ARFLAGS		=	crs
 LDFLAGS		+=	-noshared -lm
+LINKRPATH =
 CC		=	cc
 CXX		=	cc
 ZLIB_FLAGS	=

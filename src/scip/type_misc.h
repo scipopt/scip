@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,10 @@ typedef struct SCIP_IntArray SCIP_INTARRAY;       /**< dynamic array for storing
 typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing SCIP_Bool values */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
 typedef struct SCIP_MpqArray SCIP_MPQARRAY;       /**< dynamic array for storing mpq_t values */
-
+typedef struct SCIP_Stairmap SCIP_STAIRMAP;       /**< stair map */
+typedef struct SCIP_Digraph SCIP_DIGRAPH;         /**< adjacency list to store and handle graphs */
+typedef struct SCIP_BstNode SCIP_BSTNODE;         /**< search node of binary search tree */
+typedef struct SCIP_Bst SCIP_BST;                 /**< binary search tree */
 
 
 /** compares two element indices
@@ -67,6 +70,28 @@ typedef struct SCIP_MpqArray SCIP_MPQARRAY;       /**< dynamic array for storing
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+
+/** method used to insert a search into a binary search tree
+ *
+ *  input:
+ *  - tree            : binary search tree
+ *  - node            : search node to be inserted
+ *
+ *  output:
+ *  - inserted        : pointer to store whether the node was inserted
+ */
+#define SCIP_DECL_BSTINSERT(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* inserted)
+
+/** method used to delete from a binarysearch tree
+ *
+ *  input:
+ *  - tree            : binary search tree
+ *  - node            : pointer to the search node to be deleted
+ *
+ *  output:
+ *  - inserted        : pointer to store whether the node was deleted
+ */
+#define SCIP_DECL_BSTDELETE(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* deleted)
 
 #ifdef __cplusplus
 }

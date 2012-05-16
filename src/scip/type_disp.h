@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for displaying runtime statistics
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for display columns implemented in C.
+ *
+ * - \ref DISP "Instructions for implementing a display column"
+ * - \ref DISPLAYS "List of available display columns"
+ * - \ref scip::ObjDisp "C++ wrapper class
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,6 +52,14 @@ typedef enum SCIP_DispStatus SCIP_DISPSTATUS;
 typedef struct SCIP_Disp SCIP_DISP;               /**< display column data structure */
 typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific data */
 
+
+/**  copy method for display plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - disp            : the display column itself
+ */
+#define SCIP_DECL_DISPCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** destructor of display column to free user data (called when SCIP is exiting)
  *

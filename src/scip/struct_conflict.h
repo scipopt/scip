@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,7 @@ struct SCIP_Conflicthdlr
 {
    char*                 name;               /**< name of conflict handler */
    char*                 desc;               /**< description of conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy));  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
@@ -47,6 +48,8 @@ struct SCIP_Conflicthdlr
    SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol));/**< solving process deinitialization method of conflict handler */
    SCIP_DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this conflict handler for the next stages */
+   SCIP_CLOCK*           conflicttime;       /**< conflict handler execution time */
    int                   priority;           /**< priority of the conflict handler */
    SCIP_Bool             initialized;        /**< is conflict handler initialized? */
 };
@@ -55,6 +58,7 @@ struct SCIP_Conflicthdlr
 struct SCIP_ConflictSet
 {
    SCIP_BDCHGINFO**      bdchginfos;         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds;         /**< array of relaxed bounds which are efficient for a valid conflict */
    int*                  sortvals;           /**< aggregated var index/bound type values for sorting */
    int                   bdchginfossize;     /**< size of bdchginfos array */
    int                   nbdchginfos;        /**< number of bound change informations in the conflict set */
@@ -63,6 +67,17 @@ struct SCIP_ConflictSet
    int                   conflictdepth;      /**< depth in the tree where the conflict set yields a conflict */
    int                   repropdepth;        /**< depth at which the conflict set triggers a deduction */
    SCIP_Bool             repropagate;        /**< should the conflict constraint trigger a repropagation? */
+};
+
+/** set of LP bound change */
+struct SCIP_LPBdChgs
+{
+   int*                 bdchginds;           /**< array of column indices */
+   SCIP_Real*           bdchglbs;            /**< array of lower bounds */
+   SCIP_Real*           bdchgubs;            /**< array of upper bounds */
+   int*                 bdchgcolinds;        /**< array of ???????????? */
+   SCIP_Bool*           usedcols;            /**< array to mark if a column is used */
+   int                  nbdchgs;             /**< number of stored LP bound changes */
 };
 
 /** conflict analysis data structure */

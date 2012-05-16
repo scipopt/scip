@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -171,82 +171,12 @@ char* SCIPparamGetStringDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
-/** sets value of SCIP_Bool parameter */
-SCIP_RETCODE SCIPparamSetBool(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Bool             value               /**< new value of the parameter */
-   );
-
-/** sets value of int parameter */
-extern
-SCIP_RETCODE SCIPparamSetInt(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int                   value               /**< new value of the parameter */
-   );
-
-/** sets value of SCIP_Longint parameter */
-extern
-SCIP_RETCODE SCIPparamSetLongint(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Longint          value               /**< new value of the parameter */
-   );
-
-/** sets value of SCIP_Real parameter */
-extern
-SCIP_RETCODE SCIPparamSetReal(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   SCIP_Real             value               /**< new value of the parameter */
-   );
-
-/** sets value of char parameter */
-extern
-SCIP_RETCODE SCIPparamSetChar(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char                  value               /**< new value of the parameter */
-   );
-
-/** sets value of string parameter */
-extern
-SCIP_RETCODE SCIPparamSetString(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*           value               /**< new value of the parameter */
-   );
-
 /** returns whether the parameter is on its default setting */
 extern
 SCIP_Bool SCIPparamIsDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
-/** sets the parameter to its default setting */
-extern
-SCIP_RETCODE SCIPparamSetToDefault(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   );
-
-/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
- *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
- *  (for that the EXACTSOLVE flag has to be set to true as well).
- */ 
-extern
-SCIP_RETCODE SCIPparamsetSetReducedsolve(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets heuristics to aggressive */
-extern
-SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 #ifdef __cplusplus
 }
 #endif

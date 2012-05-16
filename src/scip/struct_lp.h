@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,18 +19,34 @@
  *
  *  In SCIP, the LP is defined as follows:
  *
- *   min       obj * x
- *      lhs <=   A * x + const <= rhs
- *      lb  <=       x         <= ub
+ *     min       obj * x
+ *        lhs <=   A * x + const <= rhs
+ *        lb  <=       x         <= ub
  *
- *  The row activities are defined as 
- *     activity = A * x + const
- *  and must therefore be in the range of [lhs,rhs].
+ *  The row activities are defined as activity = A * x + const and must
+ *  therefore be in the range of [lhs,rhs].
  *
- *  The reduced costs are defined as
- *     redcost = obj - A^T * y
- *  and must be   nonnegative, if the corresponding lb is nonnegative,
- *                zero,        if the corresponging lb is negative.
+ *  Mathematically, each range constraint would account for two dual
+ *  variables, one for each inequality. Since in an optimal solution (at
+ *  least) one of them may be chosen to be zero, we may define one dual
+ *  multiplier for each row as the difference of those two.
+ *
+ *  Let y be the vector of dual multipliers for the rows, then the reduced
+ *  costs are defined as
+ *
+ *     redcost = obj - A^T * y.
+ *
+ *  In an optimal solution, y must be
+ *
+ *     - nonnegative, if the corresponding row activity is not tight at its rhs
+ *     - nonpositive, if the corresponding row activity is not tight at its lhs
+ *     - zero, if the corresponding row activity is not at any of its sides
+ *
+ *  and the reduced costs must be
+ *
+ *     - nonnegative, if the corresponding variable is not tight at its ub
+ *     - nonpositive, if the corresponding variable is not tight at its lb
+ *     - zero, if the corresponding variable is not at any of its bounds.
  *
  *  The main datastructures for storing an LP are the rows and the columns.
  *  A row can live on its own (if it was created by a separator), or as SCIP_LP
@@ -53,10 +69,49 @@
 #include "scip/type_lpi.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
+#include "scip/type_event.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** collected values of a column which depend on the LP solution
+ *  We store these values in each column to recover the LP solution at start of diving or probing mode, say, without
+ *  having to resolve the LP.  Note that we do not store the farkascoef value since we do expect a node with infeasible
+ *  LP to be pruned anyway.
+ */
+struct SCIP_ColSolVals
+{
+   SCIP_Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   SCIP_Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
+};
+
+/** collected values of a row which depend on the LP solution
+ *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without having
+ *  to resolve the LP.  We do not store the dualfarkas value since we expect a node with infeasible LP to be pruned
+ *  anyway. In this unlikely case, we have to resolve the LP.
+ */
+struct SCIP_RowSolVals
+{
+   SCIP_Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   SCIP_Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
+};
+
+/** collected values of the LP data which depend on the LP solution
+ *  We store these values to recover the LP solution at start of diving or probing mode, say, without having to resolve
+ *  the LP.
+ */
+struct SCIP_LpSolVals
+{
+   SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
+   SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             lpissolved;         /**< is current LP solved? */
+};
 
 /** LP column;
  *  The row vector of the LP column is partitioned into two parts: The first col->nlprows rows in the rows array
@@ -79,7 +134,7 @@ struct SCIP_Col
    SCIP_Real             flushedub;          /**< upper bound of column already flushed to the LP solver */
    SCIP_Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    SCIP_Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Real             farkascoef;         /**< coefficient in dual farkas infeasibility proof (== dualfarkas^T A_c) */
+   SCIP_Real             farkascoef;         /**< coefficient in dual Farkas infeasibility proof (== dualfarkas^T A_c) */
    SCIP_Real             minprimsol;         /**< minimal LP solution value, this column ever assumed */
    SCIP_Real             maxprimsol;         /**< maximal LP solution value, this column ever assumed */
    SCIP_Real             sbdown;             /**< strong branching information for downwards branching */
@@ -88,9 +143,13 @@ struct SCIP_Col
    SCIP_Real             sblpobjval;         /**< LP objective value at last strong branching call on the column */
    SCIP_Longint          sbnode;             /**< node number of the last strong branching call on this column */
    SCIP_Longint          obsoletenode;       /**< last node where this column was removed due to aging */
+   SCIP_COLSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    SCIP_VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    SCIP_ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
    SCIP_Real*            vals;               /**< coefficients of column entries */
+   SCIP_Longint          validredcostlp;     /**< LP number for which reduced cost value is valid */
+   SCIP_Longint          validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
+   SCIP_Longint          validsblp;          /**< LP number for which strong branching values are valid */
    int*                  linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    int                   index;              /**< consecutively numbered column identifier */
    int                   size;               /**< size of the row- and val-arrays */
@@ -100,10 +159,7 @@ struct SCIP_Col
    int                   lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int                   lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int                   lpdepth;            /**< depth level at which column entered the LP, or -1 if not in current LP */
-   int                   validredcostlp;     /**< LP number for which reduced cost value is valid */
-   int                   validfarkaslp;      /**< LP number for which farkas coefficient is valid */
-   int                   validsblp;          /**< LP number for which strong branching values are valid */
-   int                   sbitlim;            /**< strong branching iteration limit used to get strongbranch values, or -1 */
+   int                   sbitlim;            /**< strong branching iteration limit used to get strong branching values, or -1 */
    int                   nsbcalls;           /**< number of times, strong branching was applied on the column */
    int                   age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int                   var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
@@ -136,25 +192,28 @@ struct SCIP_Row
    SCIP_Real             rhs;                /**< right hand side of row */
    SCIP_Real             flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
    SCIP_Real             flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
-   SCIP_Real             sqrnorm;            /**< squared euclidean norm of row vector */
+   SCIP_Real             sqrnorm;            /**< squared Euclidean norm of row vector */
    SCIP_Real             sumnorm;            /**< sum norm of row vector (sum of absolute values of coefficients) */
    SCIP_Real             objprod;            /**< scalar product of row vector with objective function */
    SCIP_Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
    SCIP_Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */
    SCIP_Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
    SCIP_Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
+   SCIP_Real             dualfarkas;         /**< multiplier value in dual Farkas infeasibility proof */
    SCIP_Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    SCIP_Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    SCIP_Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
+   SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    char*                 name;               /**< name of the row */
    SCIP_COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
+   SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
    int                   len;                /**< number of nonzeros in row */
@@ -168,7 +227,6 @@ struct SCIP_Row
    int                   maxidx;             /**< maximal column index of row entries */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
-   int                   validactivitylp;    /**< LP number for which activity value is valid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int          lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
@@ -192,8 +250,14 @@ struct SCIP_Lp
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Real             looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Real             rellooseobjval;     /**< last reliable solution value of all loose variables set to their best bounds,
+                                              *   ignoring variables, with infinite best bound */
+   SCIP_Real             glbpseudoobjval;    /**< global pseudo solution value with all variables set to their best global bounds,
+                                              *   ignoring variables, with infinite best bound */
+   SCIP_Real             relglbpseudoobjval; /**< last reliable global pseudo solution value */
    SCIP_Real             pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Real             relpseudoobjval;    /**< last reliable pseudo solution value */
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
@@ -201,7 +265,7 @@ struct SCIP_Lp
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
-   SCIP_Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of problem variables */
+   SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    SCIP_LPI*             lpi;                /**< LP solver interface */
    SCIP_COL**            lpicols;            /**< array with columns currently stored in the LP solver */
@@ -212,6 +276,9 @@ struct SCIP_Lp
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
+   SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
+   SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
+   SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -234,13 +301,19 @@ struct SCIP_Lp
    int                   firstnewrow;        /**< first row added at the current node */
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int                   nloosevars;         /**< number of loose variables in LP */
+   int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
-   int                   validsollp;         /**< LP number for which the currently stored solution values are valid */
-   int                   validfarkaslp;      /**< LP number for which the currently stored farkas row multipliers are valid */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
+   int                   lpifastmip;         /**< current FASTMIP setting in LPI */
+   int                   lpithreads;         /**< current THREADS setting in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
+   SCIP_Bool             objsqrnormunreliable;/**< is squared Euclidean norm of objective function vector of problem
+                                               *   variables unreliable and need recalculation? */
+   SCIP_Bool             looseobjvalid;      /**< is the loose objective value valid or should it be recomputed from scratch? */
+   SCIP_Bool             glbpseudoobjvalid;  /**< is the global pseudo solution value valid or should it be recomputed from scratch? */
+   SCIP_Bool             pseudoobjvalid;     /**< is the pseudo solution value valid or should it be recomputed from scratch? */
    SCIP_Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    SCIP_Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
@@ -251,25 +324,29 @@ struct SCIP_Lp
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             hasprovedbound;     /**< was finite safe dual bound computed for current LP? */
-   SCIP_Bool             rootlpisrelax;      /**< is root LP solution a relaxation of the problem and its value a valid global lower bound? */
-   SCIP_Bool             isrelax;            /**< is current LP solution a relaxation of the current problem and its value a valid local lower bound? */
+   SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
+   SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
+                                              *   solution value a valid local lower bound? */
+   SCIP_Bool             installing;         /**< whether the solution process is in stalling */
+   SCIP_Bool             strongbranching;    /**< whether the lp is used for strong branching */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
-   SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
+   SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
-   SCIP_Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
-   SCIP_Bool             lpisimplexrowrep;   /**< should simplex algorithm use row representation of the basis? */
    SCIP_Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
    SCIP_Bool             lpihasdualfeastol;  /**< does the LPI support the DUALFEASTOL parameter? */
    SCIP_Bool             lpihasbarrierconvtol;/**< does the LPI support the BARRIERCONVTOL parameter? */
    SCIP_Bool             lpihasfastmip;      /**< does the LPI support the FASTMIP parameter? */
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
-   SCIP_Bool             lpihassimplexrowrep;/**< does the LPI support the SIMPLEXROWREP parameter? */
+   SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
+   SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
+                                              *   if number of rows divided by number of columns exceeds this value */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,10 +37,12 @@ struct SCIP_Reader
    const char*           name;               /**< name of reader */
    const char*           desc;               /**< description of reader */
    const char*           extension;          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy));    /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite));   /**< write method */
    SCIP_READERDATA*      readerdata;         /**< reader data */
+   SCIP_CLOCK*           readingtime;        /**< time used for reading of this reader */
 };
 
 #ifdef __cplusplus

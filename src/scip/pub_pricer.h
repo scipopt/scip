@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,15 +80,27 @@ int SCIPpricerGetNVarsFound(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
+/** gets time in seconds used in this pricer for setting up for next stages */
+extern
+SCIP_Real SCIPpricerGetSetupTime(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
 /** gets time in seconds used in this pricer */
 extern
 SCIP_Real SCIPpricerGetTime(
-   SCIP_PRICER*            pricer                /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** returns whether the given pricer is in use in the current problem */
 extern
 SCIP_Bool SCIPpricerIsActive(
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
+/** returns whether the pricer should be delayed until no other pricer finds a new variable */
+extern
+SCIP_Bool SCIPpricerIsDelayed(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 

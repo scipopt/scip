@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -73,6 +73,28 @@ void ReaderTSP::getNodesFromFile(
    assert( i == graph->nnodes );
 }
 
+/** adds a variable to both halfedges and captures it for usage in the graph */
+SCIP_RETCODE ReaderTSP::addVarToEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPHEDGE*            edge,               /**< an edge of the graph */
+   SCIP_VAR*             var                 /**< variable corresponding to that edge */
+   )
+{
+   assert(scip != NULL);
+   assert(edge != NULL);
+   assert(var != NULL);
+
+   /* add variable to forward edge and capture it for usage in graph */
+   edge->var = var;
+   SCIP_CALL( SCIPcaptureVar(scip, edge->var) );
+
+   /* two parallel halfedges have the same variable,
+    * add variable to backward edge and capture it for usage in graph */
+   edge->back->var = edge->var;
+   SCIP_CALL( SCIPcaptureVar(scip, edge->back->var) );
+
+   return SCIP_OKAY;
+}
 
 /** method asserting, that the file has had the correct format and everything was set correctly */
 bool ReaderTSP::checkValid(
@@ -113,10 +135,7 @@ bool ReaderTSP::checkValid(
 
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
-SCIP_RETCODE ReaderTSP::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader              /**< the file reader itself */
-   )
+SCIP_DECL_READERFREE(ReaderTSP::scip_free)
 {
    return SCIP_OKAY;
 }
@@ -129,12 +148,7 @@ SCIP_RETCODE ReaderTSP::scip_free(
  *
  *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
  */
-SCIP_RETCODE ReaderTSP::scip_read(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-   )
+SCIP_DECL_READERREAD(ReaderTSP::scip_read)
 {
    SCIP_RETCODE retcode;
 
@@ -150,7 +164,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
    double*  y_coords = NULL;
 
 #ifdef SCIP_DEBUG
-   double** weights = new double* [0];
+   double** weights = NULL;
 #endif
    
    double x;                         // concrete coordinates
@@ -212,6 +226,9 @@ SCIP_RETCODE ReaderTSP::scip_read(
          // the graph is created and filled with nodes 
          else if( create_graph(nnodes, nedges, &graph) )
          {
+            assert(x_coords == NULL);
+            assert(y_coords == NULL);
+
             x_coords = new double[nnodes];
             y_coords = new double[nnodes];
             getNodesFromFile(filedata, x_coords, y_coords, graph);
@@ -280,11 +297,11 @@ SCIP_RETCODE ReaderTSP::scip_read(
             else if( edgeweighttype == "GEO")
             {
                const double pi =  3.141592653589793;
-               double* rads   = new double[4];
-               double* coords = new double[4];
-               double* degs   = new double[4];
-               double* mins   = new double[4];
-               double* euler  = new double[3];
+               double rads[4];
+               double coords[4];
+               double degs[4];
+               double mins[4];
+               double euler[3];
                int k;
 
                coords[0] = x_coords[(*nodestart).id];
@@ -349,7 +366,19 @@ SCIP_RETCODE ReaderTSP::scip_read(
    delete[] x_coords;
       
    if( retcode != SCIP_OKAY )
+   {
+#ifdef SCIP_DEBUG
+      if( weights != NULL )
+      {
+         for( i = 0; i < nnodes; i++ )
+         {    
+            delete[] weights[i];
+         }
+         delete[] weights;
+      }
+#endif
       return retcode;
+   }
 
 #ifdef SCIP_DEBUG
    printf("Matrix:\n");
@@ -358,7 +387,9 @@ SCIP_RETCODE ReaderTSP::scip_read(
       for( j = 0; j < nnodes; j++ )
          printf(" %4.0f ",weights[i][j]);
       printf("\n");
+      delete[] weights[i];
    }
+   delete[] weights;
 #endif
 
    // create the problem's data structure
@@ -367,18 +398,23 @@ SCIP_RETCODE ReaderTSP::scip_read(
    // add variables to problem and link them for parallel halfedges
    for( i = 0; i < nedges/2; i++ )
    {
+      SCIP_VAR* var;
+
       stringstream varname;
       edge = &graph->edges[i];
 
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
-      SCIP_CALL( SCIPcreateVar(scip, &edge->var, varname.str().c_str(), 0.0, 1.0, edge->length,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-      
-      //two parallel halfedges have the same variable
-      edge->back->var = edge->var;
-      SCIP_CALL( SCIPcaptureVar(scip, edge->var) );
-      SCIP_CALL( SCIPaddVar(scip, edge->var) );
+      SCIP_CALL( SCIPcreateVar(scip, &var, varname.str().c_str(), 0.0, 1.0, edge->length,
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+
+      /* add variable to SCIP and to the graph */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+      SCIP_CALL( addVarToEdges(scip, edge, var) );
+
+      /* release variable for the reader. */
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );      
+
    }
 
    // add all n node degree constraints
@@ -432,35 +468,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
  *  If the reader detected an error in the writing to the file stream, it should return
  *  with RETCODE SCIP_WRITEERROR.
  */
-SCIP_RETCODE ReaderTSP::scip_write(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_READER*       reader,             /**< the file reader itself */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_PROBDATA*     probdata,           /**< user problem data set by the reader */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
-   SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-                                           *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, 
-                                           *   continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   int                nbinvars,           /**< number of binary variables */
-   int                nintvars,           /**< number of general integer variables */
-   int                nimplvars,          /**< number of implicit integer variables */
-   int                ncontvars,          /**< number of continuous variables */
-   SCIP_VAR**         fixedvars,          /**< array with fixed and aggregated variables */
-   int                nfixedvars,         /**< number of fixed and aggregated variables in the problem */
-   int                startnvars,         /**< number of variables existing when problem solving started */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   int                maxnconss,          /**< maximum number of constraints existing at the same time */
-   int                startnconss,        /**< number of constraints existing when problem solving started */
-   SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
-   )
+SCIP_DECL_READERWRITE(ReaderTSP::scip_write)
 {
    *result = SCIP_DIDNOTRUN;
 

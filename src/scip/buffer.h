@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,6 +72,36 @@ SCIP_RETCODE SCIPbufferReallocMem(
    void**                ptr,                /**< pointer to the allocated memory buffer */
    int                   size                /**< minimal required size of the buffer */
    );
+
+#ifndef NDEBUG
+/** allocates the next unused buffer; checks for integer overflow */
+extern
+SCIP_RETCODE SCIPbufferAllocMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   int                   num,                /**< number of entries to allocate */
+   size_t                elemsize            /**< size of one element in the array */
+   );
+
+/** allocates the next unused buffer and copies the given memory into the buffer; checks for integer overflows */
+extern
+SCIP_RETCODE SCIPbufferDuplicateMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   num,                /**< number of entries to copy */
+   size_t                elemsize            /**< size of one element in the array */
+   );
+
+/** reallocates the buffer to at least the given size; checks for integer overflows */
+extern
+SCIP_RETCODE SCIPbufferReallocMemSave(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   num,                /**< number of entries to get memory for */
+   size_t                elemsize            /**< size of one element in the array */
+   );
+#endif
 
 /** frees a buffer */
 extern

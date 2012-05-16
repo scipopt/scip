@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,24 +14,40 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_rlp.c
- * @ingroup FILEREADERS 
  * @brief  RLP file reader (LP format with generic variables and row names)
  * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <string.h>
+
 #include "scip/reader_lp.h"
 #include "scip/reader_rlp.h"
 
 #define READER_NAME             "rlpreader"
-#define READER_DESC             "file reader for MIPs in ILOG's RLP file format"
+#define READER_DESC             "file reader for MIPs in IBM CPLEX's RLP file format"
 #define READER_EXTENSION        "rlp"
 
 
 /*
  * Callback methods of reader
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyRlp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderRlp(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeRlp NULL
@@ -59,16 +75,16 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
    }
    else
    {
-      SCIPwarningMessage("RLP format is LP format with generic variable and constraint names\n");
+      SCIPwarningMessage(scip, "RLP format is LP format with generic variable and constraint names\n");
       
       if( transformed )
       {
-         SCIPwarningMessage("wirte transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("wirte original problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
       }
       *result = SCIP_SUCCESS;
@@ -81,7 +97,7 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
  * reader specific interface methods
  */
 
-/** includes the lp file reader in SCIP */
+/** includes the rlp file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderRlp(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -93,7 +109,7 @@ SCIP_RETCODE SCIPincludeReaderRlp(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
+         readerCopyRlp, readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
 
    return SCIP_OKAY;
 }

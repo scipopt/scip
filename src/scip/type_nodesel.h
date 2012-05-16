@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,15 @@ extern "C" {
 typedef struct SCIP_NodePQ SCIP_NODEPQ;           /**< node priority queue */
 typedef struct SCIP_Nodesel SCIP_NODESEL;         /**< node selector data structure */
 typedef struct SCIP_NodeselData SCIP_NODESELDATA; /**< node selector specific data */
+
+
+/** copy method for node selector plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
+ */
+#define SCIP_DECL_NODESELCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 
 /** destructor of node selector to free user data (called when SCIP is exiting)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_DialogData
 
 extern "C"
 {
+
+/** copy method for dialog plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_DIALOGCOPY(dialogCopyObj)
+{  /*lint --e{715}*/
+   SCIP_DIALOGDATA* dialogdata;
+   
+   assert(scip != 0);
+   
+   dialogdata = SCIPdialogGetData(dialog);
+   assert(dialogdata != 0);
+   assert(dialogdata->objdialog != 0);
+   assert(dialogdata->objdialog->scip_ != scip);
+
+   if( dialogdata->objdialog->iscloneable() )
+   {
+      scip::ObjDialog*  newobjdialog;
+      newobjdialog = dynamic_cast<scip::ObjDialog*> (dialogdata->objdialog->clone(scip));
+
+      /* call include method of dialog object */
+      SCIP_CALL( SCIPincludeObjDialog(scip, newobjdialog, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of dialog to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_DIALOGFREE(dialogFreeObj)
@@ -54,8 +80,9 @@ SCIP_DECL_DIALOGFREE(dialogFreeObj)
    SCIP_DIALOGDATA* dialogdata;
 
    dialogdata = SCIPdialogGetData(dialog);
-   assert(dialogdata != NULL);
-   assert(dialogdata->objdialog != NULL);
+   assert(dialogdata != 0);
+   assert(dialogdata->objdialog != 0);
+   assert(dialogdata->objdialog->scip_ == scip);
 
    /* call virtual method of dialog object */
    SCIP_CALL( dialogdata->objdialog->scip_free(scip, dialog) );
@@ -66,7 +93,7 @@ SCIP_DECL_DIALOGFREE(dialogFreeObj)
 
    /* free dialog data */
    delete dialogdata;
-   SCIPdialogSetData(dialog, NULL); /*lint !e64*/
+   SCIPdialogSetData(dialog, 0); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -79,8 +106,9 @@ SCIP_DECL_DIALOGDESC(dialogDescObj)
    SCIP_DIALOGDATA* dialogdata;
 
    dialogdata = SCIPdialogGetData(dialog);
-   assert(dialogdata != NULL);
-   assert(dialogdata->objdialog != NULL);
+   assert(dialogdata != 0);
+   assert(dialogdata->objdialog != 0);
+   assert(dialogdata->objdialog->scip_ == scip);
 
    /* call virtual method of dialog object */
    SCIP_CALL( dialogdata->objdialog->scip_desc(scip, dialog) );
@@ -95,8 +123,8 @@ SCIP_DECL_DIALOGEXEC(dialogExecObj)
    SCIP_DIALOGDATA* dialogdata;
 
    dialogdata = SCIPdialogGetData(dialog);
-   assert(dialogdata != NULL);
-   assert(dialogdata->objdialog != NULL);
+   assert(dialogdata != 0);
+   assert(dialogdata->objdialog != 0);
 
    /* call virtual method of dialog object */
    SCIP_CALL( dialogdata->objdialog->scip_exec(scip, dialoghdlr, dialog, nextdialog) );
@@ -120,27 +148,38 @@ SCIP_RETCODE SCIPincludeObjDialog(
 {/*lint --e{429} */
    SCIP_DIALOG* parentdialog;
 
+   assert(scip != 0);
+   assert(objdialog != 0);
+
    /* get parent dialog */
    parentdialog = SCIPgetRootDialog(scip);
-   assert(parentdialog != NULL);
+   assert(parentdialog != 0);
    /* TODO: (optional) change parent dialog from root dialog to another existing dialog (needs to be a menu) */
-   
+
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, objdialog->scip_name_) )
    {
-      SCIP_DIALOGDATA* dialogdata;
+      SCIP_DIALOGDATA* dialogdata; /*lint !e593*/
       SCIP_DIALOG* dialog;
+      SCIP_RETCODE retcode;
+
+      dialog = 0;
 
       /* create dialog data */
       dialogdata = new SCIP_DIALOGDATA;
       dialogdata->objdialog = objdialog;
       dialogdata->deleteobject = deleteobject;
 
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecObj, dialogDescObj, dialogFreeObj,
-				  objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
+      retcode = SCIPincludeDialog(scip, &dialog, dialogCopyObj, dialogExecObj, dialogDescObj, dialogFreeObj,
+         objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata);
+      if( retcode != SCIP_OKAY )
+      {
+          delete dialogdata;
+          SCIP_CALL( retcode );
+      }
+      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );  /*lint !e593*/
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );                /*lint !e593*/
+   }  /*lint !e593*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e593*/
 }

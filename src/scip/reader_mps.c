@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
- * @ingroup FILEREADERS 
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -27,7 +26,6 @@
  * name lengths and coefficients are considerably relaxed. The columns
  * in the format are then separated by whitespaces.
  *
- * @todo Test for uniqueness of variable and constraint names (after cutting down).
  * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
  */
 
@@ -39,6 +37,7 @@
 
 #include "scip/reader_mps.h"
 #include "scip/cons_knapsack.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
@@ -47,6 +46,7 @@
 #include "scip/cons_sos2.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_soc.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "mpsreader"
@@ -67,65 +67,67 @@
 #define PATCH_CHAR    '_'
 #define BLANK         ' '
 
+/** enum containing all mps sections */
 enum MpsSection
-   {
-      MPS_NAME,
-      MPS_OBJSEN,
-      MPS_OBJNAME,
-      MPS_ROWS,
-      MPS_USERCUTS,
-      MPS_LAZYCONS,
-      MPS_COLUMNS,
-      MPS_RHS,
-      MPS_RANGES,
-      MPS_BOUNDS,
-      MPS_SOS,
-      MPS_QUADOBJ,
-      MPS_QMATRIX,
-      MPS_QCMATRIX,
-      MPS_ENDATA
-   };
+{
+   MPS_NAME,
+   MPS_OBJSEN,
+   MPS_OBJNAME,
+   MPS_ROWS,
+   MPS_USERCUTS,
+   MPS_LAZYCONS,
+   MPS_COLUMNS,
+   MPS_RHS,
+   MPS_RANGES,
+   MPS_BOUNDS,
+   MPS_SOS,
+   MPS_QUADOBJ,
+   MPS_QMATRIX,
+   MPS_QCMATRIX,
+   MPS_INDICATORS,
+   MPS_ENDATA
+};
 typedef enum MpsSection MPSSECTION;
 
+/** mps input structure */
 struct MpsInput
 {
-   MPSSECTION           section;
-   SCIP_FILE*           fp;
-   int                  lineno;
-   SCIP_OBJSENSE        objsense;
-   SCIP_Bool            haserror;
-   char                 buf[MPS_MAX_LINELEN];
-   const char*          f0;
-   const char*          f1;
-   const char*          f2;
-   const char*          f3;
-   const char*          f4;
-   const char*          f5;
-   char                 probname[MPS_MAX_NAMELEN];
-   char                 objname [MPS_MAX_NAMELEN];
-   SCIP_Bool            isinteger;
-   SCIP_Bool            isnewformat;
-   SCIP_Bool            semicontwarning;
+   MPSSECTION            section;
+   SCIP_FILE*            fp;
+   int                   lineno;
+   SCIP_OBJSENSE         objsense;
+   SCIP_Bool             haserror;
+   char                  buf[MPS_MAX_LINELEN];
+   const char*           f0;
+   const char*           f1;
+   const char*           f2;
+   const char*           f3;
+   const char*           f4;
+   const char*           f5;
+   char                  probname[MPS_MAX_NAMELEN];
+   char                  objname [MPS_MAX_NAMELEN];
+   SCIP_Bool             isinteger;
+   SCIP_Bool             isnewformat;
 };
 typedef struct MpsInput MPSINPUT;
 
-/* sparse matrix representation */
+/** sparse matrix representation */
 struct SparseMatrix
 {
-   SCIP_Real*            values;           /**< matrix element */
-   SCIP_VAR**            columns;          /**< corresponding variables */
-   const char**          rows;             /**< corresponding constraint names */ 
-   int                   nentries;         /**< number of elements in the arrays */
-   int                   sentries;         /**< number of slots in the arrays */
+   SCIP_Real*            values;             /**< matrix element */
+   SCIP_VAR**            columns;            /**< corresponding variables */
+   const char**          rows;               /**< corresponding constraint names */ 
+   int                   nentries;           /**< number of elements in the arrays */
+   int                   sentries;           /**< number of slots in the arrays */
 };
 typedef struct SparseMatrix SPARSEMATRIX;
 
-
+/** creates the mps input structure */
 static
 SCIP_RETCODE mpsinputCreate(
-   SCIP*                 scip,
-   MPSINPUT**            mpsi,
-   SCIP_FILE*            fp
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT**            mpsi,               /**< mps input structure */
+   SCIP_FILE*            fp                  /**< file object for the input file */
    )
 {
    assert(mpsi != NULL);
@@ -140,7 +142,6 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->haserror    = FALSE;
    (*mpsi)->isinteger   = FALSE;
    (*mpsi)->isnewformat = FALSE;
-   (*mpsi)->semicontwarning = FALSE;
    (*mpsi)->buf     [0] = '\0';
    (*mpsi)->probname[0] = '\0';
    (*mpsi)->objname [0] = '\0';
@@ -154,18 +155,20 @@ SCIP_RETCODE mpsinputCreate(
    return SCIP_OKAY;
 }
 
+/** free the mps input structure */
 static
 void mpsinputFree(
-   SCIP*                 scip,
-   MPSINPUT**            mpsi
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
    SCIPfreeMemory(scip, mpsi);
 }
 
+/** returns the current section */
 static
 MPSSECTION mpsinputSection(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -173,21 +176,10 @@ MPSSECTION mpsinputSection(
    return mpsi->section;
 }
 
-#if 0
-static
-int mpsinputLineno(
-   const MPSINPUT*       mpsi
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->lineno;
-}
-#endif
-
+/** return the current value of field 0 */
 static
 const char* mpsinputField0(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -195,9 +187,10 @@ const char* mpsinputField0(
    return mpsi->f0;
 }
 
+/** return the current value of field 1 */
 static
 const char* mpsinputField1(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -205,9 +198,10 @@ const char* mpsinputField1(
    return mpsi->f1;
 }
 
+/** return the current value of field 2 */
 static
 const char* mpsinputField2(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -215,9 +209,10 @@ const char* mpsinputField2(
    return mpsi->f2;
 }
 
+/** return the current value of field 3 */
 static
 const char* mpsinputField3(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -225,9 +220,10 @@ const char* mpsinputField3(
    return mpsi->f3;
 }
 
+/** return the current value of field 4 */
 static
 const char* mpsinputField4(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -235,9 +231,10 @@ const char* mpsinputField4(
    return mpsi->f4;
 }
 
+/** return the current value of field 5 */
 static
 const char* mpsinputField5(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -246,9 +243,10 @@ const char* mpsinputField5(
 }
 
 #if 0
+/** returns the problem name */
 static
 const char* mpsinputProbname(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -257,9 +255,10 @@ const char* mpsinputProbname(
 }
 #endif
 
+/** returns the objective name */
 static
 const char* mpsinputObjname(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -267,9 +266,10 @@ const char* mpsinputObjname(
    return mpsi->objname;
 }
 
+/** returns the objective sense */
 static
 SCIP_OBJSENSE mpsinputObjsense(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -277,9 +277,10 @@ SCIP_OBJSENSE mpsinputObjsense(
    return mpsi->objsense;
 }
 
+/** returns if an error was detected */
 static
 SCIP_Bool mpsinputHasError(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -287,9 +288,10 @@ SCIP_Bool mpsinputHasError(
    return mpsi->haserror;
 }
 
+/** returns the value of the Bool "is integer" in the mps input */
 static
 SCIP_Bool mpsinputIsInteger(
-   const MPSINPUT*       mpsi
+   const MPSINPUT*       mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -297,10 +299,11 @@ SCIP_Bool mpsinputIsInteger(
    return mpsi->isinteger;
 }
 
+/** set the section in the mps input structure to given section */
 static
 void mpsinputSetSection(
-   MPSINPUT*             mpsi,
-   MPSSECTION            section
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   MPSSECTION            section             /**< section that is set */
    )
 {
    assert(mpsi != NULL);
@@ -308,36 +311,39 @@ void mpsinputSetSection(
    mpsi->section = section;
 }
 
+/** set the problem name in the mps input structure to given problem name */
 static
 void mpsinputSetProbname(
-   MPSINPUT*             mpsi,
-   const char*           probname
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           probname            /**< name of the problem to set */
    )
 {
    assert(mpsi     != NULL);
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
 
-   (void)strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->probname, probname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
+/** set the objective name in the mps input structure to given objective name */
 static
 void mpsinputSetObjname(
-   MPSINPUT*             mpsi,
-   const char*           objname
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           objname             /**< name of the objective function to set */
    )
 {
    assert(mpsi != NULL);
    assert(objname != NULL);
    assert(strlen(objname) < sizeof(mpsi->objname));
 
-   (void)strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
+   (void)SCIPmemccpy(mpsi->objname, objname, '\0', MPS_MAX_NAMELEN - 1);
 }
 
+/** set the objective sense in the mps input structure to given objective sense */
 static
 void mpsinputSetObjsense(
-   MPSINPUT*             mpsi,
-   SCIP_OBJSENSE         sense
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP_OBJSENSE         sense               /**< sense of the objective function */
    )
 {
    assert(mpsi != NULL);
@@ -347,25 +353,26 @@ void mpsinputSetObjsense(
 
 static
 void mpsinputSyntaxerror(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
 
-   SCIPwarningMessage("Syntax error in line %d\n", mpsi->lineno);
+   SCIPerrorMessage("Syntax error in line %d\n", mpsi->lineno);
    mpsi->section  = MPS_ENDATA;
    mpsi->haserror = TRUE;
 }
 
+/** method post a ignore message  */
 static
 void mpsinputEntryIgnored(
    SCIP*                 scip,               /**< SCIP data structure */
-   MPSINPUT*             mpsi,
-   const char*           what,
-   const char*           what_name,
-   const char*           entity,
-   const char*           entity_name,
-   SCIP_VERBLEVEL        verblevel
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           what,               /**< what get ignored */
+   const char*           what_name,          /**< name of that object */
+   const char*           entity,             /**< entity */
+   const char*           entity_name,        /**< entity name */
+   SCIP_VERBLEVEL        verblevel           /**< SCIP verblevel for this message */
    )
 {
    assert(mpsi        != NULL);
@@ -378,11 +385,11 @@ void mpsinputEntryIgnored(
       "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", mpsi->lineno, what, what_name, entity, entity_name);
 }
 
-/* fill the line from \p pos up to column 80 with blanks. */
+/** fill the line from \p pos up to column 80 with blanks. */
 static
 void clearFrom(
-   char*                 buf,
-   unsigned int          pos
+   char*                 buf,                /**< buffer to clear */
+   unsigned int          pos                 /**< position to start the clearing process */
    )
 {
    unsigned int i;
@@ -392,12 +399,12 @@ void clearFrom(
    buf[80] = '\0';
 }
 
-/* change all blanks inside a field to #PATCH_CHAR. */
+/** change all blanks inside a field to #PATCH_CHAR. */
 static
 void patchField(
-   char*                 buf,
-   int                   beg,
-   int                   end
+   char*                 buf,                /**< buffer to patch */
+   int                   beg,                /**< position to begin */
+   int                   end                 /**< position to end */
    )
 {
    int i;
@@ -413,10 +420,10 @@ void patchField(
          buf[i] = PATCH_CHAR;
 }
 
-/* read a mps format data line and parse the fields. */
+/** read a mps format data line and parse the fields. */
 static
 SCIP_Bool mpsinputReadLine(
-   MPSINPUT*             mpsi
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    unsigned int len;
@@ -432,11 +439,11 @@ SCIP_Bool mpsinputReadLine(
       mpsi->f0 = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
 
-      /* Read until we have a not comment line. */
+      /* Read until we have not a comment line. */
       do
       {
-         BMSclearMemoryArray(mpsi->buf, MPS_MAX_LINELEN);
-         if (NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
+         mpsi->buf[MPS_MAX_LINELEN-1] = '\0';
+         if( NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp) )
             return FALSE;
          mpsi->lineno++;
       }
@@ -484,7 +491,7 @@ SCIP_Bool mpsinputReadLine(
             | mpsi->buf[47] | mpsi->buf[48]
             | mpsi->buf[61] | mpsi->buf[62] | mpsi->buf[63];
 
-         if (space == BLANK)
+         if( space == BLANK )
          {
             /* Now we have space at the right positions.
              * But are there also the non space where they
@@ -492,17 +499,17 @@ SCIP_Bool mpsinputReadLine(
              */
             SCIP_Bool number;
             
-            number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
-               || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27])
-               || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29])
-               || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31])
-               || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33])
-               || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]);
+            number = isdigit((unsigned char)mpsi->buf[24]) || isdigit((unsigned char)mpsi->buf[25])
+               || isdigit((unsigned char)mpsi->buf[26]) || isdigit((unsigned char)mpsi->buf[27])
+               || isdigit((unsigned char)mpsi->buf[28]) || isdigit((unsigned char)mpsi->buf[29])
+               || isdigit((unsigned char)mpsi->buf[30]) || isdigit((unsigned char)mpsi->buf[31])
+               || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
+               || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
-            /* len < 13 is handle ROW lines with embedded spaces
+            /* len < 14 is handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 13 )
+            if( number || len < 14 )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
@@ -530,7 +537,7 @@ SCIP_Bool mpsinputReadLine(
        * Initially comment marks '$' are only allowed in the beginning
        * of the 2nd and 3rd name field. We test all fields but the first.
        * This makes no difference, since if the $ is at the start of a value
-       * field, the line will be errornous anyway.
+       * field, the line will be erroneous anyway.
        */
       do
       {
@@ -589,12 +596,12 @@ SCIP_Bool mpsinputReadLine(
    return TRUE;
 }
 
-/* Insert \p name as field 1 and shift all other fields up. */
+/** Insert \p name as field 1 or 2 and shift all other fields up. */
 static
 void mpsinputInsertName(
-   MPSINPUT*             mpsi,
-   const char*           name,
-   SCIP_Bool             second
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   const char*           name,               /**< name to insert */
+   SCIP_Bool             second              /**< insert as second field? */
    )
 {
    assert(mpsi != NULL);
@@ -613,10 +620,11 @@ void mpsinputInsertName(
    }
 }
 
-/* Process NAME section. */
+/** Process NAME section. */
 static
 SCIP_RETCODE readName(
-   MPSINPUT*             mpsi
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -629,7 +637,7 @@ SCIP_RETCODE readName(
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   
+
    /* Sometimes the name is omitted. */
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
@@ -659,10 +667,11 @@ SCIP_RETCODE readName(
    return SCIP_OKAY;
 }
 
-/* Process OBJSEN section. This Section is an ILOG extension. */
+/** Process OBJSEN section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjsen(
-   MPSINPUT*             mpsi
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -710,10 +719,11 @@ SCIP_RETCODE readObjsen(
    return SCIP_OKAY;
 }
 
-/* Process OBJNAME section. This Section is an ILOG extension. */
+/** Process OBJNAME section. This Section is a CPLEX extension. */
 static
 SCIP_RETCODE readObjname(
-   MPSINPUT*             mpsi
+   SCIP*                 scip,               /**< SCIP data structure */
+   MPSINPUT*             mpsi                /**< mps input structure */
    )
 {
    assert(mpsi != NULL);
@@ -747,15 +757,20 @@ SCIP_RETCODE readObjname(
    return SCIP_OKAY;
 }
 
-/* Process ROWS, USERCUTS, or LAZYCONS section. */
+/** Process ROWS, USERCUTS, or LAZYCONS section. */
 static
 SCIP_RETCODE readRows(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool dynamicrows;
+   SCIP_Bool dynamicconss;
 
    SCIPdebugMessage("read rows\n");
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -785,8 +800,6 @@ SCIP_RETCODE readRows(
       else
       {
          SCIP_CONS* cons;
-         SCIP_Bool dynamicrows;
-         SCIP_Bool dynamicconss;
          SCIP_Bool initial;
          SCIP_Bool separate;
          SCIP_Bool enforce;
@@ -801,8 +814,6 @@ SCIP_RETCODE readRows(
          if( cons != NULL )
             break;
 
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
          initial = !dynamicrows && (mpsinputSection(mpsi) == MPS_ROWS);
          separate = TRUE;
          enforce = (mpsinputSection(mpsi) != MPS_USERCUTS);
@@ -840,10 +851,10 @@ SCIP_RETCODE readRows(
    return SCIP_OKAY;
 }
 
-/* Process COLUMNS section. */
+/** Process COLUMNS section. */
 static
 SCIP_RETCODE readCols(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -851,8 +862,11 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+   SCIP_Bool     dynamiccols;
 
    SCIPdebugMessage("read columns\n");
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
    var = NULL;
    while( mpsinputReadLine(mpsi) )
@@ -879,8 +893,6 @@ SCIP_RETCODE readCols(
       /* new column? */
       if( strcmp(colname, mpsinputField1(mpsi)) )
       {
-         SCIP_Bool dynamiccols;
-
          /* add the last variable to the problem */
          if( var != NULL )
          {
@@ -889,21 +901,19 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-         (void)strncpy(colname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
-
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x < 1(not +infinity, like it is for continuous variables), and default cost is 0 */
-            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
-                  NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, 
+                  !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
          else
          {
             /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
             SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                  !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL) );
+                  !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
       }
       assert(var != NULL);
@@ -951,10 +961,10 @@ SCIP_RETCODE readCols(
    return SCIP_OKAY;
 }
 
-/* Process RHS section. */
+/** Process RHS section. */
 static
 SCIP_RETCODE readRhs(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -982,6 +992,8 @@ SCIP_RETCODE readRhs(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
@@ -996,7 +1008,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if( *rhsname == '\0' )
-         (void)strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1074,10 +1086,10 @@ SCIP_RETCODE readRhs(
    return SCIP_OKAY;
 }
 
-/* Process RANGES section */
+/** Process RANGES section */
 static
 SCIP_RETCODE readRanges(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1103,6 +1115,8 @@ SCIP_RETCODE readRanges(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
@@ -1117,7 +1131,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if( *rngname == '\0' )
-         (void)strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1208,10 +1222,10 @@ SCIP_RETCODE readRanges(
    return SCIP_OKAY;
 }
 
-/* Process BOUNDS section. */
+/** Process BOUNDS section. */
 static
 SCIP_RETCODE readBounds(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1219,6 +1233,19 @@ SCIP_RETCODE readBounds(
    SCIP_VAR*   var;
    SCIP_Real   val;
    SCIP_Bool   shifted;
+   
+   SCIP_VAR** semicont;
+   int nsemicont;
+   int semicontsize;
+   SCIP_Bool dynamiccols;
+   SCIP_Bool dynamicconss;
+
+   semicont = NULL;
+   nsemicont = 0;
+   semicontsize = 0;  
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
 
    SCIPdebugMessage("read bounds\n");
 
@@ -1234,11 +1261,13 @@ SCIP_RETCODE readBounds(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
             break;
-         return SCIP_OKAY;
+         goto READBOUNDS_FINISH;
       }
       
       shifted = FALSE;
@@ -1249,18 +1278,12 @@ SCIP_RETCODE readBounds(
          || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
-         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable */
+         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable, upper bound given in field 4 */
       {
          if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
          {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
             shifted = TRUE;
-         }
-         if( !mpsi->semicontwarning && !strcmp(mpsinputField1(mpsi), "SC") )
-         {
-            mpsinputEntryIgnored(scip, mpsi, "not supported semi continuous declaration", mpsinputField1(mpsi),
-               "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
-            mpsi->semicontwarning = TRUE;
          }
       }
       else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
@@ -1284,80 +1307,118 @@ SCIP_RETCODE readBounds(
          break;
 
       if( *bndname == '\0' )
-         (void)strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
+         SCIP_Bool infeasible;
+
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
+         /* if variable did not appear in columns section before, then it may still come in later sections (QCMATRIX, QMATRIX, SOS, ...)
+          * thus add it as continuous variables, which has default bounds 0.0 <= x, and default cost 0.0 */
          if( var == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL);
-         else
          {
-            if( mpsinputField4(mpsi) == NULL )
-               val = 0.0;
-            else
-               val = atof(mpsinputField4(mpsi));
+            SCIP_VAR* varcpy;
 
-            /* if a bound of a binary variable is given, the variable is converted into an integer variable
-             * with default bounds 0 <= x <= infinity
-             */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, 
+                  SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+            
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            varcpy = var;
+            SCIP_CALL( SCIPreleaseVar(scip, &varcpy) );
+            /* mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL); */
+         }
+         assert(var != NULL);
+
+         if( mpsinputField4(mpsi) == NULL )
+            val = 0.0;
+         else
+            val = atof(mpsinputField4(mpsi));
+
+         /* if a bound of a binary variable is given, the variable is converted into an integer variable
+          * with default bounds 0 <= x <= infinity
+          */
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         {
+            if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
+               || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
+                  && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
             {
-               if( (mpsinputField1(mpsi)[1] == 'I') /* ILOG extension (Integer Bound) */
-                  || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisEQ(scip, val, 0.0))
-                     && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisEQ(scip, val, 1.0))) )
-               {
-                  assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-                  assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-                  SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
-               }
+               assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+               assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
             }
+         }
 
-            switch( mpsinputField1(mpsi)[0] )
+         switch( mpsinputField1(mpsi)[0] )
+         {
+         case 'L':
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
-            case 'L':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            }
+            SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+            break;
+         case 'U':
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+            {
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            }
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            break;
+         case 'S':
+            assert(mpsinputField1(mpsi)[1] == 'C'); /* CPLEX extension (Semi-Continuous) */
+            /* remember that variable is semi-continuous */
+            if( semicontsize <= nsemicont )
+            {
+               semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
+               if( semicont == NULL )
                {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-               }
-               SCIP_CALL( SCIPchgVarLb(scip, var, val) );
-               break;
-            case 'U':
-               if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
-               {
-                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-               }
-               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
-               break;
-            case 'F':
-               if( mpsinputField1(mpsi)[1] == 'X' )
-               {
-                  SCIP_CALL( SCIPchgVarLb(scip, var, val) );
-                  SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &semicont, semicontsize) );
                }
                else
                {
-                  SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
-                  SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
                }
-               break;
-            case 'M':
-               SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
-               break;
-            case 'P':
-               SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
-               break;
-            case 'B' : /* Ilog extension (Binary) */
-               SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-               SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
-               break;
-            default:
-               mpsinputSyntaxerror(mpsi);
-               return SCIP_OKAY;
             }
+            assert(semicont != NULL);
+            semicont[nsemicont] = var;
+            ++nsemicont;
+
+            SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            break;
+         case 'F':
+            if( mpsinputField1(mpsi)[1] == 'X' )
+            {
+               SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+            }
+            break;
+         case 'M':
+            SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+            break;
+         case 'P':
+            SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+            break;
+         case 'B' : /* CPLEX extension (Binary) */
+            SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+            SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+            /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            break;
+         default:
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
          }
       }
       else
@@ -1374,27 +1435,86 @@ SCIP_RETCODE readBounds(
       }
    }
    mpsinputSyntaxerror(mpsi);
+   
+   
+ READBOUNDS_FINISH:
+   if( nsemicont > 0 )
+   {
+      int i;
+      SCIP_Real oldlb;
+      char name[SCIP_MAXSTRLEN];
+      SCIP_CONS* cons;
+
+      SCIP_VAR* vars[2];
+      SCIP_BOUNDTYPE boundtypes[2];
+      SCIP_Real bounds[2];
+      
+      assert(semicont != NULL);
+
+      /* add bound disjunction constraints for semi-continuous variables */
+      for( i = 0; i < nsemicont; ++i )
+      {
+         var = semicont[i];
+         
+         oldlb = SCIPvarGetLbGlobal(var);
+         /* if no bound was specified (which we assume if we see lower bound 0.0),
+          * then the default lower bound for a semi-continuous variable is 1.0 */
+         if( oldlb == 0.0 )
+            oldlb = 1.0;
+         
+         /* change the lower bound to 0.0 */
+         SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+
+         /* add a bound disjunction constraint to say var <= 0.0 or var >= oldlb */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semicont_%s", SCIPvarGetName(var));
+         
+         vars[0] = var;
+         vars[1] = var;
+         boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
+         boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
+         bounds[0] = 0.0;
+         bounds[1] = oldlb;
+         
+         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
+               !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         
+         SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
+   
+   SCIPfreeBufferArrayNull(scip, &semicont);
 
    return SCIP_OKAY;
 }
 
 
-/* Process SOS section.
+/** Process SOS section.
  *
- * We read the SOS section, which is a nonstandard section introduced by CPLEX.
+ *  We read the SOS section, which is a nonstandard section introduced by CPLEX.
  *
- * @note Currently do not support the standard way of specifying SOS constraints via markers.
+ *  @note Currently we do not support the standard way of specifying SOS constraints via markers.
  */
 static
 SCIP_RETCODE readSOS(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_Bool initial, separate, enforce, check, propagate;
-   SCIP_Bool local, modifiable, dynamic, removable;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
    char name[MPS_MAX_NAMELEN] = { '\0' };
-   SCIP_CONS*  cons = NULL;
+   SCIP_CONS* cons = NULL;
    int consType = -1;
    int cnt = 0;
 
@@ -1427,9 +1547,11 @@ SCIP_RETCODE readSOS(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          break;
       }
-      if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
          mpsinputSyntaxerror(mpsi);
@@ -1457,7 +1579,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-            (void)strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+	    (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */
@@ -1469,13 +1591,13 @@ SCIP_RETCODE readSOS(
          {
             /* we do not know the name of the constraint */
             SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+                  local, modifiable, dynamic, removable) );
          }
          else
          {
             assert( type == 2 );
             SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+                  local, modifiable, dynamic, removable) );
          }
          consType = type;
          SCIPdebugMessage("created constraint <%s> of type %d.\n", name, type);
@@ -1499,7 +1621,7 @@ SCIP_RETCODE readSOS(
          var = SCIPfindVar(scip, mpsinputField1(mpsi));
          if( var == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
+            /* ignore unknown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name, SCIP_VERBLEVEL_NORMAL);
          }
          else
@@ -1515,11 +1637,17 @@ SCIP_RETCODE readSOS(
 
             /* add variable and weight */
             assert( consType == 1 || consType == 2 );
-            switch (consType)
+            switch( consType )
             {
-               case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
-               case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-               default: abort(); /* should not happen */
+            case 1: 
+               SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) );
+               break;
+            case 2: 
+               SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
+               break;
+            default: 
+               SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
+               SCIPABORT();
             }
             SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
@@ -1528,7 +1656,7 @@ SCIP_RETCODE readSOS(
             (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
             (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
          {
-            SCIPwarningMessage("ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
+            SCIPwarningMessage(scip, "ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
                mpsinputField3(mpsi), mpsinputField4(mpsi), mpsinputField5(mpsi));
          }
       }
@@ -1547,16 +1675,19 @@ SCIP_RETCODE readSOS(
 }
 
 
-/* Process QMATRIX or QUADOBJ section.
+/** Process QMATRIX or QUADOBJ section.
  *
- * We read the QMATRIX or QUADOBJ section, which is a nonstandard section introduced by CPLEX.
- * We create a quadratic constraint for this matrix and add a variable to the objective to represent the value of the QMATRIX.
- * For a QMATRIX, we expect that both lower and upper diagonal elements are given and every coefficient has to be divided by 2.0.
- * For a QUADOBJ, we expect that only the upper diagonal elements are given and thus only coefficients on the diagonal have to be divided by 2.0.
+ *  - We read the QMATRIX or QUADOBJ section, which is a nonstandard section introduced by CPLEX.
+ *  - We create a quadratic constraint for this matrix and add a variable to the objective to
+ *    represent the value of the QMATRIX.
+ *  - For a QMATRIX, we expect that both lower and upper diagonal elements are given and every
+ *    coefficient has to be divided by 2.0.
+ *  - For a QUADOBJ, we expect that only the upper diagonal elements are given and thus only
+ *    coefficients on the diagonal have to be divided by 2.0.
  */
 static
 SCIP_RETCODE readQMatrix(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP_Bool             isQuadObj,          /**< whether we actually read a QUADOBJ section */
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1565,7 +1696,7 @@ SCIP_RETCODE readQMatrix(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    int cnt  = 0; /* number of qmatrix elements processed so far */
-   int size = 0; /* size of quad* arrays */
+   int size;     /* size of quad* arrays */
 
    SCIPdebugMessage("read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    
@@ -1587,6 +1718,8 @@ SCIP_RETCODE readQMatrix(
       {
          if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
@@ -1605,7 +1738,7 @@ SCIP_RETCODE readQMatrix(
       var1 = SCIPfindVar(scip, mpsinputField1(mpsi));
       if( var1 == NULL )
       {
-         /* ignore unkown variables - we would not know the type anyway */
+         /* ignore unknown variables - we would not know the type anyway */
          mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QMatrix", "QMATRIX", SCIP_VERBLEVEL_NORMAL);
       }
       else
@@ -1614,7 +1747,7 @@ SCIP_RETCODE readQMatrix(
          var2 = SCIPfindVar(scip, mpsinputField2(mpsi));
          if( var2 == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
+            /* ignore unknown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QMatrix", "QMATRIX", SCIP_VERBLEVEL_NORMAL);
          }
          else
@@ -1633,7 +1766,7 @@ SCIP_RETCODE readQMatrix(
             }
 
             /* store variables and coefficient */
-            if (cnt >= size)
+            if( cnt >= size )
             {
                int newsize = SCIPcalcMemGrowSize(scip, size+1);
                assert(newsize > size);
@@ -1650,7 +1783,7 @@ SCIP_RETCODE readQMatrix(
              * in a QMATRIX section also off-diagonal have to be divided by 2.0, since both lower and upper diagonal elements are given
              */
             if( var1 == var2 || !isQuadObj )
-              quadcoefs[cnt] /= 2.0;
+               quadcoefs[cnt] /= 2.0;
             ++cnt;
             
             SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
@@ -1659,14 +1792,14 @@ SCIP_RETCODE readQMatrix(
             if( (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
                (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
             {
-               SCIPwarningMessage("ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
+               SCIPwarningMessage(scip, "ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
             }
          }
       }
    }
 
    /* add constraint */
-   if (cnt)
+   if( cnt )
    {
       SCIP_Bool  initial, separate, enforce, check, propagate;
       SCIP_Bool  local, modifiable, dynamic, removable;
@@ -1686,11 +1819,11 @@ SCIP_RETCODE readQMatrix(
       dynamic    = FALSE;
       removable  = FALSE;
       
-      SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS,
-         initial, removable, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &qmatrixvar, "qmatrixvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+            SCIP_VARTYPE_CONTINUOUS, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, qmatrixvar) );
       
-      if ( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
+      if( mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE )
       {
          lhs = -SCIPinfinity(scip);
          rhs = 0.0;
@@ -1702,7 +1835,7 @@ SCIP_RETCODE readQMatrix(
       }
       
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
       
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
@@ -1713,7 +1846,7 @@ SCIP_RETCODE readQMatrix(
    }
    else
    {
-      SCIPwarningMessage("%s section has no entries.\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
+      SCIPwarningMessage(scip, "%s section has no entries.\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    }
    
    SCIPfreeBufferArray(scip, &quadvars1);
@@ -1724,14 +1857,16 @@ SCIP_RETCODE readQMatrix(
 }
 
 
-/* Process QCMATRIX section.
+/** Process QCMATRIX section.
  *
- * We read the QCMATRIX section, which is a nonstandard section introduced by CPLEX.
- * We replace the corresponding linear constraint by a quadratic constraint which contains the original linear constraint plus the quadratic part specified in the QCMATRIX.
+ *  We read the QCMATRIX section, which is a nonstandard section introduced by CPLEX.
+ *
+ *  We replace the corresponding linear constraint by a quadratic constraint which contains the
+ *  original linear constraint plus the quadratic part specified in the QCMATRIX.
  */
 static
 SCIP_RETCODE readQCMatrix(
-   MPSINPUT*             mpsi,
+   MPSINPUT*             mpsi,               /**< mps input structure */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1740,7 +1875,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    int cnt  = 0; /* number of qcmatrix elements processed so far */
-   int size = 0; /* size of quad* arrays */
+   int size;     /* size of quad* arrays */
 
    if( mpsinputField1(mpsi) == NULL )
    {
@@ -1781,6 +1916,8 @@ SCIP_RETCODE readQCMatrix(
             mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
@@ -1799,8 +1936,8 @@ SCIP_RETCODE readQCMatrix(
       var1 = SCIPfindVar(scip, mpsinputField1(mpsi));
       if( var1 == NULL )
       {
-         /* ignore unkown variables - we would not know the type anyway */
-         mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QCMatrix", "QCMATRIX", SCIP_VERBLEVEL_NORMAL);
+         /* ignore unknown variables - we would not know the type anyway */
+         mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
       }
       else
       {
@@ -1808,8 +1945,8 @@ SCIP_RETCODE readQCMatrix(
          var2 = SCIPfindVar(scip, mpsinputField2(mpsi));
          if( var2 == NULL )
          {
-            /* ignore unkown variables - we would not know the type anyway */
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", "QCMATRIX", SCIP_VERBLEVEL_NORMAL);
+            /* ignore unknown variables - we would not know the type anyway */
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", SCIPconsGetName(lincons), SCIP_VERBLEVEL_NORMAL);
          }
          else
          {
@@ -1827,7 +1964,7 @@ SCIP_RETCODE readQCMatrix(
             }
 
             /* store variables and coefficient */
-            if (cnt >= size)
+            if( cnt >= size )
             {
                int newsize = SCIPcalcMemGrowSize(scip, size+1);
                assert(newsize > size);
@@ -1848,36 +1985,23 @@ SCIP_RETCODE readQCMatrix(
             if( (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
                (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
             {
-               SCIPwarningMessage("ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
+               SCIPwarningMessage(scip, "ignoring data in fields 4 and 5 <%s> <%s>.\n", mpsinputField4(mpsi), mpsinputField5(mpsi));
             }
          }
       }
    }
 
    /* replace linear constraint by quadratic constraint */
-   if (cnt)
+   if( cnt )
    {
-      SCIP_Bool  initial, separate, enforce, check, propagate;
-      SCIP_Bool  local, modifiable, dynamic, removable;
       SCIP_CONS* cons = NULL;
-
-      /* standard settings for quadratic constraints: */
-      initial    = TRUE;
-      separate   = TRUE;
-      enforce    = TRUE;
-      check      = TRUE;
-      propagate  = TRUE;
-      local      = FALSE;
-      modifiable = FALSE;
-      dynamic    = FALSE;
-      removable  = FALSE;
                   
       SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(lincons), 
-         SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
-         cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
-         SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
-         SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons), SCIPconsIsDynamic(lincons),
-         SCIPconsIsRemovable(lincons)) );
+            SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
+            cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
+            SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
+            SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons), SCIPconsIsDynamic(lincons),
+            SCIPconsIsRemovable(lincons)) );
       
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
@@ -1889,7 +2013,7 @@ SCIP_RETCODE readQCMatrix(
    }
    else
    {
-      SCIPwarningMessage("QCMATRIX section has no entries.\n");
+      SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
    }
    
    SCIPfreeBufferArray(scip, &quadvars1);
@@ -1899,7 +2023,227 @@ SCIP_RETCODE readQCMatrix(
    return SCIP_OKAY;
 }
 
-/* Read LP in "MPS File Format".
+
+/** Process INDICATORS section.
+ *
+ *  We read the INDICATORS section, which is a nonstandard section introduced by CPLEX.
+ *
+ *  The section has to come after the QMATRIX* sections.
+ */
+static
+SCIP_RETCODE readIndicators(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   SCIP_Bool stickingatnode;
+   char name[MPS_MAX_NAMELEN] = { '\0' };
+
+   SCIPdebugMessage("read INDICATORS constraints\n");
+   
+   /* standard settings for indicator constraints: */
+   initial = TRUE;
+   separate = TRUE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   dynamic = FALSE;
+   removable = FALSE;
+   stickingatnode = FALSE;
+
+   /* loop through section */
+   while( mpsinputReadLine(mpsi) )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_VARTYPE slackvartype;
+      SCIP_CONS* cons;
+      SCIP_CONS* lincons;
+      SCIP_VAR* binvar;
+      SCIP_VAR* slackvar;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      SCIP_Real sign;
+      SCIP_VAR** linvars;
+      SCIP_Real* linvals;
+      int nlinvars;
+      int i;
+
+      /* check if next section is found */
+      if( mpsinputField0(mpsi) != NULL )
+      {
+         if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+            mpsinputSetSection(mpsi, MPS_ENDATA);
+         break;
+      }
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
+      {
+         SCIPerrorMessage("empty data in a non-comment line.\n");
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* check for new indicator constraint */
+      if( strcmp(mpsinputField1(mpsi), "IF") != 0 )
+      {
+         SCIPerrorMessage("Indicator constraints need to be introduced by 'IF' in column 1.\n");
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* get linear constraint (row) */
+      lincons = SCIPfindCons(scip, mpsinputField2(mpsi));
+      if( lincons == NULL )
+      {
+         SCIPerrorMessage("row <%s> does not exist.\n", mpsinputField2(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* check whether constraint is really linear */
+      conshdlr = SCIPconsGetHdlr(lincons);
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
+      {
+         SCIPerrorMessage("constraint <%s> is not linear.\n", mpsinputField2(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* get binary variable */
+      binvar = SCIPfindVar(scip, mpsinputField3(mpsi));
+      if( binvar == NULL )
+      {
+         SCIPerrorMessage("binary variable <%s> does not exist.\n", mpsinputField3(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* check type */
+      if( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
+      {
+         SCIPerrorMessage("variable <%s> is not binary.\n", mpsinputField3(mpsi));
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      /* check whether we need the negated variable */
+      if( mpsinputField4(mpsi) != NULL )
+      {
+         if( *mpsinputField4(mpsi) == '0' )
+         {
+            SCIP_VAR* var;
+            SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &var) );
+            binvar = var;
+            assert( binvar != NULL );
+         }
+         else
+         {
+            if( *mpsinputField4(mpsi) != '1' )
+            {
+               SCIPerrorMessage("binary variable <%s> can only take values 0/1 (%s).\n", mpsinputField3(mpsi), mpsinputField4(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+         }
+      }
+
+      /* check lhs/rhs */
+      lhs = SCIPgetLhsLinear(scip, lincons);
+      rhs = SCIPgetLhsLinear(scip, lincons);
+      nlinvars = SCIPgetNVarsLinear(scip, lincons);
+      linvars = SCIPgetVarsLinear(scip, lincons);
+      linvals = SCIPgetValsLinear(scip, lincons);
+
+      sign = -1.0;
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         if( SCIPisInfinity(scip, rhs) )
+            sign = 1.0;
+         else
+         {
+            if( !SCIPisEQ(scip, lhs, rhs) )
+            {
+               SCIPerrorMessage("ranged row <%s> is not allowed in indicator constraints.\n", mpsinputField2(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+            else
+            {
+               /* create second indicator constraint */
+               SCIP_VAR** vars;
+               SCIP_Real* vals;
+
+               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars+1) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars+1) );
+               for( i = 0; i < nlinvars; ++i )
+               {
+                  vars[i] = linvars[i];
+                  vals[i] = -linvals[i];
+               }
+
+               /* create new name */
+               (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+
+               /* create indicator constraint */
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
+                     initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+               SCIPfreeBufferArray(scip, &vals);
+               SCIPfreeBufferArray(scip, &vars);
+            }
+         }
+      }
+
+      /* check if slack variable can be made implicitly integer */
+      slackvartype = SCIP_VARTYPE_IMPLINT;
+      for( i = 0; i < nlinvars; ++i )
+      {
+         if( !SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
+         {
+            slackvartype = SCIP_VARTYPE_CONTINUOUS;
+            break;
+         }
+      }
+
+      /* create slack variable */
+      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
+      SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+
+      /* add slack variable */      
+      SCIP_CALL( SCIPaddVar(scip, slackvar) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
+
+      /* create new name */
+      (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indlhs_%s", SCIPconsGetName(lincons));
+
+      /* create indicator constraint */
+      SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
+            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+      
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** Read LP in "MPS File Format".
  *
  *  A specification of the MPS format can be found at
  *
@@ -1908,7 +2252,7 @@ SCIP_RETCODE readQCMatrix(
  *
  *  and in the
  *
- *  ILOG CPLEX Reference Manual
+ *  CPLEX Reference Manual
  *
  *  This routine should read all valid MPS format files.
  *  What it will not do, is to find all cases where a file is ill formed.
@@ -1937,17 +2281,17 @@ SCIP_RETCODE readMps(
 
    SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
 
-   SCIP_CALL( readName(mpsi) );
+   SCIP_CALL( readName(scip, mpsi) );
 
-   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if( mpsinputSection(mpsi) == MPS_OBJSEN )
    {
-      SCIP_CALL( readObjsen(mpsi) );
+      SCIP_CALL( readObjsen(scip, mpsi) );
    }
    if( mpsinputSection(mpsi) == MPS_OBJNAME )
    {
-      SCIP_CALL( readObjname(mpsi) );
+      SCIP_CALL( readObjname(scip, mpsi) );
    }
    while( mpsinputSection(mpsi) == MPS_ROWS
       || mpsinputSection(mpsi) == MPS_USERCUTS
@@ -1991,6 +2335,10 @@ SCIP_RETCODE readMps(
    {
       SCIP_CALL( readQCMatrix(mpsi, scip) );
    }
+   if( mpsinputSection(mpsi) == MPS_INDICATORS )
+   {
+      SCIP_CALL( readIndicators(mpsi, scip) );
+   }
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
@@ -2005,7 +2353,7 @@ SCIP_RETCODE readMps(
    mpsinputFree(scip, &mpsi);
 
    if( error )
-      return SCIP_PARSEERROR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }
@@ -2025,7 +2373,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeyVar)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
 {  /*lint --e{715}*/
-   if ( key1 == key2 )
+   if( key1 == key2 )
       return TRUE;
    return FALSE;
 }
@@ -2039,7 +2387,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 }
 
 
-/* computes the field width such that the output file is nicely arranged */
+/** computes the field width such that the output file is nicely arranged */
 static
 unsigned int computeFieldWidth(
    unsigned int             width              /**< required width */
@@ -2050,7 +2398,7 @@ unsigned int computeFieldWidth(
 }
 
 
-/* output two strings in columns 1 and 2 with computed widths */
+/** output two strings in columns 1 and 2 with computed widths */
 static
 void printRecord(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2073,10 +2421,10 @@ void printRecord(
    fieldwidth = computeFieldWidth(maxnamelen);
    (void) SCIPsnprintf(format, 32," %%-%ds %%%ds ", fieldwidth, MPS_MAX_VALUELEN - 1);
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char *)format, col1, col2);
 }
 
-/* output two strings in columns 1 (width 2) and 2 (width 8) */
+/** output two strings in columns 1 (width 2) and 2 (width 8) */
 static
 void printStart(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2107,19 +2455,19 @@ void printStart(
       (void) SCIPsnprintf(format, 32, " %%-2.2s %%-%ds ", fieldwidth);
    }
 
-   SCIPinfoMessage(scip, file, format, col1, col2);
+   SCIPinfoMessage(scip, file, (const char*)format, col1, col2);
 }
 
-/* prints the given data as column entry */
+/** prints the given data as column entry */
 static
 void printEntry(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file (or NULL for standard output) */
-   const char*        varname,            /**< variable name */
-   const char*        consname,           /**< constraint name */
-   SCIP_Real          value,              /**< value to display */
-   int*               recordcnt,          /**< pointer to store the number of records per line */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           varname,            /**< variable name */
+   const char*           consname,           /**< constraint name */
+   SCIP_Real             value,              /**< value to display */
+   int*                  recordcnt,          /**< pointer to store the number of records per line */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
@@ -2151,7 +2499,7 @@ void printEntry(
    }
 }
 
-/* prints the constraint type to file stream */
+/** prints the constraint type to file stream */
 static
 void printRowType(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2193,9 +2541,9 @@ void printRowType(
 /** initializes the sparse matrix */
 static
 SCIP_RETCODE initializeMatrix(
-   SCIP*              scip,               /**< SCIP data structure */
-   SPARSEMATRIX**     matrix,             /**< pointer to sparse matrix containing the entries */
-   int                slots               /**< number of slots */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SPARSEMATRIX**        matrix,             /**< pointer to sparse matrix containing the entries */
+   int                   slots               /**< number of slots */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, matrix) );
@@ -2229,8 +2577,8 @@ SCIP_RETCODE checkSparseMatrixCapacity(
 /** frees the sparse matrix */
 static
 void freeMatrix(
-   SCIP*              scip,               /**< SCIP data structure */
-   SPARSEMATRIX*      matrix              /**< sparse matrix to free */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SPARSEMATRIX*         matrix              /**< sparse matrix to free */
    )
 {
    SCIPfreeBufferArray(scip, &matrix->rows);
@@ -2338,13 +2686,13 @@ SCIP_RETCODE getLinearCoeffs(
 /** check whether given variables are aggregated and put them into an array without duplication */
 static
 SCIP_RETCODE collectAggregatedVars(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< variable array */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_VAR***        aggvars,            /**< pointer to array storing the aggregated variables on output */
-   int*               naggvars,           /**< pointer to number of aggregated variables on output */
-   int*               saggvars,           /**< pointer to number of slots in aggvars array */
-   SCIP_HASHTABLE*    varAggregated       /**< hashtable for checking duplicates */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_VAR***           aggvars,            /**< pointer to array storing the aggregated variables on output */
+   int*                  naggvars,           /**< pointer to number of aggregated variables on output */
+   int*                  saggvars,           /**< pointer to number of slots in aggvars array */
+   SCIP_HASHTABLE*       varAggregated       /**< hashtable for checking duplicates */
    )
 {
    int v;
@@ -2392,12 +2740,12 @@ SCIP_RETCODE collectAggregatedVars(
 /** method check if the variable names are not longer than MPS_MAX_NAMELEN - 1*/
 static
 SCIP_RETCODE checkVarnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_VAR**         vars,               /**< array of variables */
-   int                nvars,              /**< number of variables */
-   unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
-   const char***      varnames,           /**< pointer to array of varible names */
-   SCIP_HASHMAP**     varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */
+   unsigned int*         maxnamelen,         /**< pointer to store the maximum name length */
+   const char***         varnames,           /**< pointer to array of variable names */
+   SCIP_HASHMAP**        varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
    )
 {
    int v;
@@ -2412,23 +2760,26 @@ SCIP_RETCODE checkVarnames(
    faulty = 0;
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, varnames, nvars) );
 
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
    {
+      size_t l;
+
       var = vars[v];
       assert( var != NULL );
-      
-      if( strlen(SCIPvarGetName(var)) >= MPS_MAX_NAMELEN )
+
+      l = strlen(SCIPvarGetName(var));
+
+      if( l >= MPS_MAX_NAMELEN )
       {
          faulty++;
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
       else
       {
-         size_t l = strlen(SCIPvarGetName(var));
          (*maxnamelen) = MAX(*maxnamelen, l);
       }
  
@@ -2444,7 +2795,7 @@ SCIP_RETCODE checkVarnames(
    
    if( faulty > 0 )
    {
-      SCIPwarningMessage("there are %d variable names which have to be cut down to %d characters; LP might be corrupted\n", 
+      SCIPwarningMessage(scip, "there are %d variable names which have to be cut down to %d characters; LP might be corrupted\n", 
          faulty, MPS_MAX_NAMELEN - 1);
    }
    return SCIP_OKAY;
@@ -2453,101 +2804,90 @@ SCIP_RETCODE checkVarnames(
 /** method check if the constraint names are not longer than MPS_MAX_NAMELEN - 1 */
 static
 SCIP_RETCODE checkConsnames(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONS**        origconss,          /**< array of all constraints */
-   int                norigconss,         /**< number of all constraints */
-   SCIP_CONS***       conss,              /**< array to store only relevant constraints */
-   int*               nconss,             /**< number of relevant constraints */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
-   const char***      consnames,          /**< pointer to array of constraint names */
-   SCIP_Bool*         error               /**< pointer to store whether all constraintnames exist */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< array of all constraints */
+   int                   nconss,             /**< number of all constraints */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int*         maxnamelen,         /**< pointer to store the maximum name length */
+   const char***         consnames,          /**< pointer to array of constraint names */
+   SCIP_Bool*            error               /**< pointer to store whether all constraint names exist */
    )
 {
-   int c, i;
-   int faulty;
    SCIP_CONS* cons;
    char* consname;
+   int faulty;
+   int i;
 
-   assert( scip != NULL );
-   assert( conss != NULL );
-   assert( maxnamelen != NULL );
+   assert(scip != NULL);
+   assert(maxnamelen != NULL);
 
    faulty = 0;
    *error = FALSE;
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, conss, norigconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, consnames, norigconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, consnames, nconss) );
 
-   for( i = 0, c = 0; i < norigconss; ++i )
+   for( i = 0; i < nconss; ++i )
    {
       size_t l;
 
-      cons = origconss[i];
+      cons = conss[i];
       assert( cons != NULL );
 
-      /* in case the transformed probelms is written only constraint are
-       * posted which are enabled in the current node */
-      if( transformed && !SCIPconsIsEnabled(cons) )
-         continue;
+      /* in case the transformed problem is written, only constraints are posted which are enabled in the current node */
+      assert(!transformed || SCIPconsIsEnabled(cons));
+
+      l = strlen(SCIPconsGetName(cons));
       
-      (*conss)[c] = cons;
-      
-      if( strlen(SCIPconsGetName(cons)) >= MPS_MAX_NAMELEN )
+      if( l >= MPS_MAX_NAMELEN )
       {
          faulty++;
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
 
-      l = strlen(SCIPconsGetName(cons));
-
       if( l == 0 )
       {
-         SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
-         
-         --c;
-         for( ; c >= 0; --c)
+         SCIPwarningMessage(scip, "At least one name of a constraint is empty, so file will be written with generic names.\n");
+
+         --i;  /*lint !e445*/
+         for( ; i >= 0; --i)  /*lint !e445*/
          {
-            SCIPfreeBufferArray(scip, &((*consnames)[c]));
+            SCIPfreeBufferArray(scip, &((*consnames)[i]));
          }
-         SCIPfreeBufferArray(scip, &consnames);
-         SCIPfreeBufferArray(scip, &conss);
-         
+         SCIPfreeBufferArray(scip, consnames);
+
          *error = TRUE;
 
          return SCIP_OKAY;
       }
 
       (*maxnamelen) = MAX(*maxnamelen, l);
-      
+
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       (void) SCIPsnprintf(consname, (int)(*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
-      
-      (*consnames)[c] = consname;
-      c++;
+
+      (*consnames)[i] = consname;
    }
-   
+
    if( faulty > 0 )
    {
-      SCIPwarningMessage("there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
+      SCIPwarningMessage(scip, "there are %d constraint names which have to be cut down to %d characters; LP might be corrupted\n", 
          faulty, MPS_MAX_NAMELEN - 1);
    }
-   
-   (*nconss) = c;
    
    return SCIP_OKAY;
 }
 
 
-/* outputs the COULMNS section of the MPS format */
+/** outputs the COLUMNS section of the MPS format */
 static
 void printColumnSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SPARSEMATRIX*      matrix,             /**< sparse matrix containing the entries */
-   SCIP_HASHMAP*      varnameHashmap,     /**< map from SCIP_VAR* to variable name */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
+   SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
+   SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    SCIP_Bool intSection;
@@ -2558,20 +2898,26 @@ void printColumnSection(
    int recordcnt;
 
    /* sort sparse matrix w.r.t. the variable indices */
-   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, 
-         SCIPvarComp, matrix->nentries);
+   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, SCIPvarComp, matrix->nentries);
 
    /* print COLUMNS section */
    SCIPinfoMessage(scip, file, "COLUMNS\n");
 
    intSection = FALSE;
    
-   for( v = 0; v < matrix->nentries; ++v )
+   for( v = 0; v < matrix->nentries; )
    {
       var = matrix->columns[v];
       assert( var != NULL );
+
+      /* skip slack variables in output */
+      if( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+      {
+         ++v;
+         continue;
+      }
          
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection)
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -2600,7 +2946,8 @@ void printColumnSection(
       varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
 
       /* output all entries of the same variable */
-      do{
+      do
+      {
          value = matrix->values[v];
          
          /* print record to file */
@@ -2611,8 +2958,15 @@ void printColumnSection(
          
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
-         
-      v--;
+   }
+   /* end integer section, if the columns sections ends with integer variables */
+   if( intSection )
+   {
+      /* end integer section in MPS format */
+      printStart(scip, file, "", "INTEND", (int) maxnamelen);
+      printRecord(scip, file, "'MARKER'", "", maxnamelen);
+      printRecord(scip, file, "'INTEND'", "", maxnamelen);
+      SCIPinfoMessage(scip, file, "\n", maxnamelen);
    }
 }
 
@@ -2620,19 +2974,21 @@ void printColumnSection(
 /** outputs the right hand side section */
 static
 void printRhsSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_CONS**        conss,              /**< constraint array */
-   int                nconss,             /**< number of constraints */
-   const char**       consnames,          /**< constraint names */
-   SCIP_Real*         rhss,               /**< right hand side array */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_CONS**           conss,              /**< constraint array */
+   int                   nconss,             /**< number of constraints */
+   const char**          consnames,          /**< constraint names */
+   SCIP_Real*            rhss,               /**< right hand side array */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    int c;
    int recordcnt;
+#ifndef NDEBUG
    SCIP_CONS* cons;
+#endif
 
    assert( rhss != NULL );
 
@@ -2644,20 +3000,20 @@ void printRhsSection(
    /* take care of the linear constraints */
    for( c = 0; c < nconss; ++c )
    {
+#ifndef NDEBUG
       cons = conss[c];
       assert( cons != NULL );
+#endif
 
-      /* skip all contraints which have a right hand side of infinity */
+      /* skip all constraints which have a right hand side of infinity */
       if( SCIPisInfinity(scip, rhss[c]) )
          continue;
          
-         /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
-      assert( !transformed || SCIPconsIsEnabled(cons) );
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints 
+       */
+      assert(!transformed || SCIPconsIsEnabled(cons));
       
-      assert( conss[c] != NULL );
       assert( consnames[c] != NULL );
       assert( !SCIPisInfinity(scip, rhss[c]) );
       
@@ -2672,13 +3028,13 @@ void printRhsSection(
 /** outputs the range section */
 static
 void printRangeSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_CONS**        conss,              /**< constraint array */
-   int                nconss,             /**< number of constraints */
-   const char**       consnames,          /**< constraint names */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_CONS**           conss,              /**< constraint array */
+   int                   nconss,             /**< number of constraints */
+   const char**          consnames,          /**< constraint names */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {   
    int c;
@@ -2702,10 +3058,9 @@ void printRangeSection(
       cons = conss[c];
       assert( cons != NULL);
 
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
 
       assert( consnames[c] != NULL );
@@ -2741,8 +3096,8 @@ void printRangeSection(
 /** print bound section name */
 static
 void printBoundSectionName(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file                /**<  output file, or NULL if standard output should be used */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**<  output file, or NULL if standard output should be used */
    )   
 {
    SCIPinfoMessage(scip, file, "BOUNDS\n");
@@ -2752,15 +3107,16 @@ void printBoundSectionName(
 /** output bound section */
 static
 void printBoundSection(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**<  output file, or NULL if standard output should be used */
-   SCIP_VAR**         vars,               /**< active variables */
-   int                nvars,              /**< number of active variables */
-   SCIP_VAR**         aggvars,            /**< needed aggregated variables */
-   int                naggvars,           /**< number of aggregated variables */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   const char**       varnames,           /**< array with variable names */
-   unsigned int       maxnamelen          /**< maximum name length */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   SCIP_VAR**            vars,               /**< active variables */
+   int                   nvars,              /**< number of active variables */
+   SCIP_VAR**            aggvars,            /**< needed aggregated variables */
+   int                   naggvars,           /**< number of aggregated variables */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   const char**          varnames,           /**< array with variable names */
+   SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
    int v;
@@ -2781,6 +3137,10 @@ void printBoundSection(
    {
       var = vars[v];
       assert( var != NULL );
+
+      /* skip slack variables in output */
+      if( indicatorSlackHash != NULL && SCIPhashtableExists(indicatorSlackHash, var) )
+         continue;
 
       /* get variable name */
       varname = varnames[v];
@@ -2883,7 +3243,9 @@ void printBoundSection(
          }
       }
 
-      /* print upper bound, infinity has to be printed for integer! variables, because during reading an mps file no upper bound of an integer variable means that the upper bound will be set to 1 instead of +infinity (like it is for continuous variables)*/
+      /* print upper bound, infinity has to be printed for integer (!) variables, because during
+       * reading an mps file no upper bound of an integer variable means that the upper bound will
+       * be set to 1 instead of +infinity (like it is for continuous variables) */
       if( SCIPisInfinity(scip, ub) )
       {
          if( !sectionName )
@@ -2941,6 +3303,21 @@ void printBoundSection(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyMps)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderMps(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeMps NULL
 
@@ -2958,7 +3335,7 @@ SCIP_DECL_READERREAD(readerReadMps)
 
    retcode =  readMps(scip, filename);
 
-   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
       return retcode;
 
    SCIP_CALL( retcode );
@@ -2975,9 +3352,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 {  /*lint --e{715}*/
    int c, v, i;
    char* namestr;
-
-   SCIP_CONS** relconss;
-   int nrelconss;
 
    SCIP_CONS* cons = NULL;
    const char* consname;
@@ -2997,10 +3371,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
 
+   SCIP_CONS** consIndicator;
    SCIP_CONS** consSOS1;
    SCIP_CONS** consSOS2;
    SCIP_CONS** consQuadratic;
    SCIP_CONS** consSOC;
+   int nConsIndicator;
    int nConsSOS1;
    int nConsSOS2;
    int nConsQuadratic;
@@ -3013,7 +3389,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    int naggvars = 0;
    int saggvars;
    SCIP_HASHTABLE* varAggregatedHash;
-
+   SCIP_HASHTABLE* indicatorSlackHash;
 
    SCIP_VAR** consvars;
    int nconsvars;
@@ -3032,25 +3408,25 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    
    needRANGES = FALSE;
    maxnamelen = 0;
-   nrelconss = -1;
    nConsSOS1 = 0;
    nConsSOS2 = 0;
    nConsQuadratic = 0;
-   nConsSOC  = 0;
+   nConsSOC = 0;
+   nConsIndicator = 0;
 
    /* check if the constraint names are too long and build the constraint names */
-   SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames, &error) );
+   SCIP_CALL( checkConsnames(scip, conss, nconss, transformed, &maxnamelen, &consnames, &error) );
    if( error )
    {
-      /* todo call writing with generic names */
+      /* call writing with generic names */
       if( transformed )
       {
-         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "mps", TRUE) );
       }
       else
       {
-         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "mps", TRUE) );
       }
       *result = SCIP_SUCCESS;
@@ -3058,26 +3434,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       return SCIP_OKAY;
    }
    
-   assert(nrelconss >= 0);
-
    /* check if the variable names are not too long and build the "variable" -> "variable name" hash map */
    SCIP_CALL( checkVarnames(scip, vars, nvars, &maxnamelen, &varnames, &varnameHashmap) );
 
-   conss = relconss;
-   nconss = nrelconss;
-
-   /* collect SOS and quadratic constraints in array for later output */
+   /* collect SOS, quadratic, and indicator constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOC, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
    /* create hashtable for storing aggregated variables */
    saggvars = nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, 
-         NULL) );
-   
+   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 3*nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+
    /* initialize sparse matrix */
    SCIP_CALL( initializeMatrix(scip, &matrix, (nvars * 2)) );
    assert( matrix->sentries >= nvars );
@@ -3132,10 +3504,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       cons = conss[c];
       assert( cons != NULL);
 
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
 
       conshdlr = SCIPconsGetHdlr(cons);
@@ -3242,7 +3613,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             /* print row entry */
             printRowType(scip, file, lhs, rhs, consname);
 
-            /* allocat memory */
+            /* allocate memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
             SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
       
@@ -3265,6 +3636,20 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             SCIPfreeBufferArray(scip, &vals);
             SCIPfreeBufferArray(scip, &consvars);
          }
+      }
+      else if( strcmp(conshdlrname, "indicator") == 0 )
+      {
+         SCIP_VAR* slackvar;
+
+         /* store slack variable in hash */
+         slackvar = SCIPgetSlackVarIndicator(cons);
+         assert( slackvar != NULL );
+         assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
+         SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
+
+         /* store constraint */
+         consIndicator[nConsIndicator++] = cons;
+         continue;
       }
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
@@ -3298,9 +3683,22 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       }
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
+         SCIP_VAR** quadvars;
+         SCIP_Real* quadvarlincoefs;
+         int j;
+         
          /* store constraint */
          consQuadratic[nConsQuadratic++] = cons;
 
+         /* collect linear coefficients of quadratic part */
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvars,        SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+         for( j = 0; j < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++j )
+         {
+            quadvars[j]        = SCIPgetQuadVarTermsQuadratic(scip, cons)[j].var;
+            quadvarlincoefs[j] = SCIPgetQuadVarTermsQuadratic(scip, cons)[j].lincoef;
+         }
+         
          lhs = SCIPgetLhsQuadratic(scip, cons);
          rhs = SCIPgetRhsQuadratic(scip, cons);
 
@@ -3327,20 +3725,27 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             
             /* compute column entries for linear part in quadratic part */
             SCIP_CALL( getLinearCoeffs(scip, consname, 
-                  SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons),
-                  SCIPgetNQuadVarsQuadratic(scip, cons), transformed, matrix, &rhss[c]) );
+                  quadvars, quadvarlincoefs, SCIPgetNQuadVarTermsQuadratic(scip, cons),
+                  transformed, matrix, &rhss[c]) );
          }
          
          /* check for aggregated variables in quadratic part of quadratic constraints for later output of
           * aggregations as linear constraints */
-         consvars = SCIPgetQuadVarsQuadratic(scip, cons);
-         nconsvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-                  
+         consvars = quadvars;
+         nconsvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
+
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
+         
+         SCIPfreeBufferArray(scip, &quadvars);
+         SCIPfreeBufferArray(scip, &quadvarlincoefs);
       }
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          /* SOC constraints are of the form lhsconstant + sum_i (lhscoef_i*(lhsvar_i+lhsoffset_i))^2 <= (rhscoef*(rhsvar+rhsoffset))^2 */
+         
+         SCIP_Real* lincoefs;
+         SCIP_Real  coef;
+         SCIP_Real  offset;
          
          /* store constraint */
          consSOC[nConsSOC++] = cons;
@@ -3350,37 +3755,32 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          rhs = -SCIPgetLhsConstantSOC(scip, cons);
          
-         /* if there are offsets on lhs, then we have linear coefficients that need to be processed here */
-         if( SCIPgetLhsOffsetsSOC(scip, cons) )
+         /* offsets on lhs give linear coefficients that need to be processed here */
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nconsvars) );
+
+         for( v = 0; v < nconsvars; ++v )
          {
-            SCIP_Real* lincoefs;
-            SCIP_Real  coef;
-            SCIP_Real  offset;
-            SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nconsvars) );
-            
-            for( v = 0; v < nconsvars; ++v )
-            {
-               offset = SCIPgetLhsOffsetsSOC(scip, cons)[v];
-               coef = SCIPgetLhsCoefsSOC(scip, cons) ? SCIPgetLhsCoefsSOC(scip, cons)[v] : 1.0;
-               
-               lincoefs[v] = 2 * offset * coef * coef;
-               rhs -= offset * offset * coef * coef;
-            }
-            
-            SCIP_CALL( getLinearCoeffs(scip, consname,
-               SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
-            
-            SCIPfreeBufferArray(scip, &lincoefs);
+            offset = SCIPgetLhsOffsetsSOC(scip, cons)[v];
+            coef = SCIPgetLhsCoefsSOC(scip, cons)[v];
+
+            lincoefs[v] = 2 * offset * coef * coef;
+            rhs -= offset * offset * coef * coef;
          }
 
+         SCIP_CALL( getLinearCoeffs(scip, consname,
+               SCIPgetLhsVarsSOC(scip, cons), lincoefs, nconsvars, transformed, matrix, &rhs) );
+
+         SCIPfreeBufferArray(scip, &lincoefs);
+
          /* if there is an offsets on rhs, then we have linear a coefficient that need to be processed here */
-         if (SCIPgetRhsOffsetSOC(scip, cons) != 0.0)
+         if( SCIPgetRhsOffsetSOC(scip, cons) != 0.0 )
          {
-            SCIP_VAR* rhsvar = SCIPgetRhsVarSOC(scip, cons);
-            SCIP_Real coef   = SCIPgetRhsCoefSOC(scip, cons);
-            SCIP_Real offset = SCIPgetRhsOffsetSOC(scip, cons);
+            SCIP_VAR* rhsvar;
             SCIP_Real lincoef;
-            
+
+            coef   = SCIPgetRhsCoefSOC(scip, cons);
+            offset = SCIPgetRhsOffsetSOC(scip, cons);
+            rhsvar = SCIPgetRhsVarSOC(scip, cons);
             lincoef = -2 * offset * coef * coef;
             rhs += offset * offset * coef * coef;
             
@@ -3404,12 +3804,18 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* unknown constraint type; mark this with SCIPinfinity(scip) */
          rhss[c] = SCIPinfinity(scip); 
          
-         SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
+         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
       }
    }
 
    /* free hash table */
    SCIPhashtableFree(&varAggregatedHash);
+
+   if( nConsIndicator == 0 )
+   {
+      SCIPhashtableFree(&indicatorSlackHash);
+      assert( indicatorSlackHash == NULL );
+   }
 
    if( naggvars > 0 )
    {
@@ -3429,13 +3835,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* create variable name */
          var = aggvars[c];
          
-         if( strlen(SCIPvarGetName(var)) >= MPS_MAX_NAMELEN )
+         l = strlen(SCIPvarGetName(var));
+         if( l >= MPS_MAX_NAMELEN )
             maxnamelen = MPS_MAX_NAMELEN - 1;
          else
-         {
-            l = strlen(SCIPvarGetName(var));
             maxnamelen = MAX(maxnamelen, l);
-         }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
          (void) SCIPsnprintf(namestr,  MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
@@ -3472,7 +3876,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
    
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
    
    /* output RHS section */
    printRhsSection(scip, file, conss, nconss, consnames, rhss, transformed, maxnamelen);
@@ -3482,7 +3886,77 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       printRangeSection(scip, file, conss, nconss, consnames, transformed, maxnamelen);
       
    /* output BOUNDS section */
-   printBoundSection(scip, file, vars, nvars, aggvars, naggvars, transformed, varnames, maxnamelen);
+   printBoundSection(scip, file, vars, nvars, aggvars, naggvars, transformed, varnames, indicatorSlackHash, maxnamelen);
+
+   /* print SOS section */
+   if( nConsSOS1 > 0 || nConsSOS2 > 0 )
+   {
+      SCIP_Real* sosweights;
+
+      SCIPinfoMessage(scip, file, "SOS\n");
+      SCIPdebugMessage("start printing SOS section\n");
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
+
+      /* first output SOS1 constraints */
+      for( c = 0; c < nConsSOS1; ++c )
+      {
+         cons = consSOS1[c];
+         consvars = SCIPgetVarsSOS1(scip, cons);
+         nconsvars = SCIPgetNVarsSOS1(scip, cons);
+         sosweights = SCIPgetWeightsSOS1(scip, cons);
+         (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
+         
+         printStart(scip, file, "S1", namestr, -1);
+         SCIPinfoMessage(scip, file, "\n");
+
+         for( v = 0; v < nconsvars; ++v )
+         {
+            /* get variable name */
+            assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            
+            printStart(scip, file, "", varname, (int) maxnamelen);
+
+            if( sosweights != NULL )
+               (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
+            else
+               (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d ", v);
+
+            SCIPinfoMessage(scip, file, "%25s\n", valuestr);
+         }
+      }
+
+      /* next output SOS2 constraints */
+      for( c = 0; c < nConsSOS2; ++c )
+      {
+         cons = consSOS2[c];
+         consvars = SCIPgetVarsSOS2(scip, cons);
+         nconsvars = SCIPgetNVarsSOS2(scip, cons);
+         sosweights = SCIPgetWeightsSOS2(scip, cons);
+         (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
+
+         printStart(scip, file, "S2", namestr, -1);
+         SCIPinfoMessage(scip, file, "\n");
+
+         for( v = 0; v < nconsvars; ++v )
+         {
+            /* get variable name */
+            assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+
+            printStart(scip, file, "", varname, (int) maxnamelen);
+
+            if( sosweights != NULL )
+               (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
+            else
+               (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d ", v);
+
+            SCIPinfoMessage(scip, file, "%25s\n", valuestr);
+         }
+      }
+      SCIPfreeBufferArray(scip, &namestr);
+   }
 
    /* print SOS section */
    if( nConsSOS1 > 0 || nConsSOS2 > 0 )
@@ -3555,14 +4029,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
 
    /* print QCMATRIX sections for quadratic constraints
-    * in difference to an quadratic term in the objective function, the quadratic part is not divided by 2 here
+    * in difference to a quadratic term in the objective function, the quadratic part is not divided by 2 here
     */
    if( nConsQuadratic > 0 )
    {
-      SCIP_Real*  sqrcoefs;
-      SCIP_VAR**  bilinvars1;
-      SCIP_VAR**  bilinvars2;
-      SCIP_Real*  bilincoefs;
+      SCIP_QUADVARTERM* quadvarterms;
+      SCIP_BILINTERM*   bilinterms;
       int         nbilin;
       const char* varname2;
       
@@ -3572,14 +4044,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       for( c = 0; c < nConsQuadratic; ++c )
       {
          cons = consQuadratic[c];
-         consvars = SCIPgetQuadVarsQuadratic(scip, cons);
-         nconsvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-         sqrcoefs = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons);
-         
-         bilinvars1 = SCIPgetBilinVars1Quadratic(scip, cons);
-         bilinvars2 = SCIPgetBilinVars2Quadratic(scip, cons);
-         bilincoefs = SCIPgetBilinCoefsQuadratic(scip, cons);
+         nconsvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
+         quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
          nbilin     = SCIPgetNBilinTermsQuadratic(scip, cons);
+         bilinterms = SCIPgetBilinTermsQuadratic(scip, cons);
          
          (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
@@ -3588,15 +4056,15 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* print x^2 terms */
          for( v = 0; v < nconsvars; ++v )
          {
-            if( sqrcoefs[v] == 0.0 )
+            if( quadvarterms[v].sqrcoef == 0.0 )
                continue;
             
             /* get variable name */
-            assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, quadvarterms[v].var) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, quadvarterms[v].var);
 
             /* get coefficient as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sqrcoefs[v]);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", quadvarterms[v].sqrcoef);
 
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
@@ -3609,19 +4077,19 @@ SCIP_DECL_READERWRITE(readerWriteMps)
           * I.e., we have to split bilinear coefficients into two off diagonal elements */
          for( v = 0; v < nbilin; ++v )
          {
-            if( bilincoefs[v] == 0.0 )
+            if( bilinterms[v].coef == 0.0 )
                continue;
             
             /* get name of first variable */
-            assert ( SCIPhashmapExists(varnameHashmap, bilinvars1[v]) );
-            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinvars1[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var1) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var1);
             
             /* get name of second variable */
-            assert ( SCIPhashmapExists(varnameHashmap, bilinvars2[v]) );
-            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinvars2[v]);
+            assert ( SCIPhashmapExists(varnameHashmap, bilinterms[v].var2) );
+            varname2 = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, bilinterms[v].var2);
             
             /* get coefficient as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilincoefs[v]);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", 0.5*bilinterms[v].coef);
 
             /* print "x y coeff/2" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
@@ -3660,7 +4128,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* print alpha_i^2 x_i^2 terms */
          for( v = 0; v < nconsvars; ++v )
          {
-            if( coefs && coefs[v] == 0.0 )
+            if( coefs[v] == 0.0 )
                continue;
             
             /* get variable name */
@@ -3668,7 +4136,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
             /* get coefficient^2 as string */
-            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs ? coefs[v]*coefs[v] : 1.0);
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", coefs[v]*coefs[v]);
 
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
@@ -3695,6 +4163,64 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIPfreeBufferArray(scip, &namestr);
    }
 
+   /* print indicator section */
+   if( nConsIndicator > 0 )
+   {
+      SCIPinfoMessage(scip, file, "INDICATORS\n");
+      SCIPdebugMessage("start printing INDICATOR section\n");
+
+      /* output each indicator constraint */
+      for( c = 0; c < nConsIndicator; ++c )
+      {
+         SCIP_VAR* binvar;
+         SCIP_CONS* lincons;
+
+         cons = consIndicator[c];
+         binvar = SCIPgetBinaryVarIndicator(cons);
+         lincons = SCIPgetLinearConsIndicator(cons);
+
+         /* create variable and value strings */
+         if( SCIPvarIsNegated(binvar) )
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 0);
+            assert( SCIPvarGetNegatedVar(binvar) != NULL );
+            assert( SCIPhashmapExists(varnameHashmap, SCIPvarGetNegatedVar(binvar)) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, SCIPvarGetNegatedVar(binvar));
+         }
+         else
+         {
+            (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d", 1);
+            assert ( SCIPhashmapExists(varnameHashmap, binvar) );
+            varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, binvar);
+         }
+
+         /* write records */
+         printStart(scip, file, "IF", SCIPconsGetName(lincons), (int) maxnamelen);
+         printRecord(scip, file, varname, valuestr, maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
+
+   /* free matrix data structure */
+   freeMatrix(scip, matrix);
+
+   /* free slackvar hashtable */
+   if( indicatorSlackHash != NULL )
+      SCIPhashtableFree(&indicatorSlackHash);
+
+   /* free variable hashmap */
+   SCIPhashmapFree(&varnameHashmap);
+
+   SCIPfreeBufferArray(scip, &aggvars);
+   SCIPfreeBufferArray(scip, &rhss);
+
+   /* free buffer arrays for SOS1, SOS2, and quadratic */
+   SCIPfreeBufferArray(scip, &consIndicator);
+   SCIPfreeBufferArray(scip, &consSOC);
+   SCIPfreeBufferArray(scip, &consQuadratic);
+   SCIPfreeBufferArray(scip, &consSOS2);
+   SCIPfreeBufferArray(scip, &consSOS1);
+
    /* free variable and constraint name array */
    for( v = 0; v < nvars + naggvars; ++v )
    {
@@ -3704,31 +4230,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    for( c = 0; c < nconss + naggvars; ++c )
    {
-      /* in case the transformed problems is written only constraint are
-       * posted which are enabled in the current node; the conss array
-       * should only contain relevant constraints since these are collected
-       * in the beginning in the methode checkConsnames()  */
+      /* in case the transformed problems is written only constraint are posted which are enabled in the current node;
+       * the conss array should only contain relevant constraints
+       */
       assert( !transformed || SCIPconsIsEnabled(cons) );
       
       SCIPfreeBufferArray(scip, &consnames[c]);
    }
    SCIPfreeBufferArray(scip, &consnames);
-   
-   /* free matrix data structure */
-   freeMatrix(scip, matrix);
-
-   /* free variable hashmap */
-   SCIPhashmapFree(&varnameHashmap);
-
-   SCIPfreeBufferArray(scip, &aggvars);
-   SCIPfreeBufferArray(scip, &rhss);
-   SCIPfreeBufferArray(scip, &relconss);
-
-   /* free buffer arrays for SOS1, SOS2, and quadratic */
-   SCIPfreeBufferArray(scip, &consSOS1);
-   SCIPfreeBufferArray(scip, &consSOS2);
-   SCIPfreeBufferArray(scip, &consQuadratic);
-   SCIPfreeBufferArray(scip, &consSOC);
 
    /* print end of data line */
    SCIPinfoMessage(scip, file, "ENDATA");
@@ -3755,7 +4264,9 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
    /* include mps reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeMps, readerReadMps, readerWriteMps, readerdata) );
+         readerCopyMps,
+         readerFreeMps, readerReadMps, readerWriteMps,
+         readerdata) );
 
    /* add mps reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

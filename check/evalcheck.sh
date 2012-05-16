@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -28,6 +28,8 @@ do
     fi
 done
 
+export LC_NUMERIC=C
+
 for i in $FILES
 do
     NAME=`basename $i .out`
@@ -39,19 +41,19 @@ do
 
     TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
-    if test -f $TSTNAME.test
+    if test -f testset/$TSTNAME.test
     then
-	TESTFILE=$TSTNAME.test
+	TESTFILE=testset/$TSTNAME.test
     else
 	TESTFILE=""
     fi
 
-    if test -f $TSTNAME.solu
+    if test -f testset/$TSTNAME.solu
     then
-	SOLUFILE=$TSTNAME.solu
-    else if test -f all.solu
+	SOLUFILE=testset/$TSTNAME.solu
+    else if test -f testset/all.solu
     then
-	SOLUFILE=all.solu
+	SOLUFILE=testset/all.solu
     else
         SOLUFILE=""
     fi

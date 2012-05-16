@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -23,7 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
+DISPFREQ=${10}
 CONTINUE=${11}
 
 if test ! -e results
@@ -63,7 +63,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`./getlastprob.awk $OUTFILE`
+    LASTPROB=`awk -f getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -87,64 +87,73 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test`
+for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    rm -f $SETFILE
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
-	    if test $SETNAME != "default"
-	    then
-	        echo "set param_file $SETTINGS"      > $TMPFILE
-	    else
-		echo ""                              > $TMPFILE
-	    fi
+        LASTPROB=""
+        if test -f $i
+        then
+            rm -f $SETFILE
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+
+            if test $SETNAME != "default"
+            then
+                echo "set param_file $SETTINGS"      > $TMPFILE
+            else
+                echo ""                              > $TMPFILE
+            fi
 #setting of tolerances not supported (version 5.2)
-#	    if test $FEASTOL != "default"
-#	    then
-#		echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-#		echo set mip tolerances integrality $FEASTOL >> $TMPFILE
-#	    fi
-	    echo "set time_limit $TIMELIMIT"        >> $TMPFILE
-	    echo "set verbosity 0"                  >> $TMPFILE
-	    if test $MIPGAP != "default"
-	    then
-		echo "set gap_limit" $MIPGAP        >> $TMPFILE
-	    fi
-	    echo "set node_limit $NODELIMIT"        >> $TMPFILE
+#            if test $FEASTOL != "default"
+#            then
+#                echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+#                echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+#            fi
+            echo "set time_limit $TIMELIMIT"        >> $TMPFILE
+            echo "set verbosity 0"                  >> $TMPFILE
+            echo "set gap_limit 0.0"                >> $TMPFILE
+            echo "set node_limit $NODELIMIT"        >> $TMPFILE
 #$MEMLIMIT not supported (version 5.2)
 #$THREADS only supported as command line parameter (version 5.2)
 #writing of parameters not supported (version 5.2)
-	    echo "load $i"                          >> $TMPFILE
-#WORKAROUND: when using .gz-files, the filetype has to be given explicitly (version 5.2)
-            echo "mps"                              >> $TMPFILE
-#           echo "lp"                               >> $TMPFILE
-	    echo "solve"                            >> $TMPFILE
-	    echo "display stats"                    >> $TMPFILE
-	    echo "quit"                             >> $TMPFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $SYMPHONYBIN < $TMPFILE" 2>>$ERRFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo "load $i"                          >> $TMPFILE
+            #if input file is gzipped the file-type is requested
+            GZ=`echo $i | grep "\.gz"`
+            if test $GZ
+            then
+               LP=`echo $i | grep "\.lp"`
+               if test $LP
+               then
+                   echo "lp"                        >> $TMPFILE
+               else
+                   echo "mps"                       >> $TMPFILE
+               fi
+            fi
+            echo "solve"                            >> $TMPFILE
+            echo "display stats"                    >> $TMPFILE
+            echo "quit"                             >> $TMPFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $SYMPHONYBIN < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
@@ -154,9 +163,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if test -f $TSTNAME.solu
-then
-    awk -f check_symphony.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-else
-    awk -f check_symphony.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-fi
+./evalcheck_symphony.sh $OUTFILE

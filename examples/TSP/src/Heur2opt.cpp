@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,29 +54,21 @@ GRAPHEDGE* findEdge(
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-SCIP_RETCODE Heur2opt::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURFREE(Heur2opt::scip_free)
 {
    return SCIP_OKAY;
 }
    
+
 /** initialization method of primal heuristic (called after problem was transformed) */
-SCIP_RETCODE Heur2opt::scip_init(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINIT(Heur2opt::scip_init)
 {
    return SCIP_OKAY;
 }
 
-   
+
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-SCIP_RETCODE Heur2opt::scip_exit(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXIT(Heur2opt::scip_exit)
 {
    return SCIP_OKAY;
 }
@@ -88,10 +80,7 @@ SCIP_RETCODE Heur2opt::scip_exit(
  *  The primal heuristic may use this call to initialize its branch and bound specific data.
  *
  */
-SCIP_RETCODE Heur2opt::scip_initsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
 {
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    graph_ = probdata->getGraph();
@@ -110,10 +99,7 @@ SCIP_RETCODE Heur2opt::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
-SCIP_RETCODE Heur2opt::scip_exitsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur                /**< the primal heuristic itself */
-   )
+SCIP_DECL_HEUREXITSOL(Heur2opt::scip_exitsol)
 {
    release_graph(&graph_);
    SCIPfreeMemoryArray(scip, &tour_);
@@ -123,12 +109,7 @@ SCIP_RETCODE Heur2opt::scip_exitsol(
 
 
 /** execution method of primal heuristic 2-Opt */
-SCIP_RETCODE Heur2opt::scip_exec(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_HEUR*         heur,               /**< the primal heuristic itself */
-   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
-   SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
-   )
+SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 {  
    assert( heur != NULL );
    SCIP_SOL* sol = SCIPgetBestSol( scip );
@@ -208,9 +189,15 @@ SCIP_RETCODE Heur2opt::scip_exec(
       edges2test[1] = tour_[i];
       edges2test[2] = findEdge( nodes, edges2test[0]->back->adjac, edges2test[1]->back->adjac );  
       edges2test[3] = findEdge( nodes, edges2test[0]->adjac, edges2test[1]->adjac );
+      assert( edges2test[2] != NULL );
+      assert( edges2test[3] != NULL );
              
-      // if the new solution is better, update and end
-      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length )
+      // if the new solution is better and variables are not fixed, update and end
+      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length 
+         &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
+         &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
+         &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
+         &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
       {
 
          SCIP_Bool success;
@@ -240,4 +227,10 @@ SCIP_RETCODE Heur2opt::scip_exec(
    SCIPfreeBufferArray(scip, &edges2test);
 
    return SCIP_OKAY;
+}
+
+/** clone method which will be used to copy a objective plugin */
+SCIP_DECL_HEURCLONE(scip::ObjCloneable* Heur2opt::clone)
+{
+   return new Heur2opt(scip);
 }

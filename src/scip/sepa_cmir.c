@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_cmir.c
- * @ingroup SEPARATORS
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -23,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_cmir.h"
 #include "scip/pub_misc.h"
@@ -33,6 +33,7 @@
 #define SEPA_PRIORITY             -3000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
@@ -41,11 +42,11 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccesful aggregation tries (-1: unlimited) */
-#define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
+#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
-#define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggreagtions for each row per round in the root node */
+#define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
@@ -59,7 +60,7 @@
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bounddistances used to select real 
+#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real 
                                          *   variable in current aggregated constraint to be eliminated */
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
@@ -90,24 +91,24 @@ struct SCIP_SepaData
    SCIP_Real             maxaggdensity;      /**< maximal density of aggregated row */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
    SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
-   SCIP_Real             aggrtol;            /**< tolerance for bounddistance used in aggregation heuristic */
+   SCIP_Real             aggrtol;            /**< tolerance for bound distance used in aggregation heuristic */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
    int                   maxtries;           /**< maximal number of rows to start aggregation with per separation round
                                               *   (-1: unlimited) */
    int                   maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
                                               *   (-1: unlimited) */
-   int                   maxfails;           /**< maximal number of consecutive unsuccesful aggregation tries
+   int                   maxfails;           /**< maximal number of consecutive unsuccessful aggregation tries
                                               *   (-1: unlimited) */
-   int                   maxfailsroot;       /**< maximal number of consecutive unsuccesful aggregation tries in the root
+   int                   maxfailsroot;       /**< maximal number of consecutive unsuccessful aggregation tries in the root
                                               *   node (-1: unlimited) */
    int                   maxaggrs;           /**< maximal number of aggregations for each row per separation round */
    int                   maxaggrsroot;       /**< maximal number of aggregations for each row per round in the root node */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
-   int                   maxtestdelta;	     /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxconts;	     /**< maximal number of active continuous variables in aggregated row */
+   int                   maxtestdelta;             /**< maximal number of different deltas to try (-1: unlimited) */
+   int                   maxconts;             /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
@@ -225,16 +226,16 @@ SCIP_RETCODE addCut(
    
          SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
    
          /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-   				     (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
+               (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
          if( success && !SCIPisCutEfficacious(scip, sol, cut) )
          {
             SCIPdebugMessage(" -> %s cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
             success = FALSE;
          }
          else
@@ -247,7 +248,7 @@ SCIP_RETCODE addCut(
                cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-            SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
             SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
             if( !cutislocal )
             {
@@ -278,7 +279,7 @@ void updateNActiveConts(
    int                   nintvars,           /**< number of integer variables */
    SCIP_VAR*             var,                /**< continuous variable */
    int                   delta,              /**< delta value of counters */
-   int*                  nactiveconts        /**< pointer to count number of active continuous variabls */
+   int*                  nactiveconts        /**< pointer to count number of active continuous variables */
    )
 {
    assert(nactiveconts != NULL);
@@ -379,7 +380,7 @@ SCIP_RETCODE tryDelta(
             &success, &cutislocal) );
       assert(allowlocal || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
-         delta, success, cutact, cutrhs, cutact - cutrhs);
+         delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
                
       /* check if delta generates cut which is more violated */
       if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -467,7 +468,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, 3 + 2*(nintvars+2)) );
 
    /* As in Marchand's version. Use the absolute value of the coefficients of the integer variables (lying 
-    * stricly between its bounds) in the constructed mixed knapsack set, i.e., 
+    * strictly between its bounds) in the constructed mixed knapsack set, i.e., 
     * N* = { |alpha'_j| : j in N, alpha'_j != 0 and l_j < x*_j < u_j }
     */ 
          
@@ -478,6 +479,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    bestdelta = 0.0;
    bestefficacy = 0.0;
    maxabsmksetcoef = 0.0;
+   mksetcoefsvalid = FALSE;
 
    /* try delta = 1 and get the coefficients of all variables in the constructed mixed knapsack set;
     * if the aggregated row contains too many nonzero elements the generation of the c-MIR cut is aborted,
@@ -575,7 +577,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
                maxfrac, &bestdelta, &bestefficacy) );
       }
 
-      /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a seperate cut pool first) */
+      /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a separate cut pool first) */
       if( delta == NULL )
       {
          /* generate cut with bestdelta and best boundswitch value */
@@ -778,7 +780,7 @@ SCIP_RETCODE aggregation(
 
          /* store continuous variable in array sorted by distance to closest bound */
          bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
       }
       else
          naggrintnonzs++;
@@ -788,7 +790,7 @@ SCIP_RETCODE aggregation(
          SCIP_Real primsol;
          
          primsol = varsolvals[SCIPvarGetProbindex(var)];
-         hasfractional = !SCIPisIntegral(scip, primsol);
+         hasfractional = !SCIPisFeasIntegral(scip, primsol);
       }
    }
    assert(naggrintnonzs + naggrcontnonzs == nstartnonzcols);
@@ -965,7 +967,7 @@ SCIP_RETCODE aggregation(
                   continue;
                
                /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
-                * where P\Q is the set of constraints not yet involved in the aggregation zet
+                * where P\Q is the set of constraints not yet involved in the aggregation set
                 */
                assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
                assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);
@@ -1103,7 +1105,7 @@ SCIP_RETCODE aggregation(
 
                /* store continuous variable in array sorted by distance to closest bound */
                bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
-               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs, NULL);
 
                updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, +1, &nactiveconts);
             }
@@ -1138,7 +1140,7 @@ SCIP_RETCODE aggregation(
 
       naggrs++;
 
-      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeroes, %d/%d aggregations\n", 
+      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeros, %d/%d aggregations\n", 
          naggrcontnonzs, nactiveconts, maxconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
    }
 #ifdef SCIP_DEBUG
@@ -1201,8 +1203,7 @@ SCIP_RETCODE separateCuts(
    int v;
 
    assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -1439,6 +1440,20 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyCmir)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeCmir)
@@ -1477,6 +1492,21 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -1487,12 +1517,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolCmir)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -1510,8 +1541,9 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyCmir, sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
          sepaInitsolCmir, sepaExitsolCmir, 
          sepaExeclpCmir, sepaExecsolCmir,
          sepadata) );
@@ -1535,11 +1567,11 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxfails",
-         "maximal number of consecutive unsuccesful aggregation tries (-1: unlimited)",
+         "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
          &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxfailsroot",
-         "maximal number of consecutive unsuccesful aggregation tries in the root node (-1: unlimited)",
+         "maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)",
          &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrs",
@@ -1603,7 +1635,7 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxcontsroot, TRUE, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/aggrtol",
-         "tolerance for bounddistances used to select continuous variable in current aggregated constraint to be eliminated",
+         "tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated",
          &sepadata->aggrtol, TRUE, DEFAULT_AGGRTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cmir/trynegscaling",

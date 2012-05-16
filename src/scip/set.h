@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,8 +46,8 @@
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
-
 #include "scip/struct_set.h"
+
 
 #ifdef NDEBUG
 #include "scip/pub_misc.h"
@@ -57,12 +57,47 @@
 extern "C" {
 #endif
 
+/** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
+ *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  Note that in this case dual reductions might be invalid. */
+extern
+SCIP_RETCODE SCIPsetCopyPlugins(
+   SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
+   SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
+   SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
+   );
+
+/** copies parameters from sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPsetCopyParams(
+   SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
+   SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
+   );
+
 /** creates global SCIP settings */
 extern
 SCIP_RETCODE SCIPsetCreate(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** frees global SCIP settings */
@@ -72,10 +107,17 @@ SCIP_RETCODE SCIPsetFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** returns current stage of SCIP */
+extern
+SCIP_STAGE SCIPsetGetStage(
+   SCIP_SET*             set                 /**< pointer to SCIP settings */
+   );
+
 /** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
 SCIP_RETCODE SCIPsetAddBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -90,6 +132,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
 extern
 SCIP_RETCODE SCIPsetAddIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -106,6 +149,7 @@ SCIP_RETCODE SCIPsetAddIntParam(
 extern
 SCIP_RETCODE SCIPsetAddLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -122,6 +166,7 @@ SCIP_RETCODE SCIPsetAddLongintParam(
 extern
 SCIP_RETCODE SCIPsetAddRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -138,6 +183,7 @@ SCIP_RETCODE SCIPsetAddRealParam(
 extern
 SCIP_RETCODE SCIPsetAddCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -153,6 +199,7 @@ SCIP_RETCODE SCIPsetAddCharParam(
 extern
 SCIP_RETCODE SCIPsetAddStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
@@ -210,50 +257,119 @@ SCIP_RETCODE SCIPsetGetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPsetSetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name,               /**< name of the parameter */
+   void*                 value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPsetChgBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
+   );
+
 /** changes the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Int parameter */
 extern
+SCIP_RETCODE SCIPsetChgIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Int parameter */
+extern
 SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
 extern
+SCIP_RETCODE SCIPsetChgLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Longint parameter */
+extern
 SCIP_RETCODE SCIPsetSetLongintParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Longint          value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
 extern
+SCIP_RETCODE SCIPsetChgRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value                /**< new value of the parameter */
+   );
+
+/** changes the value of an existing SCIP_Real parameter */
+extern
 SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value               /**< new value of the parameter */
+   SCIP_Real             value                /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Char parameter */
+extern
+SCIP_RETCODE SCIPsetChgCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Char parameter */
 extern
 SCIP_RETCODE SCIPsetSetCharParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    char                  value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing String parameter */
 extern
+SCIP_RETCODE SCIPsetChgStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing String parameter */
+extern
 SCIP_RETCODE SCIPsetSetStringParam(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    const char*           value               /**< new value of the parameter */
    );
@@ -262,6 +378,7 @@ SCIP_RETCODE SCIPsetSetStringParam(
 extern
 SCIP_RETCODE SCIPsetReadParams(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename            /**< file name */
    );
 
@@ -269,30 +386,105 @@ SCIP_RETCODE SCIPsetReadParams(
 extern
 SCIP_RETCODE SCIPsetWriteParams(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
+/** resets a single parameters to its default value */
+extern
+SCIP_RETCODE SCIPsetResetParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** resets all parameters to their default values */
 extern
 SCIP_RETCODE SCIPsetResetParams(
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
-/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm. 
+/** sets parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT to use default values (see also SCIPsetResetParams())
+ *  - SCIP_PARAMSETTING_COUNTER to get feasible and "fast" counting process
+ *  - SCIP_PARAMSETTING_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - SCIP_PARAMSETTING_EASYCIP to solve easy problems fast
+ *  - SCIP_PARAMSETTING_FEASIBILITY to detect feasibility fast
+ *  - SCIP_PARAMSETTING_HARDLP to be capable to handle hard LPs
+ *  - SCIP_PARAMSETTING_OPTIMALITY to prove optimality fast
+ */
+extern
+SCIP_RETCODE SCIPsetSetEmphasis(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
+ *  auxiliary SCIP instances to avoid recursion
+ */
+extern
+SCIP_RETCODE SCIPsetSetSubscipsOff(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
  *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
  *  (for that the EXACTSOLVE flag has to be set to true as well).
- */ 
+ */
 extern
 SCIP_RETCODE SCIPsetSetReducedsolve(
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets heuristic parameters to aggressive values */
+/** sets heuristic parameters values to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
+ */
 extern
-SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
-   SCIP_SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsetSetHeuristics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets presolving parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all presolving
+ */
+extern
+SCIP_RETCODE SCIPsetSetPresolving(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets separating parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
+ *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_OFF which turn off all separating
+ */
+extern
+SCIP_RETCODE SCIPsetSetSeparating(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
 /** returns the array of all available SCIP parameters */
@@ -455,6 +647,12 @@ void SCIPsetSortProps(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts propagators by priorities for presolving */
+extern
+void SCIPsetSortPropsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -544,6 +742,56 @@ SCIP_DISP* SCIPsetFindDisp(
    const char*           name                /**< name of event handler */
    );
 
+/** inserts dialog in dialog list */
+extern
+SCIP_RETCODE SCIPsetIncludeDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** returns if the dialog already exists */
+extern
+SCIP_Bool SCIPsetExistsDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** inserts NLPI in NLPI list */
+extern
+SCIP_RETCODE SCIPsetIncludeNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< NLPI */
+   );
+
+/** returns the NLPI of the given name, or NULL if not existing */
+extern
+SCIP_NLPI* SCIPsetFindNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of NLPI */
+   );
+
+/** sorts NLPIs by priorities */
+extern
+void SCIPsetSortNlpis(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** set priority of an NLPI */
+extern
+void SCIPsetSetPriorityNlpi(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< NLPI */
+   int                   priority            /**< new priority of NLPI */
+   );
+
+/** inserts information about an external code in external codes list */
+extern
+SCIP_RETCODE SCIPsetIncludeExternalCode(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of external code */
+   const char*           description         /**< description of external code, can be NULL */
+   );
+
 /** calls init methods of all plugins */
 extern
 SCIP_RETCODE SCIPsetInitPlugins(
@@ -564,9 +812,10 @@ SCIP_RETCODE SCIPsetExitPlugins(
 extern
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
@@ -574,10 +823,13 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 extern
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
+					      *   problem was already declared unbounded, it is already stored */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
+					      *   problem was already declared infeasible, it is already stored */
    );
 
 /** calls initsol methods of all plugins */
@@ -646,6 +898,12 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
+/** marks that some limit parameter was changed */
+extern
+void SCIPsetSetLimitChanged(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns the maximal number of variables priced into the LP per round */
 extern
 int SCIPsetGetPriceMaxvars(
@@ -660,7 +918,23 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
-
+/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+ *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
+ *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
+ *  were cancelled out when increasing the value and are random after decreasing it.
+ *  We dot not consider the cancellations which can occur during increasing the absolute value because they just cannot
+ *  be expressed using fixed precision floating point arithmetic, anymore.
+ *  The idea to get more reliable values is to always store the last reliable value, where increasing the absolute of
+ *  the value is viewed as preserving reliability. Then, after each update, the new absolute value can be compared
+ *  against the last reliable one with this method, checking whether it was decreased by a factor of at least
+ *  "lp/recompfac" and should be recomputed.
+ */
+extern
+SCIP_Bool SCIPsetIsUpdateUnreliable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newvalue,           /**< new value after update */
+   SCIP_Real             oldvalue            /**< old value, i.e., last reliable value */
+   );
 
 #ifndef NDEBUG
 
@@ -713,6 +987,19 @@ SCIP_Real SCIPsetPseudocosteps(
 /** returns minimal minimal objective distance value to use for pseudo cost updates */
 extern
 SCIP_Real SCIPsetPseudocostdelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** return the delta to use for computing the cutoff bound for integral objectives */
+extern
+SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns minimal decrease factor that causes the recomputation of a value
+ *  (e.g., pseudo objective) instead of an update */
+extern
+SCIP_Real SCIPsetRecompfac(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -820,6 +1107,13 @@ SCIP_Real SCIPsetCeil(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
+/** rounds value to the nearest integer in epsilon tolerance */
+extern
+SCIP_Real SCIPsetRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
 extern
 SCIP_Real SCIPsetFrac(
@@ -902,6 +1196,13 @@ SCIP_Real SCIPsetSumCeil(
    SCIP_Real             val                 /**< value to process */
    );
 
+/** rounds value to the nearest integer in sumepsilon tolerance */
+extern
+SCIP_Real SCIPsetSumRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** returns fractional part of value, i.e. x - floor(x) in sumepsilon tolerance */
 extern
 SCIP_Real SCIPsetSumFrac(
@@ -909,7 +1210,7 @@ SCIP_Real SCIPsetSumFrac(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if values are in range of feasibility tolerance */
+/** checks, if relative difference of values is in range of feastol */
 extern
 SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -917,7 +1218,7 @@ SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is lower than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -925,7 +1226,7 @@ SCIP_Bool SCIPsetIsFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is not greater than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -933,7 +1234,7 @@ SCIP_Bool SCIPsetIsFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is greater than feastol */
 extern
 SCIP_Bool SCIPsetIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -941,7 +1242,7 @@ SCIP_Bool SCIPsetIsFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is not lower than -feastol */
 extern
 SCIP_Bool SCIPsetIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -994,6 +1295,13 @@ SCIP_Real SCIPsetFeasFloor(
 /** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
 extern
 SCIP_Real SCIPsetFeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value to the nearest integer in feasibility tolerance */
+extern
+SCIP_Real SCIPsetFeasRound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
@@ -1111,6 +1419,20 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+extern
+SCIP_Bool SCIPsetIsHugeValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be checked whether it is huge */
+   );
+
+/** returns the minimum value that is regarded as huge and should be handled separately (e.g., in activity computation) */
+extern
+SCIP_Real SCIPsetGetHugeValue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1125,6 +1447,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
+#define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
+#define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )
@@ -1140,6 +1464,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->num_epsilon) )
 #define SCIPsetFloor(set, val)             ( EPSFLOOR(val, (set)->num_epsilon) )
 #define SCIPsetCeil(set, val)              ( EPSCEIL(val, (set)->num_epsilon) )
+#define SCIPsetRound(set, val)             ( EPSROUND(val, (set)->num_epsilon) )
 #define SCIPsetFrac(set, val)              ( EPSFRAC(val, (set)->num_epsilon) )
 
 #define SCIPsetIsSumEQ(set, val1, val2)    ( EPSEQ(val1, val2, (set)->num_sumepsilon) )
@@ -1152,6 +1477,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->num_sumepsilon) )
 #define SCIPsetSumFloor(set, val)          ( EPSFLOOR(val, (set)->num_sumepsilon) )
 #define SCIPsetSumCeil(set, val)           ( EPSCEIL(val, (set)->num_sumepsilon) )
+#define SCIPsetSumRound(set, val)          ( EPSROUND(val, (set)->num_sumepsilon) )
 #define SCIPsetSumFrac(set, val)           ( EPSFRAC(val, (set)->num_sumepsilon) )
 
 #define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_feastol) )
@@ -1166,12 +1492,13 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsFeasFracIntegral(set, val) ( !EPSP(val, (set)->num_feastol) )
 #define SCIPsetFeasFloor(set, val)         ( EPSFLOOR(val, (set)->num_feastol) )
 #define SCIPsetFeasCeil(set, val)          ( EPSCEIL(val, (set)->num_feastol) )
+#define SCIPsetFeasRound(set, val)         ( EPSROUND(val, (set)->num_feastol) )
 #define SCIPsetFeasFrac(set, val)          ( EPSFRAC(val, (set)->num_feastol) )
 
 #define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( EPSGT(newlb, oldlb, \
-         set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldlb)), 1.0)) )
+         set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldlb)), 1e-3)) )
 #define SCIPsetIsUbBetter(set, newub, oldlb, oldub) ( EPSLT(newub, oldub, \
-         set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldub)), 1.0)) )
+         set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldub)), 1e-3)) )
 #define SCIPsetIsEfficacious(set, root, efficacy) \
    ( root ? EPSP(efficacy, (set)->sepa_minefficacyroot) : EPSP(efficacy, (set)->sepa_minefficacy) )
 
@@ -1186,22 +1513,32 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsHugeValue(set, val) ( (val) >= (set)->num_hugeval )
+#define SCIPsetGetHugeValue(set) ( (set)->num_hugeval )
 
 #endif
 
-
+#ifdef NDEBUG
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-         (int)((num)*sizeof(**(ptr)))) )
+                                                                     (int)((num)*sizeof(**(ptr))))      )
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
-      (int)((num)*sizeof(**(ptr)))) )
+                            (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-         (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
+                                                                       (int)((num)*sizeof(**(ptr)))) )
+#else
+/* Check for integer overflow in allocation size */
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
+#endif
+#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
+#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), sizeof(**(ptr))) )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
+#define SCIPsetFreeBuffer(set,ptr)             ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 
 #ifdef __cplusplus

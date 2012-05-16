@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,11 +27,19 @@
 #include <cassert>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for user problem data */
+/** @brief C++ wrapper for user problem data
+ *
+ *  This class defines the interface for user problem data implemented in C++. This class can be accessed at any time
+ *  using the methods SCIPgetObjProbData(). Therefore, it can be used to store data which has to be accessible within
+ *  several plugins.
+ *
+ *  - \ref type_prob.h "Corresponding C interface"
+ */
 class ObjProbData
 {
 public:
@@ -131,6 +139,38 @@ public:
       return SCIP_OKAY;
    }
 
+   /** copies user data of source SCIP for the target SCIP
+    *
+    *  This method should copy the problem data of the source SCIP and create a target problem data for (target)
+    *  SCIP. Implementing this callback is optional. If the copying process was successful the target SCIP gets this
+    *  problem data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target SCIP will have no problem data
+    *  at all.
+    *
+    *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+    *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+    *  SCIP. You should be very carefully in using these two methods since they could lead to an infinite loop due to
+    *  recursion.
+    *
+    *  possible return values for *result:
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_SUCCESS    : the copying process was successfully performed
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP*              sourcescip,         /**< source SCIP main data structure */
+      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding 
+                                              *   target variables */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+                                              *   target constraints */
+      ObjProbData**      objprobdata,        /**< pointer to store the copied problem data object */
+      SCIP_Bool          global,             /**< create a global or a local copy? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the call */
+      )
+   {  /*lint --e{715}*/
+      (*objprobdata) = 0;
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

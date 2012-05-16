@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,6 +89,7 @@ struct SCIP_Fork
    SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
    SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nchildren;          /**< number of children of this parent node */
@@ -101,6 +102,7 @@ struct SCIP_Subroot
    SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
    SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_Real             lpobjval;           /**< the LP objective value for that node, needed to compute the pseudo costs correctly */
    int                   ncols;              /**< number of columns in the LP */
    int                   nrows;              /**< number of rows in the LP */
    int                   nchildren;          /**< number of children of this parent node */
@@ -167,16 +169,16 @@ struct SCIP_Tree
    SCIP_NODE**           children;           /**< array with children of the focus node */
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
-   SCIP_Real*            siblingsprio;       /**< array with node selection priorities of children */
+   SCIP_Real*            siblingsprio;       /**< array with node selection priorities of siblings */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
-   int                   focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int                   siblingssize;       /**< available slots in siblings vector */
@@ -196,6 +198,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
+   SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
 };
 
 #ifdef __cplusplus

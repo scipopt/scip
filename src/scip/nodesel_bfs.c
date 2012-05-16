@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_bfs.c
- * @ingroup NODESELECTORS
  * @brief  node selector for best first search
  * @author Tobias Achterberg
  */
@@ -63,6 +62,20 @@ struct SCIP_NodeselData
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
@@ -272,7 +285,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
    {
 #ifdef NODESEL_OUT
       SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by lb\n",
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2, 
+         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2,
          SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node1));
 #endif
       return -1;
@@ -280,8 +293,8 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
    else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
    {
 #ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by lb\n", 
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2, 
+      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by lb\n",
+         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2,
          SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node2));
 #endif
       return +1;
@@ -293,26 +306,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 
       estimate1 = SCIPnodeGetEstimate(node1);
       estimate2 = SCIPnodeGetEstimate(node2);
-
-      if( SCIPisLT(scip, estimate1, estimate2) )
-      {
-#ifdef NODESEL_OUT
-         SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n", 
-            SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), 
-            lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node1));
-#endif
-         return -1;
-      }
-      else if( SCIPisGT(scip, estimate1, estimate2) )
-      {
-#ifdef NODESEL_OUT
-         SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n", 
-            SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), 
-            lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node2));
-#endif
-         return +1;
-      }
-      else
+      if( (SCIPisInfinity(scip,  estimate1) && SCIPisInfinity(scip,  estimate2)) ||
+          (SCIPisInfinity(scip, -estimate1) && SCIPisInfinity(scip, -estimate2)) ||
+          SCIPisEQ(scip, estimate1, estimate2) )
       {
          SCIP_NODETYPE nodetype1;
          SCIP_NODETYPE nodetype2;
@@ -321,8 +317,8 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
          nodetype2 = SCIPnodeGetType(node2);
 
 #ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node xxx by child/sibl\n", 
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), 
+      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node xxx by child/sibl\n",
+         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
          lowerbound2, SCIPnodeGetEstimate(node2));
 #endif
          if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
@@ -337,7 +333,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
          {
             int depth1;
             int depth2;
-         
+
             depth1 = SCIPnodeGetDepth(node1);
             depth2 = SCIPnodeGetDepth(node2);
             if( depth1 < depth2 )
@@ -348,6 +344,24 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
                return 0;
          }
       }
+
+      if( SCIPisLT(scip, estimate1, estimate2) )
+      {
+#ifdef NODESEL_OUT
+         SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n",
+            SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
+            lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node1));
+#endif
+         return -1;
+      }
+
+      assert(SCIPisGT(scip, estimate1, estimate2));
+#ifdef NODESEL_OUT
+      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n",
+         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
+         lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node2));
+#endif
+      return +1;
    }
 }
 
@@ -371,6 +385,7 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyBfs,
          nodeselFreeBfs, nodeselInitBfs, nodeselExitBfs, 
          nodeselInitsolBfs, nodeselExitsolBfs, nodeselSelectBfs, nodeselCompBfs,
          nodeseldata) );

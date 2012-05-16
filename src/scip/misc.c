@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,7 +21,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <ctype.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -30,9 +32,10 @@
 #endif
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "scip/set.h"
 #include "scip/misc.h"
+#include "scip/intervalarith.h"
 
 #include "scip/struct_misc.h"
 
@@ -360,6 +363,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
       currentkeyval = hashkeyval(userptr, currentkey);
       if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
+      
       hashtablelist = hashtablelist->next;
    }
 
@@ -385,9 +389,52 @@ void* hashtablelistRetrieve(
 
    /* return element */
    if( h != NULL )
+   {
+#ifndef NDEBUG
+      if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
+      {
+         SCIPerrorMessage("WARNING: hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
+      }
+#endif
+
       return h->element;
+   }
    else
       return NULL;
+}
+
+
+/** retrieves element with given key from the hash list, or NULL
+ * returns pointer to hash table list entry */
+static
+void* hashtablelistRetrieveNext(
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding to element after retrieved one, or NULL */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
+   unsigned int          keyval,             /**< hash value of key */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   SCIP_HASHTABLELIST* h;
+
+   assert(hashtablelist != NULL);
+   
+   /* find hash list entry */
+   h = hashtablelistFind(*hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+
+   /* return element */
+   if( h != NULL )
+   {
+      *hashtablelist = h->next;
+      
+      return h->element;
+   }
+   
+   *hashtablelist = NULL;
+   
+   return NULL;
 }
 
 /** removes element from the hash list */
@@ -405,9 +452,8 @@ SCIP_RETCODE hashtablelistRemove(
    assert(element != NULL);
 
    while( *hashtablelist != NULL && (*hashtablelist)->element != element )
-   {
       hashtablelist = &(*hashtablelist)->next;
-   }
+
    if( *hashtablelist != NULL )
    {
       nextlist = (*hashtablelist)->next;
@@ -418,7 +464,6 @@ SCIP_RETCODE hashtablelistRemove(
    return SCIP_OKAY;
 }
 
-   
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
@@ -474,6 +519,29 @@ void SCIPhashtableFree(
    /* free main hast table data structure */
    BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
+}
+
+/** removes all elements of the hash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+void SCIPhashtableClear(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
+
+   assert(hashtable != NULL);
+
+   blkmem = hashtable->blkmem;
+   lists = hashtable->lists;
+
+   /* free hash lists */
+   for( i = hashtable->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
 }
 
 /** inserts element in hash table (multiple inserts of same element possible) */
@@ -549,6 +617,41 @@ void* SCIPhashtableRetrieve(
       hashtable->hashkeyval, hashtable->userptr, keyval, key);
 }
 
+/** retrieve element with key from hash table, returns NULL if not existing
+ * can be used to retrieve all entries with the same key (one-by-one) */
+void* SCIPhashtableRetrieveNext(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL; output: entry in hash table list corresponding to element after retrieved one, or NULL */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   unsigned int keyval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(hashtablelist != NULL);
+   assert(key != NULL);
+
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
+
+   if( *hashtablelist == NULL )
+   {
+      unsigned int hashval;
+      
+      /* get the hash value of the key */
+      hashval = keyval % hashtable->nlists; /*lint !e573*/
+      
+      *hashtablelist = hashtable->lists[hashval];
+   }
+
+   return hashtablelistRetrieveNext(hashtablelist, hashtable->hashgetkey, hashtable->hashkeyeq, 
+      hashtable->hashkeyval, hashtable->userptr, keyval, key);
+}
+
 /** returns whether the given element exists in the table */
 SCIP_Bool SCIPhashtableExists(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -607,7 +710,8 @@ SCIP_RETCODE SCIPhashtableRemove(
 
 /** prints statistics about hash table usage */
 void SCIPhashtablePrintStatistics(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHTABLELIST* hashtablelist;
@@ -639,12 +743,12 @@ void SCIPhashtablePrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot",
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 
@@ -665,6 +769,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
    str = (const char*)key;
    sum = 0;
+
    while( *str != '\0' )
    {
       sum *= 31;
@@ -677,7 +782,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 
 
 
-
 /*
  * Hash Map
  */
@@ -686,7 +790,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 static
 SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin,             /**< origin of the mapping origin -> image */
    void*                 image               /**< image of the mapping origin -> image */
    )
@@ -694,10 +798,17 @@ SCIP_RETCODE hashmaplistAppend(
    SCIP_HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    assert(origin != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
+   if( blkmem != NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocMemory(&newlist) );
+   }
+
    newlist->origin = origin;
    newlist->image = image;
    newlist->next = *hashmaplist;
@@ -710,20 +821,28 @@ SCIP_RETCODE hashmaplistAppend(
 static
 void hashmaplistFree(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem              /**< block memory, or NULL */
    )
 {
    SCIP_HASHMAPLIST* list;
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    
    list = *hashmaplist;
    while( list != NULL )
    {
       nextlist = list->next;
-      BMSfreeBlockMemory(blkmem, &list);
+
+      if( blkmem != NULL )
+      {
+         BMSfreeBlockMemory(blkmem, &list);
+      }
+      else
+      {
+         BMSfreeMemory(&list);
+      }
+
       list = nextlist;
    }
 
@@ -774,7 +893,7 @@ void* hashmaplistGetImage(
 static
 SCIP_RETCODE hashmaplistSetImage(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
    )
@@ -799,14 +918,13 @@ SCIP_RETCODE hashmaplistSetImage(
 static
 SCIP_RETCODE hashmaplistRemove(
    SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
    void*                 origin              /**< origin to remove from the list */
    )
 {
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(blkmem != NULL);
    assert(origin != NULL);
 
    while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
@@ -816,7 +934,16 @@ SCIP_RETCODE hashmaplistRemove(
    if( *hashmaplist != NULL )
    {
       nextlist = (*hashmaplist)->next;
-      BMSfreeBlockMemory(blkmem, hashmaplist);
+
+      if( blkmem != NULL )
+      {
+         BMSfreeBlockMemory(blkmem, hashmaplist);
+      }
+      else
+      {
+         BMSfreeMemory(hashmaplist);
+      }
+
       *hashmaplist = nextlist;
    }
 
@@ -824,10 +951,13 @@ SCIP_RETCODE hashmaplistRemove(
 }
 
 
-/** creates a hash map mapping pointers to pointers */
+/** creates a hash map mapping pointers to pointers 
+ *
+ * @note if possible always use a blkmem pointer instead of NULL, otherwise it could slow down the map
+ */
 SCIP_RETCODE SCIPhashmapCreate(
    SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries, or NULL */
    int                   mapsize             /**< size of the hash map */
    )
 {
@@ -862,7 +992,7 @@ void SCIPhashmapFree(
    for( i = 0; i < (*hashmap)->nlists; ++i )
       hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->blkmem);
 
-   /* free main hast map data structure */
+   /* free main hash map data structure */
    BMSfreeMemoryArray(&(*hashmap)->lists);
    BMSfreeMemory(hashmap);
 }
@@ -978,7 +1108,8 @@ SCIP_RETCODE SCIPhashmapRemove(
 
 /** prints statistics about hash map usage */
 void SCIPhashmapPrintStatistics(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_HASHMAPLIST* hashmaplist;
@@ -1010,17 +1141,17 @@ void SCIPhashmapPrintStatistics(
       }
    }
 
-   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
    if( usedslots > 0 )
-      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot", 
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot", 
          (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
-   SCIPmessagePrintInfo("\n");
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
-/** indicates whether an hash map has no entries */
+/** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int i;
@@ -1033,9 +1164,9 @@ SCIP_Bool SCIPhashmapIsEmpty(
    return TRUE;
 }
 
-/** gives the number of entries in an hash map */ 
+/** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int count = 0;
@@ -1048,9 +1179,9 @@ int SCIPhashmapGetNEntries(
    return count;
 }
 
-/** gives the number of lists (buckets) in an hash map */ 
+/** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    assert(hashmap != NULL);
@@ -1058,10 +1189,10 @@ int SCIPhashmapGetNLists(
    return hashmap->nlists;
 }
 
-/** gives a specific list (bucket) in an hash map */
+/** gives a specific list (bucket) in a hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
-   SCIP_HASHMAP*     hashmap,          /**< hash map */
-   int               listindex         /**< index of hash map list */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   int                   listindex           /**< index of hash map list */
 )
 {
    assert(hashmap != NULL);
@@ -1073,7 +1204,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
 
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
 )
 {
    int count = 0;
@@ -1084,9 +1215,9 @@ int SCIPhashmapListGetNEntries(
    return count;
 }
 
-/** retrieves origin of given entry in an hash map */ 
+/** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1094,9 +1225,9 @@ void* SCIPhashmapListGetOrigin(
    return hashmaplist->origin;
 }
 
-/** retrieves image of given entry in an hash map */ 
+/** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1104,9 +1235,9 @@ void* SCIPhashmapListGetImage(
    return hashmaplist->image;
 }
 
-/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1114,9 +1245,9 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    return hashmaplist->next;
 }
 
-/** removes all entries in an hash map. */ 
+/** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
-   SCIP_HASHMAP*     hashmap           /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int listidx;
@@ -1245,9 +1376,12 @@ SCIP_RETCODE SCIPrealarrayExtend(
          for( i = 0; i < realarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0.0;
 
+         /* check for possible overflow or negative value */
+         assert(realarray->maxusedidx - realarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
-            &realarray->vals[realarray->minusedidx - realarray->firstidx],
-            realarray->maxusedidx - realarray->minusedidx + 1);
+            &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -1357,16 +1491,14 @@ SCIP_RETCODE SCIPrealarrayClear(
 
    if( realarray->minusedidx <= realarray->maxusedidx )
    {
-      int i;
-   
       assert(realarray->firstidx <= realarray->minusedidx);
       assert(realarray->maxusedidx < realarray->firstidx + realarray->valssize);
       assert(realarray->firstidx != -1);
       assert(realarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = realarray->minusedidx - realarray->firstidx; i <= realarray->maxusedidx - realarray->firstidx; ++i )
-         realarray->vals[i] = 0.0;
+      BMSclearMemoryArray(&realarray->vals[realarray->minusedidx - realarray->firstidx],
+         realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
 
       /* mark the array cleared */
       realarray->minusedidx = INT_MAX;
@@ -1610,9 +1742,13 @@ SCIP_RETCODE SCIPintarrayExtend(
       {
          for( i = 0; i < intarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0;
+
+         /* check for possible overflow or negative value */
+         assert(intarray->maxusedidx - intarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1);
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -1722,16 +1858,14 @@ SCIP_RETCODE SCIPintarrayClear(
 
    if( intarray->minusedidx <= intarray->maxusedidx )
    {
-      int i;
-   
       assert(intarray->firstidx <= intarray->minusedidx);
       assert(intarray->maxusedidx < intarray->firstidx + intarray->valssize);
       assert(intarray->firstidx != -1);
       assert(intarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = intarray->minusedidx - intarray->firstidx; i <= intarray->maxusedidx - intarray->firstidx; ++i )
-         intarray->vals[i] = 0;
+      BMSclearMemoryArray(&intarray->vals[intarray->minusedidx - intarray->firstidx],
+         intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
 
       /* mark the array cleared */
       intarray->minusedidx = INT_MAX;
@@ -1971,9 +2105,13 @@ SCIP_RETCODE SCIPboolarrayExtend(
       {
          for( i = 0; i < boolarray->minusedidx - newfirstidx; ++i )
             newvals[i] = FALSE;
+
+         /* check for possible overflow or negative value */
+         assert(boolarray->maxusedidx - boolarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1);
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -2053,11 +2191,13 @@ SCIP_RETCODE SCIPboolarrayExtend(
          /* shift used part of array to the left */
          shift = newfirstidx - boolarray->firstidx;
          assert(shift > 0);
-         for( i = boolarray->minusedidx - boolarray->firstidx; i <= boolarray->maxusedidx - boolarray->firstidx; ++i )
-         {
-            assert(0 <= i - shift && i - shift < boolarray->valssize);
-            boolarray->vals[i - shift] = boolarray->vals[i];
-         }
+
+	 assert(0 <= boolarray->minusedidx - boolarray->firstidx - shift);
+         assert(boolarray->maxusedidx - boolarray->firstidx - shift < boolarray->valssize);
+	 BMSmoveMemoryArray(&(boolarray->vals[boolarray->minusedidx - boolarray->firstidx - shift]),
+            &(boolarray->vals[boolarray->minusedidx - boolarray->firstidx]),
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
+
          /* clear the formerly used tail of the array */
          for( i = 0; i < shift; ++i )
             boolarray->vals[boolarray->maxusedidx - boolarray->firstidx - i] = FALSE;
@@ -2083,16 +2223,14 @@ SCIP_RETCODE SCIPboolarrayClear(
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
    {
-      int i;
-   
       assert(boolarray->firstidx <= boolarray->minusedidx);
       assert(boolarray->maxusedidx < boolarray->firstidx + boolarray->valssize);
       assert(boolarray->firstidx != -1);
       assert(boolarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = boolarray->minusedidx - boolarray->firstidx; i <= boolarray->maxusedidx - boolarray->firstidx; ++i )
-         boolarray->vals[i] = FALSE;
+      BMSclearMemoryArray(&boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
+         boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
 
       /* mark the array cleared */
       boolarray->minusedidx = INT_MAX;
@@ -2320,9 +2458,13 @@ SCIP_RETCODE SCIPptrarrayExtend(
       {
          for( i = 0; i < ptrarray->minusedidx - newfirstidx; ++i )
             newvals[i] = NULL;
+
+         /* check for possible overflow or negative value */
+         assert(ptrarray->maxusedidx - ptrarray->minusedidx + 1 > 0);
+
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
-            &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1);
+            &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -2331,7 +2473,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          for( i = 0; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
-
+      
       /* free old memory storage, and set the new array parameters */
       BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
@@ -2432,16 +2574,14 @@ SCIP_RETCODE SCIPptrarrayClear(
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
    {
-      int i;
-   
       assert(ptrarray->firstidx <= ptrarray->minusedidx);
       assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
       assert(ptrarray->firstidx != -1);
       assert(ptrarray->valssize > 0);
 
       /* clear the used part of array */
-      for( i = ptrarray->minusedidx - ptrarray->firstidx; i <= ptrarray->maxusedidx - ptrarray->firstidx; ++i )
-         ptrarray->vals[i] = NULL;
+      BMSclearMemoryArray(&ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
+         ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
 
       /* mark the array cleared */
       ptrarray->minusedidx = INT_MAX;
@@ -2967,9 +3107,27 @@ int SCIPmpqarrayGetMaxIdx(
  * Sorting algorithms
  */
 
+/** default comparer for integers */
+SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt)
+{
+   int value1;
+   int value2;
+
+   value1 = (int)(size_t)elem1;
+   value2 = (int)(size_t)elem2;
+
+   if( value1 < value2 )
+      return -1;
+
+   if( value2 < value1 )
+      return 1;
+
+   return 0;
+}
+
 /* first all upwards-sorting methods */
 
-/** sort an indexed element set, resulting in a permutation index array */
+/** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
 void SCIPsort(
    int*                  perm,               /**< pointer to store the resulting permutation */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -2993,14 +3151,14 @@ void SCIPsort(
 #define SORTTPL_NAMEEXT     Ind
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_INDCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Ptr
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3008,7 +3166,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3016,7 +3174,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3024,7 +3182,15 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3033,7 +3199,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3042,7 +3208,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3051,7 +3217,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3060,7 +3226,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3070,7 +3236,17 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3080,35 +3256,72 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrLongIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrLongIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Real
 #define SORTTPL_KEYTYPE     SCIP_Real
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortRealPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealIntLong
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortRealIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealIntPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealLongRealInt
@@ -3116,8 +3329,15 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Longint
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortRealRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealInt
@@ -3125,7 +3345,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealPtr
@@ -3133,7 +3353,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealBoolPtr
@@ -3142,33 +3362,33 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Int
 #define SORTTPL_KEYTYPE     int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntInt
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntReal
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  SCIP_Real
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3176,7 +3396,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3184,7 +3404,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  void*
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3192,7 +3412,7 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  SCIP_Real
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3200,7 +3420,16 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortIntIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3209,13 +3438,28 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  SCIP_Real
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Long
 #define SORTTPL_KEYTYPE     SCIP_Longint
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtr
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3224,7 +3468,17 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortLongPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortLongPtrPtrBoolInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3234,14 +3488,14 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  int
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 
 /* now all downwards-sorting methods */
 
 
-/** sort an indexed element set, resulting in a permutation index array */
+/** sort an indexed element set in non-increasing order, resulting in a permutation index array */
 void SCIPsortDown(
    int*                  perm,               /**< pointer to store the resulting permutation */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -3267,7 +3521,7 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_INDCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3275,7 +3529,7 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3284,7 +3538,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3293,7 +3547,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3302,8 +3556,15 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownPtrBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrIntInt
@@ -3312,7 +3573,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3322,7 +3583,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3332,7 +3593,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3342,7 +3603,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3353,7 +3614,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownPtrPtrLongInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3364,22 +3625,40 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownPtrPtrLongIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrLongIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownReal
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Bool
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3387,7 +3666,34 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntLong
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtrPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3396,7 +3702,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3406,7 +3712,17 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3416,7 +3732,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3426,7 +3742,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3437,14 +3753,14 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownInt
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3452,15 +3768,22 @@ void SCIPsortDown(
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntPtr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3469,7 +3792,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3478,7 +3801,17 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownIntIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3488,14 +3821,31 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  SCIP_Real
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownLong
 #define SORTTPL_KEYTYPE     SCIP_Longint
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtr
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3505,7 +3855,18 @@ void SCIPsortDown(
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownLongPtrPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrPtrIntInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* SCIPsortDownLongPtrPtrBoolInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
@@ -3516,8 +3877,1362 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  int
 #define SORTTPL_BACKWARDS
-#include "scip/sorttpl.c"
+#include "scip/sorttpl.c" /*lint !e451*/
 
+
+/*
+ * Stair map
+ */
+
+/** creates stair map */
+SCIP_RETCODE SCIPstairmapCreate(
+   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
+   int                   upperbound,         /**< upper bound of the stairmap */
+   int                   ntimepoints         /**< minimum size to ensure */
+   )
+{
+   assert(stairmap != NULL);
+   assert(upperbound > 0);
+   assert(ntimepoints > 0);
+
+   SCIP_ALLOC( BMSallocMemory(stairmap) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->timepoints, ntimepoints) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->freecapacities, ntimepoints) );
+
+   /* setup cumulative stairmap for use */
+   (*stairmap)->ntimepoints = 2;
+   (*stairmap)->timepoints[0] = 0;
+   (*stairmap)->timepoints[1] = INT_MAX;
+   (*stairmap)->freecapacities[0] = upperbound;
+   (*stairmap)->freecapacities[1] = 0;
+   (*stairmap)->arraysize = ntimepoints;
+
+   return SCIP_OKAY;
+}
+
+/** frees given stair map */
+void SCIPstairmapFree(
+   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
+   )
+{
+   assert(stairmap != NULL);
+   assert(*stairmap != NULL);
+
+   /* free main hash map data structure */
+   BMSfreeMemoryArray(&(*stairmap)->freecapacities);
+   BMSfreeMemoryArray(&(*stairmap)->timepoints);
+   BMSfreeMemory(stairmap);
+}
+
+/** resizes the stair map arrays */
+SCIP_RETCODE SCIPstairmapResize(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
+   int                   ntimepoints         /**< minimum size to ensure */
+   )
+{
+   assert(stairmap != NULL);
+   assert(ntimepoints >= 0);
+   assert(stairmap->timepoints != NULL);
+   assert(stairmap->freecapacities != NULL);
+
+   if( stairmap->ntimepoints >= ntimepoints )
+      return SCIP_OKAY;
+
+   /* grow arrays of times and free capacity */
+   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->timepoints, ntimepoints) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->freecapacities, ntimepoints) );
+   stairmap->arraysize = ntimepoints;
+
+   return SCIP_OKAY;
+}
+
+/** output of the given stair map */
+void SCIPstairmapPrint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int t;
+
+   for( t = 0; t < stairmap->ntimepoints; ++t )
+   {
+      SCIPmessageFPrintInfo(messagehdlr, file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]);
+   }
+
+   SCIPmessageFPrintInfo(messagehdlr, file,"\n");
+}
+
+/** returns if the given time point exists in the stair map and stores the position of the given time point if it
+ *  exists; otherwise the position of the next smaller existing time point is stored
+ */
+static
+SCIP_Bool stairmapFindLeft(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to search */
+   int                   timepoint,          /**< time point to search for */
+   int*                  pos                 /**< pointer to store the position */
+   )
+{
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(stairmap->ntimepoints > 0);
+   assert(stairmap->timepoints[0] == 0);
+
+   /* find the position of time point in the time points array via binary search */
+   if( SCIPsortedvecFindInt(stairmap->timepoints, timepoint, stairmap->ntimepoints, pos) )
+      return TRUE;
+
+   assert(*pos > 0);
+   (*pos)--;
+
+   return FALSE;
+}
+
+/** inserts the given time point into the stairmap if it this time point does not exists yet; returns its position in the
+ *  time point array
+ */
+static
+int stairmapInsertTimepoint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to insert the time point */
+   int                   timepoint           /**< time point to insert */
+   )
+{
+   int pos;
+
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+
+   if( timepoint == 0 )
+      return 0;
+
+   /* get the position of the given time point in the stair map array if it exists; otherwise the position of the next
+    * smaller existing time point
+    */
+   if( stairmapFindLeft(stairmap, timepoint, &pos) )
+   {
+      /* if the time point exists return the corresponding position */
+      assert(pos >= 0 && pos < stairmap->ntimepoints);
+      return pos;
+   }
+
+   assert(pos >= 0 && pos < stairmap->ntimepoints);
+   assert(timepoint >= stairmap->timepoints[pos]);
+   assert(pos + 1 < stairmap->arraysize);
+
+   /* insert new time point into the (sorted) stair map */
+   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos],
+      &stairmap->ntimepoints, NULL);
+
+#ifndef NDEBUG
+   /* check if the time points are sorted */
+   {
+      int i;
+      for( i = 1; i < stairmap->ntimepoints; ++i )
+         assert(stairmap->timepoints[i-1] < stairmap->timepoints[i]);
+   }
+#endif
+
+   return pos+1;
+}
+
+/** updates the stair map due to inserting of a stair */
+static
+void stairmapUpdate(
+   SCIP_STAIRMAP*        stairmap,           /**< stairmap to update */
+   int                   left,               /**< left side of stair interval */
+   int                   right,              /**< right side of stair interval */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
+   )
+{
+   int startpos;
+   int endpos;
+   int i;
+
+   assert(stairmap != NULL);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+   assert(left >= 0);
+   assert(left < right);
+   assert(infeasible != NULL);
+
+   (*infeasible) = FALSE;
+
+   /* get position of the starttime in stairmap */
+   startpos = stairmapInsertTimepoint(stairmap, left);
+   assert(stairmap->timepoints[startpos] == left);
+
+   /* get position of the endtime in stairmap */
+   endpos = stairmapInsertTimepoint(stairmap, right);
+   assert(stairmap->timepoints[endpos] == right);
+
+   assert(startpos < endpos);
+   assert(stairmap->arraysize >= stairmap->ntimepoints);
+
+   /* remove/add the given height from the stair map */
+   for( i = startpos; i < endpos; ++i )
+   {
+      stairmap->freecapacities[i] -= height;
+
+      if( stairmap->freecapacities[i] < 0 )
+      {
+         *infeasible = TRUE;
+
+         /* remove infeasible stair */
+         for( ; i >= startpos; --i ) /*lint !e445*/
+            stairmap->freecapacities[i] += height;
+
+         break;
+      }
+   }
+}
+
+/** insert a stair into stair map; if stair is non-empty the stair map will be updated otherwise nothing happens */
+void SCIPstairmapInsertStair(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer to store if the stair does not fit due to capacity */
+   )
+{
+   assert(stairmap != NULL);
+   assert(left < right);
+   assert(infeasible != NULL);
+
+   (*infeasible) = FALSE;
+
+   /* insert stair into the stair map */
+   SCIPdebugMessage("insert stair [%d,%d] with height %d\n", left, right, height);
+
+   /* try to insert stair into the stair map */
+   stairmapUpdate(stairmap, left, right, height, infeasible);
+}
+
+/** subtracts the height from the stair map during stair time */
+void SCIPstairmapDeleteStair(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   left,               /**< left side of the stair  */
+   int                   right,              /**< right side of the stair */
+   int                   height              /**< height of the stair */
+   )
+{
+   SCIP_Bool infeasible;
+
+   assert(left < right);
+#ifndef NDEBUG
+   {
+      /* check if the begin and end time points of the stair correspond to a time point in the stairmap; this should be
+       * the case since we added the stair before to the stair map
+       */
+      int pos;
+      assert(stairmapFindLeft(stairmap, left, &pos));
+      assert(stairmapFindLeft(stairmap, right, &pos));
+   }
+#endif
+
+      /* remove the stair from the current stair map */
+      SCIPdebugMessage("delete stair [%d,%d] with height %d\n", left, right, height);
+
+      stairmapUpdate(stairmap, left, right, -height, &infeasible);
+      assert(!infeasible);
+}
+
+/** returns the time point at the given position */
+int SCIPstairmapGetTimepoint(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   pos                 /**< position */
+   )
+{
+   assert(stairmap != NULL);
+   assert(pos < stairmap->ntimepoints);
+
+   return stairmap->timepoints[pos];
+}
+
+/** returns TRUE if the stair  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
+SCIP_Bool SCIPstairmapIsFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   timepoint,          /**< time point to start */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   int*                  pos                 /**< pointer to store the earliest position where the stair does not fit */
+   )
+{
+   int endtime;
+   int startpos;
+   int endpos;
+   int p;
+
+   assert(stairmap != NULL);
+   assert(timepoint >= 0);
+   assert(height >= 0);
+   assert(pos != NULL);
+
+   if( duration == 0 )
+      return TRUE;
+
+   endtime = timepoint + duration;
+
+   /* check if the activity fits at timepoint */
+   (void)stairmapFindLeft(stairmap, timepoint, &startpos);
+
+   if( !stairmapFindLeft(stairmap, endtime, &endpos) )
+      endpos++;
+
+   assert(stairmap->timepoints[startpos] <= timepoint);
+   assert(stairmap->timepoints[endpos] >= endtime);
+
+   for( p = startpos; p < endpos; ++p )
+   {
+      if( stairmap->freecapacities[p] < height )
+      {
+         (*pos) = p;
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+/** return the earliest possible starting point within the time interval [lb,ub] for a given stair (given by its height
+ *  and duration)
+ */
+int SCIPstairmapGetEarliestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest starting time of the given stair */
+   int                   ub,                 /**< latest starting time of the given stair */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+   )
+{
+   int starttime;
+   int pos;
+
+   assert(stairmap != NULL);
+   assert(lb >= 0);
+   assert(duration >= 0);
+   assert(height >= 0);
+   assert(infeasible != NULL);
+   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
+
+   if( lb > ub )
+   {
+      *infeasible = TRUE;
+      return lb;
+   }
+
+   if( duration == 0 || height == 0 )
+   {
+      *infeasible = FALSE;
+      return lb;
+   }
+
+   starttime = lb;
+
+   (void)stairmapFindLeft(stairmap, starttime, &pos);
+   assert(stairmap->timepoints[pos] <= starttime);
+
+   (*infeasible) = TRUE;
+
+   while( (*infeasible) && starttime <= ub )
+   {
+      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
+      {
+         (*infeasible) = FALSE;
+         return starttime;
+      }
+
+      /* the stair did not fit into the stair map since at time point "pos" not enough capacity is available; therefore we
+       * can proceed with the next time point
+       */
+      assert(stairmap->freecapacities[pos] < height);
+      pos++;
+
+      /* check if we exceed the time point array */
+      if( pos >= stairmap->ntimepoints )
+         break;
+
+      starttime = stairmap->timepoints[pos];
+   }
+
+   assert(*infeasible || starttime <= ub);
+   return starttime;
+}
+
+/** return the latest possible starting point within the time interval [lb,ub] for a given stair (given by its height and
+ *  duration)
+ */
+int SCIPstairmapGetLatestFeasibleStart(
+   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+   int                   lb,                 /**< earliest possible start point */
+   int                   ub,                 /**< latest possible start point */
+   int                   duration,           /**< duration of the stair */
+   int                   height,             /**< height of the stair */
+   SCIP_Bool*            infeasible          /**< pointer store if the stair cannot be inserted */
+   )
+{
+   int starttime;
+   int pos;
+
+   assert(stairmap != NULL);
+   assert(lb >= 0);
+   assert(lb <= ub);
+   assert(duration >= 0);
+   assert(height >= 0);
+   assert(infeasible != NULL);
+   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
+
+   if( duration == 0 || height == 0 )
+      return ub;
+
+   starttime = ub;
+   (void)stairmapFindLeft(stairmap, starttime, &pos);
+   assert(stairmap->timepoints[pos] <= starttime);
+
+   (*infeasible) = TRUE;
+
+   while( (*infeasible) && starttime >= lb )
+   {
+      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
+      {
+         (*infeasible) = FALSE;
+         return starttime;
+      }
+      assert(pos >= 0);
+
+      /* the stair did not fit into the stair map since at time point "pos" not enough capacity is available; therefore
+       * we can proceed with the next time point
+       */
+      assert(stairmap->freecapacities[pos] < height);
+
+      starttime = stairmap->timepoints[pos] - duration;
+   }
+
+   assert(*infeasible || starttime >= lb);
+
+   return starttime;
+}
+
+/*
+ * Directed graph
+ */
+
+/** creates directed graph structure */
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   assert(digraph != NULL);
+   assert(nnodes > 0);
+
+   SCIP_ALLOC( BMSallocMemory(digraph) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodes, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodessize, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nadjnodes, nnodes) );
+
+   /* store number of nodes */
+   (*digraph)->nnodes = nnodes;
+   (*digraph)->ncomponents = 0;
+   (*digraph)->componentstartsize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+SCIP_RETCODE SCIPdigraphSetSizes(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  sizes               /**< sizes of the adjacency lists */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
+
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[i], sizes[i]) );
+      digraph->adjnodessize[i] = sizes[i];
+      digraph->nadjnodes[i] = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees given directed graph structure */
+void SCIPdigraphFree(
+   SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(*digraph != NULL);
+
+   for( i = 0; i < (*digraph)->nnodes; ++i )
+   {
+      assert(((*digraph)->adjnodessize == 0) == ((*digraph)->adjnodes == NULL));
+      if( (*digraph)->adjnodessize[i] > 0 )
+      {
+         BMSfreeMemoryArray(&(*digraph)->adjnodes[i]);
+      }
+   }
+
+   /* free components structure */
+   SCIPdigraphFreeComponents(*digraph);
+   assert((*digraph)->ncomponents == 0);
+   assert((*digraph)->componentstartsize == 0);
+
+   /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->adjnodessize);
+   BMSfreeMemoryArray(&(*digraph)->nadjnodes);
+   BMSfreeMemoryArray(&(*digraph)->adjnodes);
+   BMSfreeMemory(digraph);
+}
+
+#define STARTADJNODESSIZE 5
+
+/* ensures that adjnodes array of one node in a directed graph is big enough */
+static
+SCIP_RETCODE ensureAdjnodesSize(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   idx,                /**< index for which the size is ensured */
+   int                   newsize             /**< needed size */
+   )
+{
+   assert(digraph != NULL);
+   assert(idx >= 0);
+   assert(idx < digraph->nnodes);
+   assert(newsize > 0);
+
+   /* check whether array is big enough, and realloc, if needed */
+   if( newsize > digraph->adjnodessize[idx] )
+   {
+      if( digraph->adjnodessize[idx] == 0 )
+      {
+         digraph->adjnodessize[idx] = STARTADJNODESSIZE;
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
+      }
+      else
+      {
+         digraph->adjnodessize[idx] = 2 * digraph->adjnodessize[idx];
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** add (directed) edge to the directed graph structure
+ *  @note: if the edge is already contained, it is added a second time
+ */
+SCIP_RETCODE SCIPdigraphAddEdge(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   )
+{
+   assert(digraph != NULL);
+   assert(startnode >= 0);
+   assert(endnode >= 0);
+   assert(startnode < digraph->nnodes);
+   assert(endnode < digraph->nnodes);
+
+   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
+
+   /* add edge */
+   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
+   digraph->nadjnodes[startnode]++;
+
+   return SCIP_OKAY;
+}
+
+/** add (directed) edge to the directed graph structure, if it is not contained, yet */
+SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< start node of the edge */
+   int                   endnode             /**< start node of the edge */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(startnode >= 0);
+   assert(endnode >= 0);
+   assert(startnode < digraph->nnodes);
+   assert(endnode < digraph->nnodes);
+
+   for( i = 0; i < digraph->nadjnodes[startnode]; ++i )
+      if( digraph->adjnodes[startnode][i] == endnode )
+         return SCIP_OKAY;
+
+   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
+
+   /* add edge */
+   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
+   digraph->nadjnodes[startnode]++;
+
+   return SCIP_OKAY;
+}
+
+/** returns the number of edges originating at the given node */
+int SCIPdigraphGetNOutEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the number of outgoing edges is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nadjnodes[node] >= 0);
+   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
+
+   return digraph->nadjnodes[node];
+}
+
+/** returns the array of edges originating at the given node; this array must not be changed from outside */
+int* SCIPdigraphGetOutEdges(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing edges is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nadjnodes[node] >= 0);
+   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
+   assert((digraph->nadjnodes[node] == 0) || (digraph->adjnodes[node] != NULL));
+
+   return digraph->adjnodes[node];
+}
+
+/** performs depth-first-search in the given directed graph from the given start node */
+static
+void depthFirstSearch(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stackadjvisited,    /**< array of size number of nodes to store the number of adjacent nodes already visited
+                                              *   for each node on the stack; only needed for performance reasons */
+   int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse dfs order */
+   int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
+   )
+{
+   int stacksize;
+   int currnode;
+
+   assert(digraph != NULL);
+   assert(startnode >= 0);
+   assert(startnode < digraph->nnodes);
+   assert(visited != NULL);
+   assert(visited[startnode] == FALSE);
+   assert(dfsstack != NULL);
+   assert(dfsnodes != NULL);
+   assert(ndfsnodes != NULL);
+
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stackadjvisited[0] = 0;
+   stacksize = 1;
+
+   while( stacksize > 0 )
+   {
+      /* get next node from stack */
+      currnode = dfsstack[stacksize - 1];
+
+      /* mark current node as visited */
+      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      visited[currnode] = TRUE;
+
+      /* iterate through the adjacency list until we reach unhandled node */
+      while( stackadjvisited[stacksize - 1] < digraph->nadjnodes[currnode]
+         && visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]] )
+      {
+         stackadjvisited[stacksize - 1]++;
+      }
+
+      /* the current node was completely handled, remove it from stack */
+      if( stackadjvisited[stacksize - 1] == digraph->nadjnodes[currnode] )
+      {
+         stacksize--;
+
+         /* store node in the sorted nodes array */
+         dfsnodes[(*ndfsnodes)] = currnode;
+         (*ndfsnodes)++;
+      }
+      /* handle next unhandled adjacent node */
+      else
+      {
+         assert(!visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]]);
+
+         /* put the adjacent node onto the stack */
+         dfsstack[stacksize] = digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]];
+         stackadjvisited[stacksize] = 0;
+         stackadjvisited[stacksize - 1]++;
+         stacksize++;
+         assert(stacksize <= digraph->nnodes);
+      }
+   }
+}
+
+/** Compute undirected connected components on the given graph.
+ *
+ *  @note For each edge, its reverse is added, so the graph does not need
+ *        to be the directed representation of an undirected graph.
+ */
+SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   minsize,            /**< all components with less nodes are ignored */
+   int*                  components,         /**< array with as many slots as there are nodes in the directed graph
+                                              *   to store for each node the component to which it belongs
+                                              *   (components are numbered 0 to ncomponents - 1); or NULL, if components
+                                              *   are accessed one-by-one using SCIPdigraphGetComponent() */
+   int*                  ncomponents         /**< pointer to store the number of components; or NULL, if the
+                                              *   number of components is accessed by SCIPdigraphGetNComponents() */
+   )
+{
+   SCIP_Bool* visited;
+   int* ndirectedadjnodes;
+   int* stackadjvisited;
+   int* dfsstack;
+   int ndfsnodes;
+   int compstart;
+   int v;
+   int i;
+   int j;
+
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
+
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 10;
+
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
+
+   digraph->componentstarts[0] = 0;
+
+   /* store the number of directed arcs per node */
+   BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
+
+   /* add reverse edges to the graph */
+   for( i = digraph->nnodes - 1; i>= 0; --i )
+   {
+      for( j = 0; j < ndirectedadjnodes[i]; ++j )
+      {
+         SCIP_CALL( SCIPdigraphAddEdge(digraph, digraph->adjnodes[i][j], i) );
+      }
+   }
+
+   for( v = 0; v < digraph->nnodes; ++v )
+   {
+      if( visited[v] )
+         continue;
+
+      compstart = digraph->componentstarts[digraph->ncomponents];
+      ndfsnodes = 0;
+      depthFirstSearch(digraph, v, visited, dfsstack, stackadjvisited,
+         &digraph->components[compstart], &ndfsnodes);
+
+      /* forget about this component if it is too small */
+      if( ndfsnodes >= minsize )
+      {
+         digraph->ncomponents++;
+
+         /* enlarge componentstartsize array, if needed */
+         if( digraph->ncomponents >= digraph->componentstartsize )
+         {
+            digraph->componentstartsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < digraph->componentstartsize);
+
+            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+         }
+         digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
+
+         /* store component number for contained nodes if array was given */
+         if( components != NULL )
+         {
+            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >=  compstart; --i )
+            {
+               components[digraph->components[i]] = digraph->ncomponents - 1;
+            }
+         }
+      }
+   }
+
+   /* restore the number of directed arcs per node */
+   BMScopyMemoryArray(digraph->nadjnodes, ndirectedadjnodes, digraph->nnodes);
+   BMSclearMemoryArray(visited, digraph->nnodes);
+
+   /* return number of components, if the pointer was given */
+   if( ncomponents != NULL )
+      (*ncomponents) = digraph->ncomponents;
+
+   BMSfreeMemoryArray(&ndirectedadjnodes);
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
+   BMSfreeMemoryArray(&visited);
+
+   return SCIP_OKAY;
+}
+
+/** Performes an (almost) topological sort on the undirected components of the directed graph.
+ *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+ *
+ *  Note, that in general a topological sort is not unique.
+ *  Note, that there might be directed cycles, that are randomly broken,
+ *  which is the reason for having only almost topologically sorted arrays.
+ */
+SCIP_RETCODE SCIPdigraphTopoSortComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   SCIP_Bool* visited;
+   int* comps;
+   int* compstarts;
+   int* stackadjvisited;
+   int* dfsstack;
+   int* dfsnodes;
+   int ndfsnodes;
+   int ncomps;
+   int i;
+   int j;
+   int k;
+   int endidx;
+
+   assert(digraph != NULL);
+
+   ncomps = digraph->ncomponents;
+   comps = digraph->components;
+   compstarts = digraph->componentstarts;
+
+   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+
+   /* sort the components (almost) topologically */
+   for( i = 0; i < ncomps; ++i )
+   {
+      endidx = compstarts[i+1] - 1;
+      ndfsnodes = 0;
+      for( j = compstarts[i]; j < compstarts[i+1]; ++j )
+      {
+         if( visited[comps[j]] )
+            continue;
+
+         /* perform depth first search, nodes visited in this call are appended to the list dfsnodes in reverse
+          * dfs order, after the nodes already contained;
+          * so at every point in time, the nodes in dfsnode are in reverse (almost) topological order
+          */
+         depthFirstSearch(digraph, comps[j], visited, dfsstack, stackadjvisited, dfsnodes, &ndfsnodes);
+      }
+      assert(endidx - ndfsnodes == compstarts[i] - 1);
+
+      /* copy reverse (almost) topologically sorted array of nodes reached by the dfs searches;
+       * reverse their order to get an (almost) topologically sort
+       */
+      for( k = 0; k < ndfsnodes; ++k )
+      {
+         digraph->components[endidx - k] = dfsnodes[k];
+      }
+   }
+
+   BMSfreeMemoryArray(&stackadjvisited);
+   BMSfreeMemoryArray(&dfsstack);
+   BMSfreeMemoryArray(&dfsnodes);
+   BMSfreeMemoryArray(&visited);
+
+   return SCIP_OKAY;
+}
+
+/** returns the number of previously computed undirected components for the given directed graph */
+int SCIPdigraphGetNComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+   assert(digraph->componentstartsize > 0); /* components should have been computed */
+
+   return digraph->ncomponents;
+}
+
+/** Returns the previously computed undirected component of the given number for the given directed graph.
+ *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
+ */
+void SCIPdigraphGetComponent(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the component to return */
+   int**                 nodes,              /**< pointer to store the nodes in the component; or NULL, if not needed */
+   int*                  nnodes              /**< pointer to store the number of nodes in the component;
+                                              *   or NULL, if not needed */
+   )
+{
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+   assert(nodes != NULL || nnodes != NULL);
+
+   if( nodes != NULL )
+      (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
+   if( nnodes != NULL )
+      (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+}
+
+/** frees the component information for the given directed graph */
+void SCIPdigraphFreeComponents(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   assert(digraph != NULL);
+
+   /* free components structure */
+   if( digraph->componentstartsize > 0 )
+   {
+      BMSfreeMemoryArray(&digraph->componentstarts);
+      BMSfreeMemoryArray(&digraph->components);
+   }
+   digraph->ncomponents = 0;
+   digraph->componentstartsize = 0;
+}
+
+
+/*
+ * Binary search tree
+ */
+
+/** creates a search node for a binary search tree */
+static
+SCIP_RETCODE bstnodeCreateEmpty(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< pointer to store the created search node */
+   )
+{
+   SCIP_ALLOC( BMSallocBlockMemory(tree->blkmem, node) );
+
+   (*node)->parent = NULL;
+   (*node)->left = NULL;
+   (*node)->right = NULL;
+   (*node)->key = NULL;
+   (*node)->dataptr = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** creates a search tree node with (optinal) sorting value and user data */
+SCIP_RETCODE SCIPbstnodeCreate(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
+   void*                 key,                /**< sorting key, or NULL */
+   void*                 dataptr             /**< user node data pointer, or NULL */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+
+   SCIP_CALL( bstnodeCreateEmpty(tree, node) );
+
+   assert((*node)->parent == NULL);
+   assert((*node)->left == NULL);
+   assert((*node)->right == NULL);
+
+   /* initialize search key and user data */
+   (*node)->key = key;
+   (*node)->dataptr = dataptr;
+
+   return SCIP_OKAY;
+}
+
+/** frees a search tree leaf */
+static
+void bstnodeFreeLeaf(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< pointer to search node which has to be freed */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
+
+   assert((*node)->left == NULL);
+   assert((*node)->right == NULL);
+
+   /* remove reference from parent node */
+   if( (*node)->parent != NULL )
+   {
+      assert((*node)->parent->left == *node || ((*node)->parent->right == *node));
+
+      if( (*node)->parent->left == *node )
+         (*node)->parent->left = NULL;
+      else
+      {
+         assert((*node)->parent->right == *node);
+         (*node)->parent->right = NULL;
+      }
+   }
+
+   BMSfreeBlockMemory(tree->blkmem, node);
+   assert(*node == NULL);
+}
+
+/** frees the search node including the rooted subtree
+ *
+ *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
+ */
+void SCIPbstnodeFree(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE**        node                /**< search node to be freed */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
+
+   if( (*node)->left != NULL )
+   {
+      SCIPbstnodeFree(tree, &(*node)->left);
+      assert((*node)->left == NULL);
+   }
+
+   if( (*node)->right != NULL )
+   {
+      SCIPbstnodeFree(tree, &(*node)->right);
+      assert((*node)->right == NULL);
+   }
+
+   bstnodeFreeLeaf(tree, node);
+   assert(*node == NULL);
+}
+
+/** returns whether the search node is a leaf */
+SCIP_Bool SCIPbstnodeIsLeaf(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->left == NULL && node->right == NULL);
+}
+
+/** returns the user data pointer stored in that search node */
+void* SCIPbstnodeGetData(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->dataptr;
+}
+
+/** returns the key of the search node */
+void* SCIPbstnodeGetKey(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->key;
+}
+
+/** returns the parent which can be NULL if the given node is the root */
+SCIP_BSTNODE* SCIPbstnodeGetParent(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->parent;
+}
+
+/** returns left child which can be NULL if the given node is a leaf */
+SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->left;
+}
+
+/** returns right child which can be NULL if the given node is a leaf */
+SCIP_BSTNODE* SCIPbstnodeGetRightchild(
+   SCIP_BSTNODE*         node                /**< search node */
+   )
+{
+   assert(node != NULL);
+
+   return node->right;
+}
+
+/** sets the give node data
+ *
+ *  @note The old user pointer is not freed.
+ */
+void SCIPbstnodeSetData(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 dataptr             /**< node user data pointer */
+   )
+{
+   assert(node != NULL);
+
+   node->dataptr = dataptr;
+}
+
+/** sets the key to the search node
+ *
+ *  @note The old key pointer is not freed.
+ */
+void SCIPbstnodeSetKey(
+   SCIP_BSTNODE*         node,               /**< search node */
+   void*                 key                 /**< key value */
+   )
+{
+   assert(node != NULL);
+
+   node->key = key;
+}
+
+/** sets parent node
+ *
+ *  @note The old parent including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetParent(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->parent = parent;
+}
+
+/** sets left child
+ *
+ *  @note The old left child including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetLeftchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         left                /**< new left child, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->left = left;
+}
+
+/** sets right child
+ *
+ *  @note The old right child including the rooted subtree is not delete.
+ */
+void SCIPbstnodeSetRightchild(
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_BSTNODE*         right               /**< new right child, or NULL */
+   )
+{
+   assert(node != NULL);
+
+   node->right = right;
+}
+
+/** creates an binary search tree */
+SCIP_RETCODE SCIPbstCreate(
+   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
+   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
+   )
+{
+   assert(tree != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(tree) );
+   (*tree)->blkmem = blkmem;
+   (*tree)->root = NULL;
+   (*tree)->inserter = inserter;
+   (*tree)->deleter = deleter;
+   (*tree)->comparer = comparer;
+
+   return SCIP_OKAY;
+}
+
+/** frees binary search tree
+ *
+ *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
+ */
+void SCIPbstFree(
+   SCIP_BST**            tree                /**< pointer to binary search tree */
+   )
+{
+   assert(tree != NULL);
+
+   if( (*tree)->root != NULL )
+   {
+      SCIPbstnodeFree(*tree, &((*tree)->root));
+   }
+
+   BMSfreeMemory(tree);
+}
+
+/** returns whether the binary search tree is empty (has no nodes) */
+SCIP_Bool SCIPbstIsEmpty(
+   SCIP_BST*             tree                /**< binary search tree */
+   )
+{
+   assert(tree != NULL);
+
+   return (tree->root == NULL);
+}
+
+/** returns the the root node of the binary search or NULL if the binary search tree is empty */
+SCIP_BSTNODE* SCIPbstGetRoot(
+   SCIP_BST*             tree                /**< tree to be evaluated */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->root;
+}
+
+/** sets root node
+ *
+ *  @note The old root including the rooted subtree is not delete.
+ */
+void SCIPbstSetRoot(
+   SCIP_BST*             tree,               /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                /**< new root, or NULL */
+   )
+{
+   assert(tree != NULL);
+
+   tree->root = root;
+}
+
+/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method; */
+SCIP_RETCODE SCIPbstInsert(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(node->key != NULL);
+   assert(inserted != NULL);
+
+   (*inserted) = FALSE;
+
+   if( tree->inserter != NULL )
+   {
+      SCIP_CALL( (*tree->inserter)(tree, node, inserted) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
+SCIP_RETCODE SCIPbstDelete(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node */
+   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
+   )
+{
+   assert(tree != NULL);
+   assert(node != NULL);
+   assert(deleted != NULL);
+
+   (*deleted) = FALSE;
+
+   if( tree->deleter != NULL )
+   {
+      SCIP_CALL( (*tree->deleter)(tree, node, deleted) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** compares to search nodes using the search tree comparer */
+int SCIPbstComp(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node1,              /**< search node 1 */
+   SCIP_BSTNODE*         node2               /**< search node 2 */
+   )
+{
+   assert(tree != NULL);
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   assert(tree->comparer != NULL);
+
+   return (*tree->comparer)(node1, node2);
+}
+
+/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
+ *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
+ *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
+ *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
+ */
+SCIP_BSTNODE* SCIPbstFindInsertNode(
+   SCIP_BST*             tree,               /**< binary search tree */
+   SCIP_BSTNODE*         node,               /**< search node to find */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   )
+{
+   return SCIPbstFindKey(tree, node->key, found);
+}
+
+/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
+ *  return. If a search node with the same key exists, the method returns the last search node and sets the found
+ *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
+ *  which is smaller than the given one and sets the found pointer to FALSE.
+ */
+SCIP_BSTNODE* SCIPbstFindKey(
+   SCIP_BST*             tree,               /**< binary search tree */
+   void*                 key,                /**< key value */
+   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
+   )
+{
+   SCIP_BSTNODE* node;
+
+   assert(tree != NULL);
+   assert(key != NULL);
+   assert(found != NULL);
+
+   (*found) = FALSE;
+
+   if(!SCIPbstIsEmpty(tree) )
+      return NULL;
+
+   node = tree->root;
+
+   while( !SCIPbstnodeIsLeaf(node) )
+   {
+      if( (*tree->comparer)(key, node->key) < 0 )
+      {
+         if( node->left == NULL )
+            break;
+
+         node = node->left;
+      }
+      else
+      {
+         if( node->right == NULL )
+            break;
+
+         node = node->right;
+      }
+   }
+
+   return node;
+}
 
 /*
  * Numerical methods
@@ -3561,12 +5276,12 @@ SCIP_Longint SCIPcalcGreComDiv(
    /* if val1 is even, divide it by 2 */
    while( !(val1 & 1) )
    {
-      val1 >>= 1;
+      val1 >>= 1; /*lint !e704*/
       
-      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      /* if val2 is even too, divide it by 2 and increase t(=number of e) */
       if( !(val2 & 1) )
       {
-         val2 >>= 1;
+         val2 >>= 1; /*lint !e704*/
          ++t;
       }
       /* only val1 can be odd */
@@ -3574,25 +5289,26 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* while val1 is even, divide it by 2 */
          while( !(val1 & 1) )
-            val1 >>= 1;
+            val1 >>= 1; /*lint !e704*/
          
          break;
       }
    }
    /* while val2 is even, divide it by 2 */
    while( !(val2 & 1) )
-      val2 >>= 1;
+      val2 >>= 1; /*lint !e704*/
    
    /* val1 and val 2 are odd */
-   while (val1 != val2)
-      if (val1 > val2)
+   while( val1 != val2 )
+   {
+      if( val1 > val2 )
       {
          val1 -= val2;
          /* val1 is now even, divide it by 2  */
          do 
          {
-            val1 >>= 1;
-         } while ( !(val1 & 1) );
+            val1 >>= 1;   /*lint !e704*/
+         } while( !(val1 & 1) );
       }
       else 
       {
@@ -3600,11 +5316,12 @@ SCIP_Longint SCIPcalcGreComDiv(
          /* val2 is now even, divide it by 2  */
          do 
          {
-            val2 >>= 1;
-         } while ( !(val2 & 1) );
+            val2 >>= 1;  /*lint !e704*/
+         } while( !(val2 & 1) );
       }
+   }
 
-   return (val1 << t);
+   return (val1 << t);  /*lint !e703*/
 }
 
 /** calculates the smallest common multiple of the two given values */
@@ -3798,6 +5515,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
+   SCIP_Real bestscalar;
    SCIP_Longint gcd;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -3806,12 +5524,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real minval;
    SCIP_Real absval;
    SCIP_Real scaleval;
-   SCIP_Real twomultval;
    SCIP_Bool scalable;
-   SCIP_Bool twomult;
    SCIP_Bool rational;
    int c;
    int s;
+   int i;
 
    assert(vals != NULL);
    assert(nvals >= 0);
@@ -3850,86 +5567,66 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    }
    assert(minval > MIN(-mindelta, maxdelta));
 
-   /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
-   scalable = TRUE;
-   scaleval = 1.0/minval;
-   for( c = 0; c < nvals && scalable; ++c )
-   {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-    
-      absval = REALABS(val);
-      while( scaleval <= maxscale
-         && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-      {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-            {
-               scaleval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            scaleval *= 2.0;
-      }
-      scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
-         val, scaleval, val*scaleval, scalable);
-   }
-   if( scalable )
-   {
-      /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
-      assert(scaleval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = scaleval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
-      
-      return SCIP_OKAY;
-   }
+   bestscalar = SCIP_INVALID;
 
-   /* try, if values can be made integral by multiplying them by a power of 2 */
-   twomult = TRUE;
-   twomultval = 1.0;
-   for( c = 0; c < nvals && twomult; ++c )
+   for( i = 0; i < 2; ++i )
    {
-      /* check, if the value can be scaled with a simple scalar */
-      val = vals[c];
-      if( val == 0.0 ) /* zeros are allowed in the vals array */
-         continue;
-      
-      absval = REALABS(val);
-      while( twomultval <= maxscale
-         && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta)) )
+      scalable = TRUE;
+
+      /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
+      if( i == 0 )
+	 scaleval = 1.0/minval;
+      /* try, if values can be made integral by multiplying them by a power of 2 */
+      else
+	 scaleval = 1.0;
+
+      for( c = 0; c < nvals && scalable; ++c )
       {
-         for( s = 0; s < nscalars; ++s )
-         {
-            if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta) )
-            {
-               twomultval *= scalars[s];
-               break;
-            }
-         }
-         if( s >= nscalars )
-            twomultval *= 2.0;
+	 /* check, if the value can be scaled with a simple scalar */
+	 val = vals[c];
+	 if( val == 0.0 ) /* zeros are allowed in the vals array */
+	    continue;
+
+	 absval = REALABS(val);
+	 while( scaleval <= maxscale
+	    && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+	 {
+	    for( s = 0; s < nscalars; ++s )
+	    {
+	       if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+	       {
+		  scaleval *= scalars[s];
+		  break;
+	       }
+	    }
+	    if( s >= nscalars )
+	       scaleval *= 2.0;
+	 }
+	 scalable = (scaleval <= maxscale);
+	 SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
+	    val, scaleval, val*scaleval, scalable);
       }
-      twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
-         val, twomultval, val*twomultval, twomult);
-   }
-   if( twomult )
-   {
-      /* make values integral by multiplying them with a power of 2 */
-      assert(twomultval <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = twomultval;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
-      
-      return SCIP_OKAY;
+      if( scalable )
+      {
+	 /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+	 assert(scaleval <= maxscale);
+
+	 /* check if we found a better scaling value */
+	 if( scaleval < bestscalar )
+	    bestscalar = scaleval;
+
+	 SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
+
+	 /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
+	 if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
+	 {
+	    if( intscalar != NULL )
+	       *intscalar = bestscalar;
+	    *success = TRUE;
+
+	    return SCIP_OKAY;
+	 }
+      }
    }
 
    /* convert each value into a rational number, calculate the greatest common divisor of the nominators
@@ -3986,11 +5683,22 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    {
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-      if( intscalar != NULL )
-         *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
-      *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
+
+      /* check if we found a better scaling value */
+      if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
+	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
+
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
+   }
+
+   if( bestscalar < SCIP_INVALID )
+   {
+      if( intscalar != NULL )
+         *intscalar = bestscalar;
+      *success = TRUE;
+
+      SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
 
    return SCIP_OKAY;
@@ -4014,7 +5722,25 @@ SCIP_Bool SCIPfindSimpleRational(
    assert(lb <= ub);
 
    center = 0.5*(lb+ub);
-   delta = 0.5*(ub-lb);
+
+   /* in order to compute a rational number that is exactly within the bounds (as the user expects),
+    * we computed the allowed delta with downward rounding, if available
+    */
+   if( SCIPintervalHasRoundingControl() )
+   {
+      SCIP_ROUNDMODE roundmode;
+
+      roundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeDownwards();
+
+      delta = 0.5*(ub-lb);
+
+      SCIPintervalSetRoundingMode(roundmode);
+   }
+   else
+   {
+      delta = 0.5*(ub-lb);
+   }
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
@@ -4045,6 +5771,12 @@ SCIP_Real SCIPselectSimpleValue(
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
          SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
+
+         if( val - lb < 0.0 || val - ub > 0.0 )
+         {
+            SCIPdebugPrintf(" value is out of interval bounds by %g -> failed\n", MAX(lb-val, val-ub));
+            val = 0.5*(lb+ub);
+         }
       }
       else
       {
@@ -4235,6 +5967,80 @@ SCIP_Real SCIPgetRandomReal(
 
 
 /*
+ * Additional math functions
+ */
+
+/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
+ *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
+ *  big numbers or an negative value m (and m < n) and -1 will be returned
+ */
+SCIP_Longint SCIPcalcBinomCoef(
+   int                   n,                  /**< number of different elements */
+   int                   m                   /**< number to choose out of the above */
+   )
+{
+   if( m == 0 || m >= n )
+      return 1;
+
+   if( m < 0 )
+      return -1;
+
+   /* symmetry of the binomial coefficient, choose smaller m */
+   if( m > n/2 )
+      m = n - m;
+
+   /* trivial case m == 1 */
+   if( m == 1 )
+      return n;
+
+   /* abort on to big numbers */
+   if( m > 16 || n > 33 )
+      return -1;
+
+   /* simple case m == 2 */
+   if( m == 2 )
+      return (n*(n-1)/2); /*lint !e647*/
+
+   /* simple case m == 3 */
+   if( m == 3 )
+      return (n*(n-1)*(n-2)/6); /*lint !e647*/
+   else
+   {
+      /* first half of Pascal's triangle numbers(without the symmetric part) backwards from (33,16) over (32,16),
+       * (33,15), (32,15),(31,15, (30,15), (33,14) to (8,4) (rest is calculated directly)
+       *
+       * due to this order we can extract the right binomial coefficient by (16-m)^2+(16-m)+(33-n)
+       */
+      static const SCIP_Longint binoms[182] = {
+         1166803110, 601080390, 1037158320, 565722720, 300540195, 155117520, 818809200, 471435600, 265182525, 145422675,
+         77558760, 40116600, 573166440, 347373600, 206253075, 119759850, 67863915, 37442160, 20058300, 10400600,
+         354817320, 225792840, 141120525, 86493225, 51895935, 30421755, 17383860, 9657700, 5200300, 2704156, 193536720,
+         129024480, 84672315, 54627300, 34597290, 21474180, 13037895, 7726160, 4457400, 2496144, 1352078, 705432,
+         92561040, 64512240, 44352165, 30045015, 20030010, 13123110, 8436285, 5311735, 3268760, 1961256, 1144066,
+         646646, 352716, 184756, 38567100, 28048800, 20160075, 14307150, 10015005, 6906900, 4686825, 3124550, 2042975,
+         1307504, 817190, 497420, 293930, 167960, 92378, 48620, 13884156, 10518300, 7888725, 5852925, 4292145, 3108105,
+         2220075, 1562275, 1081575, 735471, 490314, 319770, 203490, 125970, 75582, 43758, 24310, 12870, 4272048, 3365856,
+         2629575, 2035800, 1560780, 1184040, 888030, 657800, 480700, 346104, 245157, 170544, 116280, 77520, 50388, 31824,
+         19448, 11440, 6435, 3432, 1107568, 906192, 736281, 593775, 475020, 376740, 296010, 230230, 177100, 134596,
+         100947, 74613, 54264, 38760, 27132, 18564, 12376, 8008, 5005, 3003, 1716, 924, 237336, 201376, 169911, 142506,
+         118755, 98280, 80730, 65780, 53130, 42504, 33649, 26334, 20349, 15504, 11628, 8568, 6188, 4368, 3003, 2002,
+         1287, 792, 462, 252, 40920, 35960, 31465, 27405, 23751, 20475, 17550, 14950, 12650, 10626, 8855, 7315, 5985,
+         4845, 3876, 3060, 2380, 1820, 1365, 1001, 715, 495, 330, 210, 126, 70};
+
+      /* m can at most be 16 */
+      const int t = 16-m;
+      assert(t >= 0);
+      assert(n <= 33);
+
+      /* binoms array hast exactly 182 elements */
+      assert(t*(t+1)+(33-n) < 182);
+
+      return binoms[t*(t+1)+(33-n)]; /*lint !e662 !e661*/
+   }
+}
+
+
+/*
  * Permutations / Shuffling
  */
 
@@ -4255,7 +6061,7 @@ void SCIPswapPointers(
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
    unsigned int*         randseed            /**< seed value for the random generator */
    ) 
 {
@@ -4301,17 +6107,18 @@ SCIP_RETCODE SCIPgetRandomSubset(
    /* abort, if size of subset is too big */
    if( nsubelems > nelems )
    {
-      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);      
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
       return SCIP_INVALIDDATA;
    }
 #ifndef NDEBUG
-   for( i = 0; i < nsubelems; i++ ) 
-      for( j = 0; j < i; j++ ) 
+   for( i = 0; i < nsubelems; i++ )
+      for( j = 0; j < i; j++ )
          assert(set[i] != set[j]);
-#endif   
+#endif
 
    /* draw each element individually */
-   for( i = 0; i < nsubelems; i++ ) 
+   i = 0;
+   while( i < nsubelems )
    {
       int r;
 
@@ -4323,10 +6130,11 @@ SCIP_RETCODE SCIPgetRandomSubset(
       {
          if( subset[i] == subset[j] ) 
          {
-            i--;
+            --i;
             break;
          }
       }
+      ++i;
    }
    return SCIP_OKAY;
 }
@@ -4337,20 +6145,47 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Strings
  */
 
-/** prints an error message containing of the given string followed by a string describing the current system error; 
-    prefers to use the strerror_r method, which is threadsafe; 
-    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
-    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+
+/** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
+ *  'cnt' characters have been copied, whichever comes first.
+ *
+ *  @note undefined behaviuor on overlapping arrays
+ */
+int SCIPmemccpy(
+   char*                 dest,               /**< destination pointer to copy to */
+   const char*           src,                /**< source pointer to copy to */
+   char                  stop,               /**< character when found stop copying */
+   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   )
+{
+   if( dest == NULL || src == NULL || cnt == 0 )
+      return -1;
+   else
+   {
+      char* destination = dest;
+
+      while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
+
+      return (destination - dest);
+   }
+}
+
+/** prints an error message containing of the given string followed by a string describing the current system error;
+ *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is) 
+ */
 void SCIPprintSysError(
-   const char*                 message             /**< first part of the error message, e.g. the filename */
+   const char*           message             /**< first part of the error message, e.g. the filename */
    )
 {
 #ifdef NO_STRERROR_R
    char* buf;
    buf = strerror(errno);
 #else
-   char buf[1024];
-   (void) strerror_r(errno, buf, 1024);
+   char buf[SCIP_MAXSTRLEN];
+   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
 #endif
    SCIPmessagePrintError("%s: %s\n", message, buf);
 }
@@ -4399,26 +6234,28 @@ void SCIPescapeString(
 
 /* safe version of snprintf */
 int SCIPsnprintf(
-   char*            t,     /**< target string                  */
-   int              len,   /**< length of t                    */
-   const char*      s,     /**< source string or format string */
-   ...                     /**< further parameters             */
+   char*                 t,                  /**< target string */
+   int                   len,                /**< length of the string to copy */
+   const char*           s,                  /**< source string */
+   ...                                       /**< further parameters */
    )
 {
    va_list ap;
    int n;
-   
+
    assert(t != NULL);
    assert(len > 0);
 
-   va_start(ap, s);
+   va_start(ap, s); /*lint !e826*/
    n = vsnprintf(t, (size_t) len, s, ap);
    va_end(ap);
    if( n < 0 || n >= len )
    {
 #ifndef NDEBUG
       if( n < 0 )
-         SCIPmessagePrintWarning("vsnprintf returned %d\n",n);
+      {
+         SCIPerrorMessage("vsnprintf returned %d\n",n);
+      }
 #endif
       t[len-1] = '\0';
       n = len-1;
@@ -4426,7 +6263,101 @@ int SCIPsnprintf(
    return n;
 }
 
+/** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToRealValue(
+   const char*           str,                /**< string to search */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   )
+{
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
+   *value = strtod(str, endptr);
+
+   if( *endptr != str && *endptr != NULL )
+   {
+      SCIPdebugMessage("parsed real value <%g>\n", *value);
+      return TRUE;
+   }
+   *endptr = (char*)str;
+
+   SCIPdebugMessage("failed parsing real value <%s>\n", str);
+
+   return FALSE;
+}
+
+/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+ *  will point to the position after the read part, otherwise it will point to NULL
+ */
+void SCIPstrCopySection(
+   const char*           str,                /**< string to search */
+   char                  startchar,          /**< character which defines the beginning */
+   char                  endchar,            /**< character which defines the ending */
+   char*                 token,              /**< string to store the copy */
+   int                   size,               /**< size of the token char array */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed,
+                                              *   otherwise str */
+   )
+{
+   const char* copystr;
+   int nchars;
+
+   assert(str != NULL);
+   assert(token != NULL);
+   assert(size > 0);
+   assert(endptr != NULL);
+
+   nchars = 0;
+
+   copystr = str;
+
+   /* find starting character */
+   while( *str != '\0' && *str != startchar )
+      ++str;
+
+   /* did not find start character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
+
+   /* skip start character */
+   ++str;
+
+   /* copy string */
+   while( *str != '\0' && *str != endchar && nchars < size-1 )
+   {
+      assert(nchars < SCIP_MAXSTRLEN);
+      token[nchars] = *str;
+      nchars++;
+      ++str;
+   }
+
+   /* add end to token */
+   token[nchars] = '\0';
+
+   /* if section was longer than size, we want to reach the end of the parsing section anyway */
+   if( nchars == (size-1) )
+      while( *str != '\0' && *str != endchar )
+         ++str;
+
+   /* did not find end character */
+   if( *str == '\0' )
+   {
+      *endptr = (char*)copystr;
+      return;
+   }
+
+   /* skip end character */
+   ++str;
+
+   SCIPdebugMessage("parsed section <%s>\n", token);
+
+   *endptr = (char*) str;
+}
 
 /*
  * File methods

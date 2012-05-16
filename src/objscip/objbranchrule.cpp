@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_BranchruleData
 
 extern "C"
 {
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyObj)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   
+   assert(scip != NULL);
+   
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ != scip);
+
+   if( branchruledata->objbranchrule->iscloneable() )
+   {
+      scip::ObjBranchrule*  newobjbranchrule;
+      newobjbranchrule = dynamic_cast<scip::ObjBranchrule*> (branchruledata->objbranchrule->clone(scip));
+
+      /* call include method of branchrule object */
+      SCIP_CALL( SCIPincludeObjBranchrule(scip, newobjbranchrule, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_BRANCHFREE(branchFreeObj)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ == scip);
 
    /* call virtual method of branchrule object */
    SCIP_CALL( branchruledata->objbranchrule->scip_free(scip, branchrule) );
@@ -81,6 +108,7 @@ SCIP_DECL_BRANCHINIT(branchInitObj)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
+   assert(branchruledata->objbranchrule->scip_ == scip);
 
    /* call virtual method of branchrule object */
    SCIP_CALL( branchruledata->objbranchrule->scip_init(scip, branchrule) );
@@ -157,9 +185,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpObj)
 }
 
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelObj)
+SCIP_DECL_BRANCHEXECEXT(branchExecextObj)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
@@ -168,7 +196,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelObj)
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   SCIP_CALL( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_execext(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
@@ -206,6 +234,9 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
+   assert(scip != NULL);
+   assert(objbranchrule != NULL);
+
    /* create branching rule data */
    branchruledata = new SCIP_BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
@@ -214,12 +245,14 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
+         branchCopyObj,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
-         branchExeclpObj, branchExecrelObj, branchExecpsObj,
+         branchExeclpObj, branchExecextObj, branchExecpsObj,
          branchruledata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }
+
 
 /** returns the branchrule object of the given name, or 0 if not existing */
 scip::ObjBranchrule* SCIPfindObjBranchrule(

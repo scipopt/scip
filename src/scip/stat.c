@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,6 +16,11 @@
 /**@file   stat.c
  * @brief  methods for problem statistics
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Gregor Hendel
+ * @author Gerald Gamrath
+ * @author Marc Pfetsch
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +42,8 @@
 SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    assert(stat != NULL);
@@ -57,12 +63,14 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc) );
+   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc, messagehdlr) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -70,6 +78,9 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->marked_nrowidx = 0;
    (*stat)->userinterrupt = FALSE;
    (*stat)->userrestart = FALSE;
+   (*stat)->inrestart = FALSE;
+   (*stat)->collectvarhistory = TRUE;
+   (*stat)->subscipdepth = 0;
 
    SCIPstatReset(*stat);
 
@@ -97,6 +108,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
+   SCIPclockFree(&(*stat)->nlpsoltime);
+   SCIPclockFree(&(*stat)->copyclock);
    SCIPclockFree(&(*stat)->provedfeaslptime);
    SCIPclockFree(&(*stat)->provedinfeaslptime);
 
@@ -109,21 +122,32 @@ SCIP_RETCODE SCIPstatFree(
    return SCIP_OKAY;
 }
 
+/** diables the collection of any statistic for a variable */
+void SCIPstatDisableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = FALSE;
+}
+
+/** enables the collection of statistics for a variable */
+void SCIPstatEnableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->collectvarhistory = TRUE;
+}
+
 /** marks statistics to be able to reset them when solving process is freed */
 void SCIPstatMark(
    SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
-   assert(stat->marked_nvaridx == -1);
-   assert(stat->marked_ncolidx == -1);
-   assert(stat->marked_nrowidx == -1);
-   assert(stat->lpcount == 0);
-   assert(stat->nlps == 0);
-   assert(stat->nprimallps == 0);
-   assert(stat->nduallps == 0);
-   assert(stat->nlexduallps == 0);
-   assert(stat->nbarrierlps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
    stat->marked_ncolidx = stat->ncolidx;
@@ -152,12 +176,13 @@ void SCIPstatReset(
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->nodeactivationtime);
+   SCIPclockReset(stat->copyclock);
    SCIPclockReset(stat->provedfeaslptime);
    SCIPclockReset(stat->provedinfeaslptime);
 
    SCIPhistoryReset(stat->glbhistory);
 
-   stat->conflictscoreweight = 1.0;
+   stat->vsidsweight = 1.0;
    stat->nlpiterations = 0;
    stat->nrootlpiterations = 0;
    stat->nprimallpiterations = 0;
@@ -192,10 +217,14 @@ void SCIPstatReset(
    stat->nrowidx = stat->marked_nrowidx;
    stat->lpcount = 0;
    stat->nlps = 0;
+   stat->nrootlps = 0;
    stat->nprimallps = 0;
+   stat->nprimalzeroitlps = 0;
    stat->nduallps = 0;
+   stat->ndualzeroitlps = 0;
    stat->nlexduallps = 0;
    stat->nbarrierlps = 0;
+   stat->nbarrierzeroitlps = 0;
    stat->nprimalresolvelps = 0;
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
@@ -205,6 +234,7 @@ void SCIPstatReset(
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
+   stat->nnlps = 0;
    stat->maxtotaldepth = -1;
    stat->nactiveconss = 0;
    stat->nenabledconss = 0;
@@ -215,6 +245,12 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL; 
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->primalzeroittime = 0.0;
+   stat->dualzeroittime = 0.0;
+   stat->barrierzeroittime = 0.0;
+   stat->maxcopytime = SCIP_REAL_MIN;
+   stat->mincopytime = SCIP_REAL_MAX;
+   stat->ncopies = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
@@ -247,6 +283,7 @@ void SCIPstatResetPresolving(
    stat->npresolchgbds = 0;
    stat->npresoladdholes = 0;
    stat->npresoldelconss = 0;
+   stat->npresoladdconss = 0;
    stat->npresolupgdconss = 0;
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
@@ -319,6 +356,7 @@ void SCIPstatEnforceLPUpdates(
 void SCIPstatUpdateMemsaveMode(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_MEM*             mem                 /**< block memory pools */
    )
 {
@@ -333,8 +371,8 @@ void SCIPstatUpdateMemsaveMode(
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
@@ -342,8 +380,8 @@ void SCIPstatUpdateMemsaveMode(
       else if( stat->memsavemode && memused < 0.5 * set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to standard mode */
-         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n", 
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;

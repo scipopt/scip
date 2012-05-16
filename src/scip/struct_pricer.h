@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,14 +37,16 @@ struct SCIP_Pricer
 {
    char*                 name;               /**< name of variable pricer */
    char*                 desc;               /**< description of variable pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy));    /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
    SCIP_DECL_PRICERINITSOL((*pricerinitsol));/**< solving process initialization method of variable pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol));/**< solving process deinitialization method of variable pricer */
    SCIP_DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas));  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata;         /**< variable pricers local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this pricer for the next stages */
    SCIP_CLOCK*           pricerclock;        /**< pricer execution time */
    int                   priority;           /**< priority of the variable pricer */
    int                   ncalls;             /**< number of times, this pricer was called */

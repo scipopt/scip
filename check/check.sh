@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,7 +13,6 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -28,6 +27,7 @@ CONTINUE=${11}
 LOCK=${12}
 VERSION=${13}
 LPS=${14}
+VALGRIND=${15}
 
 SETDIR=../settings
 
@@ -57,18 +57,18 @@ if test "$LOCK" = "true"
 then
     if test -e $DONEFILE
     then
-	echo skipping test due to existing done file $DONEFILE
-	exit
+        echo skipping test due to existing done file $DONEFILE
+        exit
     fi
     if test -e $LOCKFILE
     then
-	if test -e $RUNFILE
+        if test -e $RUNFILE
         then
-	    echo continuing aborted run with run file $RUNFILE
-	else
-	    echo skipping test due to existing lock file $LOCKFILE
-	    exit
-	fi
+            echo continuing aborted run with run file $RUNFILE
+        else
+            echo skipping test due to existing lock file $LOCKFILE
+            exit
+        fi
     fi
     date > $LOCKFILE
     date > $RUNFILE
@@ -98,7 +98,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`./getlastprob.awk $OUTFILE`
+    LASTPROB=`awk -f getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -116,90 +116,91 @@ date >>$ERRFILE
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 1000\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test` DONE
+VALGRINDCMD=
+if test "$VALGRIND" = "true"
+then
+   VALGRINDCMD="valgrind --log-fd=1 --leak-check=full"
+fi
+
+for i in `cat testset/$TSTNAME.test` DONE
 do
     if test "$i" = "DONE"
     then
-	date > $DONEFILE
-	break
+        date > $DONEFILE
+        break
     fi
 
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    echo @01 $i ===========
-	    echo @01 $i ===========                >> $ERRFILE
-	    echo > $TMPFILE
-	    if test $SETNAME != "default"
-	    then
-		echo set load $SETTINGS            >>  $TMPFILE
-	    fi
-	    if test $FEASTOL != "default"
-	    then
-		echo set numerics feastol $FEASTOL >> $TMPFILE
-	    fi
-	    echo set limits time $TIMELIMIT        >> $TMPFILE
-	    echo set limits nodes $NODELIMIT       >> $TMPFILE
-	    echo set limits memory $MEMLIMIT       >> $TMPFILE
-#THREADS not supported yet (version 1.2.0.8)
-	    echo set timing clocktype 1            >> $TMPFILE
-	    echo set display verblevel 4           >> $TMPFILE
-	    echo set display freq $DISPFREQ        >> $TMPFILE
-	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-	    if test "$LPS" == "none"      
-	    then
-		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
-
-	    fi
-	    echo set save $SETFILE                 >> $TMPFILE
-	    echo read $i                           >> $TMPFILE
-	    echo optimize                          >> $TMPFILE
-	    echo display statistics                >> $TMPFILE
-#	    echo display solution                  >> $TMPFILE
-	    echo checksol                          >> $TMPFILE
-	    echo quit                              >> $TMPFILE
-
-#	    if test "$LPS" == "cpx"      
-#	    then
-#		waitcplex.sh # ??????????????????
-#	    fi
-
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    date +"@03 %s"
-	    bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-#	    bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; nice -15 ../$BINNAME < $TMPFILE" 2>>$ERRFILE
-	    date +"@04 %s"
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+        LASTPROB=""
+        if test -f $i
+        then
+            echo @01 $i ===========
+            echo @01 $i ===========                >> $ERRFILE
+            echo > $TMPFILE
+            if test "$SETNAME" != "default"
+            then
+                echo set load $SETTINGS            >>  $TMPFILE
+            fi
+            if test "$FEASTOL" != "default"
+            then
+                echo set numerics feastol $FEASTOL >> $TMPFILE
+            fi
+            echo set limits time $TIMELIMIT        >> $TMPFILE
+            echo set limits nodes $NODELIMIT       >> $TMPFILE
+            echo set limits memory $MEMLIMIT       >> $TMPFILE
+            echo set lp advanced threads $THREADS  >> $TMPFILE
+            echo set timing clocktype 1            >> $TMPFILE
+            echo set display verblevel 4           >> $TMPFILE
+            echo set display freq $DISPFREQ        >> $TMPFILE
+            echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+            if test "$LPS" = "none"      
+            then
+                echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+            fi
+            echo set save $SETFILE                 >> $TMPFILE
+            echo read $i                           >> $TMPFILE
+#            echo write genproblem cipreadparsetest.cip >> $TMPFILE
+#            echo read cipreadparsetest.cip         >> $TMPFILE
+            echo optimize                          >> $TMPFILE
+            echo display statistics                >> $TMPFILE
+#           echo display solution                  >> $TMPFILE
+            echo checksol                          >> $TMPFILE
+            echo quit                              >> $TMPFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; $VALGRINDCMD ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
 
 rm -f $TMPFILE
+rm -f cipreadparsetest.cip
 
 date >>$OUTFILE
 date >>$ERRFILE
@@ -207,9 +208,9 @@ date >>$ERRFILE
 if test -e $DONEFILE
 then
     ./evalcheck.sh $OUTFILE
-
+    
     if test "$LOCK" = "true"
     then
-	rm -f $RUNFILE
+        rm -f $RUNFILE
     fi
 fi

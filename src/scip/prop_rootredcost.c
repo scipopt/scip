@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
- * @ingroup PROPAGATORS
  * @brief  reduced cost strengthening at the root node
  * @author Tobias Achterberg
  */
@@ -22,15 +21,21 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/prop_rootredcost.h"
 
 
 #define PROP_NAME              "rootredcost"
 #define PROP_DESC              "reduced cost strengthening at the root node"
-#define PROP_PRIORITY          +1000000
-#define PROP_FREQ                     1
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY         +10000000 /**< propagator priority */
+#define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
+#define PROP_PRESOL_PRIORITY          0 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 
 
 
@@ -51,6 +56,20 @@ struct SCIP_PropData
 /*
  * Callback methods of propagator
  */
+
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyRootredcost)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropRootredcost(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
@@ -75,6 +94,14 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
 #define propExitRootredcost NULL
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitpreRootredcost NULL
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitpreRootredcost NULL
+
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolRootredcost)
@@ -92,6 +119,10 @@ SCIP_DECL_PROPINITSOL(propInitsolRootredcost)
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 #define propExitsolRootredcost NULL
+
+
+/** presolving method of propagator */
+#define propPresolRootredcost NULL
 
 
 /** execution method of propagator */
@@ -112,7 +143,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       return SCIP_OKAY;
 
    /* propagator can only be applied if the root lp was a valid relaxation */
-   if ( !SCIPisRootLPRelax(scip) )
+   if( !SCIPisRootLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -151,6 +182,8 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    {
       SCIP_VAR* var;
       SCIP_Real redcost;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
 
       var = vars[v];
       redcost = SCIPvarGetRootRedcost(var);
@@ -163,43 +196,32 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newub;
-         SCIP_Bool strengthen;
 
          rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
          oldub = SCIPvarGetUbGlobal(var);
-         assert(SCIPisLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
+         assert(SCIPisFeasLE(scip, rootsol, SCIPvarGetLbGlobal(var))); /* lb might have been increased in the meantime */
 
          /* calculate reduced cost based bound */
          newub = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         /* strengthen upper bound */
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
+
+         if( infeasible )
          {
-            newub = SCIPadjustedVarUb(scip, var, newub);
-            strengthen = (newub < oldub - 0.5);
+            /* we are done with solving: cutoff root node */
+            SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+            *result = SCIP_CUTOFF;
+            break;
          }
-         else
-            strengthen = SCIPisUbBetter(scip, newub, oldlb, oldub);
 
-         if( strengthen )
+         if( tightened )
          {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            /* strengthen upper bound */
             SCIPdebugMessage("root redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
-            if( infeasible )
-            {
-               /* we are done with solving: cutoff root node */
-               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
-               *result = SCIP_CUTOFF;
-               break;
-            }
-            else if( tightened )
-               *result = SCIP_REDUCEDDOM;
+
+            *result = SCIP_REDUCEDDOM;
          }
       }
       else if( SCIPisFeasNegative(scip, redcost) )
@@ -208,7 +230,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          SCIP_Real oldlb;
          SCIP_Real oldub;
          SCIP_Real newlb;
-         SCIP_Bool strengthen;
 
          rootsol = SCIPvarGetRootSol(var);
          oldlb = SCIPvarGetLbGlobal(var);
@@ -218,33 +239,23 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          /* calculate reduced cost based bound */
          newlb = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         /* strengthen lower bound */
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
+
+         if( infeasible )
          {
-            newlb = SCIPadjustedVarLb(scip, var, newlb);
-            strengthen = (newlb > oldlb + 0.5);
+            /* we are done with solving: cutoff root node */
+            SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
+            *result = SCIP_CUTOFF;
+            break;
          }
-         else
-            strengthen = SCIPisLbBetter(scip, newlb, oldlb, oldub);
 
-         if( strengthen )
+         if( tightened )
          {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            /* strengthen lower bound */
             SCIPdebugMessage("root redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
-            if( infeasible )
-            {
-               /* we are done with solving: cutoff root node */
-               SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
-               *result = SCIP_CUTOFF;
-               break;
-            }
-            else if( tightened )
-               *result = SCIP_REDUCEDDOM;
+
+            *result = SCIP_REDUCEDDOM;
          }
       }
    }
@@ -281,9 +292,10 @@ SCIP_RETCODE SCIPincludePropRootredcost(
    propdata->lastcutoffbound = SCIPinfinity(scip);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
-         propFreeRootredcost, propInitRootredcost, propExitRootredcost, 
-         propInitsolRootredcost, propExitsolRootredcost, propExecRootredcost, propRespropRootredcost,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
+         propCopyRootredcost,
+         propFreeRootredcost, propInitRootredcost, propExitRootredcost, propInitpreRootredcost, propExitpreRootredcost,
+         propInitsolRootredcost, propExitsolRootredcost, propPresolRootredcost, propExecRootredcost, propRespropRootredcost,
          propdata) );
 
    return SCIP_OKAY;

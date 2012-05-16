@@ -1,0 +1,17 @@
+* #variable= 10 #constraint= 10 #product= 52 sizeproduct= 104
+****************************************
+* begin normalizer comments
+* category= OPT-SMALLINT-NLC
+* end normalizer comments
+****************************************
+min: +1 x1 +1 x2 +1 x3 +1 x4 +1 x5 +1 x6 +1 x7 +1 x8 +1 x9 +1 x10 ;
++1 ~x1 x7 +1 ~x1 x6 +1 ~x1 x9 +1 ~x1 x3 +1 ~x1 x10 +1 x1 >= 1 ;
++1 ~x2 x7 +1 ~x2 x5 +1 ~x2 x9 +1 ~x2 x4 +1 ~x2 x3 +1 ~x2 x8 +1 x2 >= 1 ;
++1 x1 ~x3 +1 x2 ~x3 +1 ~x3 x10 +1 ~x3 x5 +1 ~x3 x4 +1 x3 >= 1 ;
++1 x2 ~x4 +1 x3 ~x4 +1 ~x4 x6 +1 ~x4 x9 +1 ~x4 x5 +1 x4 >= 1 ;
++1 x2 ~x5 +1 x3 ~x5 +1 x4 ~x5 +1 ~x5 x9 +1 ~x5 x7 +1 ~x5 x8 +1 x5 >= 1 ;
++1 x1 ~x6 +1 x4 ~x6 +1 ~x6 x8 +1 ~x6 x9 +1 ~x6 x10 +1 x6 >= 1 ;
++1 x1 ~x7 +1 x2 ~x7 +1 x5 ~x7 +1 ~x7 x9 +1 ~x7 x8 +1 x7 >= 1 ;
++1 x2 ~x8 +1 x5 ~x8 +1 x6 ~x8 +1 x7 ~x8 +1 x8 >= 1 ;
++1 x1 ~x9 +1 x2 ~x9 +1 x4 ~x9 +1 x5 ~x9 +1 x6 ~x9 +1 x7 ~x9 +1 ~x9 x10 +1 x9 >= 1 ;
++1 x1 ~x10 +1 x3 ~x10 +1 x6 ~x10 +1 x9 ~x10 +1 x10 >= 1 ;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,6 +45,7 @@ struct SCIP_Sepa
                                               *   to best node's dual bound for applying separation */
    char*                 name;               /**< name of separator */
    char*                 desc;               /**< description of separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy));      /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
@@ -53,11 +54,13 @@ struct SCIP_Sepa
    SCIP_DECL_SEPAEXECLP  ((*sepaexeclp));    /**< LP solution separation method of separator */
    SCIP_DECL_SEPAEXECSOL ((*sepaexecsol));   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata;           /**< separators local data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this separator for the next stages */
    SCIP_CLOCK*           sepaclock;          /**< separation time */
    int                   priority;           /**< priority of the separator */
    int                   freq;               /**< frequency for calling separator */
    int                   ncallsatnode;       /**< number of times, this separator was called at the current node */
    int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   SCIP_Bool             usessubscip;        /**< does the separator use a secondary SCIP instance? */
    SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
    SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */

@@ -1,0 +1,14 @@
+=opt= Riley_Clement09     8.1599152e+10
+=opt= multi-aggr             1.33389102
+=opt= ggt1                            3
+=opt= ggt1b                           3
+=opt= ggt2                            3
+=best= ggt3                           3
+=opt= mip_146                    151859
+=opt= mip_147                    151859
+=opt= preproc                90227510.2
+=opt= SfoLP60                    1316.7
+=opt= monotonic              141.273104
+=opt= SfOMIP_001             71.4663684
+=opt= stha                     40355.82
+=opt= SRtest                -11126.3198

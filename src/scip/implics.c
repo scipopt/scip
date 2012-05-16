@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,13 +25,13 @@
 #include "string.h"
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_implics.h"
@@ -175,7 +175,7 @@ SCIP_RETCODE vboundsSearchPos(
             assert(vbounds->coefs[pos-1] > 0.0);
             *insertpos = pos-1;
             *found = TRUE;
-            }
+         }
          else
          {
             /* the positive coefficient should be inserted to the left of the negative one */
@@ -387,7 +387,7 @@ SCIP_DECL_SORTPTRCOMP(compVars)
       else
       {
          SCIPABORT();
-	 /*lint --e{527}*/
+         /*lint --e{527}*/
          return 0;
       }
    }
@@ -430,6 +430,10 @@ void checkImplics(
       {
          int cmp;
 
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
          assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
          assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
@@ -447,6 +451,10 @@ void checkImplics(
       {
          int cmp;
          
+         /* in case of implication we cannot use SCIPvarIsBinary() to check for binaries since the implication are
+          * sorted with respect to variable type; this means first the binary variables (SCIPvarGetType(var) ==
+          * SCIP_VARTYPE_BINARY) and second all others;
+          */
          assert(SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY);
 
          if( i == 0 )
@@ -544,13 +552,13 @@ SCIP_RETCODE implicsEnsureSize(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
-            newsize) );
+            newsize) ); /*lint !e866*/
       (*implics)->size[varfixing] = newsize;
    }
    assert(num <= (*implics)->size[varfixing]);
@@ -572,10 +580,10 @@ void implicsSearchVar(
                                               *   should be placed */
    )
 {
-   int implvaridx;
+   SCIP_Bool found;
    int left;
    int right;
-   int middle;
+   int pos;
 
    assert(implics != NULL);
    assert(poslower != NULL);
@@ -592,17 +600,17 @@ void implicsSearchVar(
          *posadd = 0;
          *poslower = -1;
          *posupper = -1;
-          return;
+         return;
       }      
       left = 0;
       right = implics->nbinimpls[varfixing] - 1;
    }
    else
    {
-      /* check whethere there are implications with nonbinary variable y */
+      /* check whether there are implications with non-binary variable y */
       if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
       {
-         /* there are no implications with nonbinary variable y */
+         /* there are no implications with non-binary variable y */
          *posadd = implics->nbinimpls[varfixing];
          *poslower = -1;
          *posupper = -1;
@@ -613,69 +621,54 @@ void implicsSearchVar(
    }
    assert(left <= right);
 
-   /* search for y */
-   implvaridx = SCIPvarGetIndex(implvar);
-   do
-   {
-      int idx;
+   /* search for the position in the sorted array (via binary search) */
+   found = SCIPsortedvecFindPtr((void**)(&(implics->vars[varfixing][left])), SCIPvarComp, (void*)implvar, right-left+1, &pos);
 
-      middle = (left + right) / 2;
-      idx = SCIPvarGetIndex(implics->vars[varfixing][middle]);
-      if( implvaridx < idx )
-         right = middle - 1;
-      else if( implvaridx > idx )
-         left = middle + 1;
-      else
-      {
-         assert(implvar == implics->vars[varfixing][middle]);
-         break;
-      }
-   }
-   while( left <= right );
-   assert(left <= right+1);
+   /* adjust position */
+   pos += left;
 
-   if( left > right )
+   if( !found )
    {
       /* y was not found */
-      assert(right == -1 || compVars((void*)implics->vars[varfixing][right], (void*)implvar) < 0);
-      assert(left >= implics->nimpls[varfixing] || implics->vars[varfixing][left] != implvar);
+      assert(pos >= right || compVars((void*)implics->vars[varfixing][pos], (void*)implvar) > 0);
+      assert(pos == left || compVars((void*)implics->vars[varfixing][pos-1], (void*)implvar) < 0);
       *poslower = -1;
       *posupper = -1;
-      *posadd = left;
+      *posadd = pos;
    }
    else
    {
       /* y was found */
-      assert(implvar == implics->vars[varfixing][middle]);
+      assert(implvar == implics->vars[varfixing][pos]);
 
       /* set poslower and posupper */
-      if( implics->types[varfixing][middle] == SCIP_BOUNDTYPE_LOWER )
+      if( implics->types[varfixing][pos] == SCIP_BOUNDTYPE_LOWER )
       {
          /* y was found as y_lower (on position middle) */
-         *poslower = middle;
-         if( middle + 1 < implics->nimpls[varfixing] && implics->vars[varfixing][middle+1] == implvar )
+         *poslower = pos;
+         if( pos + 1 < implics->nimpls[varfixing] && implics->vars[varfixing][pos+1] == implvar )
          {  
-            assert(implics->types[varfixing][middle+1] == SCIP_BOUNDTYPE_UPPER);
-            *posupper = middle + 1;
+            assert(implics->types[varfixing][pos+1] == SCIP_BOUNDTYPE_UPPER);
+            *posupper = pos + 1;
          }
          else
             *posupper = -1;
-         *posadd = middle;
+         *posadd = pos;
       }
       else
       {
-         /* y was found as y_upper (on position middle) */
-         *posupper = middle;
-         if( middle - 1 >= 0 && implics->vars[varfixing][middle-1] == implvar )
+         /* y was found as y_upper (on position pos) */
+         *posupper = pos;
+         if( pos - 1 >= 0 && implics->vars[varfixing][pos-1] == implvar )
          {  
-            assert(implics->types[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
-            *poslower = middle - 1;
-            *posadd = middle - 1;
+            assert(implics->types[varfixing][pos-1] == SCIP_BOUNDTYPE_LOWER);
+            *poslower = pos - 1;
+            *posadd = pos - 1;
          }
          else
          {
             *poslower = -1;
-            *posadd = middle;
+            *posadd = pos;
          }
       }
    }
@@ -739,7 +732,9 @@ SCIP_RETCODE SCIPimplicsAdd(
    int posupper;
    int posadd;
    SCIP_Bool found;
+#ifndef NDEBUG
    int k;
+#endif
 
    assert(implics != NULL);
    assert(*implics == NULL || (*implics)->nbinimpls[varfixing] <= (*implics)->nimpls[varfixing]);
@@ -819,16 +814,23 @@ SCIP_RETCODE SCIPimplicsAdd(
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
-      
-         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-         {
-            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-         }
-         assert(posadd == k);
+
+	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
+	 {
+	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+
+#ifndef NDEBUG
+	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+	    {
+	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+	    }
+#endif
+	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+	 }
+
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
@@ -885,16 +887,23 @@ SCIP_RETCODE SCIPimplicsAdd(
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
-      
-         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-         {
-            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-         }
-         assert(posadd == k);
+
+	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
+	 {
+	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+
+#ifndef NDEBUG
+	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+	    {
+	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+	    }
+#endif
+	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+	 }
+
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
@@ -925,7 +934,6 @@ SCIP_RETCODE SCIPimplicsDel(
    SCIP_BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    )
 {
-   int i;
    int poslower;
    int posupper; 
    int posadd;
@@ -956,13 +964,16 @@ SCIP_RETCODE SCIPimplicsDel(
    assert((*implics)->types[varfixing][posadd] == impltype);
 
    /* removes y from implications of x */
-   for( i = posadd; i < (*implics)->nimpls[varfixing] - 1; i++ )
+   if( (*implics)->nimpls[varfixing] - posadd > 1 )
    {
-      (*implics)->vars[varfixing][i] = (*implics)->vars[varfixing][i+1];
-      (*implics)->types[varfixing][i] = (*implics)->types[varfixing][i+1];
-      (*implics)->bounds[varfixing][i] = (*implics)->bounds[varfixing][i+1];
+      int amount = ((*implics)->nimpls[varfixing] - posadd - 1);
+
+      BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd]), &((*implics)->types[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd]), &((*implics)->vars[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd]), &((*implics)->bounds[varfixing][posadd+1]), amount); /*lint !e866*/
    }
    (*implics)->nimpls[varfixing]--;
+
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       assert(posadd < (*implics)->nbinimpls[varfixing]);
@@ -1182,7 +1193,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 
    assert(clique != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
    assert(doubleentry != NULL);
    assert(oppositeentry != NULL);
 
@@ -1233,7 +1244,7 @@ SCIP_RETCODE SCIPcliqueDelVar(
 
    assert(clique != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    SCIPdebugMessage("deleting variable <%s> == %u from clique %u\n", SCIPvarGetName(var), value, clique->id);
 
@@ -1379,7 +1390,7 @@ SCIP_RETCODE cliquelistEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) ); /*lint !e866*/
       cliquelist->size[value] = newsize;
    }
    assert(num <= cliquelist->size[value]);
@@ -1479,28 +1490,59 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
    cliques1 = cliquelist1->cliques[value1];
    ncliques2 = cliquelist2->ncliques[value2];
    cliques2 = cliquelist2->cliques[value2];
+
    i1 = 0;
    i2 = 0;
-   while( i1 < ncliques1 && i2 < ncliques2 )
+
+   if( i1 < ncliques1 && i2 < ncliques2 )
    {
       int cliqueid;
 
-      cliqueid = SCIPcliqueGetId(cliques2[i2]);
-      while( i1 < ncliques1 && SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-         i1++;
-      if( i1 == ncliques1 )
-         break;
+      /* make the bigger clique the first one */
+      if( ncliques2 > ncliques1 )
+      {
+         SCIP_CLIQUE** tmpc;
+         int tmpi;
 
-      cliqueid = SCIPcliqueGetId(cliques1[i1]);
-      while( i2 < ncliques2 && SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-         i2++;
-      if( i2 == ncliques2 )
-         break;
+         tmpc = cliques1;
+         tmpi = ncliques1;
+         cliques1 = cliques2;
+         ncliques1 = ncliques2;
+         cliques2 = tmpc;
+         ncliques2 = tmpi;
+      }
+    
+      /* check whether both clique lists have a same clique */
+      while( TRUE )  /*lint !e716*/
+      {
+         cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-      if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-         return TRUE;
+         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+            break;
+
+         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+         {
+            ++i1;
+            assert(i1 < ncliques1);
+         }
+         cliqueid = SCIPcliqueGetId(cliques1[i1]);
+
+         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+          * there will be no same item and we can stop */
+         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+            break;
+
+         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+         {
+            ++i2;
+            assert(i2 < ncliques2);
+         }
+         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+            return TRUE;
+      }
    }
-
    return FALSE;
 }
 
@@ -1510,7 +1552,7 @@ void SCIPcliquelistRemoveFromCliques(
    SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
    )
 {
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsBinary(var));
 
    if( cliquelist != NULL )
    {
@@ -1770,9 +1812,36 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       if( clique->nvars == 2 )
       {
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
-         SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-               clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+         if( SCIPvarGetType(clique->vars[0]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+                  (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+         }
+	 else if( SCIPvarGetType(clique->vars[1]) == SCIP_VARTYPE_BINARY )
+         {
+            SCIP_CALL( SCIPvarAddImplic(clique->vars[1], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  clique->values[1], clique->vars[0], clique->values[0] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+                  (SCIP_Real)(!clique->values[0]), FALSE, infeasible, NULL) );
+         }
+         else
+         {
+            /** in case the variable are not of binary type we have to add the implication as variable bound */
+
+            assert(SCIPvarGetType(clique->vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarIsBinary(clique->vars[0]));
+
+            /* add variable upper or rather variable lower bound on vars[0] */
+            if( clique->values[0] )
+            {
+               SCIP_CALL( SCIPvarAddVub(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     clique->vars[1], clique->values[1] ? -1.0 : 1.0, clique->values[1] ? 1.0 : 0.0, FALSE, infeasible, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarAddVlb(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                     clique->vars[1], clique->values[1] ? 1.0 : -1.0, clique->values[1] ? 0.0 : 1.0, FALSE, infeasible, NULL) );
+            }
+         }
       }
       
       /* check if the clique is already contained in the clique table, or if it is redundant (too small) */
@@ -2009,6 +2078,7 @@ void SCIPcliquelistCheck(
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
+#ifndef NDEBUG
    int value;
 
    assert(SCIPvarGetNCliques(var, FALSE) == SCIPcliquelistGetNCliques(cliquelist, FALSE));
@@ -2026,17 +2096,20 @@ void SCIPcliquelistCheck(
       cliques = SCIPcliquelistGetCliques(cliquelist, (SCIP_Bool)value);
       for( i = 0; i < ncliques; ++i )
       {
+
          SCIP_CLIQUE* clique;
          int pos;
 
          clique = cliques[i];
          assert(clique != NULL);
+
          pos = SCIPcliqueSearchVar(clique, var, (SCIP_Bool)value);
          assert(0 <= pos && pos < clique->nvars);
          assert(clique->vars[pos] == var);
          assert(clique->values[pos] == (SCIP_Bool)value);
       }
    }
+#endif
 }
 
 /** gets the number of cliques stored in the clique table */

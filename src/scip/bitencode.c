@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,7 +34,7 @@ void SCIPencodeSingleBit(
    int                   count               /**< number of elements */
    )
 {
-   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {   /* if the packet size changes, the mask has to be updated */
       {0x00000000, 0x00000001},
       {0x00000000, 0x00000002},
       {0x00000000, 0x00000004},
@@ -93,8 +93,8 @@ void SCIPencodeSingleBit(
       }
 #endif
       *out++ =
-	 mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
-	 | mask[4][inp[4]] | mask[5][inp[5]] | mask[6][inp[6]] | mask[7][inp[7]]
+         mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
+         | mask[4][inp[4]] | mask[5][inp[5]] | mask[6][inp[6]] | mask[7][inp[7]]
          | mask[8][inp[8]] | mask[9][inp[9]] | mask[10][inp[10]] | mask[11][inp[11]]
          | mask[12][inp[12]] | mask[13][inp[13]] | mask[14][inp[14]] | mask[15][inp[15]]
          | mask[16][inp[16]] | mask[17][inp[17]] | mask[18][inp[18]] | mask[19][inp[19]]
@@ -112,7 +112,7 @@ void SCIPencodeSingleBit(
       assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
-	 m |= mask[i][inp[i]];
+         m |= mask[i][inp[i]];
       *out = m;
    }
 }
@@ -218,8 +218,8 @@ void SCIPdecodeSingleBit(
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
-	 *out++ = m & 1;
-	 m >>= 1;
+         *out++ = m & 1;
+         m >>= 1;
       }
    }
 }
@@ -231,7 +231,7 @@ void SCIPencodeDualBit(
    int                   count               /**< number of elements */
    )
 {
-   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {   /* if the packet size changes, the mask has to be updated */
       {0x00000000, 0x00000001, 0x00000002, 0x00000003},
       {0x00000000, 0x00000004, 0x00000008, 0x0000000C},
       {0x00000000, 0x00000010, 0x00000020, 0x00000030},
@@ -274,8 +274,8 @@ void SCIPencodeDualBit(
       }
 #endif
       *out++ =
-	 mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
-	 | mask[4][inp[4]] | mask[5][inp[5]] | mask[6][inp[6]]
+         mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
+         | mask[4][inp[4]] | mask[5][inp[5]] | mask[6][inp[6]]
          | mask[7][inp[7]] | mask[8][inp[8]] | mask[9][inp[9]] 
          | mask[10][inp[10]] | mask[11][inp[11]] | mask[12][inp[12]] 
          | mask[13][inp[13]] | mask[14][inp[14]] | mask[15][inp[15]];
@@ -289,7 +289,7 @@ void SCIPencodeDualBit(
       assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
-	 m |= mask[i][inp[i]];
+         m |= mask[i][inp[i]];
       *out = m;
    }
 }
@@ -363,8 +363,8 @@ void SCIPdecodeDualBit(
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
-	 *out++ = m & 3;
-	 m >>= 2;
+         *out++ = m & 3;
+         m >>= 2;
       }
    }
 }

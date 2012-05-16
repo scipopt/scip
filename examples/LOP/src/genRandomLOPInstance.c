@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   genRandomLOPInstance.c
  * @brief  generate a random linear ordering problem instance
  * @author Marc Pfetsch
@@ -73,7 +74,10 @@ int getRandomInt(
 
 int main(int argc, char** argv)
 {
-   int n, d, i, j;
+   int n;
+   int d;
+   int i;
+   int j;
    unsigned int seed;
    FILE *file;
 

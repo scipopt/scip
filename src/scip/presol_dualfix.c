@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualfix.c
- * @ingroup PRESOLVERS
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  */
@@ -39,6 +38,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyDualfix)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolDualfix(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeDualfix NULL
@@ -66,6 +80,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real bound;
+   SCIP_Real roundbound;
    SCIP_Real obj;
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
@@ -85,7 +100,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
    /* look for fixable variables
     * loop backwards, since a variable fixing can change the current and the subsequent slots in the vars array
     */
-   for( v = nvars-1; v >= 0; --v )
+   for( v = nvars - 1; v >= 0; --v )
    {
       /* don't perform dual presolving operations on deleted variables */
       if( SCIPvarIsDeleted(vars[v]) )
@@ -98,25 +113,41 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
       if( SCIPisZero(scip, obj) && SCIPvarMayRoundDown(vars[v]) && SCIPvarMayRoundUp(vars[v]) )
       {
          bound = SCIPvarGetLbGlobal(vars[v]);
-	 if( SCIPisLT(scip, bound, 0.0) )
-	 {
-	    if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
-	       bound = 0.0;
-	    else
-	       bound = SCIPvarGetUbGlobal(vars[v]);
-	 }
+         if( SCIPisLT(scip, bound, 0.0) )
+         {
+            if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
+               bound = 0.0;
+            else
+            {
+               /* try to take an integer value, only for polishing */
+               roundbound = SCIPfloor(scip, SCIPvarGetUbGlobal(vars[v]));
+               
+               if( roundbound < bound )
+                  bound = SCIPvarGetUbGlobal(vars[v]);
+               else
+                  bound = roundbound;
+            }
+         }
+         else
+         {
+            /* try to take an integer value, only for polishing */
+            roundbound = SCIPceil(scip, bound);
+
+            if( roundbound < SCIPvarGetUbGlobal(vars[v]) )
+               bound = roundbound;
+         }
          SCIPdebugMessage("variable <%s> with objective 0 fixed to %g\n",
             SCIPvarGetName(vars[v]), bound);
       }
       else
       {
-	 /* if it is always possible to round variable in direction of objective value,
-	  * fix it to its proper bound
-	  */
-	 if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
-	 {
-	    bound = SCIPvarGetLbGlobal(vars[v]);
-            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
+         /* if it is always possible to round variable in direction of objective value,
+          * fix it to its proper bound
+          */
+         if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
+         {
+            bound = SCIPvarGetLbGlobal(vars[v]);
+            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
             {
                /* variable can be set to -infinity, and it is only contained in one constraint:
                 * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
@@ -124,13 +155,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
-			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
-	 }
-	 else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
-	 {
-	    bound = SCIPvarGetUbGlobal(vars[v]);
-            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
+            SCIPdebugMessage("variable <%s> with objective %g and %d uplocks fixed to lower bound %g\n",
+               SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksUp(vars[v]), bound);
+         }
+         else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
+         {
+            bound = SCIPvarGetUbGlobal(vars[v]);
+            if( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
             {
                /* variable can be set to +infinity, and it is only contained in one constraint:
                 * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
@@ -138,11 +169,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
                 */
                continue;
             }
-	    SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
-			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
-	 }
-	 else
-	    continue;
+            SCIPdebugMessage("variable <%s> with objective %g and %d downlocks fixed to upper bound %g\n",
+               SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), bound);
+         }
+         else
+            continue;
       }
 
       /* apply the fixing */
@@ -190,6 +221,7 @@ SCIP_RETCODE SCIPincludePresolDualfix(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyDualfix,
          presolFreeDualfix, presolInitDualfix, presolExitDualfix,
          presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
          presoldata) );

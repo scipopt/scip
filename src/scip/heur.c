@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,14 +25,14 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/primal.h"
 #include "scip/scip.h"
-#include "scip/pub_misc.h"
 #include "scip/heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_heur.h"
 
@@ -74,8 +74,27 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
-   /* use SCIPsetHeurPriority() to mark the heurs unsorted */
+   /* use SCIPsetHeurPriority() to mark the heuristics unsorted */
    SCIP_CALL( SCIPsetHeurPriority(scip, (SCIP_HEUR*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
+/** copies the given primal heuristic to a new scip */
+SCIP_RETCODE SCIPheurCopyInclude(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(heur != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( heur->heurcopy != NULL )
+   {
+      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
+      SCIP_CALL( heur->heurcopy(set->scip, heur) );
+   }
 
    return SCIP_OKAY;
 }
@@ -84,6 +103,7 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 SCIP_RETCODE SCIPheurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of primal heuristic */
    const char*           desc,               /**< description of primal heuristic */
@@ -93,6 +113,8 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -122,6 +144,8 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->maxdepth = maxdepth;
    (*heur)->delaypos = -1;
    (*heur)->timingmask = timingmask;
+   (*heur)->usessubscip = usessubscip;
+   (*heur)->heurcopy = heurcopy;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;
@@ -129,6 +153,7 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->heurexitsol = heurexitsol;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
+   SCIP_CALL( SCIPclockCreate(&(*heur)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*heur)->heurclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
@@ -138,20 +163,20 @@ SCIP_RETCODE SCIPheurCreate(
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of heuristic <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*heur)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
                   paramChgdHeurPriority, (SCIP_PARAMDATA*)(*heur)) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -175,6 +200,7 @@ SCIP_RETCODE SCIPheurFree(
    }
 
    SCIPclockFree(&(*heur)->heurclock);
+   SCIPclockFree(&(*heur)->setuptime);
    BMSfreeMemoryArray(&(*heur)->name);
    BMSfreeMemoryArray(&(*heur)->desc);
    BMSfreeMemory(heur);
@@ -197,16 +223,26 @@ SCIP_RETCODE SCIPheurInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(heur->heurclock);
-
-   heur->delaypos = -1;
-   heur->ncalls = 0;
-   heur->nsolsfound = 0;
-   heur->nbestsolsfound = 0;
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(heur->setuptime);
+      SCIPclockReset(heur->heurclock);
+      
+      heur->delaypos = -1;
+      heur->ncalls = 0;
+      heur->nsolsfound = 0;
+      heur->nbestsolsfound = 0;
+   }
 
    if( heur->heurinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurinit(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
    heur->initialized = TRUE;
 
@@ -230,7 +266,13 @@ SCIP_RETCODE SCIPheurExit(
 
    if( heur->heurexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurexit(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
    heur->initialized = FALSE;
 
@@ -255,7 +297,13 @@ SCIP_RETCODE SCIPheurInitsol(
    /* call solving process initialization method of primal heuristic */
    if( heur->heurinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurinitsol(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -273,7 +321,13 @@ SCIP_RETCODE SCIPheurExitsol(
    /* call solving process deinitialization method of primal heuristic */
    if( heur->heurexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(heur->setuptime, set);
+
       SCIP_CALL( heur->heurexitsol(set->scip, heur) );
+
+      /* stop timing */
+      SCIPclockStop(heur->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -462,10 +516,9 @@ char SCIPheurGetDispchar(
    SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
-   if( heur == NULL )
-      return '*';
-   else
-      return heur->dispchar;
+   assert(heur != NULL);
+
+   return heur->dispchar;
 }
 
 /** returns the timing mask of the heuristic */
@@ -487,6 +540,16 @@ void SCIPheurSetTimingmask(
    assert(heur != NULL);
 
    heur->timingmask = timingmask;
+}
+
+/** does the heuristic use a secondary SCIP instance? */
+SCIP_HEURTIMING SCIPheurUsesSubscip(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->usessubscip;
 }
 
 /** gets priority of primal heuristic */
@@ -521,6 +584,17 @@ int SCIPheurGetFreq(
    assert(heur != NULL);
 
    return heur->freq;
+}
+
+/** sets frequency of primal heuristic */
+void SCIPheurSetFreq(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   freq                /**< new frequency of heuristic */
+   )
+{
+   assert(heur != NULL);
+   
+   heur->freq = freq;
 }
 
 /** gets frequency offset of primal heuristic */
@@ -581,6 +655,16 @@ SCIP_Bool SCIPheurIsInitialized(
    assert(heur != NULL);
 
    return heur->initialized;
+}
+
+/** gets time in seconds used in this heuristic for setting up for next stages */
+SCIP_Real SCIPheurGetSetupTime(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return SCIPclockGetTime(heur->setuptime);
 }
 
 /** gets time in seconds used in this heuristic */

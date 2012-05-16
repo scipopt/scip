@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,37 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *
  * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
  * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
  * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
- * variables appears twice, but it then can be fixed to 0.
- *
- * This implementation of this constraint handler is based on classical ideas, see e.g.@n
- *  "Special Facilities in General Mathematical Programming System for
- *  Non-Convex Problems Using Ordered Sets of Variables"@n
- *  E. Beale and J. Tomlin, Proc. 5th IFORS Conference, 447-454 (1970)
- *
- *
- * The order of the variables is determined as follows:
- *
- * - If the constraint is created with SCIPcreateConsSOS1() and weights are given, the weights
- *   determine the order (decreasing weights). Additional variables can be added with
- *   SCIPaddVarSOS1(), which adds a variable with given weight.
- *
- * - If an empty constraint is created and then variables are added with SCIPaddVarSOS1(), weights
- *   are needed and stored.
- *
- * - All other calls ignore the weights, i.e., if an nonempty constraint is created or variables are
- *   added with SCIPappendVarSOS1().
- *
- * The validity of the constraint is enforced by the classical SOS branching. Depending on the
- * parameters there are two ways to choose the branching constraint. Either the constraint with the
- * most number of nonzeros is chosen or the constraint with the largest nonzero-variable
- * weight. The later version allows the user to specify an order for the branching importance of the
- * constraints. Constraint branching can also be turned off.
+ * variable appears twice, but it then can be fixed to 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,7 +42,14 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures an SOS1 constraint */
+/** creates and captures an SOS1 constraint
+ *
+ *  We set the constraint to not be modifable. If the weights are non
+ *  NULL, the variables are ordered according to these weights (in
+ *  ascending order).
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -88,7 +72,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

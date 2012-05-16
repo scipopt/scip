@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.h
- * @brief  constraint handler for logicor constraints
- *         (equivalent to set covering, but algorithms are suited for depth first search)
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for logicor constraints \f$1^T x \ge 1\f$
+ *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
+ * @author Michael Winkler
+ *
+ * This constraint handler handles a special type of linear constraints, namely
+ * logic or constraints. These are equivalent to set covering constraints, but
+ * are handled by special algorithms which are better suited for depth first search.
+ * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a logic or constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i \ge 1.
+ * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +47,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a logic or constraint */
+/** creates and captures a logic or constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -62,12 +75,20 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** adds coefficient in logic or constraint */
+extern
+SCIP_RETCODE SCIPaddCoefLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logicor constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
    );
 
 /** gets number of variables in logic or constraint */
@@ -91,7 +112,7 @@ SCIP_Real SCIPgetDualsolLogicor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
+/** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */

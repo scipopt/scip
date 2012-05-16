@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_inference.h
+ * @ingroup BRANCHINGRULES
  * @brief  inference history branching rule
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,7 +33,7 @@
 extern "C" {
 #endif
 
-/** creates the inference history braching rule and includes it in SCIP */
+/** creates the inference history branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleInference(
    SCIP*                 scip                /**< SCIP data structure */

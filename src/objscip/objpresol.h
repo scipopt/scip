@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,15 +26,27 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for presolvers */
-class ObjPresol
+/** @brief C++ wrapper for presolvers
+ *
+ *  This class defines the interface for presolvers implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref PRESOL "Instructions for implementing a presolver"
+ *  - \ref PRESOLVERS "List of available presolvers"
+ *  - \ref type_presol.h "Corresponding C interface"
+ */
+class ObjPresol : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the presolver */
    char* scip_name_;
@@ -53,28 +65,32 @@ public:
 
    /** default constructor */
    ObjPresol(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of presolver */
       const char*        desc,               /**< description of presolver */
       int                priority,           /**< priority of the presolver */
       int                maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
       SCIP_Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_maxrounds_(maxrounds),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjPresol()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
    /** destructor of presolver to free user data (called when SCIP is exiting) */
@@ -114,6 +130,8 @@ public:
    virtual SCIP_RETCODE scip_initpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -134,6 +152,8 @@ public:
    virtual SCIP_RETCODE scip_exitpre(
       SCIP*              scip,               /**< SCIP data structure */   
       SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
+      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {  /*lint --e{715}*/
@@ -143,11 +163,14 @@ public:
 
       return SCIP_OKAY;
    }
-   
+
    /** execution method of presolver
     *
     *  The presolver should go through the variables and constraints and tighten the domains or
     *  constraints. Each tightening should increase the given total numbers of changes.
+    *
+    *  @note the counters state the changes since the last call including the changes of this presolver during its last
+    *        last call
     *
     *  possible return values for *result:
     *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
@@ -167,6 +190,7 @@ public:
       int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolver */
       int                nnewholes,          /**< no. of domain holes added since last call to presolver */
       int                nnewdelconss,       /**< no. of deleted constraints since last call to presolver */
+      int                nnewaddconss,       /**< no. of added constraints since last call to presolver */
       int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolver */
       int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolver */
       int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolver */
@@ -176,6 +200,7 @@ public:
       int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
       int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
       int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+      int*               naddconss,          /**< pointer to count total number of added constraints of all presolvers */
       int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
       int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
       int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */

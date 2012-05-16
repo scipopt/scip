@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,9 +38,17 @@ extern "C" {
  * dialog handler
  */
 
+/** copies the given dialog to a new scip */
+extern
+SCIP_RETCODE SCIPdialogCopyInclude(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a dialog handler */
 extern
 SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    );
 
@@ -77,12 +85,13 @@ SCIP_RETCODE SCIPdialoghdlrSetRoot(
 extern
 SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
    const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*           desc,               /**< description of dialog used if description output method is NULL */
-   SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
+   SCIP_Bool             issubmenu,          /**< is the dialog a sub-menu? */
    SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    );
 
@@ -108,12 +117,12 @@ SCIP_RETCODE SCIPdialogExec(
    SCIP_DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
    );
 
-/** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
+/** adds a sub-dialog to the given dialog as menu entry and captures the sub-dialog */
 extern
 SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
+   SCIP_DIALOG*          subdialog           /**< sub-dialog to add as menu entry in dialog */
    );
 
 #ifdef __cplusplus

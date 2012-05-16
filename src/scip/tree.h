@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,8 @@ SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -96,6 +98,7 @@ SCIP_RETCODE SCIPnodeFocus(
                                               *   is freed, if it was cut off due to a cut off subtree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -169,6 +172,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -191,6 +195,7 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -201,6 +206,27 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
+/** adds hole with inference information to focus node, child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
+ */
+SCIP_RETCODE SCIPnodeAddHoleinfer(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
+   );
+
 /** adds hole change to focus node, or child of focus node */
 extern
 SCIP_RETCODE SCIPnodeAddHolechg(
@@ -209,11 +235,13 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_HOLELIST**       ptr,                /**< changed list pointer */
-   SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
-   SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             left,               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right,              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_Bool             probingchange,      /**< is the bound change a temporary setting due to probing? */
+   SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    );
-
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern
@@ -231,6 +259,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
                                               *   ('i'gnore bound, 's'afe bound, 'u'nsafe bound) */ 
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp                  /**< LP data */
    );
 
@@ -247,7 +276,7 @@ void SCIPchildChgNodeselPrio(
 extern
 void SCIPnodeSetEstimate(
    SCIP_NODE*            node,               /**< node to update lower bound for */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newestimate         /**< new estimated bound for the node */
    );
 
@@ -258,6 +287,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -286,6 +316,8 @@ SCIP_RETCODE SCIPtreeFree(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -295,6 +327,8 @@ SCIP_RETCODE SCIPtreeClear(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -305,6 +339,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -314,6 +349,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -330,6 +366,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -351,6 +388,7 @@ extern
 SCIP_RETCODE SCIPtreeSetNodesel(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
@@ -362,6 +400,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
@@ -372,6 +411,8 @@ SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    );
@@ -383,6 +424,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -395,6 +437,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
+                                              * fixed should only be used, when both bounds changed 
+                                              */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
@@ -410,16 +455,22 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** branches on a variable v
- *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
- *  if v is not a continuous variable, then:
- *  if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
- *  variable and the bounds of v are finite, then two child nodes are created
+/** branches on a variable x
+ *  if x is a continuous variable, then two child nodes will be created
+ *  (x <= x', x >= x')
+ *  but if the bounds of x are such that their relative difference is smaller than epsilon,
+ *  the variable is fixed to val (if not SCIP_INVALID) or a well chosen alternative in the current node,
+ *  i.e., no children are created
+ *  if x is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes will be created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of x are finite, then two child nodes will be created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+ *  otherwise (up to) three child nodes will be created
  *  (x <= x'-1, x == x', x >= x'+1)
+ *  if solution value is equal to one of the bounds and the other bound is infinite, only two child nodes
+ *  will be created (the third one would be infeasible anyway)
  */
 extern
 SCIP_RETCODE SCIPtreeBranchVar(
@@ -427,6 +478,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -435,6 +487,60 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
+/** branches a variable x using the given domain hole; two child nodes will be created (x <= left, x >= right) */
+extern
+SCIP_RETCODE SCIPtreeBranchVarHole(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             left,               /**< left side of the domain hole */
+   SCIP_Real             right,              /**< right side of the domain hole */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
+/** n-ary branching on a variable x
+ * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
+ * The branching value is selected as in SCIPtreeBranchVar().
+ * If n is 2 or the variables local domain is too small for a branching into n pieces, SCIPtreeBranchVar() is called.
+ * The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
+ * If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
+ * Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
+ * Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance from the first nodes.
+ * The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
+ * If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
+ *
+ * Giving a large value for widthfactor results in creating children with small domain when close to the branching value
+ * and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
+ * results in a ternary branching where the branching variable is mostly fixed in the middle child.
+ * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
+ * (except for one child if the branching value is not in the middle).
+ */
+extern
+SCIP_RETCODE SCIPtreeBranchVarNary(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution.
+                                              *   A branching value is required for branching on continuous variables */
+   int                   n,                  /**< attempted number of children to be created, must be >= 2 */
+   SCIP_Real             minwidth,           /**< minimal domain width in children */
+   SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
+   int*                  nchildren           /**< buffer to store number of created children, or NULL */
    );
 
 /** switches to probing mode and creates a probing root */
@@ -461,6 +567,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -482,9 +589,11 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
    );
 
@@ -496,11 +605,13 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 

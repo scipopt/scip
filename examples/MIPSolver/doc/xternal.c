@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,31 +15,15 @@
 
 /**@file   xternal.c
  * @brief  main document page
- * @author Tobias Achterberg
+ * @author Gerald Gamrath
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage SCIP example project
+/**@mainpage example project using SCIP as a MIP solver
  * @version  0.1
  * @author   Tobias Achterberg
  *
- * This file illustrates how to create a doxygen main menu file. To add a linked
- * subpage, use the following:
- *
- * - \ref LINK1  "this is a link"
- * - \ref LINK2  "this is a second link"
-*/
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page LINK1 first subpage
- *
- * Here you can insert some text.
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page LINK2 second subpage
- *
- * Here you can insert some other text.
+ * This example illustrates how to integrate SCIP into your source code.
  */
 

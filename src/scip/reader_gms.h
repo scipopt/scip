@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.h
- * @brief  GAMS file reader
+ * @ingroup FILEREADERS
+ * @brief  GAMS file writer
  * @author Ambros Gleixner
+ *
+ * This reader writes a CIP in GAMS format.
+ * It can write all kinds of linear and nonlinear constraints (as occurring in MINLPs) and indicator constraints.
+ *
+ * Reading of GAMS model files is not supported.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,9 +39,8 @@ extern "C" {
 /** includes the gms file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderGms(
-   SCIP*              scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /* writes problem to file */
 extern

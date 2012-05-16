@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,29 +38,29 @@ struct SCIP_BranchCand
    SCIP_VAR**            lpcands;            /**< candidates for branching on LP solution (fractional integer variables) */
    SCIP_Real*            lpcandssol;         /**< solution values of LP candidates */
    SCIP_Real*            lpcandsfrac;        /**< fractionalities of LP candidates */
-   SCIP_VAR**            relaxcands;         /**< candidates for branching on relaxation solution */
-   SCIP_Real*            relaxcandsscore;    /**< scores of relaxation candidates, e.g. infeasibilities */
-   SCIP_Real*            relaxcandssol;      /**< values in relaxation solution of relaxation candidates */
+   SCIP_VAR**            externcands;        /**< external candidates for branching, e.g. given by relaxation */
+   SCIP_Real*            externcandsscore;   /**< scores of external candidates, e.g. infeasibilities */
+   SCIP_Real*            externcandssol;     /**< values in solution of external candidates */
    SCIP_VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
+   SCIP_Longint          validlpcandslp;     /**< lp number for which lpcands are valid */
    int                   lpcandssize;        /**< number of available slots in lpcands array */
    int                   nlpcands;           /**< number of candidates for branching on LP solution */
    int                   npriolpcands;       /**< number of LP candidates with largest branch priority value */
    int                   npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
    int                   lpmaxpriority;      /**< maximal branch priority of all LP candidates */
-   int                   relaxcandssize;     /**< number of available slots in relaxcands array */
-   int                   nrelaxcands;        /**< number of candidates for branching on relaxation solution */
-   int                   npriorelaxcands;    /**< number of relaxation candidates with largest branch priority value */
-   int                   npriorelaxbins;     /**< number of binary relaxation candidates with largest branch priority value */
-   int                   npriorelaxints;     /**< number of integer relaxation candidates with largest branch priority value */
-   int                   npriorelaximpls;    /**< number of implicit integer relaxation candidates with largest branch priority value */
-   int                   relaxmaxpriority;   /**< maximal branch priority of all relaxation candidates */
+   int                   externcandssize;    /**< number of available slots in externcands array */
+   int                   nexterncands;       /**< number of external candidates for branching */
+   int                   nprioexterncands;   /**< number of external candidates with largest branch priority value */
+   int                   nprioexternbins;    /**< number of binary external candidates with largest branch priority value */
+   int                   nprioexternints;    /**< number of integer external candidates with largest branch priority value */
+   int                   nprioexternimpls;   /**< number of implicit integer external candidates with largest branch priority value */
+   int                   externmaxpriority;  /**< maximal branch priority of all external candidates */
    int                   pseudocandssize;    /**< number of available slots in pseudocands array */
    int                   npseudocands;       /**< number of candidates for branching on pseudo solution */
    int                   npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */
    int                   npriopseudobins;    /**< number of binary pseudo candidates with largest branch priority value */
    int                   npriopseudoints;    /**< number of integer pseudo candidates with largest branch priority value */
    int                   pseudomaxpriority;  /**< maximal branch priority of all pseudo candidates */
-   int                   validlpcandslp;     /**< lp number for which lpcands are valid */
 };
 
 /** branching rule */
@@ -70,7 +70,7 @@ struct SCIP_Branchrule
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
    SCIP_Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
-   SCIP_Longint          nrelaxcalls;        /**< number of times, this branching rule was called on a relaxation solution */
+   SCIP_Longint          nexterncalls;       /**< number of times, this branching rule was called on external candidates */
    SCIP_Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
    SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
@@ -80,19 +80,22 @@ struct SCIP_Branchrule
    SCIP_Longint          nchildren;          /**< number of children created so far by this branching rule */
    char*                 name;               /**< name of branching rule */
    char*                 desc;               /**< description of branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy));    /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
    SCIP_DECL_BRANCHINITSOL((*branchinitsol));/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol));/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
-   SCIP_DECL_BRANCHEXECREL((*branchexecrel));/**< branching execution method for relaxation solutions */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext));/**< branching execution method for external candidates */
    SCIP_DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this branchrule for the next stages */
    SCIP_CLOCK*           branchclock;        /**< branching rule execution time */
    int                   priority;           /**< priority of the branching rule */
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
+   SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
 };
 
 #ifdef __cplusplus

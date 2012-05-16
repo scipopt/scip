@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,43 +13,94 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+In most cases (LINUX and MAC) it is quite easy to compile and install
+SCIP. Therefore, reading the section "Brief installation description"
+should usually be enough. If this is not the case you find "Detailed
+installation description" below as well as some examples.
+
+Content
+*******
+
+I    Brief installation description:
+II   Detailed installation description:
+III  Examples
+
+
+I Brief installation description
+********************************
+
+The easiest way to install SCIP is to use the ZIB Optimization Suite which
+contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
+the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is
+not need to specify any directories, the compiling process is fully
+automated).
+
+Compiling SCIP directly can be done as follows:
+
+1) unpack the tarball "tar xvf scip-x.y.z.tgz"
+2) change into the directory "cd scip-x.y.z"
+3) start compiling SCIP "make"
+4) (optional) install the header, libraries, and binary "make install INSTALLDIR="/usr/local/"
+
+On your first compilation you will be asked for some soft-link targets,
+depending on the LP solver you want to use. Usually, SCIP needs the
+following information
+ (a) the directory where the include files of the LP solver lie
+ (b) the library file(s) "lib*.a" or/and "lib*.so"
+
+Beside that SCIP needs the some soft-link targets, for ZIMPL lie
+ (a) the directory where the include files of ZIMPL
+ (b) the library file(s) "lib*.a" or/and "lib*.so"
+
+You will need either the .a or the .so files and can skip the others by
+just pressing return.
+
+II Detailed installation description
+************************************
+
 In the following, some of the names depend on your machine and your
 compilation settings:
 
-- $(OSTYPE): the operating system
-             the string returned by "uname -s" in lower case with the following
-             replacements:
-             - "cygwin*" is replaced by only "cygwin"
-             - "irix??" is replaced by only "irix"
-             - "windows*" is replaced by only "windows"
+- $(OSTYPE):  the operating system
+              the string returned by "uname -s" in lower case with the following
+              replacements:
+              - "cygwin*" is replaced by only "cygwin"
+              - "irix??" is replaced by only "irix"
+              - "windows*" is replaced by only "windows"
+              - "mingw*" is replaced by only "mingw"
 
-- $(ARCH):   the architecture
-             the string returned by "uname -m", modified by the following
-             rules to subsume some architectures:
-              - "sun??" is replaced by "sparc"
-              - "i?86" is replaced by "x86"
-              - "IP??" is replaced by "mips"
-              - "9000????" is replaced by "hppa"
-              - "Power Macintosh" is replaced by "ppc"
-              - "00??????????" is replaced by "pwr4"
+- $(ARCH):    the architecture
+              the string returned by "uname -m", modified by the following
+              rules to subsume some architectures:
+               - "sun??" is replaced by "sparc"
+               - "i?86", "i86pc", and "[0-9]86" are replaced by "x86"
+               - "amd64" is replaced by "x86_64"
+               - "IP??" is replaced by "mips"
+               - "9000????" is replaced by "hppa"
+               - "Power Macintosh" is replaced by "ppc"
+               - "00??????????" is replaced by "pwr4"
 
-- $(COMP):   the compiler
-             "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
+- $(COMP):    the compiler
+              "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
 
-- $(OPT):    the optimization level of compilation
-             "dbg", "opt", or "prf"
+- $(OPT):     the optimization level of compilation
+              "dbg", "opt", or "prf" 
 
-- $(LPS):    the LP solver to use
-             "spx", "spx132", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+- $(LPS):     the LP solver to use
+              "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+
+- $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
+              "none", "cppad"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode, and using Soplex version >= 1.4.0
-as LP solver, you would have the following names:
-- $(OSTYPE) = linux
-- $(ARCH)   = x86
-- $(COMP)   = gnu
-- $(OPT)    = dbg
-- $(LPS)    = spx
+using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
+and no expressions interpreter you would have the following names:
+- $(OSTYPE)  = linux
+- $(ARCH)    = x86
+- $(COMP)    = gnu
+- $(OPT)     = dbg
+- $(LPS)     = spx
+- $(EXPRINT) = none
 
 -----------------------------------------------------------------------------
 
@@ -58,9 +109,9 @@ Here is what you have to do to get SCIP running:
 1. Compile the library and the solver program:
    In your SCIP main directory, enter "make [options]" with the following options:
    - "OPT=opt"         to use optimized compilation mode (default)
-   - "OPT=opt-gcc42"   to use if compiler gcc4.2 or greater is available
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
+   - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
    - "LPS=spx"         to use SOPLEX Version >= 1.4.0 as LP solver (default)
    - "LPS=spx132"      to use SOPLEX Version 1.3.2 as LP solver
@@ -88,8 +139,17 @@ Here is what you have to do to get SCIP running:
    - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library
    - "GMP=auto"        to automaticaly link the GMP library in case ZIMPL is enabled (default)
 
+   - "IPOPT=true"      to enable IPOPT interface (needs IPOPT)
+   - "IPOPT=false"     to disable IPOPT interface (default)
+
+   - "EXPRINT=cppad"   to use CppAD as expressions interpreter
+   - "EXPRINT=none"    to use no expressions interpreter (default)
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
+
+   - "SHARED=false"    to suppress shared libraries
+   - "SHARED=true"     to create shared libraries
 
    On some machines, you should use gmake instead of make.
 
@@ -98,6 +158,21 @@ Here is what you have to do to get SCIP running:
      (a) the directory where the include files of the LP solver
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
+
+2. Installing SCIP
+   After compiling you can install the headers, the libraries, and the binay. Therefore you use the command:
+
+   make install INSATLLDIR=<dirctory>
+
+   - "INSTALLDIR="     directory as install directory (dafault) 
+   - "INSTALLDIR=/usr/local" 
+                       to install the headers (/usr/local/include/), the libraries (/usr/local/lib/),
+                        and binary (/usr/loacl/bin/) in the directory /usr/local
+
+   For un-installing SCIP there exist the target "uninstall" which can be used in the same way as "install".
+
+III Examples
+************
 
    Example 1 (defaults: SoPlex, with ZIMPL support):
    =================================================
@@ -108,7 +183,7 @@ Here is what you have to do to get SCIP running:
 ---
 make[1]: Entering directory `/sw/scip'
 
-** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true
+** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt EXPRINT=none
 
 ** creating directory "lib/zimplinc"
 ** missing soft-link "lib/spxinc"
@@ -167,6 +242,41 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
+   Example 3 (CLP, IPOPT, CppAD, no ZIMPL):
+   ========================================
+
+   Typing "make LPS=clp ZIMPL=false IPOPT=true EXPRINT=cppad" uses CLP as LP solver, and activates
+   the interfaces to IPOPT and CppAD. You will be asked the following questions on
+   the first call to "make" (example answers are already given):
+
+---
+make[1]: Entering directory `/sw/scip'
+
+- Current settings: LPS=clp OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt EXPRINT=cppad
+
+* SCIP needs some softlinks to external programs, in particular, LP-solvers.
+* Please insert the paths to the corresponding directories/libraries below.
+* The links will be installed in the 'lib' directory.
+* For more information and if you experience problems see the INSTALL file.
+
+  -> "clp.*" is a directory containing the Clp installation, i.e., "clp.*/include/coin/ClpModel.hpp" should exist.
+  -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/include/coin/IpIpoptApplication.hpp", "ipopt.*/lib/libipopt*", ... should exist.
+  -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
+
+- preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
+> Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed): 
+> /sw/Clp-1.11/build
+-> creating softlink "lib/clp.linux.x86_64.gnu.opt" -> "/sw/Clp-1.11/build"
+
+- preparing missing soft-link "lib/ipopt.linux.x86_64.gnu.opt":
+> Enter soft-link target file or directory for "lib/ipopt.linux.x86_64.gnu.opt" (return if not needed):
+> /sw/ia64_lx26/ipopt-3.10.0/
+-> creating softlink "lib/ipopt.linux.x86_64.gnu.opt" -> "/sw/ia64_lx26/ipopt-3.10.0/"
+
+make[1]: Leaving directory `/sw/scip'
+---
+
+
    If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
    and enter "make links" to generate them again.
 
@@ -221,13 +331,27 @@ make[1]: Leaving directory `/sw/scip'
 
    On some systems, the option [-e] is not available for the read command.
    You have to compile with READ=read.
+   
+   In some situations, it may be necessary to adjust the flags for
+   linking against Clp. SCIP's Makefile tries to find the file
+   "clp_addlibs.txt", which specifies the needed libraries. The first
+   thing you should check is whether "clp_addlibs.txt" is present at
+   in path "libclp.*/share/coin/doc/Clp/" (you may have to correct
+   this path for some Clp versions). If this file is not present in
+   your Clp version, SCIP tries to guess the paths and libraries: it
+   assumes that Blas and Lapack are installed as system libraries
+   (libblas.a, liblapack.a) and are not build into the CoinUtils
+   library. If that is different in your build of Clp, you may have to
+   remove $(LINKCXX_l)lapack$(LINKLIBSUFFIX) from the LPSLDFLAGS in
+   Makefile or make.project. Also removing
+   $(LINKCXX_l)bz2$(LINKLIBSUFFIX) may help in some cases.
 
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.
 
 
-2. Instructions for manually creating the soft-links, if the query script fails:
+3. Instructions for manually creating the soft-links, if the query script fails:
 
    Create necessary soft-links in the "lib/" subdirectory of SCIP:
 
@@ -268,14 +392,9 @@ make[1]: Leaving directory `/sw/scip'
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
 
    (f) to use CLP
-       - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
-         (e.g. "cd scip; ln -s /Coin-Clp/include lib/clpinc")
-       - ln -s <file libClp.a> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to Clp main directory> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Coin-Clp/lib/libClp.a lib/libclp.linux.x86.gnu.a")
-       - ln -s <file libCoin.a> <path to SCIP>/lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Coin-Clp/lib/libCoinUtils.a lib/libcoinutils.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /Coin-Clp lib/libclp.linux.x86.gnu.opt")
 
    (g) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc
@@ -284,16 +403,27 @@ make[1]: Leaving directory `/sw/scip'
        Note that ZIMPL needs the GNU multiprecision library (GMP) and the Z compression library (ZLIB) to be
        installed on your system.
 
-3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (h) to use IPOPT as NLP solver
+       - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
+         (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
+         The path to the IPOPT installation is the path under where the Ipopt build has been installed.
+         It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
+         and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
+
+   (i) to use CppAD as expressions interpreter
+       - ln -s <path to CppAD's header files> <path to SCIP>/lib/cppad
+         (e.g. "cd scip; ln -s /CppAD/cppad lib/cppad")
+
+4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version
 
-4. To generate the documentation, you need to have doxygen installed, and
+5. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
 
-5. To check the code with lint, you need to have flexelint installed, and
+6. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
 
-6. To run the MIPLIB 3 test bench, download the MIPLIB instances from
+7. To run the MIPLIB 3 test bench, download the MIPLIB instances from
    "http://scip.zib.de/download/files/scip-miplib3.zip" and extract the archive into the SCIP base directory.
    The instances will be unziped into the subdirectory "check/IP/miplib3/". Afterwards, enter
    "make [options] test" with the same options with which you compiled SCIP in step 1.
@@ -304,30 +434,32 @@ make[1]: Leaving directory `/sw/scip'
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------
 
-To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS from mingw.org .
+To build your own Windows binaries under Windows, we recommend using the MinGW-Compiler with MSYS from mingw.org
 
 First install MSYS, then MinGW to the mingw folder inside the msys folder.
 Now you need to install the following packages to the mingw folder:
-- zlib (or use ZLIB=false)
-- pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+- zlib (or use ZLIB=false ZIMPL=false since zlib is needed for ZIMPL and ZIMPL-support in SCIP)
+- pcre (or use ZIMPL=false since pcre is needed for ZIMPL and ZIMPL-support in SCIP)
+- gmplib (or use ZIMPL=false since gmplib is needed for ZIMPL and ZIMPL-support in SCIP)
 
-(After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
+(After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL.
+ We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
 
-You can download these additional packages from
-http://gnuwin32.sourceforge.net/packages.html
-or compile the source on your own from their homepages.
-
-Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
-Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry
-#include <getopt.h>
-into the /mingw/include/unistd.h after the other include-entries (if not present).
-
-At last there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in SCIP (otherwise use ZIMPL=false as parameter with the make-call):
-the gmplib from gmplib.org
-The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the gmplib to the mingw folder.
+You can download these additional packages as precompiled binaries for example from:
+http://gnuwin32.sourceforge.net/packages.html (zlib&pcre)
+http://cs.nyu.edu/exact/core/gmp/ (gmplib)
+or compile the source on your own from the project homepages:
+http://www.zlib.net/
+http://www.pcre.org/
+http://www.gmplib.org/
+(The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the packages into the mingw folder.)
 
 Now "make READLINE=false" should be compiling without errors.
-Please note that we do NOT support creating the doxygen documentation and readline-usage under windows.
+
+Please note that we do NOT support creating the doxygen documentation or readline-usage under Windows.
+
+Since there are no real symlinks in MSYS, the include and library files of SoPlex and ZIMPL are actually copied into the SCIP-lib-folder.
+When you recompile ZIMPL or SoPlex after compiling SCIP you have to copy the libraries manually into the SCIP-lib-folder and recompile SCIP afterwards.
 
 
 
@@ -628,6 +760,3 @@ Here is what you have to do to get SCIP running in exact mode:
    "make [options] TEST=shortmiplibex test"
 
    with the same options with which you compiled SCIP in step 1.
-
-
-

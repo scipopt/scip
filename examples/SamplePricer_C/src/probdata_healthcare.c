@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,6 +83,7 @@ SCIP_DECL_PROBDELORIG(probdelorigHealthcare)
 #define probdeltransHealthcare NULL
 #define probinitsolHealthcare NULL
 #define probexitsolHealthcare NULL
+#define probcopyHealthcare NULL
 
 
 SCIP_RETCODE HCPcreateProbHealthcare(
@@ -96,7 +97,7 @@ SCIP_RETCODE HCPcreateProbHealthcare(
    SCIP_CALL( createProbdata(scip, &probdata) );
 
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigHealthcare, probtransHealthcare, probdeltransHealthcare, 
-         probinitsolHealthcare, probexitsolHealthcare, probdata) );
+         probinitsolHealthcare, probexitsolHealthcare, probcopyHealthcare, probdata) );
 
    return SCIP_OKAY;
 }

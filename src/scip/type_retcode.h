@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,8 +33,8 @@ enum SCIP_Retcode
    SCIP_OKAY               =  +1,       /**< normal termination */
    SCIP_ERROR              =   0,       /**< unspecified error */
    SCIP_NOMEMORY           =  -1,       /**< insufficient memory error */
-   SCIP_READERROR          =  -2,       /**< file read error */
-   SCIP_WRITEERROR         =  -3,       /**< file write error */
+   SCIP_READERROR          =  -2,       /**< read error */
+   SCIP_WRITEERROR         =  -3,       /**< write error */
    SCIP_NOFILE             =  -4,       /**< file not found error */
    SCIP_FILECREATEERROR    =  -5,       /**< cannot create file */
    SCIP_LPERROR            =  -6,       /**< error in LP solver */
@@ -47,8 +47,7 @@ enum SCIP_Retcode
    SCIP_PARAMETERWRONGTYPE = -13,       /**< the parameter is not of the expected type */
    SCIP_PARAMETERWRONGVAL  = -14,       /**< the value is invalid for the given parameter */
    SCIP_KEYALREADYEXISTING = -15,       /**< the given key is already existing in table */
-   SCIP_PARSEERROR         = -16,       /**< invalid input given to the parser */
-   SCIP_MAXDEPTHLEVEL      = -17        /**< maximal branching depth level exceeded */
+   SCIP_MAXDEPTHLEVEL      = -16        /**< maximal branching depth level exceeded */
 };
 typedef enum SCIP_Retcode SCIP_RETCODE;           /**< return code for SCIP method */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,7 @@ SCIP_Bool create_graph (int n, int m, GRAPH** gr)
    assert( gr != NULL );
 
    BMSallocMemory(gr);
-   if( gr == NULL )
+   if( *gr == NULL )
       return FALSE;
 
    BMSallocMemoryArray( &(*gr)->nodes, n );
@@ -578,6 +578,7 @@ SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
       {
          constructSingleCut(gr,cuts);
          *ncuts = 1;
+	 fini_maxflow ();
          return TRUE;
       }
            

@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -1013,6 +1013,7 @@ void tcliqueMaxClique(
    int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int*             ntreenodes,         /**< pointer to store the number of used tree nodes (or NULL) */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    )
 {
@@ -1033,7 +1034,7 @@ void tcliqueMaxClique(
    int ncurcliquenodes;
    TCLIQUE_WEIGHT curcliqueweight;
    int* tmpcliquenodes;
-   int ntreenodes;
+   int nbbtreenodes;
    int backtracklevel;
 
    assert(maxcliquenodes != NULL);
@@ -1080,7 +1081,7 @@ void tcliqueMaxClique(
    *maxcliqueweight = minweight-1;
    ncurcliquenodes = 0;
    curcliqueweight = 0;
-   ntreenodes = 0;
+   nbbtreenodes = 0;
 
    /* set up V and Vzero */
    weights = getweights(tcliquegraph);
@@ -1109,7 +1110,10 @@ void tcliqueMaxClique(
       cliquehash, buffer, 0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
-      maxfirstnodeweight, &ntreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, fixednode, status);
+      maxfirstnodeweight, &nbbtreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, fixednode, status);
+
+   if ( ntreenodes != NULL )
+      *ntreenodes = nbbtreenodes;
 
    if( backtracklevel != INT_MAX && *status == TCLIQUE_OPTIMAL )
       *status = TCLIQUE_USERABORT;

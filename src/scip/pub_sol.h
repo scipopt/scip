@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,12 @@ extern "C" {
 /** gets origin of solution */
 extern
 SCIP_SOLORIGIN SCIPsolGetOrigin(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+extern
+SCIP_Real SCIPsolGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
@@ -101,6 +107,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
+#define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
 #define SCIPsolGetRunnum(sol)           (sol)->runnum

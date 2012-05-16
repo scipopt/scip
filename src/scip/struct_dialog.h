@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,6 +34,7 @@ extern "C" {
 /** user interface dialog */
 struct SCIP_Dialog
 {
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy));    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree));    /**< destructor of dialog to free user data, or NULL */

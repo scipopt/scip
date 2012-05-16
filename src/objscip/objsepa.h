@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,15 +26,26 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for cut separators */
-class ObjSepa
+/** @brief C++ wrapper for cut separators
+ *
+ *  This class defines the interface for cut separators implemented in C++. 
+ *
+ *  - \ref SEPA "Instructions for implementing a cut separator"
+ *  - \ref SEPARATORS "List of available cut separators"
+ *  - \ref type_sepa.h "Corresponding C interface"
+ */
+class ObjSepa : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the cut separator */
    char* scip_name_;
@@ -53,36 +64,45 @@ public:
     */
    const SCIP_Real scip_maxbounddist_;
 
+   /** does the separator use a secondary SCIP instance? */
+   const SCIP_Bool scip_usessubscip_;
+
    /** should separator be delayed, if other separators found cuts? */
    const SCIP_Bool scip_delay_;
 
    /** default constructor */
    ObjSepa(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of cut separator */
       const char*        desc,               /**< description of cut separator */
       int                priority,           /**< priority of the cut separator */
       int                freq,               /**< frequency for calling separator */
       SCIP_Real          maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
+      SCIP_Bool          usessubscip,        /**< does the separator use a secondary SCIP instance? */
       SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
         scip_maxbounddist_(maxbounddist),
+        scip_usessubscip_(usessubscip),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjSepa()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
    /** destructor of cut separator to free user data (called when SCIP is exiting) */

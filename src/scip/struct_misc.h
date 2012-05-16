@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -138,6 +138,48 @@ struct SCIP_MpqArray
    int                   firstidx;           /**< index of first element in vals array */
    int                   minusedidx;         /**< index of first non zero element in vals array */
    int                   maxusedidx;         /**< index of last non zero element in vals array */
+};
+
+/** stair map */
+struct SCIP_Stairmap
+{
+   int*                  timepoints;         /**< time point array */
+   int*                  freecapacities;     /**< array holding corresponding available capacity */
+   int                   ntimepoints;        /**< current number of entries */
+   int                   arraysize;          /**< current array size */
+};
+
+/** digraph structure to store and handle graphs */
+struct SCIP_Digraph
+{
+   int**                 adjnodes;           /**< adjacency list: for each node (first dimension) list of adjacent nodes */
+   int*                  adjnodessize;       /**< sizes of the adjacency lists for the nodes */
+   int*                  nadjnodes;          /**< number of edges stored in the adjacency lists of the nodes */
+   int*                  components;         /**< array to store the node indices of the components, one component after the other */
+   int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
+   int                   ncomponents;        /**< number of undirected components stored */
+   int                   componentstartsize; /**< size of array componentstarts */
+   int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
+};
+
+/** binary search node data structure */
+struct SCIP_BstNode
+{
+   SCIP_BSTNODE*         parent;             /**< pointer to the parent node */
+   SCIP_BSTNODE*         left;               /**< pointer to the left child node */
+   SCIP_BSTNODE*         right;              /**< pointer to the right child node */
+   void*                 key;                /**< key according to which the tree is ordered */
+   void*                 dataptr;            /**< user pointer */
+};
+
+/** binary search tree data structure */
+struct SCIP_Bst
+{
+   SCIP_BSTNODE*         root;               /**< pointer to the dummy root node; root is left child */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store tree nodes */
+   SCIP_DECL_BSTINSERT   ((*inserter));      /**< inserter used to insert a new search node */
+   SCIP_DECL_BSTDELETE   ((*deleter));       /**< deleter used to delete new search node */
+   SCIP_DECL_SORTPTRCOMP ((*comparer));      /**< comparer used to compares two search keys */
 };
 
 #ifdef __cplusplus

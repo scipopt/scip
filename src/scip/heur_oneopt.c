@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
- * @ingroup PRIMALHEURISTICS
- * @brief  oneopt primal heuristic
+ * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
  */
 
@@ -26,6 +25,10 @@
 
 #include "scip/heur_oneopt.h"
 
+/* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
+ *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
+ */
+
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
 #define HEUR_DISPCHAR         'b'
@@ -34,10 +37,10 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHTEDOBJ   TRUE
 #define DEFAULT_DURINGROOT    TRUE
-
 
 /*
  * Data structures
@@ -61,7 +64,7 @@ SCIP_Real calcShiftVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable that should be shifted */
    SCIP_Real             solval,             /**< current solution value */
-   SCIP_Real*            activities
+   SCIP_Real*            activities          /**< LP row activities */
    )
 {
    SCIP_Real lb;
@@ -85,10 +88,10 @@ SCIP_Real calcShiftVal(
    shiftval = 0.0;
    shiftdown = TRUE;
 
-   /* determine shifting direction and maximal possible shifting wrt. corresponding bound */
+   /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
-   else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
+   else if( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
    {
       shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;
@@ -202,6 +205,20 @@ SCIP_RETCODE updateRowActivities(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyOneopt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurOneopt(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeOneopt)
@@ -276,6 +293,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_Bool localrows;
    SCIP_Bool valid;
    int nchgbound;
    int nbinvars;
@@ -311,7 +329,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* get problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nintvars = nbinvars + nintvars;
+   nintvars += nbinvars;
+
+   /* do not run if there are no discrete variables */
+   if( nintvars == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* we need to be able to start diving from current node in order to resolve the LP
     * with continuous or implicit integer variables
@@ -324,9 +349,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_Bool cutoff;
       cutoff = FALSE;
       SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );       
+      SCIP_CALL( SCIPflushLP(scip) ); 
    }
-   
+
    /* we need an LP */
    if( SCIPgetNLPRows(scip) == 0 )
       return SCIP_OKAY;
@@ -377,6 +402,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
 
+   localrows = FALSE;
    valid = TRUE;
 
    /* initialize activities */
@@ -399,6 +425,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             break;
          }
       }
+      else
+         localrows = TRUE;
    }
 
    if(!valid)
@@ -484,7 +512,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* sort arrays with respect to the first one */
-         SCIPsortRealPtr(objcoeffs, (void*)shiftcands, nshiftcands);
+         SCIPsortRealPtr(objcoeffs, (void**)shiftcands, nshiftcands);
 
          /* try to shift each variable -> Activities have to be updated */
          for( i = 0; i < nshiftcands; ++i )
@@ -509,21 +537,15 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-#if 1
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
-#else
-         /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-          * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-          * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-          * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-          * solution which we have at hand is not feasible anymore in the current transformed problem.
+         /* since we ignore local rows, we cannot guarantee their feasibility and have to set the checklprows flag to
+          * TRUE if local rows are present
           */
-         SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
-#endif
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, localrows, &success) );
+
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
-            SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
          }
@@ -563,19 +585,20 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          /* solve LP */
          SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
 
+         /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-          * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+          * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
 #ifdef NDEBUG
          retstat = SCIPsolveDiveLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
          { 
-            SCIPwarningMessage("Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
+            SCIPwarningMessage(scip, "Error while solving LP in Oneopt heuristic; LP solve terminated with code <%d>\n",retstat);
          }
 #else
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
 #endif
-         
+
          SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
@@ -583,25 +606,16 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool success;
+
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
 
-#if 1
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
-#else
-            /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
-             * "current" global bounds. This can be the case if we shift one variable down and the corresponding
-             * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
-             * bounds. Note, that the global bounds change during solution process. It can even happen that the best
-             * solution which we have at hand is not feasible anymore in the current transformed problem.
-             */
-            SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
-#endif
             /* check solution for feasibility */
             if( success )
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
-               SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
+               SCIPdebug( SCIP_CALL( SCIPprintSol(scip, worksol, NULL, FALSE) ) );
                heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
                *result = SCIP_FOUNDSOL;
             }
@@ -639,7 +653,8 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
+         heurCopyOneopt,
          heurFreeOneopt, heurInitOneopt, heurExitOneopt,
          heurInitsolOneopt, heurExitsolOneopt, heurExecOneopt,
          heurdata) );

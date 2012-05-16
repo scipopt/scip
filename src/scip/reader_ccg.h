@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ccg.h
+ * @ingroup FILEREADERS
  * @brief  Column connectivity graph file reader (actually, only a writer)
  * @author Marc Pfetsch
  *
@@ -42,15 +43,15 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 /* writes problem to file */
 extern
 SCIP_RETCODE SCIPwriteCcg(
-   SCIP*              scip,               /**< SCIP data structure */
-   FILE*              file,               /**< output file, or NULL if standard output should be used */
-   const char*        name,               /**< problem name */
-   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                nvars,              /**< number of mutable variables in the problem */
-   SCIP_CONS**        conss,              /**< array with constraints of the problem */
-   int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 #ifdef __cplusplus

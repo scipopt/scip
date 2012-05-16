@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.h
- * @brief  constraint handler for knapsack constraints
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
+ * @author Kati Wolter
+ * @author Michael Winkler
+ *
+ * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
+ * A knapsack constraint has the form
+ * \f[
+ *   \sum_{i=1}^n a_i x_i \leq b
+ * \f]
+ * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +45,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a knapsack constraint */
+/** creates and captures a knapsack constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -62,7 +75,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -84,6 +97,17 @@ extern
 SCIP_Longint SCIPgetCapacityKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** changes capacity of the knapsack constraint
+ *
+ *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
+ */
+extern
+SCIP_RETCODE SCIPchgCapacityKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Longint          capacity            /**< new capacity of knapsack */
    );
 
 /** gets the number of items in the knapsack constraint */
@@ -114,7 +138,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
+/** gets the dual Farkas value of the knapsack constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -145,7 +169,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
-   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
+   SCIP_Bool*            success             /**< pointer to store if an error occured during solving (normally a memory problem) */
    );
 
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
@@ -197,7 +222,7 @@ SCIP_RETCODE SCIPsolveKnapsack(
    );
 
 /** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
- *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
+ *  polytope by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
  *  are fixed to one (C2)
  */
 extern
@@ -229,7 +254,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int                   maxnumcardlift,     /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
@@ -240,11 +265,12 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
    int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
    SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficients of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   int*                  ncuts,              /**< pointer to add up the number of found cuts */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    );
 
 #ifdef __cplusplus

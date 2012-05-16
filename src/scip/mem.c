@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,8 +23,8 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/mem.h"
+#include "scip/pub_message.h"
 
 
 
@@ -39,11 +39,9 @@ SCIP_RETCODE SCIPmemCreate(
 
    SCIP_ALLOC( (*mem)->setmem = BMScreateBlockMemory(1, 10) );
    SCIP_ALLOC( (*mem)->probmem = BMScreateBlockMemory(1, 10) );
-   SCIP_ALLOC( (*mem)->solvemem = BMScreateBlockMemory(1, 10) );
 
    SCIPdebugMessage("created setmem   block memory at <%p>\n", (void*)(*mem)->setmem);
    SCIPdebugMessage("created probmem  block memory at <%p>\n", (void*)(*mem)->probmem);
-   SCIPdebugMessage("created solvemem block memory at <%p>\n", (void*)(*mem)->solvemem);
 
    return SCIP_OKAY;
 }
@@ -55,7 +53,6 @@ SCIP_RETCODE SCIPmemFree(
 {
    assert(mem != NULL);
 
-   BMSdestroyBlockMemory(&(*mem)->solvemem);
    BMSdestroyBlockMemory(&(*mem)->probmem);
    BMSdestroyBlockMemory(&(*mem)->setmem);
 
@@ -71,5 +68,5 @@ SCIP_Longint SCIPmemGetUsed(
 {
    assert(mem != NULL);
 
-   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem) + BMSgetBlockMemoryUsed(mem->solvemem);
+   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem);
 }

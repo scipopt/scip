@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,15 @@ extern "C" {
 typedef struct SCIP_Pricer SCIP_PRICER;           /**< variable pricer data */
 typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable pricer data */
 
+
+/** copy method for pricer plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - pricer          : the variable pricer itself
+ *  - valid           : was the copying process valid? 
+ */
+#define SCIP_DECL_PRICERCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Bool* valid)
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting)
  *
@@ -119,12 +128,12 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  */
 #define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result)
 
-/** farkas pricing method of variable pricer for infeasible LPs
+/** Farkas pricing method of variable pricer for infeasible LPs
  *
  *  Searches for variables that can contribute to the feasibility of the current LP.
- *  In standard branch-and-price, these are variables with positive farkas values:
+ *  In standard branch-and-price, these are variables with positive Farkas values:
  *
- *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
+ *  The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
  *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
  *  by the sides of the LP rows and the sign of y:
  *   - if y_i is positive, b_i is the left hand side of the row,
@@ -134,11 +143,11 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  especially by the (for this inequality least infeasible solution) x' defined by 
  *     x'_i := ub_i, if y^T A_i >= 0
  *     x'_i := lb_i, if y^T A_i < 0.
- *  Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
+ *  Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0.
  *
  *  The method is called in the LP solving loop after an LP was proven to be infeasible.
  *
- *  Whenever the pricer finds a variable with positive farkas value, it should call SCIPcreateVar()
+ *  Whenever the pricer finds a variable with positive Farkas value, it should call SCIPcreateVar()
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *

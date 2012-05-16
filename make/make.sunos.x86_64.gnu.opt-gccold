@@ -1,0 +1,12 @@
+FLAGS		+=	-DNDEBUG -DNO_STRERROR_R -DROUNDING_FE
+OFLAGS		+=	-m64 -O3 -fomit-frame-pointer # -malign-double
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=      -Bstatic -lsocket -lnsl
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

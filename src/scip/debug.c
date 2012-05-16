@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,16 +25,16 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
 #include "scip/debug.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/struct_scip.h"
 
 #ifdef SCIP_DEBUG_SOLUTION
@@ -44,11 +44,12 @@
 static char** solnames = NULL;
 static SCIP_Real* solvals = NULL;
 static int nsolvals = 0;
+static int solsize = 0;
 static SCIP_SET* mainscipset = NULL;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
-static SCIP_Bool solisachieved = FALSE;      /**< means if current bestsolution is better than the given debugsolution */
+static SCIP_Bool solisachieved = FALSE;      /**< means if current best solution is better than the given debug solution */
 static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
 
 /** reads solution from given file into given arrays */
@@ -58,16 +59,22 @@ SCIP_RETCODE readSolfile(
    const char*           solfilename,        /**< solution filename to read */
    char***               names,              /**< pointer to store the array of variable names */
    SCIP_Real**           vals,               /**< pointer to store the array of solution values */
-   int*                  nvals               /**< pointer to store the number of non-zero elements */
+   int*                  nvals,              /**< pointer to store the number of non-zero elements */
+   int*                  valssize            /**< pointer to store the length of the variable names and solution values arrays */
    )
 {
    FILE* file;
-   int solsize;
    int nonvalues;
    int i;
 
+   assert(set != NULL);
+   assert(solfilename != NULL);
+   assert(names != NULL);
    assert(*names == NULL);
+   assert(vals != NULL);
    assert(*vals == NULL);
+   assert(nvals != NULL);
+   assert(valssize != NULL);
 
    printf("***** debug: reading solution file <%s>\n", solfilename);
 
@@ -81,8 +88,8 @@ SCIP_RETCODE readSolfile(
    }
 
    /* read data */
-   solsize = 0;
    nonvalues = 0;
+   *valssize = 0;
 
    while( !feof(file) )
    {
@@ -103,17 +110,17 @@ SCIP_RETCODE readSolfile(
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
       if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
       {
-   	 nonvalues++;
+         nonvalues++;
          continue;
       }
 
       /* skip empty lines */
       if( strlen(buf) == 1 )
       {
-   	 nonvalues++;
+         nonvalues++;
          continue;
       }
-	
+
 
       nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )
@@ -124,14 +131,13 @@ SCIP_RETCODE readSolfile(
       }
 
       /* allocate memory */
-      if( *nvals >= solsize )
+      if( *nvals >= *valssize )
       {
-         solsize *= 2;
-         solsize = MAX(solsize, (*nvals)+1);
-         SCIP_ALLOC( BMSreallocMemoryArray(names, solsize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(vals, solsize) );         
+         *valssize = MAX(2 * *valssize, (*nvals)+1);
+         SCIP_ALLOC( BMSreallocMemoryArray(names, *valssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(vals, *valssize) );
       }
-      assert(*nvals < solsize);
+      assert(*nvals < *valssize);
 
       /* store solution value in sorted list */
       for( i = *nvals; i > 0 && strcmp(name, (*names)[i-1]) < 0; --i )
@@ -140,14 +146,15 @@ SCIP_RETCODE readSolfile(
          (*vals)[i] = (*vals)[i-1];
       }
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
+      SCIPdebugMessage("found variable <%s>: value <%g>\n", (*names)[i], val);
       (*vals)[i] = val;
       (*nvals)++;
    }
-   
+
    debugsolval = 0.0;
 
    /* get solution value */
-   for( i = *nvals - 1; i >= 0; --i) 
+   for( i = *nvals - 1; i >= 0; --i)
    {
       SCIP_VAR* var;
       var = SCIPfindVar(set->scip, (*names)[i]);
@@ -173,10 +180,12 @@ SCIP_RETCODE readSolution(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   assert(set != NULL);
+
    if( nsolvals > 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( readSolfile(set, SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals) );
+   SCIP_CALL( readSolfile(set, SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals, &solsize) );
 
    return SCIP_OKAY;
 }
@@ -197,7 +206,9 @@ SCIP_RETCODE getSolutionValue(
    int right;
    int middle;
    int cmp;
-   
+
+   assert(set != NULL);
+   assert(var != NULL);
    assert(val != NULL);
 
    SCIP_CALL( readSolution(set) );
@@ -210,7 +221,7 @@ SCIP_RETCODE getSolutionValue(
       *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
    }
-   /* retransform variable onto orginal variable space */
+   /* retransform variable onto original variable space */
    solvar = var;
    scalar = 1.0;
    constant = 0.0;
@@ -225,9 +236,17 @@ SCIP_RETCODE getSolutionValue(
       SCIP_CALL( SCIPvarGetOrigvarSum(&solvar, &scalar, &constant) );
       if( solvar == NULL )
       {
-         SCIPwarningMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
-         *val = SCIP_UNKNOWN;
-         return SCIP_OKAY;
+         /* if no original counterpart, then maybe someone added a value for the transformed variable, so search for var (or its negation) */
+         SCIPdebugMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
+         solvar = var;
+         scalar = 1.0;
+         constant = 0.0;
+         if( SCIPvarIsNegated(solvar) )
+         {
+            scalar = -1.0;
+            constant = SCIPvarGetNegationConstant(solvar);
+            solvar = SCIPvarGetNegationVar(solvar);
+         }
       }
    }
    /* perform a binary search for the variable */
@@ -252,9 +271,24 @@ SCIP_RETCODE getSolutionValue(
 
    if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
    {
-      SCIPwarningMessage("invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
+      SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets value for a variable in the debug solution
+ * if no value is stored for the variable, gives 0.0
+ */
+extern
+SCIP_RETCODE SCIPdebugGetSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to get the value */
+   SCIP_Real*            val                 /**< buffer to store solution value */
+   )
+{
+   SCIP_CALL( getSolutionValue(scip->set, var, val) );
 
    return SCIP_OKAY;
 }
@@ -277,14 +311,21 @@ SCIP_Bool debugSolIsAchieved(
    assert(scip != NULL);
 
    bestsol = SCIPgetBestSol(scip);
-   
+
    if( bestsol != NULL )
    {
       SCIP_Real solvalue;
 
+      /* don't check solution while in problem creation stage */
+      if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+         return TRUE;
+
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
-      if( (SCIPgetObjsense(scip) == SCIP_OBJSEN_MINIMIZE && solvalue <= debugsolval) || (SCIPgetObjsense(scip) == SCIP_OBJSEN_MAXIMIZE && solvalue >= debugsolval) )
+      /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
+      SCIP_CALL( readSolution(set) );
+
+      if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsLE(set, solvalue, debugsolval)) || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsGE(set, solvalue, debugsolval)) )
          solisachieved = TRUE;
    }
 
@@ -310,6 +351,11 @@ SCIP_RETCODE isSolutionInNode(
    )
 {
    SCIP_Bool* boolptr;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+   assert(solcontained != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -337,7 +383,7 @@ SCIP_RETCODE isSolutionInNode(
       return SCIP_OKAY;
    }
 
-   /* if the solution is not contained in the parent of the node, it cannot be containt in the current node */
+   /* if the solution is not contained in the parent of the node, it cannot be contained in the current node */
    *solcontained = TRUE;
    if( node->parent != NULL )
    {
@@ -359,9 +405,6 @@ SCIP_RETCODE isSolutionInNode(
          {
             SCIP_Real varsol;
 
-            if( SCIPboundchgIsRedundant(&boundchgs[i]) )
-               continue;
-
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(set, boundchgs[i].var, &varsol) );
 
@@ -372,6 +415,7 @@ SCIP_RETCODE isSolutionInNode(
                   *solcontained = SCIPsetIsFeasGE(set, varsol, boundchgs[i].newbound);
                else
                   *solcontained = SCIPsetIsFeasLE(set, varsol, boundchgs[i].newbound);
+
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
@@ -391,7 +435,7 @@ SCIP_RETCODE isSolutionInNode(
 
    /* remember the status of the current node */
    SCIP_CALL( SCIPhashmapSetImage(solinnode, (void*)node, *solcontained ? (void*)(&trueptr) : (void*)(&falseptr)) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -402,24 +446,26 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
 {
    int s;
 
+   assert(set != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
 
    for( s = nsolvals - 1; s >= 0; --s )
       BMSfreeMemoryArrayNull(&solnames[s]);
-   
+
    BMSfreeMemoryArrayNull(&solnames);
    BMSfreeMemoryArrayNull(&solvals);
-   
+
    nsolvals = 0;
    debugsolval = 0.0;
    mainscipset = NULL;
    solisachieved = FALSE;
-   
+
    if( solinnode != NULL)
       SCIPhashmapFree(&solinnode);
-   
+
    return SCIP_OKAY;
 }
 
@@ -438,6 +484,9 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_Real minactivity;
    SCIP_Real maxactivity;
    SCIP_Real solval;
+
+   assert(set != NULL);
+   assert(row != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -473,6 +522,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
       /* get solution value of variable in debugging solution */
       var = SCIPcolGetVar(cols[i]);
       SCIP_CALL( getSolutionValue(set, var, &solval) );
+
       if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          minactivity += vals[i] * solval;
@@ -489,7 +539,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
          maxactivity += vals[i] * SCIPvarGetLbGlobal(var);
       }
    }
-   SCIPdebugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n", 
+   SCIPdebugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n",
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation */
@@ -497,7 +547,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
    {
       printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%d)\n",
          SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
-      SCIProwPrint(row, NULL);
+      SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
       printf("\n\n");
@@ -525,6 +575,9 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    )
 {
    SCIP_Real varsol;
+
+   assert(set != NULL);
+   assert(var != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -556,6 +609,9 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    )
 {
    SCIP_Real varsol;
+
+   assert(set != NULL);
+   assert(var != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
@@ -592,8 +648,21 @@ SCIP_RETCODE SCIPdebugCheckInference(
    SCIP_Real varsol;
    SCIP_Bool solcontained;
 
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+   assert(var != NULL);
+
+   /* in case we are in probing or diving we have to avoid checking the solution */
+   if( SCIPlpDiving(set->scip->lp) || SCIPtreeProbing(set->scip->tree) )
+      return SCIP_OKAY;
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* check whether the debugging solution is contained in the local subproblem */
@@ -629,6 +698,10 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    SCIP_NODE*            node                /**< node that will be freed */
    )
 {
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -638,18 +711,18 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       return SCIP_OKAY;
 
    /* check if a solution will be cutoff in tree */
-   if( SCIPgetStage(set->scip) != SCIP_STAGE_FREESOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_PRESOLVING && !SCIPlpDiving(set->scip->lp) && !SCIPtreeProbing(set->scip->tree) )
+   if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_Bool solisinnode;
-      
+
       solisinnode = FALSE;
-      
+
       SCIP_CALL( isSolutionInNode(blkmem, set, node, &solisinnode) );
       /* wrong node will be cutoff */
       if( solisinnode )
       {
-         SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d\n",
-            node, SCIPnodeGetDepth(node));
+         SCIPerrorMessage("debugging solution was cut off in local node #%"SCIP_LONGINT_FORMAT" (%p) at depth %d\n",
+            node->number, node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
@@ -677,6 +750,9 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_Real vbvarsol;
    SCIP_Real vb;
 
+   assert(set != NULL);
+   assert(var != NULL);
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -696,7 +772,7 @@ SCIP_RETCODE SCIPdebugCheckVbound(
       if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLT(set, varsol, vb))
          || (vbtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGT(set, varsol, vb)) )
       {
-         SCIPerrorMessage("invalid variable bound: <%s>[%.15g] %s %.15g<%s>[%.15g] %+.15g\n", 
+         SCIPerrorMessage("invalid variable bound: <%s>[%.15g] %s %.15g<%s>[%.15g] %+.15g\n",
             SCIPvarGetName(var), varsol, vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef,
             SCIPvarGetName(vbvar), vbvarsol, vbconstant);
          SCIPABORT();
@@ -718,6 +794,8 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 {
    SCIP_Real solval;
 
+   assert(set != NULL);
+   assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
    /* check if we are in the original problem and not in a sub MIP */
@@ -771,6 +849,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    )
 {
@@ -778,8 +857,11 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_Bool solcontained;
    int i;
 
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(node != NULL);
    assert(nbdchginfos == 0 || bdchginfos != NULL);
-   
+
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
@@ -796,18 +878,44 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    /* check, whether at least one literals is TRUE in the debugging solution */
    for( i = 0; i < nbdchginfos; ++i )
    {
-      SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
+      SCIP_VAR* var;
+      SCIP_Real newbound;
+
+      var = SCIPbdchginfoGetVar(bdchginfos[i]);
+      newbound = relaxedbds[i];
+
+      SCIP_CALL( getSolutionValue(set, var, &solval) );
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_OKAY;
       if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
       {
-         if( SCIPsetIsLT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         assert(SCIPsetIsLE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsLE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsLT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
       else
       {
-         if( SCIPsetIsGT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-            return SCIP_OKAY;
+         assert(SCIPsetIsGE(set, newbound, SCIPbdchginfoGetNewbound(bdchginfos[i])));
+
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( SCIPsetIsGE(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsGT(set, solval, newbound) )
+               return SCIP_OKAY;
+         }
       }
    }
 
@@ -815,9 +923,9 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    for( i = 0; i < nbdchginfos; ++i )
    {
       SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
-      printf(" <%s>[%.15g] %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
-         SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", 
-         SCIPbdchginfoGetNewbound(bdchginfos[i]));
+      printf(" <%s>[%.15g] %s %g(%g)", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
+         SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+         SCIPbdchginfoGetNewbound(bdchginfos[i]), relaxedbds[i]);
    }
    printf("\n");
    SCIPABORT();
@@ -833,6 +941,9 @@ SCIP_DECL_PROPEXEC(propExecDebug)
    SCIP_VAR** vars;
    int nvars;
    int i;
+
+   assert(scip != NULL);
+   assert(result != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -878,7 +989,7 @@ SCIP_DECL_PROPEXEC(propExecDebug)
             solval, SCIPvarGetName(vars[i]), lb, ub, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]));
          SCIPABORT();
       }
-      
+
       SCIP_CALL( SCIPfixVar(scip, vars[i], solval, &infeasible, &fixed) );
       if( infeasible )
          *result = SCIP_CUTOFF;
@@ -894,9 +1005,91 @@ SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
-         NULL, NULL, NULL, NULL, NULL, propExecDebug, NULL, NULL) );
+         SCIP_PROPTIMING_ALWAYS, 99999999, 0, FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, propExecDebug, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a solution value for a new variable in the transformed problem that has no original counterpart
+ * a value can only be set if no value has been set for this variable before
+ */
+extern
+SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to add a value */
+   SCIP_Real             val                 /**< solution value for variable */
+   )
+{
+   const char* varname;
+   int i;
+
+   assert(var != NULL);
+
+   /* check if we are in the SCIP instance that we are debugging and not some different (subSCIP, auxiliary CIP, ...) */
+   if( !isSolutionInMip(scip->set) )
+      return SCIP_OKAY;
+
+   if( SCIPvarIsOriginal(var) )
+   {
+      SCIPerrorMessage("adding solution values for original variables is forbidden\n");
+      return SCIP_ERROR;
+   }
+
+   if( SCIPvarIsTransformedOrigvar(var) )
+   {
+      SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
+      return SCIP_ERROR;
+   }
+
+   /* allocate memory */
+   if( nsolvals >= solsize )
+   {
+      solsize = MAX(2*solsize, nsolvals+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&solnames, solsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&solvals,  solsize) );
+   }
+   assert(nsolvals < solsize);
+
+   /* store solution value in sorted list */
+   varname = SCIPvarGetName(var);
+   for( i = nsolvals; i > 0 && strcmp(varname, solnames[i-1]) < 0; --i )
+   {
+      solnames[i] = solnames[i-1];
+      solvals[i]  = solvals[i-1];
+   }
+   if( i > 0 && strcmp(varname, solnames[i-1]) == 0 )
+   {
+      if( REALABS(solvals[i-1] - val) > 1e-9 )
+      {
+         SCIPerrorMessage("already have stored different debugging solution value (%g) for variable <%s>, cannot store %g\n", solvals[i-1], varname, val);
+         return SCIP_ERROR;
+      }
+      else
+      {
+         SCIPdebugMessage("already have stored debugging solution value %g for variable <%s>, do not store same value again\n", val, varname);
+         for( ; i < nsolvals; ++i )
+         {
+            solnames[i] = solnames[i+1];
+            solvals[i]  = solvals[i+1];
+         }
+         return SCIP_OKAY;
+      }
+   }
+
+   /* insert new solution value */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&solnames[i], varname, strlen(varname)+1) );
+   SCIPdebugMessage("add variable <%s>: value <%g>\n", solnames[i], val);
+   solvals[i] = val;
+   nsolvals++;
+
+   /* update objective function value of debug solution */
+   debugsolval += solvals[i] * SCIPvarGetObj(var);
+   SCIPdebugMessage("Debug Solution value is now %g.\n", debugsolval);
 
    return SCIP_OKAY;
 }
@@ -913,13 +1106,13 @@ void SCIPdummyDebugMethodForSun(void)
 #endif
 
 
-/* 
- * debug method for LP interface, to check if the LP interface works correct 
+/*
+ * debug method for LP interface, to check if the LP interface works correct
  */
 #ifdef SCIP_DEBUG_LP_INTERFACE
 
 /* check whether coef is the r-th row of the inverse basis matrix B^-1; this is
- * the case if (coef * B) is the r-th unit vector */
+ * the case if( coef * B ) is the r-th unit vector */
 SCIP_RETCODE SCIPdebugCheckBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
@@ -934,24 +1127,26 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
    int i;
    int k;
 
+   assert(scip != NULL);
+
    nrows = SCIPgetNLPRows(scip);
 
    /* get basic indices for the basic matrix B */
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
-   
-   
+
+
    /* loop over the columns of B */
    for( k = 0; k < nrows; ++k )
    {
       vecval = 0.0;
-      
-      /* indices of basic columns and rows: 
-       * - index i >= 0 corresponds to column i, 
-       * - index i < 0 to row -i-1 
+
+      /* indices of basic columns and rows:
+       * - index i >= 0 corresponds to column i,
+       * - index i < 0 to row -i-1
        */
       idx = basisind[k];
-      
+
       /* check if we have a slack variable; this is the case if idx < 0 */
       if( idx >= 0 )
       {
@@ -962,38 +1157,38 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
             vecval += coef[i] * matrixval;
          }
       }
-      else 
+      else
       {
          assert( idx < 0 );
-         
-         /* retransform idx 
-          * - index i >= 0 corresponds to column i, 
-          * - index i < 0 to row -i-1 
+
+         /* retransform idx
+          * - index i >= 0 corresponds to column i,
+          * - index i < 0 to row -i-1
           */
          idx = -idx - 1;
          assert( idx >= 0 && idx < nrows );
-         
-         /* since idx < 0 we are in the case of a slack variable, i.e., the corresponding column 
+
+         /* since idx < 0 we are in the case of a slack variable, i.e., the corresponding column
             is the idx-unit vector; note that some LP solver return a -idx-unit vector */
          /*   vecval = REALABS(coef[idx]);*/
          vecval = coef[idx];
       }
-      
+
       /* check if vecval fits to the r-th unit vector */
       if( k == r && !SCIPisFeasEQ(scip, vecval, 1.0) )
       {
          /* we expected a 1.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(scip), "checked SCIPgetLPBInvRow() found value <%g> expected 1.0\n", vecval);
       }
       else if( k != r && !SCIPisFeasZero(scip, vecval) )
       {
          /* we expected a 0.0 and found something different */
-         SCIPwarningMessage("checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(scip), "checked SCIPgetLPBInvRow() found value <%g> expected 0.0\n", vecval);
       }
    }
-   
+
    SCIPfreeBufferArray(scip, &basisind);
-   
+
    return SCIP_OKAY;
 }
 

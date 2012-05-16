@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,26 +17,24 @@
  * @brief  constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
- * This constraint ensures that a given square matrix of binary
- * variables corresponds to a tournament, i.e., it is an acyclic
- * orientation of the complete graph. This encodes a linear order as
- * follows. The rows and columns correspond to the elements of the set
- * to be ordered. A variable x[i][j] is 1 if and only if element i
- * appears before j in the order.
+ * This constraint ensures that a given square matrix of binary variables corresponds to a
+ * tournament, i.e., it is an acyclic orientation of the complete graph. This encodes a linear order
+ * as follows. The rows and columns correspond to the elements of the set to be ordered. A variable
+ * x[i][j] is 1 if and only if element i appears before j in the order.
  *
- * In this constraint handler we only add the symmetry equations and
- * separate the triangle inequalities yielding a correct IP model.
+ * In this constraint handler we only add the symmetry equations and separate the triangle
+ * inequalities yielding a correct IP model.
  *
  * The variables on the diagonal are ignored.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_LINEARORDERING_H__
-#define __SCIP_CONS_LINEARORDERING_H__
+#ifndef __LOP_CONS_LINEARORDERING_H__
+#define __LOP_CONS_LINEARORDERING_H__
 
 
-#include "scip/scip.h"
+#include <scip/scip.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +53,7 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   n,                  /**< number of elements */
-   SCIP_VAR***           Vars,               /**< n x n matrix of binary variables */
+   SCIP_VAR***           vars,               /**< n x n matrix of binary variables */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */

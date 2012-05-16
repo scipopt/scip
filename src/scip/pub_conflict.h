@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,6 +72,18 @@ int SCIPconflicthdlrGetPriority(
 /** is conflict handler initialized? */
 extern
 SCIP_Bool SCIPconflicthdlrIsInitialized(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** gets time in seconds used in this conflict handler for setting up for next stages */
+extern
+SCIP_Real SCIPconflicthdlrGetSetupTime(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** gets time in seconds used in this conflict handler */
+extern
+SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 

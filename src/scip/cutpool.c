@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,14 +23,14 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/lp.h"
 #include "scip/sepastore.h"
 #include "scip/cutpool.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_cutpool.h"
 
@@ -117,11 +117,25 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
    unsigned int keyval;
-
+   int maxabsval;
+   SCIP_Real maxval;  
+   SCIP_SET* set;
+   
+   set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
 
-   keyval = (row->nummaxval << 29) + (row->len << 22) + (row->minidx << 11) + row->maxidx; /*lint !e701*/
+   maxval = SCIProwGetMaxval(row, set);
+   assert(row->nummaxval > 0);
+   
+   if( maxval > INT_MAX )
+      maxabsval = 0;
+   else if( maxval < 1.0 )
+      maxabsval = (int) 10000*maxval; /*lint !e524*/
+   else
+      maxabsval = (int) maxval;
+
+   keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
 
    return keyval;
 }
@@ -266,7 +280,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
 
    SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, 
          (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
-         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, NULL) );
+         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, (void*) set) );
 
    (*cutpool)->cuts = NULL;
    (*cutpool)->cutssize = 0;
@@ -506,6 +520,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_Bool             root,               /**< are we at the root node? */
@@ -563,13 +579,24 @@ SCIP_RETCODE SCIPcutpoolSeparate(
          row = cut->row;
 
          if( !SCIProwIsInLP(row) )
-         {         
-            if( SCIProwIsLPEfficacious(row, set, stat, lp, root) )
+         {
+            /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP
+             * row; hence, we want to remove the bound change cut from the SCIP cut pool
+             */
+            if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
+            {
+               /* insert bound change cut into separation store which will force that cut */
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+
+               SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
+            }
+            else if( SCIProwIsLPEfficacious(row, set, stat, lp, root) )
             {
                /* insert cut in separation storage */
                SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
-                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, lp, NULL, row, FALSE, root) );
+                  SCIProwGetName(row), SCIProwGetLPFeasibility(row, set, stat, lp));
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, row, FALSE, root) );
+
                found = TRUE;
                cut->age = 0;
             }
@@ -584,7 +611,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
          }
       }
    }
-   
+
    cutpool->processedlp = stat->lpcount;
    cutpool->firstunprocessed = cutpool->ncuts;
 

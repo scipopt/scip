@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,8 +30,8 @@
 #include <readline/history.h>
 #endif
 
+#include "scip/scip.h"
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/pub_misc.h"
@@ -116,7 +116,7 @@ SCIP_RETCODE removeHistory(
 #if RL_VERSION_MAJOR >= 5
    (void)free_history_entry(entry);
 #else
-   if ( entry != NULL )
+   if( entry != NULL )
    {
       free((void*)entry->line);
       free(entry);
@@ -145,17 +145,25 @@ SCIP_RETCODE readLine(
    assert(dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
    assert(endoffile != NULL);
 
-   /* check for EOF (due to Ctrl-D or unexpected end of piped-in file) */
+   /* check for EOF (due to CTRL-D or unexpected end of piped-in file) */
    if( feof(stdin) )
       *endoffile = TRUE;
    else
    {
-      /* display prompt */
-      SCIPmessagePrintDialog(prompt);
-      
-      /* read line from stdin */
-      (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+#ifndef NDEBUG
+      char* result;
+#endif
 
+      /* display prompt */
+      printf("%s", prompt);
+
+      /* read line from stdin */
+#ifndef NDEBUG
+      result = fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+      assert(result != NULL);
+#else
+      (void) fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
+#endif
       /* replace newline with \0 */
       s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
       if( s != NULL )
@@ -277,11 +285,34 @@ SCIP_RETCODE readInputLine(
  * dialog handler
  */
 
-/** creates a dialog handler */
-SCIP_RETCODE SCIPdialoghdlrCreate(
-   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
+/** copies the given dialog to a new scip */
+SCIP_RETCODE SCIPdialogCopyInclude(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
+   assert(dialog != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( dialog->dialogcopy != NULL )
+   {
+      SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), (void*)set->scip);
+      SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
+   }
+   return SCIP_OKAY;
+}
+
+/** creates a dialog handler */
+SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
+   )
+{  /*lint --e{715}*/
+#ifdef WITH_READLINE
+   char readlineversion[20];
+#endif
+
    assert(dialoghdlr != NULL);
    
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
@@ -293,6 +324,11 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
+
+#ifdef WITH_READLINE
+   (void) SCIPsnprintf(readlineversion, sizeof(readlineversion), "Readline %s", rl_library_version);
+   SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
+#endif
 
    return SCIP_OKAY;
 }
@@ -328,7 +364,7 @@ SCIP_RETCODE SCIPdialoghdlrExec(
    SCIPdialoghdlrClearBuffer(dialoghdlr);
    dialog = dialoghdlr->rootdialog;
 
-   /* execute dialogs until a NULL is returned as nextdialog */
+   /* execute dialogs until a NULL is returned as next dialog */
    while( dialog != NULL )
    {
       SCIP_CALL( SCIPdialogExec(dialog, set, dialoghdlr, &dialog) );
@@ -443,7 +479,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
       if( len > 0 )
       {
-         while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
          {
             dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
             len--;
@@ -461,12 +497,12 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
    /* skip leading spaces: find start of first word */
-   while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
    firstword = &dialoghdlr->buffer[dialoghdlr->bufferpos];
 
    pos = dialoghdlr->bufferpos;
-   while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && !isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && !isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
    {
       assert(pos <= dialoghdlr->bufferpos);
 
@@ -539,7 +575,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       dialoghdlr->buffer[pos] = '\0';
 
    /* remove additional spaces */
-   while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
 
    *inputword = firstword;
@@ -649,12 +685,12 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
  * dialog
  */
 
-/** ensures, that subdialogs array can store at least the given number of sub dialogs */
+/** ensures, that sub-dialogs array can store at least the given number of sub-dialogs */
 static
 SCIP_RETCODE ensureSubdialogMem(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimal storage size for sub dialogs */
+   int                   num                 /**< minimal storage size for sub-dialogs */
    )
 {
    assert(dialog != NULL);
@@ -675,12 +711,13 @@ SCIP_RETCODE ensureSubdialogMem(
 /** creates and captures a user interface dialog */
 SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
    const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*           desc,               /**< description of dialog used if description output method is NULL */
-   SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
+   SCIP_Bool             issubmenu,          /**< is the dialog a sub-menu? */
    SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
@@ -688,6 +725,7 @@ SCIP_RETCODE SCIPdialogCreate(
    assert(name != NULL);
 
    SCIP_ALLOC( BMSallocMemory(dialog) );
+   (*dialog)->dialogcopy = dialogcopy;
    (*dialog)->dialogexec = dialogexec;
    (*dialog)->dialogdesc = dialogdesc;
    (*dialog)->dialogfree = dialogfree;
@@ -714,7 +752,7 @@ SCIP_RETCODE SCIPdialogCreate(
    return SCIP_OKAY;
 }
 
-/** frees dialog and all of its sub dialogs */
+/** frees dialog and all of its sub-dialogs */
 static
 SCIP_RETCODE dialogFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -733,7 +771,7 @@ SCIP_RETCODE dialogFree(
       SCIP_CALL( (*dialog)->dialogfree(scip, *dialog) );
    }
 
-   /* release sub dialogs */
+   /* release sub-dialogs */
    for( i = 0; i < (*dialog)->nsubdialogs; ++i )
    {
       SCIP_CALL( SCIPdialogRelease(scip, &(*dialog)->subdialogs[i]) );
@@ -792,24 +830,24 @@ SCIP_RETCODE SCIPdialogExec(
    return SCIP_OKAY;
 }
 
-/** comparison method for sorting dialogs by non-decreasing index */
+/** comparison method for sorting dialogs w.r.t. to their name */
 static
 SCIP_DECL_SORTPTRCOMP(dialogComp)
 {
    return strcmp( SCIPdialogGetName((SCIP_DIALOG*)elem1), SCIPdialogGetName((SCIP_DIALOG*)elem2) );
 }
 
-/** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
+/** adds a sub-dialog to the given dialog as menu entry and captures the sub-dialog */
 SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
+   SCIP_DIALOG*          subdialog           /**< sub-dialog to add as menu entry in dialog */
    )
 {
    assert(dialog != NULL);
    assert(subdialog != NULL);
 
-   /* check, if subdialog already exists */
+   /* check, if sub-dialog already exists */
    if( SCIPdialogHasEntry(dialog, SCIPdialogGetName(subdialog)) )
    {
       SCIPerrorMessage("dialog entry with name <%s> already exists in dialog <%s>\n",
@@ -817,14 +855,14 @@ SCIP_RETCODE SCIPdialogAddEntry(
       return SCIP_INVALIDDATA;
    }
 
-   /* resize the subdialogs array */
+   /* resize the sub-dialogs array */
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
-   /* link the dialogs as parent-child pair; the subdialogs are sorted non-decreasing w.r.t. their name */
-   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
+   /* link the dialogs as parent-child pair; the sub-dialogs are sorted non-decreasing w.r.t. their name */
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs, NULL);
    subdialog->parent = dialog;
 
-   /* capture sub dialog */
+   /* capture sub-dialog */
    SCIPdialogCapture(subdialog);
 
    return SCIP_OKAY;
@@ -848,7 +886,7 @@ SCIP_Bool SCIPdialogHasEntry(
    nsubdialogs = SCIPdialogGetNSubdialogs(dialog);
    for( i = 0; i < nsubdialogs; ++i )
    {
-      /* check, if the sub dialog's name matches entryname */
+      /* check, if the sub-dialog's name matches entryname */
       if( strcmp(entryname, SCIPdialogGetName(subdialogs[i])) == 0 )
          return TRUE;
    }
@@ -889,13 +927,13 @@ int SCIPdialogFindEntry(
    nfound = 0;
    for( i = 0; i < nsubdialogs; ++i )
    {
-      /* check, if the beginning of the sub dialog's name matches entryname */
+      /* check, if the beginning of the sub-dialog's name matches entryname */
       if( strncmp(entryname, SCIPdialogGetName(subdialogs[i]), namelen) == 0 )
       {
          *subdialog = subdialogs[i];
          nfound++;
 
-         /* if entryname exactly matches the subdialog's name, use this subdialog */
+         /* if entryname exactly matches the sub-dialog's name, use this sub-dialog */
          if( namelen == strlen(SCIPdialogGetName(subdialogs[i])) )
             return 1;
       }
@@ -936,7 +974,7 @@ SCIP_RETCODE SCIPdialogDisplayMenu(
    }
 
    if( dialog->nsubdialogs == 0 )
-      SCIPmessagePrintDialog("<no options available>\n");
+      SCIPdialogMessage(scip, NULL, "<no options available>\n");
 
    return SCIP_OKAY;
 }
@@ -956,11 +994,11 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
    else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
-   SCIPmessagePrintDialog("  %-21s ", name);
+   SCIPdialogMessage(scip, NULL, "  %-21s ", name);
    if( strlen(name) > 21 )
    {
       /* break the line, and start the description in the next line */
-      SCIPmessagePrintDialog("\n                   -->  ");
+      SCIPdialogMessage(scip, NULL, "\n                   -->  ");
    }
 
    /* display the dialog's description */
@@ -969,8 +1007,8 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
       SCIP_CALL( dialog->dialogdesc(scip, dialog) );
    }
    else
-      SCIPmessagePrintDialog("%s",dialog->desc);
-   SCIPmessagePrintDialog("\n");
+      SCIPdialogMessage(scip, NULL, "%s",dialog->desc);
+   SCIPdialogMessage(scip, NULL, "\n");
 
    return SCIP_OKAY;
 }
@@ -996,7 +1034,7 @@ SCIP_RETCODE SCIPdialogDisplayCompletions(
    namelen = strlen(entryname);
    for( i = 0; i < nsubdialogs; ++i )
    {
-      /* check, if the beginning of the sub dialog's name matches entryname */
+      /* check, if the beginning of the sub-dialog's name matches entryname */
       if( strncmp(entryname, SCIPdialogGetName(subdialogs[i]), namelen) == 0 )
       {
          SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialogs[i], scip) );
@@ -1018,11 +1056,14 @@ void SCIPdialogGetPath(
    assert(dialog != NULL);
 
    (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
+   path[SCIP_MAXSTRLEN - 1] = '\0';
+
    dialog = dialog->parent;
    while( dialog != NULL )
    {
       (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
       (void)strncpy(path, s, SCIP_MAXSTRLEN);
+      path[SCIP_MAXSTRLEN - 1] = '\0';
       dialog = dialog->parent;
    }
 }
@@ -1067,7 +1108,7 @@ SCIP_DIALOG* SCIPdialogGetParent(
    return dialog->parent;
 }
 
-/** gets the array of subdialogs associated with the given dialog */
+/** gets the array of sub-dialogs associated with the given dialog */
 SCIP_DIALOG** SCIPdialogGetSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */
    )
@@ -1077,7 +1118,7 @@ SCIP_DIALOG** SCIPdialogGetSubdialogs(
    return dialog->subdialogs;
 }
 
-/** gets the number of subdialogs associated with the given dialog */
+/** gets the number of sub-dialogs associated with the given dialog */
 int SCIPdialogGetNSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */
    )

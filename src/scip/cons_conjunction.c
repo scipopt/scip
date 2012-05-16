@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.c
- * @ingroup CONSHDLRS 
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -31,7 +30,7 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "conjunction"
 #define CONSHDLR_DESC          "conjunction of constraints"
-#define CONSHDLR_SEPAPRIORITY   +000000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY   +900000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -900000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
@@ -44,6 +43,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
 
@@ -250,6 +250,27 @@ SCIP_RETCODE checkAllConss(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
+ 
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+#else
+#define conshdlrCopyConjunction NULL
+#endif
+
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeConjunction NULL
 
@@ -330,7 +351,7 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 }
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #define consInitlpConjunction NULL
 
 
@@ -478,6 +499,11 @@ SCIP_DECL_CONSLOCK(consLockConjunction)
 /** constraint disabling notification method of constraint handler */
 #define consDisableConjunction NULL
 
+
+/** variable deletion method of constraint handler */
+#define consDelvarsConjunction NULL
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintConjunction)
@@ -511,6 +537,11 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
 /** constraint parsing method of constraint handler */
 #define consParseConjuction NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#define consGetVarsConjunction NULL
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#define consGetNVarsConjunction NULL
 
 
 /*
@@ -530,22 +561,28 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         consFreeConjunction, consInitConjunction, consExitConjunction, 
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyConjunction,
+         consFreeConjunction, consInitConjunction, consExitConjunction,
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
          consDeleteConjunction, consTransConjunction, consInitlpConjunction,
-         consSepalpConjunction, consSepasolConjunction, consEnfolpConjunction, consEnfopsConjunction, 
+         consSepalpConjunction, consSepasolConjunction, consEnfolpConjunction, consEnfopsConjunction,
          consCheckConjunction, consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
-         consActiveConjunction, consDeactiveConjunction, 
-         consEnableConjunction, consDisableConjunction,
+         consActiveConjunction, consDeactiveConjunction,
+         consEnableConjunction, consDisableConjunction, consDelvarsConjunction,
          consPrintConjunction, consCopyConjuction, consParseConjuction,
+         consGetVarsConjunction, consGetNVarsConjunction,
          conshdlrdata) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a conjunction constraint */
+/** creates and captures a conjunction constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsConjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -563,7 +600,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

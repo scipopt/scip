@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,7 +57,7 @@ enum SCIP_VBCColor
    SCIP_VBCCOLOR_CONFLICT   = 15,       /**< color for nodes where a conflict constraint was found */
    SCIP_VBCCOLOR_MARKREPROP = 11,       /**< color for nodes that were marked to be repropagated */
    SCIP_VBCCOLOR_REPROP     = 12,       /**< color for repropagated nodes */
-   SCIP_VBCCOLOR_SOLUTION   = -1,       /**< color for solved nodes, where a solution has been found */
+   SCIP_VBCCOLOR_SOLUTION   = 14,       /**< color for solved nodes, where a solution has been found */
    SCIP_VBCCOLOR_NONE       = -1        /**< color should not be changed */
 };
 typedef enum SCIP_VBCColor SCIP_VBCCOLOR;

@@ -76,6 +76,7 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
 #define DEFAULT_PSOBJWEIGHT         0.0 /**< weight of the original objective function in lp to compute interior point */
 #define DEFAULT_PSREDUCEAUXLP     FALSE /**< should the number of constraints in lp to compute interior point be reduced? */
@@ -1418,19 +1419,19 @@ void printVar(
    i = SCIPvarGetProbindex(var);
 
    /* name */
-   SCIPmessageFPrintInfo(file, "<%s>:", SCIPvarGetName(var));
+   SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "<%s>:", SCIPvarGetName(var));
 
    /* objective value */
    gmp_snprintf(s, SCIP_MAXSTRLEN, " obj=%Qd", consdata->obj[i]);
    SCIPinfoMessage(scip, file, s);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
-   SCIPmessageFPrintInfo(file, ", bounds=");
+   SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, ", bounds=");
 
    if( isPosInfinity(conshdlrdata, consdata->lb[i]) )
-      SCIPmessageFPrintInfo(file, "[+inf,");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "[+inf,");
    else if( isNegInfinity(conshdlrdata, consdata->lb[i]) )
-      SCIPmessageFPrintInfo(file, "[-inf,");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "[-inf,");
    else
    {
       gmp_snprintf(s, SCIP_MAXSTRLEN, "[%Qd,", consdata->lb[i]);
@@ -1438,16 +1439,16 @@ void printVar(
    }
 
    if( isPosInfinity(conshdlrdata, consdata->ub[i]) )
-      SCIPmessageFPrintInfo(file, "+inf]");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "+inf]");
    else if( isNegInfinity(conshdlrdata, consdata->ub[i]) )
-      SCIPmessageFPrintInfo(file, "-inf]");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "-inf]");
    else
    {
       gmp_snprintf(s, SCIP_MAXSTRLEN, "%Qd]", consdata->ub[i]);
       SCIPinfoMessage(scip, file, s);
    }
 
-   SCIPmessageFPrintInfo(file, "\n");
+   SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "\n");
 }
 
 /** prints exactlp constraint in CIP format to file stream */
@@ -1483,7 +1484,7 @@ void consdataPrint(
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
-         SCIPmessageFPrintInfo(file, "    ");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "    ");
          printVar(scip, conshdlrdata, consdata, file, vars[i]);
       }
    }
@@ -2094,7 +2095,6 @@ SCIP_RETCODE createRelaxation(
    SCIP_CONS*            cons                /**< constraint to check */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_VAR** rowvars;
@@ -2107,9 +2107,6 @@ SCIP_RETCODE createRelaxation(
    int v;
    int c;
    int i;
-
-   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2848,15 +2845,15 @@ SCIP_RETCODE checkIntegrality(
             /* create left child: add x_i <= floor(x_i^*) */
             solval = mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDD);
             downub = floor(solval);
-            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], downub),
-                  SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
+            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar],
+                     SCIP_BRANCHDIR_DOWNWARDS, downub), SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
             SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[branchvar], downub) );
 
             /* create right child: add x_i >= ceil(x_i^*) */
             solval = mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDU);
             uplb = ceil(solval);
-            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], uplb),
-                  SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
+            SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar],
+                     SCIP_BRANCHDIR_UPWARDS, uplb), SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
             SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[branchvar], uplb) );
 
             assert(uplb == downub + 1.0);
@@ -3393,7 +3390,7 @@ SCIP_RETCODE warmStartlpiex(
       val_real[i] = mpq_get_d(val[i]);
 
    /* build and solve approximate aux. problem */
-   SCIP_CALL( SCIPlpiCreate(&lpi, "problem" , SCIP_OBJSEN_MAXIMIZE) );
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "problem" , SCIP_OBJSEN_MAXIMIZE) );
    SCIP_CALL( SCIPlpiAddCols(lpi, nvars, obj_real, lb_real, ub_real, colnames, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nconss, lhs_real, rhs_real, NULL, nnonz, beg, ind, val_real) );
 
@@ -7222,6 +7219,20 @@ SCIP_RETCODE tightenBounds(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExactlp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define conshdlrCopyExactlp NULL
+#endif
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeExactlp)
@@ -8707,6 +8718,21 @@ SCIP_DECL_CONSDISABLE(consDisableExactlp)
 #endif
 
 
+/** variable deletion of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSDELVARS(consDelvarsExactlp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consDelvarsExactlp NULL
+#endif
+
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintExactlp)
@@ -8726,6 +8752,33 @@ SCIP_DECL_CONSPRINT(consPrintExactlp)
 /** constraint parsing method of constraint handler */
 #define consParseExactlp NULL
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+#if 0
+static
+SCIP_DECL_CONSGETVARS(consGetVarsExactlp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of exactlp power constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetVarsExactlp NULL
+#endif
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+#if 0
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsExactlp)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of exactlp power constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetNVarsExactlp NULL
+#endif
 
 /*
  * Linear constraint upgrading
@@ -8964,7 +9017,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecExactlp,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecExactlp,
          eventhdlrdata) );
 
    /* create exactlp constraint handler data */
@@ -8974,16 +9027,16 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         consFreeExactlp, consInitExactlp, consExitExactlp,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS, CONSHDLR_PROP_TIMING,
+         conshdlrCopyExactlp, consFreeExactlp, consInitExactlp, consExitExactlp,
          consInitpreExactlp, consExitpreExactlp, consInitsolExactlp, consExitsolExactlp,
          consDeleteExactlp, consTransExactlp, consInitlpExactlp,
          consSepalpExactlp, consSepasolExactlp, consEnfolpExactlp, consEnfopsExactlp, consCheckExactlp,
          consPropExactlp, consPresolExactlp, consRespropExactlp, consLockExactlp,
          consActiveExactlp, consDeactiveExactlp,
-         consEnableExactlp, consDisableExactlp,
+         consEnableExactlp, consDisableExactlp, consDelvarsExactlp,
          consPrintExactlp, consCopyExactlp, consParseExactlp,
-         conshdlrdata) );
+         consGetVarsExactlp, consGetNVarsExactlp, conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
@@ -9054,7 +9107,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    mpq_t*                lb,                 /**< lower bounds of variables */
    mpq_t*                ub,                 /**< upper bounds of variables */
    int                   nconss,             /**< number of constraints */
-   int                   nsplitconss,        /**< number of constraints that were split */
+   int                   nsplitconss,        /**< number of constraints we would have to be split for a FP-relaxation */
    mpq_t*                lhs,                /**< left hand sides of constraints */
    mpq_t*                rhs,                /**< right hand sides of constraints */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
@@ -9421,11 +9474,11 @@ SCIP_RETCODE SCIPprintSolex(
 
       SCIP_CALL( SCIPallocMemorySize(scip, &bigs, n+1) );
       gmp_snprintf(bigs, n+1, "objective value:                 %20Qd\n", obj);
-      SCIPmessagePrintInfo(bigs);
+      SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), bigs);
       SCIPfreeMemory(scip, &bigs);
    }
    else
-      SCIPmessageFPrintInfo(file, s);
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, s);
 
    /** @todo exiptodo: using scip->origprob and scip->transprob is not SCIP conform
     *  - think about a more general way to get information from cons_exactlp.c.
@@ -9459,7 +9512,7 @@ SCIP_RETCODE SCIPprintTransSolex(
 
    SCIPgetSolexTransObj(scip, sol, obj);
    gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
-   SCIPmessageFPrintInfo(file, s);
+   SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, s);
 
    /** @todo exiptodo: using scip->origprob and scip->transprob is not SCIP conform
     *  - think about a more general way to get information from cons_exactlp.c.
@@ -9485,7 +9538,7 @@ SCIP_RETCODE SCIPprintBestSolex(
    sol = SCIPgetBestSolex(scip);
 
    if( sol == NULL )
-      SCIPmessageFPrintInfo(file, "no solution available\n");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
    else
    {
       SCIP_CALL( SCIPprintSolex(scip, cons, sol, file, printzeros) );
@@ -9505,7 +9558,7 @@ SCIP_RETCODE SCIPprintBestTransSolex(
    sol = SCIPgetBestSolex(scip);
 
    if( sol == NULL )
-      SCIPmessageFPrintInfo(file, "no exact solution available\n");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no exact solution available\n");
    else
    {
       if( SCIPsolexGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
@@ -9535,16 +9588,16 @@ SCIP_RETCODE SCIPprintBestSolexVar(
    sol = SCIPgetBestSolex(scip);
 
    if( sol == NULL )
-      SCIPmessageFPrintInfo(file, "no exact solution available\n");
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no exact solution available\n");
    else
    {
       mpq_init(solval);
 
       SCIPsolexGetVal(sol, var, solval);
 
-      SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(var));
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "%-32s", SCIPvarGetName(var));
       gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
-      SCIPmessageFPrintInfo(file, s);
+      SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, s);
 
       mpq_clear(solval);
    }
@@ -9670,7 +9723,7 @@ void SCIPvarGetUbGlobalExactlp(
 }
 
 /** gets worst global bound of variable with respect to the objective function */
-void SCIPvarGetWorstGlobalBoundExactlp(
+void SCIPvarGetWorstBoundGlobalExactlp(
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< problem variable */
    mpq_t                 bound               /**< pointer to store worst bound */

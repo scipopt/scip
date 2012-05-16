@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,7 +22,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <string.h>
 
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
@@ -34,35 +33,44 @@
 #include "scip/struct_vbc.h"
 
 
-
-
 /** returns the branching variable of the node, or NULL */
 static
-SCIP_VAR* getBranchVar(
-   SCIP_NODE*            node                /**< node */
+void getBranchInfo(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            var,                /**< pointer to store the branching variable */
+   SCIP_BOUNDTYPE*       boundtype,          /**< pointer to store the branching type: lower or upper bound */
+   SCIP_Real*            bound               /**< pointer to store the new bound of the branching variable */
    )
 {
    SCIP_DOMCHGBOUND* domchgbound;
 
+   (*var) = NULL;
+   (*bound) = 0.0;
+   (*boundtype) = SCIP_BOUNDTYPE_LOWER;
+
    assert(node != NULL);
    if( node->domchg == NULL )
-      return NULL;
-   
+      return;
+
    domchgbound = &node->domchg->domchgbound;
    if( domchgbound->nboundchgs == 0 )
-      return NULL;
+      return;
 
-   return domchgbound->boundchgs[0].var;
+   (*var) = domchgbound->boundchgs[0].var;
+   (*bound) = domchgbound->boundchgs[0].newbound;
+   (*boundtype) = (SCIP_BOUNDTYPE) domchgbound->boundchgs[0].boundtype;
 }
 
 /** creates VBC Tool data structure */
 SCIP_RETCODE SCIPvbcCreate(
-   SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
+   SCIP_VBC**            vbc,                /**< pointer to store the VBC information */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    SCIP_ALLOC( BMSallocMemory(vbc) );
 
    (*vbc)->file = NULL;
+   (*vbc)->messagehdlr = messagehdlr;
    (*vbc)->nodenum = NULL;
    (*vbc)->timestep = 0;
    (*vbc)->lastnode = NULL;
@@ -89,7 +97,8 @@ void SCIPvbcFree(
 SCIP_RETCODE SCIPvbcInit(
    SCIP_VBC*             vbc,                /**< VBC information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    assert(vbc != NULL);
@@ -99,7 +108,7 @@ SCIP_RETCODE SCIPvbcInit(
    if( set->vbc_filename[0] == '-' && set->vbc_filename[1] == '\0' )
       return SCIP_OKAY;
 
-   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing VBC information in file <%s>\n", set->vbc_filename);
    vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
@@ -114,11 +123,11 @@ SCIP_RETCODE SCIPvbcInit(
       return SCIP_FILECREATEERROR;
    }
 
-   SCIPmessageFPrintInfo(vbc->file, "#TYPE: COMPLETE TREE\n");
-   SCIPmessageFPrintInfo(vbc->file, "#TIME: SET\n");
-   SCIPmessageFPrintInfo(vbc->file, "#BOUNDS: SET\n");
-   SCIPmessageFPrintInfo(vbc->file, "#INFORMATION: STANDARD\n");
-   SCIPmessageFPrintInfo(vbc->file, "#NODE_NUMBER: NONE\n");
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#TYPE: COMPLETE TREE\n");
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#TIME: SET\n");
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#BOUNDS: SET\n");
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#INFORMATION: STANDARD\n");
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "#NODE_NUMBER: NONE\n");
 
    SCIP_CALL( SCIPhashmapCreate(&vbc->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
 
@@ -128,16 +137,17 @@ SCIP_RETCODE SCIPvbcInit(
 /** closes the VBC output file */
 void SCIPvbcExit(
    SCIP_VBC*             vbc,                /**< VBC information */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+  )
 {
    assert(vbc != NULL);
    assert(set != NULL);
 
    if( vbc->file != NULL )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
-      
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
+
       fclose(vbc->file);
       vbc->file = NULL;
 
@@ -157,7 +167,7 @@ void printTime(
    int mins;
    int secs;
    int hunds;
-   
+
    assert(vbc != NULL);
    assert(stat != NULL);
 
@@ -180,7 +190,7 @@ void printTime(
    step %= 100;
    hunds = (int)step;
 
-   SCIPmessageFPrintInfo(vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
 }
 
 /** creates a new node entry in the VBC output file */
@@ -191,6 +201,8 @@ SCIP_RETCODE SCIPvbcNewChild(
    )
 {
    SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
    size_t parentnodenum;
    size_t nodenum;
 
@@ -217,15 +229,24 @@ SCIP_RETCODE SCIPvbcNewChild(
    parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0);
    assert(node->parent == NULL || parentnodenum > 0);
 
-   /* get branching variable */
-   branchvar = getBranchVar(node);
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
-      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node));
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
+   }
 
    return SCIP_OKAY;
 }
@@ -249,7 +270,7 @@ void vbcSetColor(
       nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
       assert(nodenum > 0);
       printTime(vbc, stat);
-      SCIPmessageFPrintInfo(vbc->file, "P %d %d\n", (int)nodenum, color);
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "P %d %d\n", (int)nodenum, color);
       vbc->lastnode = node;
       vbc->lastcolor = color;
    }
@@ -263,6 +284,8 @@ void SCIPvbcSolvedNode(
    )
 {
    SCIP_VAR* branchvar;
+   SCIP_BOUNDTYPE branchtype;
+   SCIP_Real branchbound;
    size_t nodenum;
 
    assert(vbc != NULL);
@@ -277,13 +300,23 @@ void SCIPvbcSolvedNode(
    nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
    assert(nodenum > 0);
 
-   /* get branching variable */
-   branchvar = getBranchVar(node);
+   /* get branching information */
+   getBranchInfo(node, &branchvar, &branchtype, &branchbound);
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
-      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
-      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
+
+   if( branchvar != NULL )
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+         SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
+         branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node), stat->nnodes);
+   }
 
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLVED);
 }
@@ -336,11 +369,12 @@ void SCIPvbcRepropagatedNode(
 /** changes the color of the node to the color of nodes with a primal solution */
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    )
 {
-   if( node != NULL )
+   if( node != NULL && set->vbc_dispsols )
       vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
 }
 
@@ -358,7 +392,7 @@ void SCIPvbcLowerbound(
       return;
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "L %f\n", lowerbound);
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "L %f\n", lowerbound);
 }
 
 /** outputs a new global upper bound to the VBC output file */
@@ -375,6 +409,6 @@ void SCIPvbcUpperbound(
       return;
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "U %f\n", upperbound);
+   SCIPmessageFPrintInfo(vbc->messagehdlr, vbc->file, "U %f\n", upperbound);
 }
 

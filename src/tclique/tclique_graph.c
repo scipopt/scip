@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #include "tclique/tclique.h"
@@ -541,7 +542,8 @@ TCLIQUE_Bool tcliqueLoadFile(
    TCLIQUE_GRAPH**  tcliquegraph,       /**< pointer to store graph data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
-   char*            probname            /**< buffer to store the name of the problem */
+   char*            probname,           /**< buffer to store the name of the problem */
+   int              sizeofprobname      /**< size of buffer to store the name of the problem */
    )
 {
    FILE* file;
@@ -551,6 +553,8 @@ TCLIQUE_Bool tcliqueLoadFile(
    int currentnode;
    int i;
    int result;
+   char* charresult;
+   char* tmp;
    
    assert(tcliquegraph != NULL);
    assert(scaleval > 0.0);
@@ -571,15 +575,38 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
  
-   /* set name of problem, number of nodes and number of edges in graph */
-   result = fscanf(file, "%s", probname);
-   if( result == EOF )
+   /* set name of problem, copies 'sizeofprobname' characters into probname */
+   charresult = fgets(probname, sizeofprobname, file);
+   if( charresult == NULL )
    {
-      infoMessage("Error while reading probname in file %s", filename); 
+      infoMessage("Error while reading probname in file %s", filename);
       fclose(file);
       return FALSE;
    }
    
+   /* allocate temporary memory for skipping rest of problem name */
+   BMSallocMemoryArray(&tmp, sizeofprobname +1 );
+   BMScopyMemoryArray(tmp, probname, sizeofprobname);
+   probname[sizeofprobname-1] = '\0';
+   tmp[sizeofprobname] = '\0';
+
+   /* continue reading until we reach the end of the problem name */
+   while( (int) strlen(tmp) == sizeofprobname && tmp[strlen(tmp)-1] != '\n' )
+   {
+      charresult = fgets(tmp, sizeofprobname, file);
+      
+      if( charresult == NULL )
+      {
+         infoMessage("Error while reading probname in file %s", filename);
+         fclose(file);
+         return FALSE;
+      }
+   }
+
+   /* free temporary memory */
+   BMSfreeMemoryArray(&tmp);
+
+   /* set number of nodes and number of edges in graph */
    result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
    if( result == EOF )
    {
@@ -604,11 +631,35 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }    
 
-   /* set data structures for tclique */
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) );
-   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) );
+   /* set data structures for tclique,
+    * if an error occured, close the file before returning */
+   if( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) == NULL )
+   {
+      infoMessage("Run out of memory while reading file %s", filename); 
+      (void) fclose(file);
+      return FALSE;
+   }
 
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
@@ -772,14 +823,18 @@ int* tcliqueGetLastAdjedge(
 {
    HEAD_ADJ* adjedges;
    int* adjnodes;
+#ifndef NDEBUG
    int* degrees;
+#endif
 
    assert(tcliquegraph != NULL);
    assert(tcliquegraph->ncachededges == 0);
    assert(0 <= node && node < tcliquegraph->nnodes);
 
    adjedges = tcliquegraph->adjedges;
+#ifndef NDEBUG
    degrees = tcliqueGetDegrees(tcliquegraph);
+#endif
    assert(adjedges != NULL);
    assert(degrees[node] == 0 || adjedges[node].last-1 >= 0);
    assert(adjedges[node].last-1 <= tcliqueGetNEdges(tcliquegraph));

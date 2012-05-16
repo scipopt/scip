@@ -1,59 +1,169 @@
 <div id="faq">
+    <ol>
+     <li><a href="#Section1"><b>General Questions about SCIP</b></a></li>
+      <ul>
+	<li><a href="#Q1.1">What is SCIP?</a></li>
+        <li><a href="#Q1.2">When should I use SCIP?</a></li>
+        <li><a href="#Q1.3">I heard something about licenses. Do I have to pay for using SCIP?</a></li>
+	<li><a href="#Q1.4">How do I get started?</a></li>
+	<li><a href="#Q1.5">Do I need any extra software?</a></li>
+	<li><a href="#Q1.6">I have installation problems. What can I do?</a></li>
+	<li><a href="#Q1.7">I changed to a new version of SCIP and now compiling breaks with some error messages which
+        I don't understand. Do you have a general hint on that?</a></li>
+	<li><a href="#Q1.8">How can I debug in SCIP?</a></li>
+	<li><a href="#Q1.9">SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely.
+         What should I do?</a></li>
+	<li><a href="#Q1.10"> I would like to check whether some functionality is implemented in SCIP.
+        How does the naming of the methods work? Where do I find the most common methods?</a></li>
+	<li><a href="#Q1.11">Can I use SCIP as a pure CP-Solver?</a></li>
+	<li><a href="#Q1.12">Can I use SCIP as a pure LP-Solver?</a></li>
+	<li><a href="#Q1.13">Which kind of MINLPs are supported by SCIP?</a></li>
+	<li><a href="#Q1.14">How can I use the SCIP makefiles?</a></li>
+	<li><a href="#Q1.15">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a></li>
+	<li><a href="#Q1.16">Can I compile SCIP as a shared library?</a></li>
+	<li><a href="#Q1.17">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
+      functionality. Which one should I use?</a></li>
+      </ul>
+     <li><a href="#Section2"><b>Using SCIP as a standalone solver</b></a></li>
+      <ul>
+	<li><a href="#Q2.1">The output is too wide for my terminal window. What can I do?</a></li>
+	<li><a href="#Q2.2">What do the cryptic abbreviations for the columns mean which are displayed
+        during the solving process of SCIP?</a></li>
+	<li><a href="#Q2.3">How do I change the behavior of SCIP?</a></li>
+	<li><a href="#Q2.4"> I recognized that one special plugin works very poorly / very well for my problem and
+        I want to disable it / weaken its influence / intensify its influence. How do I do this?</a></li>
+	<li><a href="#Q2.5">How can I input a MINLP into SCIP?</a></li>
+      </ul>
+     <li><a href="#Section3"><b>Using SCIP included in another source code</b></a></li>
+      <ul>
+	<li><a href="#Q3.1">How do I construct a problem instance in SCIP?</a></li>
+	<li><a href="#Q3.2">I already know a solution in advance, which I want to pass to SCIP.
+        How do I do this?</a></li>
+	<li><a href="#Q3.3">What operational stages of SCIP are there and are they important for me?</a></li>
+	<li><a href="#Q3.4">What is the difference between the original and the transformed problem?</a></li>
+	<li><a href="#Q3.5">Why do the names, e.g., in debug messages often differ from the ones I
+        defined?</a></li>
+	<li><a href="#Q3.6">What is SCIP_CALL()? Do I need this?</a></li>
+	<li><a href="#Q3.7">I want to stop the solving process after a certain time. How can I do this?</a></li>
+      </ul>
+     <li><a href="#Section4"><b>Using SCIP as a Branch-Cut-And-Price-Framework</b></a></li>
+      <ul>
+	<li><a href="#Q4.1">How do I start a project?</a></li>
+	<li><a href="#Q4.2">What types of plugins can I add and how do I do this?</a></li>
+	<li><a href="#Q4.3">When should I implement a constraint handler, when should I implement a separator?</a></li>
+	<li><a href="#Q4.4">Can I remove unnecessary display columns or&mdash;even better&mdash;add my own ones?
+        Can I change the statistics displayed at the end of solving?</a></li>
+	<li><a href="#Q4.5">What do LP-rows look like in SCIP?</a></li>
+	<li><a href="#Q4.6">How do I get the data of the current LP-relaxation?</a></li>
+	<li><a href="#Q4.7">What is the difference between columns and variables, rows and constraints?</a></li>
+	<li><a href="#Q4.8">Are the variables and rows sorted in any particular order?</a></li>
+	<li><a href="#Q4.9">When should I use which of the numerical comparison functions?</a></li>
+	<li><a href="#Q4.10">How do I solve an LP inside my SCIP plugin?</a></li>
+      </ul>
+     <li><a href="#Section5"><b>Specific questions about Column Generation and Branch-And-Price with SCIP</b></a></li>
+      <ul>
+	<li><a href="#Q5.1">Why are not all variables in the LP?</a></li>
+	<li><a href="#Q5.2">I only implemented one pricer, why is there a second one, called variable pricer?</a></li>
+	<li><a href="#Q5.3">How can I store branching decisions?</a></li>
+	<li><a href="#Q5.4">I want to store some information at the nodes and update my pricer's data structures
+        when entering a new node. How can I do that?</a></li>
+	<li><a href="#Q5.5">How can an event handler help me with my branching?</a></li>
+	<li><a href="#Q5.6">How can I add locally valid variables to the problem in my branch-and-price code?</a></li>
+	<li><a href="#Q5.7">My pricer generates the same column twice. How can I solve this problem?</a></li>
+	<li><a href="#Q5.8">Which default plugins should be deactivated in order to get a working branch-and-price code?</a></li>
+	<li><a href="#Q5.9">What are the lazy bounds for variables in SCIP and what do I need them for?</a></li>
+	<li><a href="#Q5.10">Can I stop the pricing process before the master problem is solved to optimality?</a></li>
+	<li><a href="#Q5.11">How can I delete variables?</a></li>
+      </ul>
+     <li><a href="#Section6"><b>Specific questions about the copy functionality in SCIP</b></a></li>
+      <ul>
+	<li><a href="#Q6.1">What is <code>SCIPcopy()</code>?</a></li>
+	<li><a href="#Q6.2">How do I get a copy of a variable or a constraint?</a></li>
+	<li><a href="#Q6.3">What does the <code>valid</code> pointer in the copy callback of the constraint handler and variable pricer mean?</a></li>
+      </ul>
+    </ol>
 
-    <h4><a name="Section0">Sections</a></h4>
-    <ul>
-     <li><a href="#Section1">General Questions about SCIP</a></li>
-     <li><a href="#Section2">Using SCIP as a standalone MIP-Solver</a></li>
-     <li><a href="#Section3">Using SCIP included in another source code</a></li>
-     <li><a href="#Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></li>
-     <li><a href="#Section5">Specific questions about Column Generation and Branch-And-Price with SCIP</a></li>
-    </ul>
 
-    <h4><a name="Section1">General Questions about SCIP</a></h4>
+    <h4><a name="Section1">1. General Questions about SCIP</a></h4>
     <p class="q">
-      <a name="Q1">What is SCIP?</a>
+      <a name="Q1.1">What is SCIP?</a>
     </p>
+
     <p class="a">
-      SCIP is a constraint integer program solver and contain all necessary plugin to be a <b>standalone MIP-Solver</b> 
-      as well as a <b>branch-cut-and-price-framework</b>.<br> 
+      SCIP is a constraint integer program solver. It can be used as a framework for <b>branch-cut-and-price</b> 
+      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.<br>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
-          with which you can solve MIPs in *.mps, *.lp, or others file format</li>
-      <li>You can use SCIP as a subroutine for solving MIPs from your own source code.</li>
+          to solve MIPs, MINLPs, or PBO problems. They can read</li>
+      <p class="a">
+        <ol>
+	  <li>CIP - file format (own constraint based file format)</li>
+	  <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html>CNF - file format</a></li>
+	  <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
+          <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
+          <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
+          <li><a href="http://www.cril.univ-artois.fr/PB12/format.pdf">OPB/WBO - file formats</a></li>
+          <li><a href="http://polip.zib.de/pipformat.php">PIP - file format</a></li>
+	  <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
+          <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
+        </ol>
+      </p>
+      <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
       <li>You can use SCIP in any combination of the three purposes above.</li>
    </ul>
-      This FAQ consists of four separate sections treating these usages of SCIP.
+      This FAQ contains separate sections covering each of these usages of SCIP. It further considers specific questions for some features.
     <p class="q">
-      <a name="Q2">When should I use SCIP?</a>
+      <a name="Q1.2">When should I use SCIP?</a>
     </p>
     <p class="a">
-      If you are either looking for a fast non-commercial MIP-Solver or for a 
+      If you are either looking for a fast non-commercial MIP-solver or for a 
       branch-cut-and-price-framework in which you can directly implement your own methods 
-      &mdash; which can even be for more general purposes than MIP (see <a href="#Q18">here</a>).
+      &mdash; which can even be for more general purposes than MIP (see, e.g., <a href="#Q1.11">here</a>).
     </p>
     <p class="q">
-      <a name="Q3">I heard something about licenses. Do I have to pay for using SCIP?</a>
+      <a name="Q1.3">I heard something about licenses. Do I have to pay for using SCIP?</a>
     </p>
     <p class="a"> 
       As long as you use it for academic, non-commercial purposes: No. 
       This will not change. For the other cases, check the explanation of the 
       <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a> and always feel free to ask us.
+      If you want to use SCIP commercially, please write an e-mail to koch@zib.de .
     </p>
     <p class="q">
-      <a name="Q4">Do I need any extra software?</a>
+      <a name="Q1.4">How do I get started?</a>
     </p>
     <p class="a">
-      Except if you want to use SCIP as a pure CP-Solver (see <a href="#Q18">here</a>), 
-      you need an underlying LP-Solver which has first to be installed and linked to the libraries 
+      An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="SHELL.html">here</a> for a tutorial. 
+      For that, you just have to download one of the precompiled binaries from the 
+      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
+      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
+    </p>
+    <p class="a">
+      Another way is to use SCIP as a solver integrated into your own program source code.
+      See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
+      for simple examples and <a href="#Q3.1">this point</a>.
+    </p>
+    <p class="a">
+      A third way is to implement your own plugins into SCIP. 
+      This is explained in the HowTos for all plugin types, which you can find in the 
+      <a href="index.html">doxygen documentation</a>.
+      See also <a href="START.html">How to start a new project</a>.
+    </p>
+    <p class="q">
+      <a name="Q1.5">Do I need any extra software?</a>
+    </p>
+    <p class="a">
+      Unless you want to use SCIP as a pure CP-Solver (see <a href="#Q1.11">here</a>),
+      you need an underlying LP-Solver installed and linked to the libraries
       (see the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory). 
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
-      <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
-      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a></li>
-      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
+      <li><a href="https://projects.coin-or.org/Clp/">CLP</a></li>
+      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
+    <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
+      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
@@ -62,50 +172,14 @@
       We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
       you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps 
       or *.lp files. ZIMPL files can also directly be read by SCIP.
-    </p>
-    <p class="q">
-      <a name="Q5">How do I get started?</a>
+      You can download a package which includes SCIP, SoPlex and ZIMPL <a href="http://scip.zib.de/download.shtml">here</a>.
     </p>
     <p class="a">
-      An easy way is to use the SCIP-binaries and call SCIP from a shell. 
-      For that, you just have to download one of the precompiled binaries from the 
-      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
-      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
-    </p>
-    <p class="a">
-      Another way is to use SCIP as a solver integrated into your own program source code. 
-      See the directory &quot;examples/MIPsolver/&quot; for a simple example and 
-      <a href="#Q12">this point</a>.
-    </p>
-    <p class="a">
-      A third way is to implement your own plugins into SCIP. 
-      This is explained in the HowTos for all plugin types, which you can find in the 
-      <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
-      See also <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
-    </p>
-    <p class="q">
-      <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
-	How does the naming of the methods work? Where do I find the most common methods?</a>
-    </p>
-    <p class="a">
-      For an explanation of the naming see the 
-      <a href="http://scip.zib.de/doc/html/CODE.html">coding style guidelines</a>. <br> 
-      The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
-      see also <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
-      In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
-      the methods are ordered by topics.		      
-    </p>
-    <p class="q">
-      <a name="Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
-	functionality. Which one should I use?</a>
-    </p>
-    <p class="a">
-      In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
-      If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine.<br> This
-      should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
+    If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g., 
+    <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>) and an expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>).
     </p>
      <p class="q">
-       <a name="Q27">I have installation problems. What can I do?</a>
+       <a name="Q1.6">I have installation problems. What can I do?</a>
     </p>
     <p class="a">
       Read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
@@ -134,32 +208,99 @@
       please read the SCIP <a href="INSTALL.html"><tt>INSTALL</tt></a> file first.                                                     
     </p>
     <p class="q">
-      <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
-	Do you have a general hint on that?</a>
+      <a name="Q1.7">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
+      Do you have a general hint on that?</a>
     </p>
     <p class="a">
       Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
     <ul>
-        <li> <a href="http://scip.zib.de/doc/html/CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-        <li> <a href="http://scip.zib.de/doc/html/CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-        <li> <a href="http://scip.zib.de/doc/html/CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+        <li> <a href="CHG4.html">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
+        <li> <a href="CHG5.html">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
     </ul>
     <p class="q">
-      <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
+      <a name="Q1.8">How can I debug in SCIP?</a>
     </p>
     <p class="a">
-      Yes. There is a setting-file "settings/emphasis/cpsolver.set". 
+      Compile SCIP in debug mode: <code>make OPT=dbg</code>. Put the binary into a debugger, e.g., <a href="http://www.gnu.org/s/gdb/">gdb</a> 
+      and let it run again. If you get an impression which component is causing the trouble, set <code>#define SCIP_DEBUG</code> as the first 
+      line of the corresponding *.c file, recompile, let it run again. This will print debug messages from that piece of code. 
+      Find a short debugging tutorial <a href="DEBUG.html">here</a>.
+    </p>
+    <p class="q">
+      <a name="Q1.9">SCIP prints error messages, aborts, produces segmentation faults, or just behaves strangely. What should I do?</a>
+    </p>
+    <p class="a">
+       <a href="#Q1.8">See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings
+       and suggest fixes, if you were calling SCIP functions in an unexpected manner. If you, however, have the impression
+       that there is a bug in SCIP, <a href="https://www.edom.mi.uni-erlangen.de/cgi/scipweb/submit.pl">send us a bug report</a>
+       and include a log file and ideally a backtrace from a debugger.
+    </p>
+    <p class="q">
+      <a name="Q1.10"> I would like to check whether some functionality is implemented in SCIP.
+      How does the naming of the methods work? Where do I find the most common methods?</a>
+    </p>
+    <p class="a">
+      For an explanation of the naming see the 
+      <a href="CODE.html">coding style guidelines</a>. <br>
+      The methods you might want to use should normally be found in scip.h or in pub_*.h,
+      see also <a href="DOC.html">here</a>.
+      In the doxygen documentation of <a href="scip_8h.html">scip.h</a>,
+      the methods are ordered by topics.
+    </p>
+    <p class="q">
+      <a name="Q1.11">Can I use SCIP as a pure CP-Solver?</a>
+    </p>
+    <p class="a">
+      Yes. SCIP can be used as a pure CP-Solver by typing
+      "set emphasis cpsolver" in the shell or by using the function <code>SCIPsetEmphasis()</code>.
       Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
+      See <a href="#Q2.3">here</a> for more on changing the behavior of SCIP.
     </p>    
     <p class="q">
-       <a name="Q19">How can I use the SCIP makefiles?</a>
+      <a name="Q1.12">Can I use SCIP as a pure LP-Solver?</a>
     </p>
-    <p class="a">
-      See <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>.
+    <p class="a"> 
+      Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
+      will first apply presolving and then hand this presolved problem to the underlying LP solver. If solved to
+      optimality, you can query the optimal solution values as always.<br/><br/>
+
+      However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
+      turns out to be infeasible, you cannot obtain the Farkas proof. Strong LP duality theory does
+      not apply to MIP or CIP and there is no special functionality implemented in SCIP for the case
+      that the solved problem is an LP.
+
+      Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
+      directly. If you are using the ZIB Optimization Suite, you could, e.g., use the included LP solver
+      <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+      C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#Q4.10">here</a>.
     </p>
     <p class="q">
-       <a name="Q19">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a>
+      <a name="Q1.13">Which kind of MINLPs are supported by SCIP?</a>
+    </p>
+    <p class="a">
+      SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
+      expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
+      nodes and operands as non-terminal nodes.
+      Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
+      logarithm. Trigonometric functions are not yet supported by SCIP.<br>
+      Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.<br>
+      <b>Note</b>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+      robust as the rest of SCIP.
+      Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
+      which can be avoided by careful modeling.
+    </p>
+    <p class="q">
+       <a name="Q1.14">How can I use the SCIP makefiles?</a>
+    </p>
+    <p class="a">
+      See <a href="MAKE.html">Makefiles</a>.
+    </p>
+    <p class="q">
+       <a name="Q1.15">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a>
     </p>
     <p class="a">
        When SCIP builds the binary it needs to link with the corresponding libraries of the LP-solver. There are usually
@@ -174,33 +315,46 @@
        the link that is not intended.
     </p>
     <p class="q">
-       <a name="Q20">Can I compile SCIP as a shared library?</a>
+       <a name="Q1.16">Can I compile SCIP as a shared library?</a>
     </p>
     <p class="a">
-       If you are using Linux and a GNU compiler you can use the <code>OPT=opt-shared</code> option
+       You can use the <code>SHARED=true</code> option
        when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
        also uses this form. Note that the path to the <code>lib</code> directory of SCIP is used to
        locate the libraries. If you want to move the libraries, you might to set the
        <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
 
+    <!--
        If you have a different system or compiler (which supports shared libraries) you might try to
        copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-       needs (see also <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>). The "magic"
-       changes are the <code>-FPIC</code> compiler/liner option and the <code>-Wl,-rpath</code>
-       option.
+       needs (see also <a href="MAKE.html">Makefiles</a>).
+     -->
+       If you are using your own building system: The "magic" changes are the <code>-FPIC</code> 
+       compiler/linker option and the <code>-Wl,-rpath</code> option.
     </p>
-<h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
-      <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
+      <a name="Q1.17">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
+      functionality. Which one should I use?</a>
+    </p>
+    <p class="a">
+      In fact, there is a slight difference: <code>SCIPvarGetSol()</code> is also able to return pseudo solution values.
+      If you do not have an idea, what pseudo solutions are, <code>SCIPgetVarSol()</code> should be just fine.<br> This
+      should be the only case of 'duplicate methods'. If you find, however, another one, please contact us.
+    </p>
+
+
+<h4><a name="Section2">2. Using SCIP as a standalone solver</a></h4>
+    <p class="q">
+      <a name="Q2.1">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
       In the interactive shell you can set the width of the output with the following command
       &quot;set display width&quot; followed by an appropriate number.
-      See also the <a href="#Q9">next question</a>.		      
+      See also the <a href="#Q2.2">next question</a>.
     </p>
     <p class="q">
-      <a name="Q9">What do the cryptic abbreviations for the columns mean which are displayed 
-	during the solving process of SCIP?</a>
+      <a name="Q2.2">What do the cryptic abbreviations for the columns mean which are displayed
+      during the solving process of SCIP?</a>
     </p>
     <p class="a">
       Type "display display" in the interactive shell to get an explanation of them.<br> 
@@ -211,20 +365,23 @@
       (Typing "display heuristics" gives you a list of the heuristics including their letters.)
     </p>
     <p class="q">
-      <a name="Q10">How do I change the behavior of SCIP?</a>
+      <a name="Q2.3">How do I change the behavior of SCIP?</a>
     </p>
     <p class="a">
-      You can find a variety of different general settings for SCIP in the directory "settings". 
-      They can be loaded via "set load settings/&#42;/&#42;.set" in the interactive shell. 
-      You can combine the general settings for cuts, presolving, and heuristics arbitrarily.<br>
+      You can switch the settings for all presolving, heuristics, and separation plugins to three different modes
+      via the "set {presolving, heuristics, separation} emphasis" parameters in the interactive shell.
+      "off" turns off the respective type of plugins, "fast" chooses settings that lead to less time spent
+      in this type of plugins, decreasing their impact, and "aggressive" increases the impact
+      of this type of plugins.
+      You can combine these general settings for cuts, presolving, and heuristics arbitrarily.<br>
       "display parameters" shows you which settings currently differ from their default, 
       "set default" resets them all. 
-      Furthermore, there are complete settings in settings/emphasis/, analogously to 
-      <a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a>.		    
+      Furthermore, there are complete settings that can be set by "set emphasis", i.e. settings for pure
+      feasibility problems, solution counting, and CP like search.
     </p>
     <p class="q">
-      <a name="Q11"> I recognized that one special plugin works very bad / very well for my problem and 
-	I want to disable it / weaken its influence / intensify its influence. How do I do this?</a>
+      <a name="Q2.4"> I recognized that one special plugin works very poorly / very well for my problem and
+      I want to disable it / weaken its influence / intensify its influence. How do I do this?</a>
     </p>
     <p class="a">
     <ul>
@@ -274,14 +431,25 @@
          <li><code> SCIP&gt; set separators &lt;name of a separator&gt; maxsepacuts &lt;some value&gt;</code></li>
       </ul>
          Compare the parameters of the heuristic/separator in the appropriate aggressive setting 
-         (see <a href="#Q10">previous question</a>).</li>
+         (see <a href="#Q2.3">previous question</a>).</li>
       <li>For <b class="grey">weakening</b>, you should just do the opposite operation, i.e.,
           reducing the values  you would raise for intensification and vice versa.</li>
     </ul>
     </p>
-<h4><a name="Section3">Using SCIP included in another source code</a></h4>
     <p class="q">
-      <a name="Q12">How do I construct a problem instance in SCIP?</a>
+      <a name="Q2.5">How can I input a MINLP into SCIP?</a>
+    </p>
+    <p class="a">
+      Mixed-integer <b>polynomially</b> constrained programs can be input via the readers for *.zpl and *.pip files.<br>
+      Further, the readers for *.mps and *.lp files support the CPLEX extensions for <b>quadratic</b> constraints and objective.<br>
+      For more general MINLPs, no reader is included in SCIP yet.
+      However, an interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.
+    </p>
+
+
+<h4><a name="Section3">3. Using SCIP included in another source code</a></h4>
+    <p class="q">
+      <a name="Q3.1">How do I construct a problem instance in SCIP?</a>
     </p>
     <p class="a">
       First you have to create a SCIP object via <code>SCIPcreate()</code>, then you start to build the problem via
@@ -295,34 +463,49 @@
 
       Make sure to also call <code>SCIPreleaseVar()</code> if you do not need the variable pointer anymore.  For an
       explanation of creating and releasing objects, please see the <a
-      href="http://scip.zib.de/doc/html/OBJ.html">doxygen documentation.</a>.
+      href="OBJ.html">doxygen documentation.</a>.
     </p>
     <p class="q">
-      <a name="Q13">I already know a solution in advance, which I want to pass to SCIP. 
-	How do I do this?</a>
+      <a name="Q3.2">I already know a solution in advance, which I want to pass to SCIP.
+      How do I do this?</a>
     </p>
     <p class="a">
-      First you have to build your problem, then you have to transform your problem (SCIP only accepts solutions if it
-      is at least in the transformed stage, see <a href="#Q15">here</a>) via calling
-      <code>SCIPtransformProb()</code>. Next, you create a new SCIP primal solution by calling
-      <code>SCIPcreateSol()</code> and set all nonzero values by calling <code>SCIPsetSolVal()</code>. <br> After that,
-      you add this solution by calling <code>SCIPtrySol()</code> (the variable <code>success</code> should be true
-      afterwards, if your solution was correct) and then release it by calling <code>SCIPsolFree()</code>.
+      First you have to build your problem (at least all variables have to
+      exist), then there are two options:
+      <ul>
+      <li>
+        You have the solution in file which fits the solution format of
+        SCIP, then you can use <code>SCIPreadSol()</code> to pass that
+        solution to SCIP.
+      </li>
+      <li>
+        You create a new SCIP primal solution candidate by
+        calling <code>SCIPcreateSol()</code> and set all nonzero values by
+        calling <code>SCIPsetSolVal()</code>. After that, you add this
+        solution by calling <code>SCIPaddSol()</code> (the variable
+        <code>stored</code> should be true afterwards, if your solution was
+        added to solution candidate store) and then release it by calling
+        <code>SCIPsolFree()</code>. Instead of adding and releasing
+        sequentially, you can use <code>SCIPaddSolFree()</code> which
+        tries to add the solution to the candidate store and
+        free the solution afterwards.
+      </li>
+      </ul>
     </p>
     <p class="q">
-      <a name="Q14">What operational stages of SCIP are there and are they important for me?</a>
+      <a name="Q3.3">What operational stages of SCIP are there and are they important for me?</a>
     </p>
     <p class="a">
       There are ten different stages during a run of SCIP.
       <!--, a flow chart can be seen here: ????????. -->
       There are some methods which cannot be called in all stages, consider for example <code>SCIPtrySol()</code>
-      (see <a href="#Q13">previous question</a>).
+      (see <a href="#Q3.2">previous question</a>).
     </p>
     <p class="q">
-      <a name="Q15">What is this thing with the original and the transformed problem about?</a>
+      <a name="Q3.4">What is the difference between the original and the transformed problem?</a>
     </p>
     <p class="a">
-      Before the solving process starts, the original problem is copied to a different memory area.
+      Before the solving process starts, the original problem is copied.
       This copy is called &quot;transformed problem&quot;, and all modifications during the presolving
       and solving process are only applied to the transformed problem.<br>
       This has two main advantages: first, the user can also modify the problem after partially solving it.
@@ -331,12 +514,12 @@
       Second, the feasibility of solutions is always tested on the original problem!
     </p>
     <p class="q">
-      <a name="Q16">Why do the names, e.g. in debug messages<!--DBG FAQ????--> often differ from the ones I
-	defined?</a>
+      <a name="Q3.5">Why do the names, e.g., in debug messages often differ from the ones I
+      defined?</a>
     </p>
     <p class="a">
       This can have several reasons. Especially names of binary variables can get different prefixes and suffixes.  Each
-      transformed variable and constraint (see <a href="#Q15">here</a>) gets a &quot;t_&quot; as prefix.  Apart from
+      transformed variable and constraint (see <a href="#Q3.4">here</a>) gets a &quot;t_&quot; as prefix.  Apart from
       that, the meaning of original and transformed variables and constraints is identical.<br>
 
       General integers with bounds that differ just by 1 will be aggregated to binary variables which get the same name
@@ -347,41 +530,55 @@
       <code>t_x_neg = 1 - t_x</code>.<br>
 
       The knapsack constraint handler is able to disaggregate its constraints to cliques, which are set packing
-      constraints and create names that consist of the knapsack's name and a suffix
+      constraints, and create names that consist of the knapsack's name and a suffix
       &quot;<code>_clq_&lt;int&gt;</code>&quot;.  E.g., a knapsack constraint
       <code>knap:&nbsp;x_1&nbsp;+&nbsp;x2&nbsp;+2 x_3&nbsp;&le;&nbsp;2</code> could be disaggregated to the set packing
       constraints <code>knap_clq_1:&nbsp;x_1&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1</code> and
       <code>knap_clq_2:&nbsp;x_2&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1</code>.
     </p>
     <p class="q">
-      <a name="Q17">What is SCIP_CALL()? Do I need this?</a>
+      <a name="Q3.6">What is SCIP_CALL()? Do I need this?</a>
     </p>
     <p class="a">
       Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods 
       which return a SCIP_RETCODE and should therefore parenthesize each such method.
       SCIP_OKAY is the code which is returned if everything worked well; 
-      there are 18 different error codes, see type_retcode.h.
+      there are 17 different error codes, see type_retcode.h.
       Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
       If you do not want to use this either, you have to do the exception handling
       (i.e. the case that the return code is not SCIP_OKAY) on your own. 
-    </p>		   
-<h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
-    <p class="q">
-      <a name="Q18">How do I start a project?</a>
-    </p>
-    <p class="a">
-      See <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
     </p>
     <p class="q">
-      <a name="Q19">What types of plugins can I add and how do I do this?</a>
+      <a name="Q3.7">I want to stop the solving process after a certain time. How can I do this?</a>
     </p>
     <p class="a">
-      See the <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a> for a list of 
+      Limits are given by parameters in SCIP, for example <code>limits/time</code> for a time limit or
+      <code>limits/nodes</code> for a node limit. 
+      If you want to set a limit, you have to change these parameters.
+      For example, for setting the time limit to one hour, you have to call 
+      <code>SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 3600) )</code>.
+      In the interactive shell, you just enter <code>SCIP> set limits time 3600</code>
+      For more examples, please have a look into heur_rens.c.      
+    </p>
+
+
+<h4><a name="Section4">4. Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
+    <p class="q">
+      <a name="Q4.1">How do I start a project?</a>
+    </p>
+    <p class="a">
+      See <a href="START.html">How to start a new project</a>.
+    </p>
+    <p class="q">
+      <a name="Q4.2">What types of plugins can I add and how do I do this?</a>
+    </p>
+    <p class="a">
+      See the <a href="index.html">doxygen documentation</a> for a list of
       plugin types. There is a HowTo for each of them.
     </p>
     <p class="q">
-      <a name="Q20">When should I implement a constraint handler, when should I implement a separator?</a>
+      <a name="Q4.3">When should I implement a constraint handler, when should I implement a separator?</a>
     </p>
      <p  class="a">
      This depends on whether you want to add constraints or only cutting planes. The main
@@ -433,7 +630,7 @@
     <p class="a">
       Note that a constraint handler is defined by the type of constraints that it manages. For
       constraint handlers, always think in terms of constraint programming. For example, the
-      &quot;nosubtour&quot; constraint handler in the TSP
+      &quot;nosubtour&quot; constraint handler in the TSP example
       (see "ConshdlrSubtour.cpp" in the directory "scip/examples/TSP/src/")
       manages &quot;nosubtour&quot; constraints, which demand
       that in a given graph no feasible solution can contain a tour that does not contain all
@@ -448,25 +645,25 @@
       inequalities in its CONSSEPALP callback.
       </p>  
     <p class="q">
-      <a name="Q21">Can I remove unnecessary display columns or&mdash;even better&mdash;add my own ones? 
-	Can I change the statistics displayed at the end of solving?</a>
+      <a name="Q4.4">Can I remove unnecessary display columns or&mdash;even better&mdash;add my own ones?
+      Can I change the statistics displayed at the end of solving?</a>
     </p>
     <p class="a">
       Setting the status of a display column to 0 turns it off. E.g., type "set display memused status 0" in the
       interactive shell to disable the memory information column, or include the line <code>SCIPsetIntParam(scip,
-      &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding an own display column can be realized
-      via the <code>SCIPincludeDisp()</code> method, see the <a href="http://scip.zib.de/doc/html/DISP.html">doxygen
+      &quot;display/memused/status&quot;, 0)</code> into your source code.  Adding your own display column can be done
+      by calling the <code>SCIPincludeDisp()</code> method, see the <a href="DISP.html">doxygen
       documentation</a>.<br> The statistic display, which is shown by "display statistics" and
       <code>SCIPprintStatistics()</code>, respectively, cannot be changed.
     </p>
     <p class="q">
-      <a name="Q22">How do LP-rows look like in SCIP?</a>
+      <a name="Q4.5">What do LP-rows look like in SCIP?</a>
     </p>
     <p class="a">
       Each row is of the form <i>lhs</i> &le; &Sigma;(<i>val</i>[<i>j</i>]&middot;<i>col</i>[<i>j</i>]) + <i>const</i>
       &le; <i>rhs</i>.  For now, <i>val</i>[<i>j</i>]&middot;<i>col</i>[<i>j</i>] can be interpreted as
       <i>a</i><sub><i>ij</i></sub>&middot;<i>x</i><sub><i>j</i></sub> (for the difference between columns and variables
-      see <a href="#Q24">here</a>).  The constant is essentially needed for collecting the influence of presolving
+      see <a href="#Q4.7">here</a>).  The constant is essentially needed for collecting the influence of presolving
       reductions like variable fixings and aggregations.<br> The <i>lhs</i> and <i>rhs</i> may take infinite values: a
       less-than inequality would have <i>lhs</i> = -&#8734;, and a greater-than inequality would have <i>rhs</i> =
       +&#8734;.  For equations <i>lhs</i> is equal to <i>rhs</i>.  An infinite left hand side can be recognized by
@@ -474,23 +671,23 @@
       <code>SCIPisInfinity(scip, rhs)</code>.
     </p>
     <p class="q">
-      <a name="Q23">How do I get the data of the current LP-relaxation?</a>
+      <a name="Q4.6">How do I get the data of the current LP-relaxation?</a>
     </p>
     <p class="a">
       You can get all rows in the current LP-relaxation by calling <code>SCIPgetLPRowsData()</code>. The methods
       <code>SCIProwGetConstant()</code>, <code>SCIProwGetLhs()</code>, <code>SCIProwGetRhs()</code>,
       <code>SCIProwGetVals()</code>, <code>SCIProwGetNNonz()</code>, <code>SCIProwGetCols()</code> then give you
-      information about each row, see <a href="#Q22">previous question</a>.<br> You get a columnwise representation by
+      information about each row, see <a href="#Q4.5">previous question</a>.<br> You get a columnwise representation by
       calling <code>SCIPgetLPColsData()</code>. The methods <code>SCIPcolGetLb()</code> and <code>SCIPcolGetUb()</code>
       give you the locally valid bounds of a column in the LP relaxation of the current branch-and-bound-node.<br> If
       you are interested in global information, you have to call <code>SCIPcolGetVar()</code> to get the variable
-      associated to a column (see <a href="#Q24">next question</a>), which you can ask for global bounds via
+      associated to a column (see <a href="#Q4.7">next question</a>), which you can ask for global bounds via
       <code>SCIPvarGetLbGlobal()</code> and <code>SCIPvarGetUbGlobal()</code> as well as the type of the variable
       (binary, general integer, implicit integer, or continuous) by calling <code>SCIPvarGetType()</code>.  For more
-      information, also see <a href="#Q25">this question</a>.
+      information, also see <a href="#Q4.8">this question</a>.
     </p>
     <p class="q">
-      <a name="Q24">What is the difference between columns and variables, rows and constraints?</a>
+      <a name="Q4.7">What is the difference between columns and variables, rows and constraints?</a>
     </p>
     <p class="a">
       The terms columns and rows always refer to the representation in the current LP-relaxation, variables and
@@ -503,7 +700,7 @@
       linear constraint.
     </p>
     <p class="q">
-      <a name="Q25">Are the variables and rows sorted in any particular order?</a>
+      <a name="Q4.8">Are the variables and rows sorted in any particular order?</a>
     </p>
     <p class="a">The variable array which you get by <code>SCIPgetVars()</code> is internally sorted by variable types.
     The ordering is binary, integer, implicit integer and continuous variables, i.e., the binary variables are stored at
@@ -513,7 +710,7 @@
     <code>SCIPcolGetIndex()</code> and <code>SCIProwGetIndex()</code>, respectively.
     </p>
     <p class="q">
-      <a name="Q26">When should I use which of the numerical comparison functions?</a>
+      <a name="Q4.9">When should I use which of the numerical comparison functions?</a>
     </p>
     <p class="a">
       There are various numerical comparison functions available, each of them using a different
@@ -551,9 +748,29 @@
       as tolerance.  It should be used to compare two results of scalar products or other &quot;long&quot; sums.
     </li>
     </ul>
-<h4><a name="Section5">Specific questions about Column Generation and Branch-And-Price with SCIP</a></h4>
     <p class="q">
-      <a name="Q29">Why are not all variables in the LP?</a>
+      <a name="Q4.10">How do I solve an LP inside my SCIP plugin?</a>
+    </p>
+    <p class="a">
+       If the LP is only a slightly modified version of the LP relaxation - changed variable bounds or objective
+       coefficients - then you can use SCIP's diving mode: methods <code>SCIPstartDive()</code>,
+       <code>SCIPchgVarLbDive()</code>, <code>SCIPsolveDiveLP()</code>, etc.
+
+       Alternatively, SCIP's probing mode allows for a tentative depth first search in the tree and can solve the LP
+       relaxations at each node: methods <code>SCIPstartProbing()</code>, <code>SCIPnewProbingNode()</code>,
+       <code>SCIPfixVarProbing()</code>, etc. However, you cannot change objective coefficients or enlarge variable bounds
+       in probing mode.<br/><br/>
+
+       If you need to solve a separate LP, creating a sub-SCIP is not recommended because of the overhead involved
+       and because dual information is not accessible (compare <a href="Q45">here</a>). Instead you can use SCIP's LP
+       interface. For this you should include <code>scip/lpi.h</code> and call the methods provided therein.
+       Note that the LPi can be used independently from SCIP.
+    </p>
+
+
+<h4><a name="Section5">5. Specific questions about Column Generation and Branch-And-Price with SCIP</a></h4>
+    <p class="q">
+      <a name="Q5.1">Why are not all variables in the LP?</a>
     </p>
     <p class="a">
       With <code>SCIPgetLPColsData()</code> you can obtain the columns of the current LP relaxation. It is correct that
@@ -564,30 +781,16 @@
       deletion can be avoided by setting the "removable" flag to FALSE in the <code>SCIPcreateVar()</code> call.
     </p>
     <p class="q">
-      <a name="Q30">I only implemented one pricer, why is there a second one, called variable pricer?</a>
+      <a name="Q5.2">I only implemented one pricer, why is there a second one, called variable pricer?</a>
     </p>
     <p class="a">
-      As described in the <a href="#Q29">previous question</a>, it may happen, that some variables are not in the
+      As described in the <a href="#Q5.1">previous question</a>, it may happen, that some variables are not in the
       current LP relaxation. Nevertheless, these variables still exist, and SCIP can calculate their reduced costs and
       add them to the LP again, if necessary. This is the job of the variable pricer. It is called before all other
       pricers.
     </p>
     <p class="q">
-      <a name="Q31">How can I delete variables?</a>
-    </p>
-    <p class="a">
-      Currently, it is not possible to delete variables during solving. A variable can be removed from the problem by
-      <code>SCIPdelVar()</code>, but it remains in the corresponding constraints. Instead of that, you should either fix
-      the variable to zero by <code>SCIPfixVar()</code>, which fixes the variable globally or use
-      <code>SCIPchgVarUbNode()</code> and <code>SCIPchgVarLBNode()</code>, which change the bounds only for the current
-      subtree.
-    </p>
-    <p class="a">
-      We are working on this problem and expect to provide functionalities for the deletion of variables in the next
-      release.
-    </p>
-    <p class="q">
-      <a name="Q32">How can I store branching decisions?</a>
+      <a name="Q5.3">How can I store branching decisions?</a>
     </p>
     <p class="a">
       This is a very common problem in Branch-And-Price, which you can deal nicely with using SCIP.
@@ -600,14 +803,13 @@
     <p class="a">
       If you have complex pricer data like a graph and need to update it after each branching decision,
       you should introduce "marker constraints" that are added to the branching nodes and store
-      all the information needed (see the <a href="#Q34">next question</a>).
+      all the information needed (see the <a href="#Q5.4">next question</a>).
     </p>
     <p class="a">
-      The third way is the usage of an event handler like described in <a href="#Q35">How can an event handler help me
-      with my branching?</a>.
+      The third way is to use an event handler, which is described <a href="#Q5.5">here</a>.
     </p>
     <p class="q">
-      <a name="Q34">I want to store some information at the nodes and update my pricer's data structures
+      <a name="Q5.4">I want to store some information at the nodes and update my pricer's data structures
                     when entering a new node. How can I do that?</a>
     </p>
     <p class="a">
@@ -616,7 +818,7 @@
     </p>
     <p class="a">
       In general, all methods of the constraint handler (check, enforcing, separation, ...) should be empty (which means
-      to always return the status SCIP_FEASIBLE for the fundamental callbacks), just as if all constraints of this type
+      that they always return the status SCIP_FEASIBLE for the fundamental callbacks), just as if all constraints of this type
       are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods.
     </p>
     <p class="a">
@@ -632,7 +834,7 @@
     </p>
     <p class="a">
       If you need to fix variables for enforcing your branching decision, this can be done in the propagation callback
-      of the constraint handler. Since in general each node is only propagated once, in this case you will have to check
+      of the constraint handler. Since, in general, each node is only propagated once, in this case you will have to check
       in your CONSACTIVE method whether new variables were added after your last propagation of this node. If this is
       the case, you will have to mark this node for repropagation by <code>SCIPrepropagateNode()</code>.
     </p>
@@ -641,7 +843,7 @@
       an example of a constraint handler that does all these things.
     </p>
     <p class="q">
-      <a name="Q35">How can an event handler help me with my branching?</a>
+      <a name="Q5.5">How can an event handler help me with my branching?</a>
     </p>
     <p class="a">
       An event handler can watch for events like local bound changes on variables. So, if your 
@@ -649,12 +851,22 @@
       event handler, catch the corresponding events of the variable, and in the event handler's 
       execution method adjust the data structures of your pricer accordingly.
     </p>
+
     <p class="q">
-      <a name="Q36">My pricer generates the same column twice. How can I solve this problem?</a>
+      <a name="Q5.6">How can I add locally valid variables to the problem in my branch-and-price code?</a>
+    </p>
+    <p class="a">
+      Variables in SCIP are always added globally. If you want to add them locally, because they are forbidden
+      in another part of the branch-and-bound-tree, you should ensure that they are locally fixed to 0
+      in all subtrees where they are not valid. A description of how this can be done is given <a href="#Q5.4">here</a>.
+    </p>
+
+    <p class="q">
+      <a name="Q5.7">My pricer generates the same column twice. How can I solve this problem?</a>
     </p>
     <p class="a">
       First check whether your pricing is correct. Are there upper bounds on variables that you have forgotten to take
-      into account? If your pricer cannot cope with other variable bounds than 0 and infinity, you have to mark 
+      into account? If your pricer cannot cope with variable bounds other than 0 and infinity, you have to mark
       all constraints containing priced variables as modifiable, and you may have to disable reduced cost
       strengthening by setting propagating/rootredcost/freq to -1.
     </p>
@@ -663,25 +875,130 @@
       behavior is probably caused by the PRICER_DELAY property of your pricer.
     </p>
     <p class="a">
-      If it is set to FALSE, the following may have happened: The variable pricer (see <a href="#Q30">this question</a>)
+      If it is set to FALSE, the following may have happened: The variable pricer (see <a href="#Q5.2">this question</a>)
       found a variable with negative dual feasibility that was not part of the current LP relaxation and added it to the
       LP. In the same pricing round, your own pricer found the same column and created a new variable for it. This might
       happen, since your pricer uses the same dual values as the variable pricer. To avoid this behavior, set
       PRICER_DELAY to TRUE, so that the LP is reoptimized after the variable pricer added variables to the LP. You can
       find some more information about the PRICER_DELAY property at <a
-      href="http://scip.zib.de/doc/html/PRICER.html#PRICER_PROPERTIES">How to add variable pricers </a>.
+      href="PRICER.html#PRICER_PROPERTIES">How to add variable pricers </a>.
     </p>
+
     <p class="q">
-      <a name="Q37">Which default plugins should be deactivated in order to get a working branch-and price code?</a>
+      <a name="Q5.8">Which default plugins should be deactivated in order to get a working branch-and-price code?</a>
     </p>
     <p class="a">
       In most cases, you should deactivate separators, since cutting planes that are added to your master problem may
       destroy your pricing problem. Additionally, it may be necessary to deactivate some presolvers, mainly the dual
       fixing presolver. This can be done by not including these plugins into SCIP, namely by not calling
-      <code>SCIPincludeSepaXxx()</code> and <code>SCIPincludePresolXxx()</code> in your own plugins-including
+      <code>SCIPincludeSepaXyz()</code> and <code>SCIPincludePresolXyz()</code> in your own plugins-including
       files. Alternatively, you can set the parameters maxrounds and maxroundsroot to zero for all separators and
       maxrounds to zero for the presolvers.
     </p>
+
+    <p class="q">
+      <a name="Q5.9">What are the lazy bounds for variables in SCIP and what do I need them for?</a>
+    </p>
+    <p class="a">
+      In many Branch-and-Price applications, you have binary variables, but you do not want to impose
+      upper bounds on these variables in the LP relaxation, because the upper bound is already implicitly enforced
+      by the problem constraints and the objective. If the upper bounds are explicitly added to the LP,
+      they lead to further dual variables, which may be hard to take into account in the pricing problem.
+    </p>
+    <p class="a">  
+      There are two possibilities for how to solve this problem. First, you could change the binary variables
+      to general integer variables, if this does not change the problem. However, if you use special linear
+      constraints like set partitioning/packing/covering, you can only add binary variables to these constraints.
+    </p>
+    <p class="a">  
+      In order to still allow the usage of these types of constraints in a branch-and-price approach, the
+      concept of lazy bounds was introduced in SCIP 2.0.
+      For each variable, you can define lazy upper and lower bounds, i.e. bounds, that are implicitly enforced by
+      constraints and objective. SCIP adds variable bounds to the LP only if the bound is tighter than the
+      corresponding lazy bound.
+      Note that lazy bounds are explicitly put into and removed from the LP when starting and ending diving mode,
+      respectively. This is needed because changing the objective in diving might reverse the implicitly enforced
+      bounds.
+    </p>
+    <p class="a">  
+      For instance, if you have set partitioning constraints in your problem, you can define variables contained in these
+      constraints as binary and set the lazy upper bound to 1, which allows you to use the better propagation methods
+      of the setppc constraint handler compared to the linear constraint handler without taking care about upper
+      bounds on variables in the master.
+    </p>
+
+    <p class="q">
+      <a name="Q5.10">Can I stop the pricing process before the master problem is solved to optimality?</a>
+    </p>
+    <p class="a">
+      In a column generation approach, you usually have to solve the master problem to optimality; otherwise,
+      its objective function value is not a valid dual bound. However, there is a way in SCIP to
+      stop the pricing process earlier, called "early branching".
+    </p>
+    <p class="a">  
+      The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
+      In the usual case that the pricer either adds a new variable or ensures that there are no further 
+      variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS. 
+      If the pricer aborts pricing without creating a new variable, but there might exist additional 
+      variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN. 
+      In this case, the lp solution will not be used as a lower bound. 
+      The pricer can, however, store a valid lower bound in the lowerbound pointer.
+    </p>
+
+    <p class="q">
+      <a name="Q5.11">How can I delete variables?</a>
+    </p>
+    <p class="a">
+      SCIP features the functionality to delete variables from the problem when performing branch-and-price.
+      This feature is still in a beta status and can be activated by switching the parameters
+      <code>pricing/delvars</code> and <code>pricing/delvarsroot</code> to TRUE in order to allow deletion
+      of variables at the root node and at all other nodes, respectively.
+      Furthermore, variables have to be marked to be deletable by <code>SCIPvarMarkDeletable()</code>, which has to be done
+      before adding the variable to the problem. Then, after a node of the branch-and-bound-tree is processed,
+      SCIP automatically deletes variables from the problem that were created at the current node and whose corresponding
+      columns were already removed from the LP. Note that due to the way SCIP stores basis information, it is not possible to
+      completely delete a variable that was created at another node than the current node.
+      You might want to change the parameters <code>lp/colagelimit</code>, <code>lp/cleanupcols</code>, and <code>lp/cleanupcolsroot</code>,
+      which have an impact on when and how fast columns are removed from the LP.
+    </p>
+    <p class="a">
+      Constraint handlers support a new callback function that deletes variables from constraints in which they were marked to be deleted.
+      Thus, when using automatic variable deletion, you should make sure that all used constraint handlers implement this callback.
+      By now, the linear, the set partitioning/packing/covering and the knapsack constraint handler support this callback, which should
+      be sufficient for most branch-and-price applications. Note that set covering constraints can be used instead of logicor constraints.
+    </p>
+    <p class="a">
+      Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
+      using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
+      <code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
+    </p>
+
+<h4><a name="Section6">6. Specific questions about the copy functionality in SCIP</a></h4>
+    <p class="q">
+      <a name="Q6.1">What is <code>SCIPcopy()</code>?</a>
+    </p>
+    <p class="a">
+      The functionality of copying a SCIP model was added in SCIP version 2.0.0. It gives the possibility to
+      generate a copy of the current SCIP model. This functionality is of interest, for example, in large
+      neighborhood heuristics (such as heur_rens.c). They can now easily copy the complete problem and fix a certain
+      set of variables to work on a reasonable copy of the original problem.
+    </p>
+    <p class="q">
+      <a name="Q6.2">How do I get a copy of a variable or a constraint?</a>
+    </p>
+    <p class="a">
+      For the variables and constraints there are the methods <code>SCIPgetVarCopy()</code> and 
+      <code>SCIPgetConsCopy()</code> which provide a copy for a variable or a constraint, respectively.
+    </p>
+    <p class="q">
+      <a name="Q6.3">What does the <code>valid</code> pointer in the copy callback of the constraint handler and variable pricer mean?</a>
+    </p>
+    <p class="a">
+      SCIP would like to know if the copied problem is a one to one copy. That is, if all problem defining objects
+      were successfully copied. If this is the case, all reductions made in the copy can be transferred to the
+      original instance. The problem defining objects in SCIP are the constraint handlers and the variable pricers.
+    </p>
           <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
+          <!-- VBC tool, visualisierung ????????? -->
 </div>
 

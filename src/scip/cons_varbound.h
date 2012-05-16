@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_varbound.h
- * @brief  constraint handler for variable bound constraints
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c y \le rhs\f$.
  * @author Tobias Achterberg
+ * @author Timo Berthold
+ * @author Michael Winkler
+ *
+ * This constraint handler handles a special type of linear constraints, namely variable bound constraints.
+ * A variable bound constraint has the form
+ * \f[
+ *   lhs \leq x + c y \leq rhs
+ * \f]
+ * with coefficient \f$c \in Q\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x\f$ (non-binary) and \f$y\f$ (binary or integer).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,7 +47,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs */
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -64,7 +78,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -114,7 +128,7 @@ SCIP_Real SCIPgetDualsolVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
+/** gets the dual Farkas value of the variable bound constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

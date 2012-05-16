@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/type_mem.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_nlp.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
@@ -55,17 +56,20 @@ struct Scip
    SCIP_SET*             set;                /**< global SCIP settings */
    SCIP_INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
    SCIP_DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler for output handling, or NULL */
    SCIP_CLOCK*           totaltime;          /**< total SCIP running time */
 
    /* PROBLEM */
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
+   SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
 
    /* TRANSFORMED */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
+   SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_allfullstrong.c
- * @ingroup BRANCHINGRULES
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
  */
@@ -53,7 +52,9 @@ SCIP_RETCODE branch(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** pseudocands;
+#ifndef NDEBUG
    SCIP_Real cutoffbound;
+#endif
    SCIP_Real lpobjval;
    SCIP_Real bestdown;
    SCIP_Real bestup;
@@ -78,7 +79,9 @@ SCIP_RETCODE branch(
 
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
+#ifndef NDEBUG
    cutoffbound = SCIPgetCutoffbound(scip);
+#endif
 
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
@@ -121,6 +124,9 @@ SCIP_RETCODE branch(
       int i;
       int c;
 
+      /* initialize strong branching */
+      SCIP_CALL( SCIPstartStrongbranch(scip) );
+
       /* search the full strong candidate:
        * cycle through the candidates, starting with the position evaluated in the last run
        */
@@ -141,8 +147,16 @@ SCIP_RETCODE branch(
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
-         SCIP_CALL( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, 
-               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         if( integral )
+         {
+            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, 
+                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX, 
+                  &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         }
          nsbcalls++;
 
          /* display node information line in root node */
@@ -296,6 +310,9 @@ SCIP_RETCODE branch(
 
       /* remember last evaluated candidate */
       branchruledata->lastcand = c;
+
+      /* end strong branching */
+      SCIP_CALL( SCIPendStrongbranch(scip) );
    }
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
@@ -315,7 +332,7 @@ SCIP_RETCODE branch(
       SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
          npseudocands, bestpseudocand, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var),
          bestdown, bestup, bestscore);
-      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, &eqchild, &upchild) );
+      SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPvarGetLPSol(var), &downchild, &eqchild, &upchild) );
 
       /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )
@@ -350,6 +367,20 @@ SCIP_RETCODE branch(
  * Callback methods
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyAllfullstrong)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeAllfullstrong)
@@ -371,7 +402,7 @@ SCIP_DECL_BRANCHINIT(branchInitAllfullstrong)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* init branching rule data */
+   /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    branchruledata->lastcand = 0;
 
@@ -408,7 +439,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
 
 /** branching execution method for relaxation solutions */
-#define branchExecrelAllfullstrong NULL
+#define branchExecextAllfullstrong NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -436,7 +467,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
  * branching specific interface methods
  */
 
-/** creates the all variables full strong LP braching rule and includes it in SCIP */
+/** creates the all variables full strong LP branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -450,9 +481,10 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyAllfullstrong,
          branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
          branchInitsolAllfullstrong, branchExitsolAllfullstrong, 
-         branchExeclpAllfullstrong,  branchExecrelAllfullstrong, branchExecpsAllfullstrong,
+         branchExeclpAllfullstrong,  branchExecextAllfullstrong, branchExecpsAllfullstrong,
          branchruledata) );
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,14 +25,14 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
-#include "scip/pub_misc.h"
 #include "scip/relax.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_relax.h"
 
@@ -59,15 +59,35 @@ SCIP_DECL_PARAMCHGD(paramChgdRelaxPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given relaxator to a new scip */
+SCIP_RETCODE SCIPrelaxCopyInclude(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(relax != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( relax->relaxcopy != NULL )
+   {
+      SCIPdebugMessage("including relaxator %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
+      SCIP_CALL( relax->relaxcopy(set->scip, relax) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a relaxator */
 SCIP_RETCODE SCIPrelaxCreate(
    SCIP_RELAX**          relax,              /**< pointer to relaxator data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of relaxator */
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
@@ -91,6 +111,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*relax)->desc, desc, strlen(desc)+1) );
    (*relax)->priority = priority;
    (*relax)->freq = freq;
+   (*relax)->relaxcopy = relaxcopy;
    (*relax)->relaxfree = relaxfree;
    (*relax)->relaxinit = relaxinit;
    (*relax)->relaxexit = relaxexit;
@@ -98,6 +119,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->relaxexitsol = relaxexitsol;
    (*relax)->relaxexec = relaxexec;
    (*relax)->relaxdata = relaxdata;
+   SCIP_CALL( SCIPclockCreate(&(*relax)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*relax)->relaxclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*relax)->ncalls = 0;
    (*relax)->lastsolvednode = -1;
@@ -106,12 +128,12 @@ SCIP_RETCODE SCIPrelaxCreate(
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of relaxator <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*relax)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*relax)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4,
          paramChgdRelaxPriority, (SCIP_PARAMDATA*)(*relax)) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
          &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -135,6 +157,7 @@ SCIP_RETCODE SCIPrelaxFree(
    }
 
    SCIPclockFree(&(*relax)->relaxclock);
+   SCIPclockFree(&(*relax)->setuptime);
    BMSfreeMemoryArray(&(*relax)->name);
    BMSfreeMemoryArray(&(*relax)->desc);
    BMSfreeMemory(relax);
@@ -157,13 +180,23 @@ SCIP_RETCODE SCIPrelaxInit(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(relax->relaxclock);
-   relax->ncalls = 0;
-   relax->lastsolvednode = -1;
-
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(relax->setuptime);
+      SCIPclockReset(relax->relaxclock);
+      relax->ncalls = 0;
+      relax->lastsolvednode = -1;
+   }
+   
    if( relax->relaxinit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxinit(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
    relax->initialized = TRUE;
 
@@ -187,7 +220,13 @@ SCIP_RETCODE SCIPrelaxExit(
 
    if( relax->relaxexit != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxexit(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
    relax->initialized = FALSE;
 
@@ -206,7 +245,13 @@ SCIP_RETCODE SCIPrelaxInitsol(
    /* call solving process initialization method of relaxator */
    if( relax->relaxinitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxinitsol(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -224,7 +269,13 @@ SCIP_RETCODE SCIPrelaxExitsol(
    /* call solving process deinitialization method of relaxator */
    if( relax->relaxexitsol != NULL )
    {
+      /* start timing */
+      SCIPclockStart(relax->setuptime, set);
+
       SCIP_CALL( relax->relaxexitsol(set->scip, relax) );
+
+      /* stop timing */
+      SCIPclockStop(relax->setuptime, set);
    }
 
    return SCIP_OKAY;
@@ -366,6 +417,16 @@ int SCIPrelaxGetFreq(
    assert(relax != NULL);
 
    return relax->freq;
+}
+
+/** gets time in seconds used in this relaxator for setting up for next stages */
+SCIP_Real SCIPrelaxGetSetupTime(
+   SCIP_RELAX*           relax               /**< relaxator */
+   )
+{
+   assert(relax != NULL);
+
+   return SCIPclockGetTime(relax->setuptime);
 }
 
 /** gets time in seconds used in this relaxator */

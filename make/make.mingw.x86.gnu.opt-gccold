@@ -1,0 +1,15 @@
+FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_STRERROR_R -DROUNDING_FE
+OFLAGS		+=	-O3 -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline
+ZIMPL_FLAGS	=
+ZIMPL_LDFLAGS	=	-static -lpcreposix -lpcre
+EXEEXTENSION	=	.exe

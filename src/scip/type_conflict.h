@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,9 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for conflict analysis
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for conflict handler implemented in C.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,9 +39,17 @@ extern "C" {
 typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound changes */
+typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
 
+/** copy method for conflict handler plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conflicthdlr    : the conflict handler itself
+ */
+#define SCIP_DECL_CONFLICTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting)
  *
@@ -109,7 +120,9 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - node            : node to add resulting conflict constraint to (with SCIPaddConsNode())
  *  - validnode       : node at which the conflict constraint is valid (should be passed to SCIPaddConsNode())
  *  - bdchginfos      : array with bound changes that lead to a conflict
+ *  - relaxedbds      : array with relaxed bounds which are efficient to create a valid conflict
  *  - nbdchginfos     : number of bound changes in the conflict set
+ *  - separate        : should the conflict constraint be separated?
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
  *  - removable       : should the conflict's relaxation be made subject to LP aging and cleanup?
@@ -122,8 +135,8 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
 #define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, \
-      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
-      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
+      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, SCIP_Real* relaxedbds, int nbdchginfos, \
+      SCIP_Bool separate, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

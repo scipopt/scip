@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_or.h
- * @brief  constraint handler for or constraints
+ * @ingroup CONSHDLRS
+ * @brief  Constraint handler for "or" constraints,  \f$r = x_1 \vee x_2 \vee \dots  \vee x_n\f$
  * @author Tobias Achterberg
+ * @author Stefan Heinz
+ * @author Michael Winkler
+ *
+ * This constraint handler deals with "or" constraint. These are constraint of the form:
+ *
+ * \f[
+ *    r = x_1 \vee x_2 \vee \dots  \vee x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
+ * called resultant and the \f$x\f$'s operators.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,7 +48,10 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a or constraint */
+/** creates nd captures a or constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsOr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -62,7 +77,7 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -80,6 +95,13 @@ int SCIPgetNVarsOr(
 /** gets array of variables in or constraint */
 extern
 SCIP_VAR** SCIPgetVarsOr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the resultant variable in or constraint */
+extern
+SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

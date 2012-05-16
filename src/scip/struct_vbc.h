@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@ extern "C" {
 struct SCIP_Vbc
 {
    FILE*                 file;               /**< file to store VBC information */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
    SCIP_Longint          timestep;           /**< time step counter for non real time output */
    SCIP_NODE*            lastnode;           /**< last node that was colored */

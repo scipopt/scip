@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -27,6 +27,7 @@
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
+#include "scip/pub_message.h"
 #endif
 
 #include "blockmemshell/memory.h"
@@ -38,15 +39,15 @@
 #ifdef SCIPdebugMessage
 #define debugMessage SCIPdebugMessage
 #define errorMessage SCIPerrorMessage
-#define warningMessage SCIPwarningMessage
 #else
 #define debugMessage while( FALSE ) printf
 #define errorMessage printf
-#define warningMessage printf
 #define printErrorHeader(f,l) printf("[%s:%d] ERROR: ", f, l)
 #define printError printf
-#define printInfo printf
 #endif
+
+#define warningMessage printf
+#define printInfo printf
 
 /* define some macros (if not already defined) */
 #ifndef FALSE
@@ -68,8 +69,7 @@
  * allocated memory elements in an allocation list. This can be used as a simple leak
  * detection.
  *************************************************************************************/
-
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
 
 typedef struct Memlist MEMLIST;         /**< memory list for debugging purposes */
 
@@ -154,8 +154,10 @@ void removeMemlistEntry(
       listptr = &(list->next);
       list = list->next;
    }
-   if( list != NULL && ptr == list->ptr )
+   if( list != NULL )
    {
+      assert(ptr == list->ptr);
+
       *listptr = list->next;
       memused -= (long long)list->size;
       free(list->filename);
@@ -249,7 +251,9 @@ void BMSdisplayMemory_call(
    void
    )
 {
+#ifdef NPARASCIP
    printInfo("optimized version of memory shell linked - no memory diagnostics available\n");
+#endif
 }
 
 /** displays a warning message on the screen, if allocated memory exists */
@@ -257,7 +261,9 @@ void BMScheckEmptyMemory_call(
    void
    )
 {
+#ifdef NPARASCIP
    printInfo("optimized version of memory shell linked - no memory leakage check available\n");
+#endif
 }
 
 /** returns total number of allocated bytes */
@@ -270,6 +276,34 @@ long long BMSgetMemoryUsed_call(
 
 #endif
 
+/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+void* BMSallocClearMemory_call(
+   size_t                num,                /**< number of memory element to allocate */
+   size_t                size,               /**< size of one memory element to allocate */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   )
+{
+   void* ptr;
+
+   debugMessage("calloc %lld elements of %lld bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
+
+   num = MAX(num, 1);
+   size = MAX(size, 1);
+   ptr = calloc(num, size);
+
+   if( ptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for allocation of %lld bytes\n", ((long long) num) * ((long long) size));
+   }
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   else
+      addMemlistEntry(ptr, num*size, filename, line);
+#endif
+
+   return ptr;
+}
 
 /** allocates memory; returns NULL if memory allocation failed */
 void* BMSallocMemory_call(
@@ -290,7 +324,7 @@ void* BMSallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %lld bytes\n", (long long) size);
    }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
 #endif
@@ -308,7 +342,7 @@ void* BMSreallocMemory_call(
 {
    void* newptr;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
 #endif
@@ -321,7 +355,7 @@ void* BMSreallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %lld bytes\n", (long long) size);
    }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
 #endif
@@ -359,6 +393,23 @@ void BMScopyMemory_call(
    }
 }
 
+/** moves the contents of one memory element into another memory element, should be used if both elements overlap,
+ *  otherwise BMScopyMemory is faster
+ */
+void BMSmoveMemory_call(
+   void*                 ptr,                /**< pointer to target memory element */
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size                /**< size of memory element to copy */
+   )
+{
+   if( size > 0 )
+   {
+      assert(ptr != NULL);
+      assert(source != NULL);
+      memmove(ptr, source, size);
+   }
+}
+
 /** allocates memory and copies the contents of the given memory element into the new memory element */
 void* BMSduplicateMemory_call(
    const void*           source,             /**< pointer to source memory element */
@@ -387,7 +438,7 @@ void BMSfreeMemory_call(
 {
    if( ptr != NULL )
    {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(ptr, filename, line);
 #endif
       free(ptr);
@@ -849,6 +900,8 @@ int createChunk(
 
    /* create new chunk */
    assert(BMSisAligned(sizeof(CHUNK)));
+   assert( chkmem->elemsize < INT_MAX / storesize );
+   assert( sizeof(CHUNK) < UINT_MAX - (size_t)(storesize * chkmem->elemsize) );
    BMSallocMemorySize(&newchunk, sizeof(CHUNK) + storesize * chkmem->elemsize);
    if( newchunk == NULL )
       return FALSE;
@@ -1579,6 +1632,8 @@ void* BMSallocBlockMemory_call(
    int hashnumber;
    void* ptr;
 
+   assert( blkmem != NULL );
+
    /* calculate hash number of given size */
    alignSize(&size);
    hashnumber = getHashNumber((int)size);
@@ -1683,6 +1738,8 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
+   assert( blkmem != NULL );
+
    if( ptr != NULL )
    {
       /* calculate hash number of given size */
@@ -1692,6 +1749,7 @@ void BMSfreeBlockMemory_call(
       debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
       /* find correspoding chunk block */
+      assert( blkmem->chkmemhash != NULL );
       chkmem = blkmem->chkmemhash[hashnumber];
       while( chkmem != NULL && chkmem->elemsize != (int)size )
 	 chkmem = chkmem->nextchkmem;

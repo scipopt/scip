@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_NodeselData
 
 extern "C"
 {
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyObj)
+{  /*lint --e{715}*/
+   SCIP_NODESELDATA* nodeseldata;
+   
+   assert(scip != NULL);
+   
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ != scip);
+
+   if( nodeseldata->objnodesel->iscloneable() )
+   {
+      scip::ObjNodesel* newobjnodesel;
+      newobjnodesel = dynamic_cast<scip::ObjNodesel*> (nodeseldata->objnodesel->clone(scip));
+
+      /* call include method of node selector object */
+      SCIP_CALL( SCIPincludeObjNodesel(scip, newobjnodesel, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeObj)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ == scip);
 
    /* call virtual method of nodesel object */
    SCIP_CALL( nodeseldata->objnodesel->scip_free(scip, nodesel) );
@@ -81,6 +108,7 @@ SCIP_DECL_NODESELINIT(nodeselInitObj)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
+   assert(nodeseldata->objnodesel->scip_ == scip);
 
    /* call virtual method of nodesel object */
    SCIP_CALL( nodeseldata->objnodesel->scip_init(scip, nodesel) );
@@ -187,6 +215,9 @@ SCIP_RETCODE SCIPincludeObjNodesel(
 {
    SCIP_NODESELDATA* nodeseldata;
 
+   assert(scip != NULL);
+   assert(objnodesel != NULL);
+
    /* create node selector data */
    nodeseldata = new SCIP_NODESELDATA;
    nodeseldata->objnodesel = objnodesel;
@@ -195,6 +226,7 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_,
+         nodeselCopyObj,
          nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
          nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
          nodeseldata) ); /*lint !e429*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_PresolData
 
 extern "C"
 {
+
+/** copy method for presolver plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+   
+   assert(scip != NULL);
+   
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+   assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ != scip);
+
+   if( presoldata->objpresol->iscloneable() )
+   {
+      scip::ObjPresol* newobjpresol;
+      newobjpresol = dynamic_cast<scip::ObjPresol*> (presoldata->objpresol->clone(scip));
+
+      /* call include method of presolver object */
+      SCIP_CALL( SCIPincludeObjPresol(scip, newobjpresol, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_PRESOLFREE(presolFreeObj)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ == scip);
 
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_free(scip, presol) );
@@ -81,6 +108,7 @@ SCIP_DECL_PRESOLINIT(presolInitObj)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
+   assert(presoldata->objpresol->scip_ == scip);
 
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_init(scip, presol) );
@@ -117,7 +145,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -134,7 +162,7 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreObj)
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -153,9 +181,9 @@ SCIP_DECL_PRESOLEXEC(presolExecObj)
    /* call virtual method of presol object */
    SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-         nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-         ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }
@@ -176,6 +204,9 @@ SCIP_RETCODE SCIPincludeObjPresol(
 {
    SCIP_PRESOLDATA* presoldata;
 
+   assert(scip != NULL);
+   assert(objpresol != NULL);
+
    /* create presolver data */
    presoldata = new SCIP_PRESOLDATA;
    presoldata->objpresol = objpresol;
@@ -184,6 +215,7 @@ SCIP_RETCODE SCIPincludeObjPresol(
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
+         presolCopyObj,
          presolFreeObj, presolInitObj, presolExitObj, 
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/

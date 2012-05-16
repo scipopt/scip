@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_flowcover.c
- * @ingroup SEPARATORS
  * @brief  flow cover cuts separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -23,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_flowcover.h"
 #include "scip/cons_knapsack.h"
@@ -34,6 +34,7 @@
 #define SEPA_PRIORITY             -4000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -164,15 +165,15 @@ SCIP_RETCODE getClosestVlb(
          SCIP_Bool meetscriteria; 
          int probidxbinvar;
       
-         /* use only variable lower bounds l~_i * x_i + d_i with x_i binary */
-         if( SCIPvarGetType(vlbvars[i]) != SCIP_VARTYPE_BINARY )
+         /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
+         if( !SCIPvarIsBinary(vlbvars[i])  || !SCIPvarIsActive(vlbvars[i]) )
             continue;
-
+         
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
           * (let a_j  = coefficient of y_j in current row,
           *      u_j  = closest simple upper bound imposed on y_j,
           *      c_i  = coefficient of x_i in current row)
-          *   0. no other nonbinary variable y_k has used a variable bound with x_i to get transformed variable y'_k yet
+          *   0. no other non-binary variable y_k has used a variable bound with x_i to get transformed variable y'_k yet
           * if a_j > 0: 
           *   1. u_j <= d_i
           *   2. a_j ( u_j - d_i ) + c_i <= 0
@@ -182,7 +183,6 @@ SCIP_RETCODE getClosestVlb(
           *   2. a_j ( u_j - d_i ) + c_i >= 0
           *   3. a_j l~_i + c_i >= 0 
           */
-         assert(SCIPvarGetProbindex(vlbvars[i]) > -1);
          probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
          rowcoefbinvar = rowcoefsbinary[probidxbinvar];
 
@@ -283,15 +283,15 @@ SCIP_RETCODE getClosestVub(
          SCIP_Bool meetscriteria; 
          int probidxbinvar;
     
-         /* use only variable upper bound u~_i * x_i + d_i with x_i binary */
-         if( SCIPvarGetType(vubvars[i]) != SCIP_VARTYPE_BINARY )
+         /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
+         if( !SCIPvarIsBinary(vubvars[i]) || !SCIPvarIsActive(vubvars[i]))
             continue;
-     
+
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
           * (let a_j  = coefficient of y_j in current row,
           *      l_j  = closest simple lower bound imposed on y_j,
           *      c_i  = coefficient of x_i in current row)
-          *   0. no other nonbinary variable y_k has used a variable bound with x_i to get transformed variable y'_k 
+          *   0. no other non-binary variable y_k has used a variable bound with x_i to get transformed variable y'_k 
           * if a > 0: 
           *   1. l_j >= d_i
           *   2. a_j ( l_i - d_i ) + c_i >= 0
@@ -301,7 +301,6 @@ SCIP_RETCODE getClosestVub(
           *   2. a_j ( l_j - d_i ) + c_i <= 0
           *   3. a_j u~_i + c_i <= 0 
           */
-         assert(SCIPvarGetProbindex(vubvars[i]) > -1);
          probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
          rowcoefbinvar = rowcoefsbinary[probidxbinvar];
 
@@ -417,12 +416,12 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIP_ROW*             row,                /**< given row */
    SCIP_Real             rowweight,          /**< weight of given row; can be +1 or -1 */
    SCIP_Real             scale,              /**< additional scaling factor for given row */
-   int*                  boundsfortrans,     /**< pointer to store bound used for all nonbin vars of row */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< pointer to store type of bound used for all nonbin vars of row */
+   int*                  boundsfortrans,     /**< pointer to store bound used for all non-binary vars of row */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< pointer to store type of bound used for all non-binary vars of row */
    int*                  assoctransvars,     /**< pointer to store associated var in relaxed set for all vars of row */ 
    int*                  transvarcoefs,      /**< pointer to store coefficient of all vars in relaxed set */ 
    SCIP_Real*            transbinvarsolvals, /**< pointer to store sol val of bin var in vub of all vars in relaxed set */
-   SCIP_Real*            transcontvarsolvals,/**< poniter to store sol val of all real vars in relaxed set */
+   SCIP_Real*            transcontvarsolvals,/**< pointer to store sol val of all real vars in relaxed set */
    SCIP_Real*            transvarvubcoefs,   /**< pointer to store coefficient in vub of all vars in relaxed set */
    int*                  ntransvars,         /**< pointer to store number of vars in relaxed set */
    SCIP_Real*            transrhs,           /**< pointer to store rhs in relaxed set */ 
@@ -474,7 +473,7 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIP_CALL( SCIPallocBufferArray(scip, &nonzcolsnonbinary, nnonzcols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowcoefsbinary, nvars) );
 
-   /* store nonzero columns representing binary and nonbinary variables, and get active binary problem variables the
+   /* store nonzero columns representing binary and non-binary variables, and get active binary problem variables the
     * coefficient in the row 
     */
    nnonzcolsbinary = 0;
@@ -490,7 +489,7 @@ SCIP_RETCODE constructSNFRelaxation(
 
       assert(!SCIPisZero(scip, nonzcoefs[c]));
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(var) )
       {
          /* saves column for binary variable */
          nonzcolsbinary[nnonzcolsbinary] = c;
@@ -502,7 +501,7 @@ SCIP_RETCODE constructSNFRelaxation(
       }
       else
       {
-         /* saves column for nonbinary variable */
+         /* saves column for non-binary variable */
          nonzcolsnonbinary[nnonzcolsnonbinary] = c;
          nnonzcolsnonbinary++;
       }
@@ -517,7 +516,7 @@ SCIP_RETCODE constructSNFRelaxation(
    }
    *ntransvars = 0;
 
-   /* initialze right hand side of constraint in 0-1 single node flow relaxation */
+   /* initialize right hand side of constraint in 0-1 single node flow relaxation */
    if( rowweight * scale == 1.0 && !SCIPisInfinity(scip, SCIProwGetRhs(row)) )
       *transrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
    else if( rowweight * scale == 1.0 && SCIPisInfinity(scip, SCIProwGetRhs(row)) )
@@ -533,23 +532,23 @@ SCIP_RETCODE constructSNFRelaxation(
       *transrhs = - SCIProwGetRhs(row) + SCIProwGetConstant(row);
    }
    
-   /* for each nonbinary variable y_j in the row with nonzero row coefficient perform
+   /* for each non-binary variable y_j in the row with nonzero row coefficient perform
     *   1. get closest simple or variable lower bound and closest simple or variable upper bound
     *   2. decide which bound is used to define the real variable y'_j in the 0-1 single node flow relaxation
     *   3. construct y'_j with 0 <= y'_j <= u'_j x_j
     *   4. store for y_j and x_j (if x_j is a binary variable in the row) that y'_j is the associated real variable 
     *      in the 0-1 single node flow relaxation and for y_j the bound used to define y'_j.
     *
-    * for each binary variable x_j in the row which has not been handled with a nonbinary variable perform
+    * for each binary variable x_j in the row which has not been handled with a non-binary variable perform
     *   1. construct y'_j with 0 <= y'_j <= u'_j x_j
     *   2. store for x_j that y'_j is the associated real variable in the 0-1 single node flow relaxation. 
     *  
-    * start with nonbinary variables because a binary variable x_j which is involved in a used variable bound 
-    * imposed on a nonbinaray variable y_j has to be handled together with the nonbinaray variable y_j. 
+    * start with non-binary variables because a binary variable x_j which is involved in a used variable bound 
+    * imposed on a non-binary variable y_j has to be handled together with the non-binary variable y_j. 
     */
    SCIPdebugMessage("transformation for NONBINARY variables (nnonbinvars=%d):\n", nnonzcolsnonbinary);
 
-   /* nonbinary variables and binary variables contained in used variable bounds */
+   /* non-binary variables and binary variables contained in used variable bounds */
    for( c = 0; c < nnonzcolsnonbinary; c++ )
    {
       SCIP_VAR* var;
@@ -585,7 +584,7 @@ SCIP_RETCODE constructSNFRelaxation(
       SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g(%d),%g(%d)]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, 
          varsolvals[probidx], bestslb, bestslbtype, bestsub, bestsubtype);
 
-      /* mixed integer set can not be relaxed to 0-1 single node flow set because both simple bounds are -infinity 
+      /* mixed integer set cannot be relaxed to 0-1 single node flow set because both simple bounds are -infinity 
        * and infinity, respectively 
        */
       if( SCIPisInfinity(scip, -bestslb) && SCIPisInfinity(scip, bestsub) )
@@ -638,7 +637,7 @@ SCIP_RETCODE constructSNFRelaxation(
       }
       SCIPdebugMessage("        bestlb=%g(%d), bestub=%g(%d)\n", bestlb, bestlbtype, bestub, bestubtype);
       
-      /* mixed integer set can not be relaxed to 0-1 single node flow set because there are no suitable bounds 
+      /* mixed integer set cannot be relaxed to 0-1 single node flow set because there are no suitable bounds 
        * to define the transformed variable y'_j 
        */       
       if( SCIPisInfinity(scip, -bestlb) && SCIPisInfinity(scip, bestub) )
@@ -735,7 +734,7 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarGetType(vlbvars[bestlbtype]) == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsBinary(vlbvars[bestlbtype]));
 
             rowcoefbinary = rowcoefsbinary[SCIPvarGetProbindex(vlbvars[bestlbtype])];
             varsolvalbinary = varsolvals[SCIPvarGetProbindex(vlbvars[bestlbtype])];
@@ -842,7 +841,7 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarGetType(vubvars[bestubtype]) == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsBinary(vubvars[bestubtype]));
 
             rowcoefbinary = rowcoefsbinary[SCIPvarGetProbindex(vubvars[bestubtype])];
             varsolvalbinary = varsolvals[SCIPvarGetProbindex(vubvars[bestubtype])];
@@ -891,7 +890,7 @@ SCIP_RETCODE constructSNFRelaxation(
 
    SCIPdebugMessage("transformation for BINARY variables (nbinvars=%d):\n", nnonzcolsbinary);
 
-   /* binary variables not involved in used variable bounds imposed on nonbinary variable */
+   /* binary variables not involved in used variable bounds imposed on non-binary variable */
    for( c = 0; c < nnonzcolsbinary; c++ )
    {
       SCIP_VAR* var;
@@ -910,7 +909,7 @@ SCIP_RETCODE constructSNFRelaxation(
       SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, varsolvals[probidx], 
          SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       
-      /* x_j has already been handled in connection with a nonbinary variable */ 
+      /* x_j has already been handled in connection with a non-binary variable */ 
       if( assoctransvars[probidx] > -1 )
       {
          assert(assoctransvars[probidx] >= 0 && assoctransvars[probidx] <= nnonzcolsnonbinary);
@@ -965,7 +964,7 @@ SCIP_RETCODE constructSNFRelaxation(
    }
    assert(*ntransvars >= nnonzcolsnonbinary && *ntransvars <= nnonzcols);
 
-   /* construction was successfull */
+   /* construction was successful */
    *success = TRUE;
 
 #ifdef SCIP_DEBUG
@@ -1024,10 +1023,10 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* allocate memory for temporary array used for sorting; array should contain profits devided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
+   /* allocate memory for temporary array used for sorting; array should contain profits divided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    /* initialize temporary array */ 
-   for (i = nitems - 1; i >= 0; --i)
+   for( i = nitems - 1; i >= 0; --i )
    {
       tempsort[i] = profits[i] / weights [i];
    }
@@ -1095,7 +1094,6 @@ SCIP_Longint getIntegralVal(
    )
 {
    SCIP_Real sval;
-   SCIP_Real downval;
    SCIP_Real upval;
    SCIP_Longint intval;
 
@@ -1103,13 +1101,12 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = floor(sval);
    upval = ceil(sval);
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
    else
-      intval = (SCIP_Longint) downval;
+      intval = (SCIP_Longint) (floor(sval));
    
    return intval;
 }
@@ -1222,7 +1219,9 @@ SCIP_RETCODE getFlowCover(
    SCIP_Real n2itemsminweight;
    SCIP_Real scalar;
    SCIP_Real transcapacityreal;
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
    SCIP_Bool kpexact;
+#endif
    SCIP_Bool scalesuccess;
    SCIP_Bool transweightsrealintegral;
    SCIP_Longint transcapacityint;
@@ -1265,14 +1264,16 @@ SCIP_RETCODE getFlowCover(
    nflowcovervarsafterfix = 0;
    nnonflowcovervarsafterfix = 0;
    flowcoverweightafterfix = 0.0;
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
    kpexact = FALSE;
+#endif
 
    /* fix some variables in advance according to the following fixing strategy
     *   put j into N1\C1,          if j in N1 and x*_j = 0, 
     *   put j into C1,             if j in N1 and x*_j = 1, 
     *   put j into C2,             if j in N2 and x*_j = 1, 
     *   put j into N2\C2,          if j in N2 and x*_j = 0 
-    * and get the set of the remaing variables
+    * and get the set of the remaining variables
     */
    SCIPdebugMessage("0. Fix some variables in advance:\n");
    nitems = 0;
@@ -1348,7 +1349,7 @@ SCIP_RETCODE getFlowCover(
     *                                         z_j in {0,1} for all j in N1 & N2
     *
     * 1. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
-    *    positive weights and the constraint is an "<" constraint, by complementing all variables in N1
+    *    positive weights and the constraint is a "<" constraint, by complementing all variables in N1
     *     
     *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
     *                      sum_{j in N1}          u_j z°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
@@ -1357,8 +1358,8 @@ SCIP_RETCODE getFlowCover(
     *    and solve it approximately under consideration of the fixing, 
     * or 
     * 2. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
-    *    positive integer weights and the constraint is an "<=" constraint, by complementing all variables in N1
-    *    and multilying the constraint by a suitable scalar C
+    *    positive integer weights and the constraint is a "<=" constraint, by complementing all variables in N1
+    *    and multiplying the constraint by a suitable scalar C
     *
     *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
     *                      sum_{j in N1}        C u_j z°_j + sum_{j in N2} C u_j  z_j <= c 
@@ -1394,7 +1395,7 @@ SCIP_RETCODE getFlowCover(
    }
    /* get capacity of knapsack constraint in KP^SNF_rat */
    transcapacityreal = - rhs + flowcoverweight + n1itemsweight;
-   SCIPdebugMessage("     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itmesweight(%g) = %g\n", 
+   SCIPdebugMessage("     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n", 
       rhs, flowcoverweight, n1itemsweight, transcapacityreal);
 
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 
@@ -1435,6 +1436,10 @@ SCIP_RETCODE getFlowCover(
             &scalesuccess) );
    }
 
+   /* initialize number of (non-)solution items, should be changed to a nonnegative number in all possible paths below */
+   nsolitems = -1;
+   nnonsolitems = -1;
+
    /* suitable factor C was found*/
    if( scalesuccess )
    {
@@ -1463,10 +1468,22 @@ SCIP_RETCODE getFlowCover(
       tmp2 = (SCIP_Real) ((transcapacityint) + 1);
       if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8.0)
       {
+         SCIP_Bool success;
+
          /* solve KP^SNF_int by dynamic programming */
-         SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint,transcapacityint, 
-               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
-         kpexact = TRUE;
+         SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint, transcapacityint, 
+               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL, &success));
+
+         if( !success )
+         {
+            /* solve KP^SNF_rat approximately */
+            SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, 
+                  transcapacityreal, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+         }
+#if !defined(NDEBUG) || defined(SCIP_DEBUG)
+         else
+            kpexact = TRUE;
+#endif
       }
       else
       {
@@ -1484,6 +1501,9 @@ SCIP_RETCODE getFlowCover(
       assert(!kpexact);
    }
 
+   assert(nsolitems != -1);
+   assert(nnonsolitems != -1);
+
    /* build the flow cover from the solution of KP^SNF_rat and KP^SNF_int, respectively and the fixing */
    assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == nvars);
    buildFlowCover(scip, coefs, vubcoefs, rhs, solitems, nonsolitems, nsolitems, nnonsolitems, nflowcovervars,
@@ -1498,7 +1518,9 @@ SCIP_RETCODE getFlowCover(
       /* solve KP^SNF_rat approximately */
       SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal, 
             items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+#ifdef SCIP_DEBUG /* this time only for SCIP_DEBUG, because only then, the variable is used again  */
       kpexact = FALSE;
+#endif
       
       /* build the flow cover from the solution of KP^SNF_rat and the fixing */
       *nflowcovervars = nflowcovervarsafterfix;
@@ -1544,7 +1566,6 @@ SCIP_RETCODE getFlowCover(
    SCIPfreeBufferArray(scip, &items);
 
    return SCIP_OKAY;
-
 }
 
 /** for a given flow cover and a given value of delta, choose L1 subset N1 \ C1 and L2 subset N2 \ C2 by comparison such that 
@@ -1558,7 +1579,7 @@ void getL1L2(
    SCIP_Real*            transbinvarsolvals, /**< LP solution value of bin var in vub of all continuous vars in N1 & N2 */
    SCIP_Real*            transcontvarsolvals,/**< LP solution value of all continuous vars in N1 & N2 */
    SCIP_Real*            transvarvubcoefs,   /**< coefficient of vub of all continuous variables in N1 & N2 */
-   int*                  transvarflowcoverstatus,/**< pointer to store whether nonbinary var is in L2 (2) or not (-1 or 1) */ 
+   int*                  transvarflowcoverstatus,/**< pointer to store whether non-binary var is in L2 (2) or not (-1 or 1) */ 
    SCIP_Real             delta,              /**< delta */
    SCIP_Real             lambda              /**< lambda */
    )
@@ -1588,7 +1609,7 @@ void getL1L2(
    SCIPdebugMessage("     L1 = { j in N1-C1 : y*_j >= ( u_j - lambda F_{f_beta}(  u_j/delta) ) x*_j }\n");
    SCIPdebugMessage("     L2 = { j in N2-C2 : y*_j >=       - lambda F_{f_beta}(- u_j/delta)   x*_j }\n");
    
-   /* set flowcover status of continous variable x_j to 2, i.e., put j intp L1 and L2, respectively 
+   /* set flowcover status of continuous variable x_j to 2, i.e., put j intp L1 and L2, respectively 
     *   if j is in N1\C1 and y*_j >= ( u_j - lambda F_{f_beta}(  u_j/delta) ) x*_j 
     *   if j is in N2\C2 and y*_j >=       - lambda F_{f_beta}(- u_j/delta)   x*_j 
     */
@@ -1662,15 +1683,15 @@ SCIP_RETCODE getBoundsForSubstitution(
    SCIP*                 scip,               /**< SCIP data structure */ 
    SCIP_VAR**            vars,               /**< active problem variables */
    int                   nvars,              /**< number of active problem variables */
-   int*                  boundsfortrans,     /**< bound used for transformation for all nonbinary vars of current row */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bound used for transform. for all nonbinary vars of curent row */
+   int*                  boundsfortrans,     /**< bound used for transformation for all non-binary vars of current row */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bound used for transform. for all non-binary vars of current row */
    int*                  assoctransvars,     /**< associated var in transformed problem for all vars of current row */ 
    int*                  transvarcoefs,      /**< coefficient of all vars in transformed problem */ 
-   int*                  flowcoverstatus,    /**< flow cover status of all nonbinary vars in transformed problem; 
+   int*                  flowcoverstatus,    /**< flow cover status of all non-binary vars in transformed problem; 
                                               *   1 if in C1 & C2, 2 if in L2, -1 N1 \ C1 & N2 \ (C2&L2) */ 
    int                   ntransvars,         /**< number of vars in transformed problem */
-   int*                  boundsforsubst,     /**< pointer to store bound that should be used for subst in c-mir for vars */
-   SCIP_BOUNDTYPE*       boundtypesforsubst  /**< pointer to store type of bound that should be used for subst in c-mir for vars vars */
+   int*                  boundsforsubst,     /**< pointer to store bounds that should be used for substitution in c-mir for vars */
+   SCIP_BOUNDTYPE*       boundtypesforsubst  /**< pointer to store types of bounds that should be used for substitution in c-mir */
    )
 {
    int j;
@@ -1702,7 +1723,7 @@ SCIP_RETCODE getBoundsForSubstitution(
       }
 
       /* binary variable */
-      if( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(vars[j]) )
       {
          /* j in C1 & C2 */
          if( flowcoverstatus[assoctransvars[j]] == 1 )
@@ -1717,7 +1738,7 @@ SCIP_RETCODE getBoundsForSubstitution(
             boundtypesforsubst[j] = SCIP_BOUNDTYPE_LOWER;
          }
       }
-      /* nonbinary variables */
+      /* non-binary variables */
       else
       {
          /* j in C1 & C2 & L1 & L2 */
@@ -1920,17 +1941,16 @@ SCIP_RETCODE addCut(
 
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
       
-#if 0
-      /* tries to scale the cut to integral values */
+#if 0 /* tries to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
          SCIPdebugMessage(" -> flowcover cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          success = FALSE;
       }
 #else
@@ -1944,7 +1964,7 @@ SCIP_RETCODE addCut(
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
          SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
          if( !cutislocal )
          {
@@ -1996,15 +2016,15 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIP_Real*            varsolvals,         /**< solution values of active variables */
    SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
    SCIP_Real             scalar,             /**< additional scaling factor of rows in aggregation */
-   int*                  boundsfortrans,     /**< bound used for all nonbin vars of row */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bound used for all nonbin vars of row */
+   int*                  boundsfortrans,     /**< bound used for all non-bin vars of row */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bound used for all non-binary vars of row */
    int*                  assoctransvars,     /**< associated var in relaxed set for all vars of row */ 
    int                   ntransvars,         /**< number of real variables in N1&N2 */
-   int*                  transvarcoefs,      /**< coefficient of all continous variables in N1 & N2 */ 
+   int*                  transvarcoefs,      /**< coefficient of all continuous variables in N1 & N2 */ 
    SCIP_Real*            transbinvarsolvals, /**< LP solution value of binary variable in vub of all real vars in N1&N2 */
    SCIP_Real*            transcontvarsolvals,/**< LP solution value of all real vars in N1&N2 */
    SCIP_Real*            transvarvubcoefs,   /**< coefficient of vub of all continuous variables in N1 & N2 */
-   int*                  transvarflowcoverstatus, /**< pointer to store whether nonbinary var is in L2 (2) or not (-1 or 1) */ 
+   int*                  transvarflowcoverstatus, /**< pointer to store whether non-binary var is in L2 (2) or not (-1 or 1) */ 
    SCIP_Real             lambda,             /**< lambda */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
@@ -2091,8 +2111,8 @@ SCIP_RETCODE cutGenerationHeuristic(
          && SCIPisFeasGT(scip, transvarvubcoefs[j], lambda) )
          l2tmpvubcoefsmax = MAX(l2tmpvubcoefsmax, transvarvubcoefs[j]);
 
-      /* u_j >= lambda */
-      if( SCIPisFeasGE(scip, transvarvubcoefs[j], lambda) )
+      /* u_j + 1 > lambda */
+      if( SCIPisFeasGT(scip, transvarvubcoefs[j] + 1.0, lambda) )
          nvubcoefsmax = MAX(nvubcoefsmax, transvarvubcoefs[j]);
          
       /* u_j > lambda */
@@ -2107,7 +2127,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    /* store max { u_j : j in N and u_j >= lambda } + 1 */
    if( !SCIPisInfinity(scip, -nvubcoefsmax) )
    {
-      assert(SCIPisGT(scip, nvubcoefsmax + 1, lambda));
+      assert(SCIPisFeasGT(scip, nvubcoefsmax + 1.0, lambda));
       startidx--;
       candsetdelta[startidx] = nvubcoefsmax + 1.0;
       ncandsetdelta++;
@@ -2145,7 +2165,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIPdebugMessage("2. generate c-MIRFCIs for different values of delta:\n");
 
    /* for each value of delta choose L1 subset N1\C1 and L2 subset N2\C2 by comparison, generate the 
-    * c-MIRFCI for delta, (C1, C2) and (L1, L2) and select the most efficiant c-MIRFCI
+    * c-MIRFCI for delta, (C1, C2) and (L1, L2) and select the most efficient c-MIRFCI
     */ 
    ntesteddeltas = 0;
    bestdelta = 0.0;
@@ -2321,9 +2341,8 @@ SCIP_RETCODE separateCuts(
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(result != NULL);
-   
-   *result = SCIP_DIDNOTRUN;
-
+   assert(*result == SCIP_DIDNOTRUN);
+ 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -2506,7 +2525,7 @@ SCIP_RETCODE separateCuts(
 
       SCIPdebugMessage("===================== flow cover separation for row <%s> (%d of %d) ===================== \n",
          SCIProwGetName(rows[roworder[r]]), r, nrows);
-      SCIPdebug(SCIPprintRow(scip, rows[roworder[r]], NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[roworder[r]], NULL) ) );
       SCIPdebugMessage("rowact=%g is closer to %s --> rowweight=%g\n", rowact, 
          rowweights[roworder[r]] == 1 ? "rhs" : "lhs", rowweights[roworder[r]]);
 
@@ -2531,6 +2550,8 @@ SCIP_RETCODE separateCuts(
             break;
          }  
        
+	 flowcoverfound = FALSE;
+
          /* get a flow cover (C1, C2) for the constructed 0-1 single node flow set */
          SCIP_CALL( getFlowCover(scip, transvarcoefs, transbinvarsolvals, transvarvubcoefs, ntransvars, transcapacity, 
                &ncovervars, &nnoncovervars, transvarflowcoverstatus, &lambda, &flowcoverfound) );
@@ -2597,8 +2618,20 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyFlowcover)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
-/** destructor of separator to free user data (called when SCIP is exiting) */
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
@@ -2637,6 +2670,21 @@ SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpFlowcover)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -2647,6 +2695,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpFlowcover)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolFlowcover)
 {  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
@@ -2669,8 +2720,9 @@ SCIP_RETCODE SCIPincludeSepaFlowcover(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeFlowcover, sepaInitFlowcover, sepaExitFlowcover, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyFlowcover, sepaFreeFlowcover, sepaInitFlowcover, sepaExitFlowcover, 
          sepaInitsolFlowcover, sepaExitsolFlowcover,
          sepaExeclpFlowcover, sepaExecsolFlowcover,
          sepadata) );

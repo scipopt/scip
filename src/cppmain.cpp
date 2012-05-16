@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,18 +25,22 @@
 #include "scip/scip.h"
 #include "scip/scipshell.h"
 
-int
-main(
-   int                        argc,
-   char**                     argv
+/** main method starting SCIP */
+int main(
+   int                        argc,          /**< number of arguments from the shell */
+   char**                     argv           /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;
 
+   /* run interactive shell */
    retcode = SCIPrunShell(argc, argv, "scip.set");
+
+   /* evaluate retrun code of the SCIP process */
    if( retcode != SCIP_OKAY )
    {
-      SCIPprintError(retcode, stderr);
+      /* write error back trace */
+      SCIPprintError(retcode);
       return -1;
    }
 

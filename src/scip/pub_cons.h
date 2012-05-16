@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,9 +78,26 @@ void SCIPconshdlrSetData(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
-/** gets array with active constraints of constraint handler */
+/** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
+ *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */ 
 extern
 SCIP_CONS** SCIPconshdlrGetConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets array with enforced constraints of constraint handler; this is local information */
+extern
+SCIP_CONS** SCIPconshdlrGetEnfoConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets array with checked constraints of constraint handler; this is local information */
+extern
+SCIP_CONS** SCIPconshdlrGetCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -90,7 +107,23 @@ int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets number of active constraints of constraint handler */
+/** gets number of enforced constraints of constraint handler; this is local information */
+extern
+int SCIPconshdlrGetNEnfoConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of checked constraints of constraint handler; this is local information */
+extern
+int SCIPconshdlrGetNCheckConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of active constraints of constraint handler
+ *
+ *  @note A constraint is active if it is global and was not removed or it was added locally (in that case the local
+ *        flag is TRUE) and the current node belongs to the corresponding sub tree.
+ */ 
 extern
 int SCIPconshdlrGetNActiveConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -99,6 +132,12 @@ int SCIPconshdlrGetNActiveConss(
 /** gets number of enabled constraints of constraint handler */
 extern
 int SCIPconshdlrGetNEnabledConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for setting up this constraint handler for new stages */
+extern
+SCIP_Real SCIPconshdlrGetSetupTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -132,6 +171,18 @@ SCIP_Real SCIPconshdlrGetPropTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for feasibility checking in this constraint handler */
+extern
+SCIP_Real SCIPconshdlrGetCheckTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets time in seconds used for resolving propagation in this constraint handler */
+extern
+SCIP_Real SCIPconshdlrGetRespropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of calls to the constraint handler's separation method */
 extern
 SCIP_Longint SCIPconshdlrGetNSepaCalls(
@@ -153,6 +204,18 @@ SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
 /** gets number of calls to the constraint handler's propagation method */
 extern
 SCIP_Longint SCIPconshdlrGetNPropCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's checking method */
+extern
+SCIP_Longint SCIPconshdlrGetNCheckCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's resolve propagation method */
+extern
+SCIP_Longint SCIPconshdlrGetNRespropCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -231,6 +294,12 @@ int SCIPconshdlrGetNAddHoles(
 /** gets number of constraints deleted in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNDelConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraints added in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNAddConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -345,6 +414,18 @@ SCIP_Bool SCIPconshdlrWasPresolvingDelayed(
 /** is constraint handler initialized? */
 extern
 SCIP_Bool SCIPconshdlrIsInitialized(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** does the constraint handler have a copy function? */
+extern
+SCIP_Bool SCIPconshdlrIsClonable(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** returns the timing mask of the propagation method of the constraint handler */
+extern
+SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -566,6 +647,11 @@ int SCIPconsGetNLocksNeg(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns if the constraint was already added to a SCIP instance */
+SCIP_Bool SCIPconsIsAdded(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -573,7 +659,7 @@ int SCIPconsGetNLocksNeg(
  */
 
 #define SCIPconsGetName(cons)           (cons)->name
-#define SCIPconsGetPos(cons)           (cons)->consspos
+#define SCIPconsGetPos(cons)            (cons)->consspos
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsGetNUses(cons)          (cons)->nuses
@@ -610,6 +696,7 @@ int SCIPconsGetNLocksNeg(
 #define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
 #define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
 #define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
+#define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 
 #endif
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,17 @@
  * @ingroup PUBLICMETHODS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
+ *
+ * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
+ * form
+ *
+ *   min/max   obj * x
+ *      lhs <=   A * x  <= rhs
+ *      lb  <=       x  <= ub
+ *
+ * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
+ * return codes, it can be used independently of any SCIP instance.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,6 +58,12 @@ const char* SCIPlpiGetSolverName(
    void
    );
 
+/** gets description of LP solver (developer, webpage, ...) */
+extern
+const char* SCIPlpiGetSolverDesc(
+   void
+   );
+
 /** gets pointer for LP solver - use only with great care 
  *
  *  The behavior of this function depends on the solver and its use is
@@ -71,9 +88,10 @@ void* SCIPlpiGetSolverPointer(
 /**@{ */
 
 /** creates an LP problem object */
-extern 
+extern
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    );
@@ -117,7 +135,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    );
 
 /** adds columns to the LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiAddCols(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to be added */
@@ -139,8 +157,8 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    );
 
-/** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
-extern 
+/** deletes columns from SCIP_LPI; the new position of a column must not be greater that its old position */
+extern
 SCIP_RETCODE SCIPlpiDelColset(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  dstat               /**< deletion status of columns
@@ -149,7 +167,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    );
 
 /** adds rows to the LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiAddRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to be added */
@@ -170,8 +188,8 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    );
 
-/** deletes rows from SCIP_LP; the new position of a row must not be greater that its old position */
-extern 
+/** deletes rows from SCIP_LPI; the new position of a row must not be greater that its old position */
+extern
 SCIP_RETCODE SCIPlpiDelRowset(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  dstat               /**< deletion status of rows
@@ -186,7 +204,7 @@ SCIP_RETCODE SCIPlpiClear(
    );
 
 /** changes lower and upper bounds of columns */
-extern 
+extern
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
@@ -196,7 +214,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    );
 
 /** changes left and right hand sides of rows */
-extern 
+extern
 SCIP_RETCODE SCIPlpiChgSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to change sides for */
@@ -215,7 +233,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
    );
 
 /** changes the objective sense */
-extern 
+extern
 SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen              /**< new objective sense */
@@ -315,6 +333,30 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
+/** gets column names */
+extern
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   );
+
+/** gets row names */
+extern
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   );
+
 /** gets objective coefficients from LP problem object */
 extern
 SCIP_RETCODE SCIPlpiGetObj(
@@ -366,30 +408,42 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /**@{ */
 
 /** calls primal simplex to solve the LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** calls dual simplex to solve the LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
-extern 
+extern
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                 /**< LP interface structure */
    SCIP_Bool             crossover            /**< perform crossover */
    );
 
-/** performs strong branching iterations on all candidates */
-extern 
-SCIP_RETCODE SCIPlpiStrongbranch(
+/** start strong branching - call before any strong branching */
+extern
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** end strong branching - call after any strong branching */
+extern
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** performs strong branching iterations on one @b fractional candidate */
+extern
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
-   SCIP_Real             psol,               /**< current primal solution value of column */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
@@ -400,6 +454,55 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    );
 
+/** performs strong branching iterations on given @b fractional candidates */
+extern
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   );
+
+/** performs strong branching iterations on one candidate with @b integral value */
+extern
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   );
+
+/** performs strong branching iterations on given candidates with @b integral values */
+extern
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   );
 /**@} */
 
 
@@ -443,19 +546,19 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    );
 
 /** returns TRUE iff LP is proven to be primal unbounded */
-extern 
+extern
 SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff LP is proven to be primal infeasible */
-extern 
+extern
 SCIP_Bool SCIPlpiIsPrimalInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff LP is proven to be primal feasible */
-extern 
+extern
 SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
@@ -463,7 +566,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
  *  this does not necessarily mean, that the solver knows and can return the dual ray
  */
-extern 
+extern
 SCIP_Bool SCIPlpiExistsDualRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
@@ -477,49 +580,49 @@ SCIP_Bool SCIPlpiHasDualRay(
    );
 
 /** returns TRUE iff LP is proven to be dual unbounded */
-extern 
+extern
 SCIP_Bool SCIPlpiIsDualUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff LP is proven to be dual infeasible */
-extern 
+extern
 SCIP_Bool SCIPlpiIsDualInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff LP is proven to be dual feasible */
-extern 
+extern
 SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff LP was solved to optimality */
-extern 
+extern
 SCIP_Bool SCIPlpiIsOptimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff current LP basis is stable */
-extern 
+extern
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff the objective limit was reached */
-extern 
+extern
 SCIP_Bool SCIPlpiIsObjlimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff the iteration limit was reached */
-extern 
+extern
 SCIP_Bool SCIPlpiIsIterlimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
 
 /** returns TRUE iff the time limit was reached */
-extern 
+extern
 SCIP_Bool SCIPlpiIsTimelimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    );
@@ -545,7 +648,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    );
 
 /** gets primal and dual solution vectors for feasible LPs */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -556,17 +659,17 @@ SCIP_RETCODE SCIPlpiGetSol(
    );
 
 /** gets primal ray for unbounded LPs */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            ray                 /**< primal ray */
    );
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 extern
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    );
 
 /** gets the number of LP iterations of the last solve call */
@@ -574,6 +677,16 @@ extern
 SCIP_RETCODE SCIPlpiGetIterations(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
+   );
+
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
    );
 
 /**@} */
@@ -605,14 +718,14 @@ SCIP_RETCODE SCIPlpiSetBase(
    );
 
 /** returns the indices of the basic columns and rows */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
    );
 
 /** get dense row of inverse basis matrix B^-1 */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -620,7 +733,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    );
 
 /** get dense column of inverse basis matrix B^-1 */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -632,7 +745,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    );
 
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -641,7 +754,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    );
 
 /** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
@@ -678,6 +791,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    );
 
+/** clears current LPi state (like basis information) of the solver */
+extern
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
+
 /** frees LPi state information */
 extern
 SCIP_RETCODE SCIPlpiFreeState(
@@ -694,14 +813,14 @@ SCIP_Bool SCIPlpiHasStateBasis(
    );
 
 /** reads LPi state (like basis information from a file */
-extern 
+extern
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    );
 
 /** writes LPi state (like basis information) to a file */
-extern 
+extern
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
@@ -720,7 +839,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 /**@{ */
 
 /** gets integer parameter of LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetIntpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
@@ -728,7 +847,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    );
 
 /** sets integer parameter of LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiSetIntpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
@@ -736,7 +855,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    );
 
 /** gets floating point parameter of LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
@@ -744,7 +863,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    );
 
 /** sets floating point parameter of LP */
-extern 
+extern
 SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPPARAM          type,               /**< parameter number */
@@ -773,7 +892,7 @@ SCIP_Real SCIPlpiInfinity(
 extern
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    );
 
 /**@} */
@@ -796,7 +915,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    );
 
 /** writes LP to a file */
-extern 
+extern
 SCIP_RETCODE SCIPlpiWriteLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */

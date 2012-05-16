@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,8 @@ struct SCIP_Primal
    SCIP_SOL**            sols;               /**< primal CIP solutions */
    SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
    SCIP_SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
+   SCIP_SOL*             primalray;          /**< solution representing the primal ray for (infeasible or) unbounded problems;
+                                              *   warning: this does not have to be a feasible solution */
    int                   solssize;           /**< size of sols array */
    int                   nsols;              /**< number of primal CIP solutions stored in sols array */
    int                   existingsolssize;   /**< size of existingsols array */

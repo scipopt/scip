@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,12 +46,20 @@ extern "C" {
  * Event handler methods
  */
 
+/** copies the given event handler to a new scip */
+extern
+SCIP_RETCODE SCIPeventhdlrCopyInclude(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates an event handler */
 extern
 SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -195,12 +203,112 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_Real             newbound            /**< new bound after bound changed */
    );
 
+/** creates an event for an addition of a global domain hole to a variable */
+SCIP_RETCODE SCIPeventCreateGholeAdded(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** creates an event for removing a global domain hole of a variable */
+SCIP_RETCODE SCIPeventCreateGholeRemoved(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in hole */
+   SCIP_Real             right               /**< right bound of open interval in hole */
+   );
+
+/** creates an event for an addition of a local domain hole to a variable */
+SCIP_RETCODE SCIPeventCreateLholeAdded(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in new hole */
+   SCIP_Real             right               /**< right bound of open interval in new hole */
+   );
+
+/** creates an event for removing a local domain hole of a variable */
+SCIP_RETCODE SCIPeventCreateLholeRemoved(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             left,               /**< left bound of open interval in hole */
+   SCIP_Real             right               /**< right bound of open interval in hole */
+   );
+
 /** creates an event for an addition to the variable's implications list, clique or variable bounds information */
 extern
 SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var                 /**< variable that was fixed */
+   );
+
+/** creates an event for the addition of a linear row to the separation storage */
+extern
+SCIP_RETCODE SCIPeventCreateRowAddedSepa(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was added to the separation storage*/
+   );
+
+/** creates an event for the deletion of a linear row from the separation storage */
+extern
+SCIP_RETCODE SCIPeventCreateRowDeletedSepa(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was deleted from the separation storage */
+   );
+
+/** creates an event for the addition of a linear row to the LP */
+extern
+SCIP_RETCODE SCIPeventCreateRowAddedLP(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was added to the LP */
+   );
+
+/** creates an event for the deletion of a linear row from the LP */
+extern
+SCIP_RETCODE SCIPeventCreateRowDeletedLP(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row that was deleted from the LP */
+   );
+
+/** creates an event for the change of a coefficient in a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowCoefChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row in which a coefficient changed */
+   SCIP_COL*             col,                /**< column which coefficient changed */
+   SCIP_Real             oldval,             /**< old value of coefficient */
+   SCIP_Real             newval              /**< new value of coefficient */
+   );
+
+/** creates an event for the change of a constant in a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowConstChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row in which the constant changed */
+   SCIP_Real             oldval,             /**< old value of constant */
+   SCIP_Real             newval              /**< new value of constant */
+   );
+
+/** creates an event for the change of a side of a linear row */
+extern
+SCIP_RETCODE SCIPeventCreateRowSideChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row,                /**< row which side has changed */
+   SCIP_SIDETYPE         side,               /**< which side has changed */
+   SCIP_Real             oldval,             /**< old value of side */
+   SCIP_Real             newval              /**< new value of side */
    );
 
 /** frees an event */
@@ -243,9 +351,9 @@ extern
 SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
+   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    );
 
@@ -314,7 +422,7 @@ SCIP_RETCODE SCIPeventqueueCreate(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to store the event queue */
    );
 
-/** frees event queue; there must not be any unprocessed eventy in the queue! */
+/** frees event queue; there must not be any unprocessed events in the queue! */
 extern
 SCIP_RETCODE SCIPeventqueueFree(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to the event queue */
@@ -326,9 +434,9 @@ SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
+   SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events, or NULL */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for bound change events, or NULL */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    SCIP_EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );

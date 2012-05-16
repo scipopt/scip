@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,6 +46,32 @@ struct SCIP_SepaData
 
 extern "C"
 {
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyObj)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   
+   assert(scip != NULL);
+   
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ != scip);
+
+   if( sepadata->objsepa->iscloneable() )
+   {
+      scip::ObjSepa* newobjsepa;
+      newobjsepa = dynamic_cast<scip::ObjSepa*> (sepadata->objsepa->clone(scip));
+
+      /* call include method of separator object */
+      SCIP_CALL( SCIPincludeObjSepa(scip, newobjsepa, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of cut separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeObj)
@@ -55,6 +81,7 @@ SCIP_DECL_SEPAFREE(sepaFreeObj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ == scip);
 
    /* call virtual method of sepa object */
    SCIP_CALL( sepadata->objsepa->scip_free(scip, sepa) );
@@ -80,6 +107,7 @@ SCIP_DECL_SEPAINIT(sepaInitObj)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
+   assert(sepadata->objsepa->scip_ == scip);
 
    /* call virtual method of sepa object */
    SCIP_CALL( sepadata->objsepa->scip_init(scip, sepa) );
@@ -188,15 +216,18 @@ SCIP_RETCODE SCIPincludeObjSepa(
 {
    SCIP_SEPADATA* sepadata;
 
+   assert(scip != NULL);
+   assert(objsepa != NULL);
+
    /* create cut separator data */
    sepadata = new SCIP_SEPADATA;
    sepadata->objsepa = objsepa;
    sepadata->deleteobject = deleteobject;
 
    /* include cut separator */
-   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
-         objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_delay_,
-         sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
+   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, objsepa->scip_priority_, 
+         objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_usessubscip_, objsepa->scip_delay_,
+         sepaCopyObj, sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
          sepaExeclpObj, sepaExecsolObj,
          sepadata) ); /*lint !e429*/
 

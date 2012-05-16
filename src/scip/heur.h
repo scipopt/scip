@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,11 +37,19 @@
 extern "C" {
 #endif
 
+/** copies the given primal heuristic to a new scip */
+extern
+SCIP_RETCODE SCIPheurCopyInclude(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a primal heuristic */
 extern
 SCIP_RETCODE SCIPheurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of primal heuristic */
    const char*           desc,               /**< description of primal heuristic */
@@ -50,7 +58,9 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */

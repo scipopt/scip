@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
+#include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
@@ -93,6 +94,19 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution, initialized to the current NLP solution */
+extern
+SCIP_RETCODE SCIPsolCreateNLPSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates primal CIP solution, initialized to the current relaxation solution */
 extern
 SCIP_RETCODE SCIPsolCreateRelaxSol(
@@ -115,7 +129,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
@@ -165,6 +179,15 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** copies current NLP solution into CIP solution by linking */
+extern
+SCIP_RETCODE SCIPsolLinkNLPSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
 /** copies current relaxation solution into CIP solution by linking */
 extern
 SCIP_RETCODE SCIPsolLinkRelaxSol(
@@ -182,7 +205,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -252,6 +275,16 @@ SCIP_Real SCIPsolGetVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
+/** returns value of variable in primal ray represented by primal CIP solution */
+extern
+SCIP_Real SCIPsolGetRayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   );
+
+
 /** gets objective value of primal CIP solution in transformed problem */
 extern
 SCIP_Real SCIPsolGetObj(
@@ -280,10 +313,12 @@ void SCIPsolUpdateVarObj(
 extern
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -320,6 +355,18 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+/** recomputes the objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+extern
+void SCIPsolRecomputeObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   );
+
+
 /** returns whether the given solutions in transformed space are equal */
 extern
 SCIP_Bool SCIPsolsAreEqual(
@@ -327,7 +374,8 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
    );
 
 /** outputs non-zero elements of solution to file stream */
@@ -335,12 +383,27 @@ extern
 SCIP_RETCODE SCIPsolPrint(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
+
+/** outputs non-zero elements of solution representing a ray to file stream */
+extern
+SCIP_RETCODE SCIPsolPrintRay(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
 
 
 #ifndef NDEBUG

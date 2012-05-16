@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,15 +26,28 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for dialog */
-class ObjDialog
+/**
+ *  @brief C++ wrapper for dialogs
+ *
+ *  This class defines the interface for dialogs implemented in C++. Note that there is a pure virtual function (this
+ *  function has to be implemented). This function is: scip_exec().
+ *
+ * - \ref DIALOG "Instructions for implementing a dialog"
+ * - \ref DIALOGS "List of available dialogs"
+ *  - \ref type_dialog.h "Corresponding C interface"
+ */
+class ObjDialog : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the dialog */
    char* scip_name_;
@@ -47,24 +60,28 @@ public:
 
    /** default constructor */
    ObjDialog(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of the dialog */
       const char*        desc,               /**< description of the dialog */
       SCIP_Bool          issubmenu           /**< default for whether the dialog is a menu */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_issubmenu_(issubmenu)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjDialog()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
    /** destructor of dialog to free user data (called when SCIP is exiting) */
@@ -79,15 +96,17 @@ public:
    
    /** description output method of dialog
     *
-    *  This method should output (usually a single line of) information describing the meaning of the dialog.
-    *  The method is called, when the help menu of the parent's dialog is displayed.
-    *  If no description output method is given, the description string of the dialog is displayed instead.
+    *  This method should output (usually a single line of) information describing the meaning of the dialog.  The
+    *  method is called, when the help menu of the parent's dialog is displayed.  
+    *  If no description output method is given/implemented, the description string of the dialog is displayed instead
+    *  (see below).
     */
    virtual SCIP_RETCODE scip_desc(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_DIALOG*       dialog              /**< the dialog itself */
       )
    {  /*lint --e{715}*/
+      SCIPdialogMessage(scip, 0, "%s", scip_desc_);
       return SCIP_OKAY;
    }
 

@@ -146,7 +146,7 @@ void solexPrintValue(
 
       if( SCIPallocMemorySize(scip, &bigs, n+1) != SCIP_OKAY )
       {
-         SCIPmessagePrintInfo("string too long\n");
+         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "string too long\n");
       }
       else
       {
@@ -157,13 +157,13 @@ void solexPrintValue(
 #else
          gmp_snprintf(bigs, n+1, "%20Qd", value);
 #endif
-         SCIPmessagePrintInfo(bigs);
+         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), bigs);
          SCIPfreeMemory(scip, &bigs);
       }
    }
    else
    {
-      SCIPmessagePrintInfo(s);
+      SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), s);
    }
 }
 
@@ -474,7 +474,9 @@ SCIP_RETCODE SCIPsolexPrint(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+#if 0
    SCIP_CONS** conss;
+#endif
    mpq_t solval;
    mpq_t obj;
    int v;
@@ -484,8 +486,10 @@ SCIP_RETCODE SCIPsolexPrint(
    assert(prob->transformed || transprob != NULL);
 
    assert(SCIPisExactSolve(scip));
+#if 0
    conss = SCIPgetConss(scip);
    assert(conss != NULL);
+#endif
    assert(SCIPgetNConss(scip) == 1);
 
    mpq_init(solval);
@@ -499,7 +503,7 @@ SCIP_RETCODE SCIPsolexPrint(
       SCIPsolexGetVal(sol, prob->fixedvars[v], solval);
       if( printzeros || mpq_sgn(solval) != 0 )
       {
-         SCIPmessageFPrintInfo(file, "%-32s ", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "%-32s ", SCIPvarGetName(prob->fixedvars[v]));
          solexPrintValue(scip, file, solval);
 #if 0
          /** @todo exiptodo: presolving extension
@@ -508,11 +512,11 @@ SCIP_RETCODE SCIPsolexPrint(
           *    problem, i.e. after objective scaling
           */
          SCIPvarGetObjExactlp(conss[0], prob->fixedvars[v], obj);
-         SCIPmessageFPrintInfo(file, " \t(obj: ");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, " \t(obj: ");
          solexPrintValue(scip, file, obj);
-         SCIPmessageFPrintInfo(file, ")");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, ")");
 #endif
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "\n");
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -523,15 +527,15 @@ SCIP_RETCODE SCIPsolexPrint(
 
       if( printzeros || mpq_sgn(solval) != 0 )
       {
-         SCIPmessageFPrintInfo(file, "%-32s ", SCIPvarGetName(prob->vars[v]));
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "%-32s ", SCIPvarGetName(prob->vars[v]));
          solexPrintValue(scip, file, solval);
 #if 0
          SCIPvarGetObjExactlp(conss[0], prob->vars[v], obj);
-         SCIPmessageFPrintInfo(file, " \t(obj: ");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, " \t(obj: ");
          solexPrintValue(scip, file, obj);
-         SCIPmessageFPrintInfo(file, ")");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, ")");
 #endif
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "\n");
       }
    }
 
@@ -549,15 +553,15 @@ SCIP_RETCODE SCIPsolexPrint(
          SCIPsolexGetVal(sol, transprob->fixedvars[v], solval);
          if( printzeros || mpq_sgn(solval) != 0 )
          {
-            SCIPmessageFPrintInfo(file, "%-32s ", SCIPvarGetName(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "%-32s ", SCIPvarGetName(transprob->fixedvars[v]));
             solexPrintValue(scip, file, solval);
 #if 0
             SCIPvarGetObjExactlp(conss[0], transprob->fixedvars[v], obj);
-            SCIPmessageFPrintInfo(file, " \t(obj: ");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, " \t(obj: ");
             solexPrintValue(scip, file, obj);
-            SCIPmessageFPrintInfo(file, ")");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, ")");
 #endif
-            SCIPmessageFPrintInfo(file, "\n");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "\n");
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -570,15 +574,15 @@ SCIP_RETCODE SCIPsolexPrint(
          SCIPsolexGetVal(sol, transprob->vars[v], solval);
          if( printzeros || mpq_sgn(solval) != 0 )
          {
-            SCIPmessageFPrintInfo(file, "%-32s ", SCIPvarGetName(transprob->vars[v]));
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "%-32s ", SCIPvarGetName(transprob->vars[v]));
             solexPrintValue(scip, file, solval);
 #if 0
             SCIPvarGetObjExactlp(conss[0], transprob->vars[v], obj);
-            SCIPmessageFPrintInfo(file, " \t(obj: ");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, " \t(obj: ");
             solexPrintValue(scip, file, obj);
-            SCIPmessageFPrintInfo(file, ")");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, ")");
 #endif
-            SCIPmessageFPrintInfo(file, "\n");
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "\n");
          }
       }
    }

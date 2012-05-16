@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,11 +27,19 @@
 #include <cassert>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for user variable data */
+/** @brief C++ wrapper for user variable data
+ *
+ *  This class defines the interface for user variable data implemented in C++. Each variable can be equipped with a
+ *  variable data class. This data can be accessed via the function SCIPgetObjVardata() at any time after it is created
+ *  and before it is deleted.
+ *
+ *  - \ref type_var.h "Corresponding C interface"
+ */
 class ObjVardata
 {
 public:
@@ -109,6 +117,38 @@ public:
       return SCIP_OKAY;
    }
 
+   /** copies variable data of source SCIP variable for the target SCIP variable
+    *
+    *  This method should copy the variable data of the source SCIP and create a target variable data for target
+    *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
+    *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+    *  all.
+    *
+    *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
+    *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
+    *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+    *  
+    *  possible return values for *result:
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_SUCCESS    : the copying process was successfully performed
+    */
+   virtual SCIP_RETCODE scip_copy(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP*              sourcescip,         /**< source SCIP main data structure */
+      SCIP_VAR*          sourcevar,          /**< variable of the source SCIP */
+      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding
+                                              *   target variables */
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+                                              *   target constraints */
+      SCIP_VAR*          targetvar,          /**< variable of the (targert) SCIP (targetvar is the copy of sourcevar) */
+      ObjVardata**       objvardata,         /**< pointer to store the copied variable data object */
+      SCIP_RESULT*       result              /**< pointer to store the result of the call */
+      )
+   {  /*lint --e{715}*/
+      (*objvardata) = 0;
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,25 +43,33 @@
 #endif
 
 #include "scip/type_retcode.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SCIP_VERSION                120 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               8 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2010 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                211 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
+/*
+ * CIP format variable characters
+ */
+
+#define SCIP_VARTYPE_BINARY_CHAR 'B'
+#define SCIP_VARTYPE_INTEGER_CHAR 'I'
+#define SCIP_VARTYPE_IMPLINT_CHAR 'M'
+#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
 
 /*
  * Long Integer values
  */
 
 #ifndef LLONG_MAX
-#define LLONG_MAX	9223372036854775807LL
-#define LLONG_MIN	(-LLONG_MAX - 1LL)
+#define LLONG_MAX        9223372036854775807LL
+#define LLONG_MIN        (-LLONG_MAX - 1LL)
 #endif
 
 #define SCIP_Longint long long                         /**< type used for long integer values */
@@ -94,6 +102,8 @@ extern "C" {
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_RECOMPFAC        1e+07  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
+#define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
@@ -111,6 +121,7 @@ extern "C" {
 #define EPSN(x,eps)       ((x) < -(eps))
 #define EPSFLOOR(x,eps)   (floor((x)+(eps)))
 #define EPSCEIL(x,eps)    (ceil((x)-(eps)))
+#define EPSROUND(x,eps)   (ceil((x)-0.5+(eps)))
 #define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
 #define EPSISINT(x,eps)   (EPSFRAC(x,eps) <= (eps))
 

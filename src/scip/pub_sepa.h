@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,9 +74,28 @@ int SCIPsepaGetFreq(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** sets frequency of separator */
+extern
+void SCIPsepaSetFreq(
+   SCIP_SEPA*            sepa,               /**< separator */
+   int                   freq                /**< new frequency of separator */
+   );
+
 /** get maximal bound distance at which the separator is called */
 extern
 SCIP_Real SCIPsepaGetMaxbounddist(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/**< does the separator use a secondary SCIP instance? */
+extern
+SCIP_Bool SCIPsepaUsesSubscip(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets time in seconds used in this separator for setting up for next stages */
+extern
+SCIP_Real SCIPsepaGetSetupTime(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

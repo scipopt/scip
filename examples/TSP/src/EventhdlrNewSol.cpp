@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,12 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#ifndef _MSC_VER
 #include <unistd.h>
+#else
+#include <windows.h>
+#define sleep Sleep
+#endif
 
 #include "objscip/objscip.h"
 #include "EventhdlrNewSol.h"
@@ -33,22 +38,16 @@
 using namespace tsp;
 using namespace std;
 
-     
+
 /** destructor of event handler to free user data (called when SCIP is exiting) */
-SCIP_RETCODE EventhdlrNewSol::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTFREE(EventhdlrNewSol::scip_free)
 {
    return SCIP_OKAY;
 }
-   
+
 
 /** initialization method of event handler (called after problem was transformed) */
-SCIP_RETCODE EventhdlrNewSol::scip_init(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
 {
 
    int lockwaits = 0;
@@ -60,7 +59,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_init(
    }
    if( SCIPfileExists("temp.tour.lock") )
    {
-      SCIPwarningMessage("cannot reset, because lockfile <temp.tour.lock> is still existing\n");
+      SCIPwarningMessage(scip, "cannot reset, because lockfile <temp.tour.lock> is still existing\n");
       return SCIP_OKAY;
    }
 
@@ -69,7 +68,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_init(
    lockfile << "lock" << endl;
    lockfile.close();
 
-   // create output file which can be read by TSPViewer 
+   // create output file which can be read by TSPViewer
    ofstream filedata("temp.tour");
    filedata << "RESET" << endl;
    filedata.close();
@@ -80,17 +79,14 @@ SCIP_RETCODE EventhdlrNewSol::scip_init(
 
    return SCIP_OKAY;
 }
- 
-  
+
+
 /** deinitialization method of event handler (called before transformed problem is freed) */
-SCIP_RETCODE EventhdlrNewSol::scip_exit(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTEXIT(EventhdlrNewSol::scip_exit)
 {
    return SCIP_OKAY;
 }
-   
+
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin)
  *
@@ -98,37 +94,27 @@ SCIP_RETCODE EventhdlrNewSol::scip_exit(
  *  The event handler may use this call to initialize its branch and bound specific data.
  *
  */
-SCIP_RETCODE EventhdlrNewSol::scip_initsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTINITSOL(EventhdlrNewSol::scip_initsol)
 {
    SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
    return SCIP_OKAY;
 }
 
-   
+
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
  *  The event handler should use this call to clean up its branch and bound data.
  */
-SCIP_RETCODE EventhdlrNewSol::scip_exitsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTEXITSOL(EventhdlrNewSol::scip_exitsol)
 {
    SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
    return SCIP_OKAY;
 }
-   
+
 
 /** frees specific constraint data */
-SCIP_RETCODE EventhdlrNewSol::scip_delete(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-   SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
-   )
+SCIP_DECL_EVENTDELETE(EventhdlrNewSol::scip_delete)
 {
    return SCIP_OKAY;
 }
@@ -141,14 +127,9 @@ SCIP_RETCODE EventhdlrNewSol::scip_delete(
  *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
  *  given event handler and event data.
  */
-SCIP_RETCODE EventhdlrNewSol::scip_exec(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-   SCIP_EVENT*        event,              /**< event to process */
-   SCIP_EVENTDATA*    eventdata           /**< user data for the event */
-   ) 
+SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
 {
-   SCIP_SOL* sol;  
+   SCIP_SOL* sol;
    sol = SCIPgetBestSol(scip);
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    GRAPH* graph = probdata->getGraph();
@@ -166,7 +147,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
 
    if( SCIPfileExists("temp.tour.lock") )
    {
-      SCIPwarningMessage("cannot output tour in file, because lockfile <temp.tour.lock> is still existing\n");
+      SCIPwarningMessage(scip, "cannot output tour in file, because lockfile <temp.tour.lock> is still existing\n");
       return SCIP_OKAY;
    }
 
@@ -175,10 +156,10 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
    lockfile << "lock" << endl;
    lockfile.close();
 
-   // create output file which can be read by TSPViewer 
+   // create output file which can be read by TSPViewer
    ofstream filedata("temp.tour");
    filedata << graph->nnodes << endl;
-   
+
    SCIP_HEUR* heur = SCIPgetSolHeur(scip, sol);
    if ( heur == NULL)
       filedata << "relaxation" << endl;
@@ -191,9 +172,9 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
       // output the number of nodes
       filedata << node->id << " " << node->x << " " << node->y << endl;
       GRAPHEDGE* edge = node->first_edge;
-     
+
       // output the id and the coordinates of the nodes in the order they appear in the tour
-   
+
       while( edge != NULL)
       {
          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
@@ -203,7 +184,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
             break;
          }
          edge = edge->next;
-      }             
+      }
    }
    while ( node != &graph->nodes[0] );
 
@@ -215,4 +196,3 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
 
    return SCIP_OKAY;
 }
-

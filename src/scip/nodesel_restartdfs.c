@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_restartdfs.c
- * @ingroup NODESELECTORS
  * @brief  node selector for depth first search with periodical selection of the best node
  * @author Tobias Achterberg
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,7 +39,8 @@
  * Default parameter settings
  */
 
-#define SELECTBESTFREQ             1000 /**< frequency for selecting the best node instead of the deepest one */
+#define SELECTBESTFREQ              100 /**< frequency for selecting the best node instead of the deepest one */
+#define COUNTONLYLEAVES            TRUE /**< only count leaf nodes or all nodes */
 
 
 
@@ -47,7 +48,9 @@
 struct SCIP_NodeselData
 {
    SCIP_Longint          lastrestart;        /**< node number where the last best node was selected */
+   SCIP_Longint          nprocessedleaves;   /**< number of processed leafs since the last restart */
    int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
+   SCIP_Bool             countonlyleaves;    /**< only count leaf nodes or all nodes */
 };
 
 
@@ -56,6 +59,20 @@ struct SCIP_NodeselData
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyRestartdfs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
@@ -93,7 +110,9 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
+   /* reset counters */
    nodeseldata->lastrestart = 0;
+   nodeseldata->nprocessedleaves = 0;
 
    return SCIP_OKAY;
 }
@@ -116,27 +135,34 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
    {
       SCIP_NODESELDATA* nodeseldata;
       SCIP_Longint nnodes;
-
+      
       /* get node selector user data */
       nodeseldata = SCIPnodeselGetData(nodesel);
       assert(nodeseldata != NULL);
 
+      /* increase the number of processed leafs since we are in a leaf */
+      nodeseldata->nprocessedleaves++;
+
       nnodes = SCIPgetNNodes(scip);
-      if( nodeseldata->selectbestfreq >= 1 && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq )
+
+      /* check if in case of "only leaves" the number processed leaves exceeds the frequency or in the other case the
+       * number of processed node does it 
+       */
+      if( (nodeseldata->countonlyleaves && nodeseldata->nprocessedleaves >= nodeseldata->selectbestfreq) 
+         || (!nodeseldata->countonlyleaves && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq ) )
       {
          nodeseldata->lastrestart = nnodes;
+         nodeseldata->nprocessedleaves = 0;
          *selnode = SCIPgetBestboundNode(scip);
       }
       else
       {
          *selnode = SCIPgetPrioSibling(scip);
          if( *selnode == NULL )
-         {
             *selnode = SCIPgetBestLeaf(scip);
-         }
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -147,9 +173,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
    return (int)(SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1));
 }
-
-
-
 
 
 /*
@@ -165,20 +188,30 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
    SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   nodeseldata->lastrestart = 0;
+   nodeseldata->nprocessedleaves = 0;
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
+   nodeseldata->countonlyleaves = COUNTONLYLEAVES;
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyRestartdfs,
          nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
          nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
          nodeseldata) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-                  "nodeselection/restartdfs/selectbestfreq",
-                  "frequency for selecting the best node instead of the deepest one (0: never)",
+         "nodeselection/restartdfs/selectbestfreq",
+         "frequency for selecting the best node instead of the deepest one",
          &nodeseldata->selectbestfreq, FALSE, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
-
+   
+   /* add node selector parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "nodeselection/restartdfs/countonlyleaves",
+         "count only leaf nodes (otherwise all nodes)?",
+         &nodeseldata->countonlyleaves, FALSE, COUNTONLYLEAVES, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

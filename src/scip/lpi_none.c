@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,10 @@
 #include <assert.h>
 
 #include "scip/lpi.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
+
+#define LPINAME          "NONE"              /**< name of the LPI interface */
+#define LPIINFINITY       1e20               /**< infinity value */
 
 
 /*
@@ -33,12 +36,23 @@
 
 /** error handling method */
 static
+void errorMessageAbort(
+   void
+   )
+{
+   SCIPerrorMessage("No LP solver available (LPS=none).\n");
+   SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
+   SCIPABORT();
+}
+
+/** error handling method */
+static
 void errorMessage(
    void
    )
 {
-   SCIPerrorMessage("there is no LP solver linked to the binary (LPS=none); you should set the parameter <lp/solvefreq> to <-1> to avoid solving LPs\n");
-   SCIPABORT();
+   SCIPerrorMessage("No LP solver available (LPS=none).\n");
+   SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
 }
 
 /*
@@ -58,7 +72,15 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   return "NONE";
+   return LPINAME;
+}
+
+/** gets description of LP solver (developer, webpage, ...) */
+const char* SCIPlpiGetSolverDesc(
+   void
+   )
+{
+   return "dummy LP solver interface which solely purpose is to resolve references at linking";
 }
 
 /** gets pointer for LP solver - use only with great care */
@@ -83,6 +105,7 @@ void* SCIPlpiGetSolverPointer(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
@@ -135,6 +158,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -152,6 +176,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -162,6 +187,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;   
 }
 
@@ -173,6 +199,7 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;   
 }
 
@@ -189,6 +216,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -199,6 +227,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;   
 }
 
@@ -210,6 +239,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
                                               *   output: new position of row, -1 if row was deleted */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;   
 }
 
@@ -218,6 +248,7 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -230,6 +261,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -242,6 +274,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    const SCIP_Real*      rhs                 /**< new values for right hand sides */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -253,6 +286,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIP_Real             newval              /**< new value of coefficient */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -262,6 +296,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -273,6 +308,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    SCIP_Real*            obj                 /**< new objective values for columns */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -283,6 +319,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -295,6 +332,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -339,6 +377,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    )
 {  /*lint --e{715}*/
    assert(nnonz != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -358,6 +397,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -377,6 +417,37 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** gets column names */
+SCIP_RETCODE SCIPlpiGetColNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstcol,           /**< first column to get name from LP */
+   int                   lastcol,            /**< last column to get name from LP */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
+   char*                 namestorage,        /**< storage for col names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** gets row names */
+SCIP_RETCODE SCIPlpiGetRowNames(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   firstrow,           /**< first row to get name from LP */
+   int                   lastrow,            /**< last row to get name from LP */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
+   char*                 namestorage,        /**< storage for row names */
+   int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   )
+{
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -388,6 +459,7 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -400,6 +472,7 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -413,6 +486,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    )
 {  /*lint --e{715}*/
    assert(firstrow <= lastrow);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -424,6 +498,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
    SCIP_Real*            val                 /**< pointer to store the value of the coefficient */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -444,6 +519,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -452,6 +528,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -461,14 +538,33 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover            /**< perform crossover */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** performs strong branching iterations on all candidates */
-SCIP_RETCODE SCIPlpiStrongbranch(
+/** start strong branching - call before any strong branching */
+SCIP_RETCODE SCIPlpiStartStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   assert( lpi != NULL);
+   return SCIP_OKAY;
+}
+
+/** end strong branching - call after any strong branching */
+SCIP_RETCODE SCIPlpiEndStrongbranch(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   assert( lpi != NULL);
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
-   SCIP_Real             psol,               /**< current primal solution value of column */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
@@ -479,13 +575,88 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {  /*lint --e{715}*/
-   assert(down != NULL);
-   assert(up != NULL);
-   assert(downvalid != NULL);
-   assert(upvalid != NULL);
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
+/** performs strong branching iterations on given @b fractional candidates */
+SCIP_RETCODE SCIPlpiStrongbranchesFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< fractional current primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{  /*lint --e{715}*/
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** performs strong branching iterations on one candidate with @b integral value */
+SCIP_RETCODE SCIPlpiStrongbranchInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col,                /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< current integral primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{  /*lint --e{715}*/
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** performs strong branching iterations on given candidates with @b integral values */
+SCIP_RETCODE SCIPlpiStrongbranchesInt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int*                  cols,               /**< columns to apply strong branching on */
+   int                   ncols,              /**< number of columns */
+   SCIP_Real*            psols,              /**< current integral primal solution values of columns */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
+   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are a valid dual bounds;
+                                              *   otherwise, they can only be used as an estimate values */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{  /*lint --e{715}*/
+   assert( cols != NULL );
+   assert( psols != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
 /**@} */
 
 
@@ -503,7 +674,7 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -516,6 +687,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {  /*lint --e{715}*/
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -526,7 +698,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -537,7 +709,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -546,7 +718,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -555,7 +727,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -564,7 +736,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -575,7 +747,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -586,7 +758,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -595,7 +767,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -604,7 +776,7 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -613,7 +785,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -622,7 +794,7 @@ SCIP_Bool SCIPlpiIsOptimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -631,7 +803,7 @@ SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -640,7 +812,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -649,7 +821,7 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -658,7 +830,7 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -667,7 +839,7 @@ int SCIPlpiGetInternalStatus(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -678,6 +850,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    )
 {  /*lint --e{715}*/
    assert(success != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -688,6 +861,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    )
 {  /*lint --e{715}*/
    assert(objval != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -701,6 +875,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -710,16 +885,18 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_Real*            ray                 /**< primal ray */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** gets dual farkas proof for infeasibility */
+/** gets dual Farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real*            dualfarkas          /**< dual farkas row multipliers */
+   SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {  /*lint --e{715}*/
    assert(dualfarkas != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -730,7 +907,26 @@ SCIP_RETCODE SCIPlpiGetIterations(
    )
 {  /*lint --e{715}*/
    assert(iterations != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
+}
+
+/** gets information about the quality of an LP solution
+ * Such information is usually only available, if also a (maybe not optimal) solution is available.
+ * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+extern
+SCIP_RETCODE SCIPlpiGetRealSolQuality(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
+   SCIP_Real*            quality             /**< pointer to store quality number */
+   )
+{
+   assert(lpi != NULL);
+   assert(quality != NULL);
+
+   *quality = SCIP_INVALID;
+
+   return SCIP_OKAY;
 }
 
 /**@} */
@@ -752,6 +948,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -764,6 +961,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 {  /*lint --e{715}*/
    assert(cstat != NULL);
    assert(rstat != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -773,6 +971,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -783,6 +982,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -797,6 +997,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -808,6 +1009,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -818,6 +1020,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -842,6 +1045,7 @@ SCIP_RETCODE SCIPlpiGetState(
 {  /*lint --e{715}*/
    assert(blkmem != NULL);
    assert(lpistate != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -855,6 +1059,17 @@ SCIP_RETCODE SCIPlpiSetState(
    )
 {  /*lint --e{715}*/
    assert(blkmem != NULL);
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
+/** clears current LPi state (like basis information) of the solver */
+SCIP_RETCODE SCIPlpiClearState(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{  /*lint --e{715}*/
+   assert(lpi != NULL);
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -865,7 +1080,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_OKAY;
 }
 
 /** checks, whether the given LP state contains simplex basis information */
@@ -874,7 +1089,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   errorMessageAbort();
    return FALSE;
 }
 
@@ -884,6 +1099,7 @@ SCIP_RETCODE SCIPlpiReadState(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -893,6 +1109,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -916,7 +1133,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    )
 {  /*lint --e{715}*/
    assert(ival != NULL);
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_PARAMETERUNKNOWN;
 }
 
 /** sets integer parameter of LP */
@@ -952,9 +1169,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
 /**@} */
 
-
-
-
 /*
  * Numerical Methods
  */
@@ -967,17 +1181,17 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   errorMessage();
-   return 0.0;
+   return LPIINFINITY;
 }
 
 /** checks if given value is treated as infinity in the LP solver */
 SCIP_Bool SCIPlpiIsInfinity(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
-   errorMessage();
+   if( val >= LPIINFINITY )
+      return TRUE;
    return FALSE;
 }
 
@@ -999,6 +1213,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -1008,6 +1223,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
+   errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
 

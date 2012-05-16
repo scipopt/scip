@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_mem.h"
+#include "scip/pub_message.h"
 
 #include "scip/struct_stat.h"
 
@@ -42,7 +43,8 @@ extern
 SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** frees problem statistics data */
@@ -50,6 +52,18 @@ extern
 SCIP_RETCODE SCIPstatFree(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** diables the collection of any statistic for a variable */
+extern
+void SCIPstatDisableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** enables the collection of statistics for a variable */
+extern
+void SCIPstatEnableVarHistory(
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** marks statistics to be able to reset them when solving process is freed */
@@ -99,6 +113,7 @@ extern
 void SCIPstatUpdateMemsaveMode(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_MEM*             mem                 /**< block memory pools */
    );
 

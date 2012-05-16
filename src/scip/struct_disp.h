@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@ struct SCIP_Disp
    char*                 name;               /**< name of display column */
    char*                 desc;               /**< description of display column */
    char*                 header;             /**< head line of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy));      /**< copy method of display column or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */
@@ -48,7 +49,7 @@ struct SCIP_Disp
    int                   priority;           /**< priority of display column */
    int                   position;           /**< relative position of display column */
    SCIP_DISPSTATUS       dispstatus;         /**< display activation status of display column */
-   SCIP_Bool             stripline;          /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             stripline;          /**< should the column be separated with a line from its right neighbor? */
    SCIP_Bool             initialized;        /**< is display column initialized? */
    SCIP_Bool             active;             /**< should column be displayed to the screen? */
 };

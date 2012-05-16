@@ -28,8 +28,8 @@
 -wlib(1)    // sets the warning level within library headers to 1
             // (no warnings, just syntax errors).  Comment out if you
             // are actually linting library headers.  This
-            // option makes obsolete options of the form -elib(axxx) where
-            // xxx >= 400 which may be retained for historical reasons.
+            // option makes obsolete options of the form -elib(aXYZ) where
+            // XYZ >= 400 which may be retained for historical reasons.
 
 -i./lint/posix
 -i./lint/cpp

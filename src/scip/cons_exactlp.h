@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    mpq_t*                lb,                 /**< lower bounds of variables */
    mpq_t*                ub,                 /**< upper bounds of variables */
    int                   nconss,             /**< number of constraints */
-   int                   neqconss,           /**< number of equalities */
+   int                   nsplitconss,        /**< number of constraints we would have to be split for a FP-relaxation */
    mpq_t*                lhs,                /**< left hand sides of constraints */
    mpq_t*                rhs,                /**< right hand sides of constraints */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
@@ -308,7 +308,7 @@ void SCIPvarGetUbGlobalExactlp(
 
 /** gets worst global bound of variable with respect to the objective function */
 extern
-void SCIPvarGetWorstGlobalBoundExactlp(
+void SCIPvarGetWorstBoundGlobalExactlp(
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< problem variable */
    mpq_t                 bound               /**< pointer to store worst bound */

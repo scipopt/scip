@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,35 +39,27 @@ struct SCIP_ConsData
    GRAPH* graph;
 };
 
+/* checks whether proposed solution contains a subtour */
 static
-bool findSubtour( 
+SCIP_Bool findSubtour( 
    SCIP*              scip,               /**< SCIP data structure */
    GRAPH*             graph,              /**< underlying graph */
-   SCIP_SOL*          sol,                /**< proposed solution */
-   bool*              subtour             /**< if a subtour elimination cut is to be created, the nodes in a subtour are 
-                                           * labeled true */
+   SCIP_SOL*          sol                 /**< proposed solution */
    )
 {  
-   if(graph->nnodes <= 1)
-      return false;
-   int tourlength;
    GRAPHNODE* node;
    GRAPHNODE* startnode;
    GRAPHEDGE* lastedge;
    GRAPHEDGE* edge;
+   GRAPHEDGE* nextedge;
+   int tourlength;
+   SCIP_Bool foundnextedge;
+
+   if(graph->nnodes <= 1)
+      return FALSE;
 
    startnode = &graph->nodes[0];
 
-   //has to be restarted at maximum once
- SUBTOURLOOP:
-
-   // if a subtour exists, every node is part of some subtour, so we can look for the subtour containing node 0 
-   if(subtour != NULL)
-   {
-      assert(0 <= startnode->id && startnode->id < graph->nnodes);
-      BMSclearMemoryArray(subtour, graph->nnodes);
-      subtour[startnode->id] = true;
-   }
    tourlength = 0;
    lastedge = NULL;
    node = startnode;
@@ -76,55 +68,52 @@ bool findSubtour(
    do
    {
       edge = node->first_edge;
-    
+      foundnextedge = FALSE;
+      nextedge = NULL;
+
       // look for an outgoing edge to proceed
       while( edge != NULL )
       {
          // if a new edge with value numerical equal to one is found, we proceed
          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
-         {
+         {          
             tourlength++;
-            node = edge->adjac;
-            lastedge = edge;
             
-            // the new node is stored to be part of a possible subtour
-            if( subtour != NULL )
-            {
-               assert(0 <= node->id && node->id < graph->nnodes);
-               assert(node == startnode || !subtour[node->id]);
-               subtour[node->id] = true;
-            }
-         
-            if( tourlength > graph->nnodes )
+            if( foundnextedge || tourlength > graph->nnodes )
             {
                /* we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
                 * this can only happen, if the degree constraints are violated;
                 * start again with the last visited node as starting node, because this must be member of the subtour;
                 * thus, in the second run we will find the subtour!
                 */
-               startnode = node;
-
-               goto SUBTOURLOOP;
+               return TRUE;
             }
-            break;
+
+            foundnextedge= TRUE;
+            nextedge = edge;            
+            
+            if( node == startnode )
+               break;
          }    
+      
          edge = edge->next;        
       }
-      
+   
       /* we didn't find an outgoing edge in the solution: the degree constraints must be violated; abort! */
-      if( edge == NULL )
-         return false;
+      if( nextedge == NULL )
+         return TRUE;
+
+      node = nextedge->adjac;
+      lastedge = nextedge;
    }
    while( node != startnode );
-  
+
    assert(tourlength <= graph->nnodes);
 
-   if( graph->nnodes != tourlength )
-      return true;
-   else 
-      return false; 
+   return ( graph->nnodes != tourlength );
 }
 
+/* separates subtour elemination cuts */
 static
 SCIP_RETCODE sepaSubtour(
    SCIP*              scip,               /**< SCIP data structure */
@@ -231,12 +220,7 @@ SCIP_RETCODE sepaSubtour(
  *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
  *  the corresponding bound change event was not yet processed.
  */
-SCIP_RETCODE ConshdlrSubtour::scip_delete(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS*         cons,               /**< the constraint belonging to the constraint data */
-   SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
-   )
+SCIP_DECL_CONSDELETE(ConshdlrSubtour::scip_delete)
 {
    assert(consdata != NULL);
 
@@ -248,17 +232,13 @@ SCIP_RETCODE ConshdlrSubtour::scip_delete(
 
 
 /** transforms constraint data into data belonging to the transformed problem */
-SCIP_RETCODE ConshdlrSubtour::scip_trans(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS*         sourcecons,         /**< source constraint to transform */
-   SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
-   )
+SCIP_DECL_CONSTRANS(ConshdlrSubtour::scip_trans)
 {
-   SCIP_CONSDATA* sourcedata;
-   SCIP_CONSDATA* targetdata;
+   SCIP_CONSDATA* sourcedata = NULL;
+   SCIP_CONSDATA* targetdata = NULL;
 
    sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
 
    SCIP_CALL( SCIPallocMemory(scip, &targetdata) );
    targetdata->graph = sourcedata->graph;
@@ -293,14 +273,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_trans(
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-SCIP_RETCODE ConshdlrSubtour::scip_sepalp(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
-   )
+SCIP_DECL_CONSSEPALP(ConshdlrSubtour::scip_sepalp)
 {
    SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
@@ -327,15 +300,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_sepalp(
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-SCIP_RETCODE ConshdlrSubtour::scip_sepasol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_SOL*          sol,                /**< primal solution that should be separated */
-   SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
-   )
+SCIP_DECL_CONSSEPASOL(ConshdlrSubtour::scip_sepasol)
 {
    SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
@@ -373,20 +338,10 @@ SCIP_RETCODE ConshdlrSubtour::scip_sepasol(
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_Bool          solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
-   SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
-   )
+SCIP_DECL_CONSENFOLP(ConshdlrSubtour::scip_enfolp)
 {
-   bool* subtour;
-
    *result = SCIP_FEASIBLE;
-   subtour = NULL;
+
    for( int i = 0; i < nconss; ++i )
    {
       SCIP_CONSDATA* consdata;
@@ -397,49 +352,13 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
       graph = consdata->graph;
       assert(graph != NULL);
 
-      SCIP_CALL( SCIPreallocBufferArray(scip, &subtour, graph->nnodes) );
-      found = findSubtour(scip, graph, NULL, subtour);
+      found = findSubtour(scip, graph, NULL);
       
       // if a subtour was found, we generate a cut constraint saying that there must be at least two outgoing edges
       if( found )
-      {
-         SCIP_ROW* row;
-
-         // a new cut constraint is created 
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "loop_con", 2.0, SCIPinfinity(scip), 
-               FALSE, FALSE, TRUE) ); 
-
-         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-         for( int j = 0; j < graph->nnodes; j++ )
-         {
-            if( subtour[j] )
-            {
-               GRAPHEDGE* edge = graph->nodes[j].first_edge;
-      
-               // find edges going out of the subtour
-               while( edge != NULL )
-               {
-                  if( !subtour[edge->adjac->id] )
-                  {
-                     SCIP_CALL( SCIPaddVarToRow(scip, row, edge->var, 1.0) );
-                  }
-                  edge = edge->next;
-               }
-            }
-         }
-         
-         SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-         // add the constraint to SCIP 
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         
-         *result = SCIP_SEPARATED;
-      }
+         *result = SCIP_INFEASIBLE;
    }
-   SCIPfreeBufferArrayNull(scip, &subtour);
-
+   
    return SCIP_OKAY;
 }
 
@@ -473,16 +392,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
-SCIP_RETCODE ConshdlrSubtour::scip_enfops(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_Bool          solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
-   SCIP_Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
-   SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
-   )
+SCIP_DECL_CONSENFOPS(ConshdlrSubtour::scip_enfops)
 {
    *result = SCIP_FEASIBLE;
  
@@ -498,11 +408,9 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfops(
       assert(graph != NULL);
   
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, NULL, NULL);      
+      found = findSubtour(scip, graph, NULL);      
       if( found )
-      {
          *result = SCIP_INFEASIBLE;
-      }
    }
 
    return SCIP_OKAY;
@@ -529,17 +437,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfops(
  *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-SCIP_RETCODE ConshdlrSubtour::scip_check(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   SCIP_SOL*          sol,                /**< the solution to check feasibility for */
-   SCIP_Bool          checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool          checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool          printreason,        /**< should the reason for the violation be printed? */
-   SCIP_RESULT*       result              /**< pointer to store the result of the feasibility checking call */
-   )
+SCIP_DECL_CONSCHECK(ConshdlrSubtour::scip_check)
 {
    *result = SCIP_FEASIBLE;
 
@@ -555,7 +453,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_check(
       assert(graph != NULL);
      
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, sol, NULL);      
+      found = findSubtour(scip, graph, sol);      
       if( found )
       {
          *result = SCIP_INFEASIBLE;
@@ -584,14 +482,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_check(
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
-SCIP_RETCODE ConshdlrSubtour::scip_prop(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS**        conss,              /**< array of constraints to process */
-   int                nconss,             /**< number of constraints to process */
-   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
-   )
+SCIP_DECL_CONSPROP(ConshdlrSubtour::scip_prop)
 {
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -647,14 +538,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_prop(
  *  SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
  *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
  */
-SCIP_RETCODE ConshdlrSubtour::scip_lock(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
-                                           *   constraint handler does not need constraints */
-   int                nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
-   int                nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
-   )
+SCIP_DECL_CONSLOCK(ConshdlrSubtour::scip_lock)
 {
    SCIP_CONSDATA* consdata;
    GRAPH* g;
@@ -673,16 +557,28 @@ SCIP_RETCODE ConshdlrSubtour::scip_lock(
    return SCIP_OKAY;
 }
 
+/** variable deletion method of constraint handler
+ *
+ *  This method should iterate over all constraints of the constraint handler and delete all variables
+ *  that were marked for deletion by SCIPdelVar().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
+ */
+SCIP_DECL_CONSDELVARS(ConshdlrSubtour::scip_delvars)
+{
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should store a representation of the constraint into the given text file.
  */
-SCIP_RETCODE ConshdlrSubtour::scip_print(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS*         cons,               /**< the constraint that should be displayed */
-   FILE*              file                /**< the text file to store the information into */
-   )
+SCIP_DECL_CONSPRINT(ConshdlrSubtour::scip_print)
 {
    SCIP_CONSDATA* consdata;
    GRAPH* g;
@@ -698,7 +594,48 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
    return SCIP_OKAY;
 }
 
+/** clone method which will be used to copy a objective plugin */
+SCIP_DECL_CONSHDLRCLONE(ObjProbCloneable* ConshdlrSubtour::clone)
+{
+   *valid = true;
+   return new ConshdlrSubtour(scip);
+}
 
+/** constraint copying method of constraint handler
+ *
+ *  The constraint handler can provide a copy method, which copies a constraint from one SCIP data structure into a other
+ *  SCIP data structure.
+ */
+SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSDATA* consdata = NULL;
+
+   /* find the subtour constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "subtour");
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("subtour constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
+   ProbDataTSP * probdatatsp = NULL;
+   probdatatsp = dynamic_cast<ProbDataTSP *>(SCIPgetObjProbData(scip));
+   assert( probdatatsp != NULL );
+   GRAPH * graph = probdatatsp->getGraph();
+   consdata->graph = graph;
+   capture_graph( consdata->graph );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, (name == NULL) ? SCIPconsGetName(sourcecons) : name, 
+         conshdlr, consdata, initial, separate, enforce, check, 
+         propagate, local, modifiable, dynamic, removable, FALSE) );
+
+   *valid = true;
+   return SCIP_OKAY;
+}
 
 /** creates and captures a TSP subtour constraint */
 SCIP_RETCODE tsp::SCIPcreateConsSubtour(
@@ -717,8 +654,8 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSDATA* consdata = NULL;
 
    /* find the subtour constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "subtour");

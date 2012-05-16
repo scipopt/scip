@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ppm.h
- * @brief  PPM file reader
+ * @ingroup FILEREADERS
+ * @brief  file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)
  * @author Tobias Achterberg
  * @author Michael Winkler
  */
@@ -36,7 +37,6 @@ extern
 SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /* writes problem to file */
 extern

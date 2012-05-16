@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,8 +38,8 @@ extern "C" {
 struct SCIP_Cut
 {
    SCIP_ROW*             row;                /**< LP row of this cut */
+   SCIP_Longint          processedlp;        /**< last LP, where this cut was processed */
    int                   age;                /**< age of the cut: number of successive times, the cut was not violated */
-   int                   processedlp;        /**< last LP, where this cut was processed */
    int                   pos;                /**< position of cut in the cuts array of the cut pool */
 };
 
@@ -51,11 +51,11 @@ struct SCIP_Cutpool
    SCIP_CLOCK*           poolclock;          /**< separation time */
    SCIP_HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
    SCIP_CUT**            cuts;               /**< stored cuts of the pool */
+   SCIP_Longint          processedlp;        /**< last LP that has been processed */
    int                   cutssize;           /**< size of cuts array */
    int                   ncuts;              /**< number of cuts stored in the pool */
    int                   nremovablecuts;     /**< number of cuts stored in the pool that are marked to be removable */
    int                   agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
-   int                   processedlp;        /**< last LP that has been processed */
    int                   firstunprocessed;   /**< first cut that has not been processed in the last LP */
    int                   maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
    SCIP_Bool             globalcutpool;      /**< is this the global cut pool of SCIP? */

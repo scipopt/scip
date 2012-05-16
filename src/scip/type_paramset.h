@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,14 +35,39 @@ extern "C" {
 /** possible parameter types */
 enum SCIP_ParamType
 {
-   SCIP_PARAMTYPE_BOOL    = 0,           /**< bool values: TRUE or FALSE */
-   SCIP_PARAMTYPE_INT     = 1,           /**< integer values */
-   SCIP_PARAMTYPE_LONGINT = 2,           /**< long integer values */
-   SCIP_PARAMTYPE_REAL    = 3,           /**< real values */
-   SCIP_PARAMTYPE_CHAR    = 4,           /**< characters */
-   SCIP_PARAMTYPE_STRING  = 5            /**< strings: arrays of characters */
+   SCIP_PARAMTYPE_BOOL    = 0,               /**< bool values: TRUE or FALSE */
+   SCIP_PARAMTYPE_INT     = 1,               /**< integer values */
+   SCIP_PARAMTYPE_LONGINT = 2,               /**< long integer values */
+   SCIP_PARAMTYPE_REAL    = 3,               /**< real values */
+   SCIP_PARAMTYPE_CHAR    = 4,               /**< characters */
+   SCIP_PARAMTYPE_STRING  = 5                /**< strings: arrays of characters */
 };
 typedef enum SCIP_ParamType SCIP_PARAMTYPE;
+
+/** possible parameter settings - used to determine the behavior of different SCIP components, e.g., heuristics, separtors, ... */
+enum SCIP_ParamSetting
+{
+   SCIP_PARAMSETTING_DEFAULT     = 0,        /**< use default values */
+
+   SCIP_PARAMSETTING_AGGRESSIVE  = 1,        /**< set to aggressive settings */
+   SCIP_PARAMSETTING_FAST        = 2,        /**< set to fast settings */
+   SCIP_PARAMSETTING_OFF         = 3         /**< turn off */
+};
+typedef enum SCIP_ParamSetting SCIP_PARAMSETTING;
+
+/** possible parameter emphases - used to determine the general SCIP behavior */
+enum SCIP_ParamEmphasis
+{
+   SCIP_PARAMEMPHASIS_DEFAULT     = 0,        /**< use default values */
+
+   SCIP_PARAMEMPHASIS_CPSOLVER    = 1,        /**< get CP like search (e.g. no LP relaxation) */
+   SCIP_PARAMEMPHASIS_EASYCIP     = 2,        /**< solve easy problems fast */
+   SCIP_PARAMEMPHASIS_FEASIBILITY = 3,        /**< detect feasibility fast */
+   SCIP_PARAMEMPHASIS_HARDLP      = 4,        /**< be capable to handle hard LPs */
+   SCIP_PARAMEMPHASIS_OPTIMALITY  = 5,        /**< prove optimality fast */
+   SCIP_PARAMEMPHASIS_COUNTER     = 6         /**< get a feasible and "fast" counting process */
+};
+typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 
 typedef struct SCIP_Param SCIP_PARAM;             /**< single parameter */
 typedef struct SCIP_ParamData SCIP_PARAMDATA;     /**< locally defined parameter specific data */
@@ -51,8 +76,8 @@ typedef struct SCIP_ParamSet SCIP_PARAMSET;       /**< set of parameters */
 
 /** information method for changes in the parameter
  *
- *  Method is called if the parameter was changed through a SCIPparamsetSetXxx() call
- *  (which is called by SCIPsetXxxParam()).
+ *  Method is called if the parameter was changed through a SCIPparamsetSetXyz() call
+ *  (which is called by SCIPsetXyzParam()).
  *  It will not be called, if the parameter was changed directly by changing the value
  *  in the memory location.
  *

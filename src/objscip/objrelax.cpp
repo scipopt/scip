@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_RelaxData
 
 extern "C"
 {
+
+/** copy method for relaxator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_RELAXCOPY(relaxCopyObj)
+{  /*lint --e{715}*/
+   SCIP_RELAXDATA* relaxdata;
+   
+   assert(scip != NULL);
+   
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+   assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ != scip);
+
+   if( relaxdata->objrelax->iscloneable() )
+   {
+      scip::ObjRelax* newobjrelax;
+      newobjrelax = dynamic_cast<scip::ObjRelax*> (relaxdata->objrelax->clone(scip));
+
+      /* call include method of relaxator object */
+      SCIP_CALL( SCIPincludeObjRelax(scip, newobjrelax, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_RELAXFREE(relaxFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_RELAXFREE(relaxFreeObj)
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ == scip);
 
    /* call virtual method of relax object */
    SCIP_CALL( relaxdata->objrelax->scip_free(scip, relax) );
@@ -81,6 +108,7 @@ SCIP_DECL_RELAXINIT(relaxInitObj)
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
+   assert(relaxdata->objrelax->scip_ == scip);
 
    /* call virtual method of relax object */
    SCIP_CALL( relaxdata->objrelax->scip_init(scip, relax) );
@@ -172,6 +200,9 @@ SCIP_RETCODE SCIPincludeObjRelax(
 {
    SCIP_RELAXDATA* relaxdata;
 
+   assert(scip != NULL);
+   assert(objrelax != NULL);
+
    /* create relaxator data */
    relaxdata = new SCIP_RELAXDATA;
    relaxdata->objrelax = objrelax;
@@ -180,6 +211,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
    /* include relaxator */
    SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
          objrelax->scip_priority_, objrelax->scip_freq_,
+         relaxCopyObj,
          relaxFreeObj, relaxInitObj, relaxExitObj, 
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,
          relaxdata) ); /*lint !e429*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,17 +36,26 @@
 extern "C" {
 #endif
 
+/** copies the given presolver to a new scip */
+extern
+SCIP_RETCODE SCIPpresolCopyInclude(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a presolver */
 extern
 SCIP_RETCODE SCIPpresolCreate(
    SCIP_PRESOL**         presol,             /**< pointer to store presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of presolver */
    const char*           desc,               /**< description of presolver */
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -82,6 +91,8 @@ extern
 SCIP_RETCODE SCIPpresolInitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -90,6 +101,8 @@ extern
 SCIP_RETCODE SCIPpresolExitpre(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -103,9 +116,10 @@ SCIP_RETCODE SCIPpresolExec(
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
    int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */

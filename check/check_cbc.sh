@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -23,8 +23,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 THREADS=$8
 FEASTOL=$9
-MIPGAP=${10}
-CONTINUE=${11}
+CONTINUE=${10}
 
 if test ! -e results
 then
@@ -63,7 +62,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`./getlastprob.awk $OUTFILE`
+    LASTPROB=`awk -f getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -90,65 +89,64 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
-for i in `cat $TSTNAME.test`
+for i in `cat testset/$TSTNAME.test`
 do
     if test "$LASTPROB" = ""
     then
-	LASTPROB=""
-	if test -f $i
-	then
-	    rm -f $SETFILE
-	    echo @01 $i ===========
-	    echo @01 $i ===========                 >> $ERRFILE
-	    echo @03 SETTINGS: $SETNAME
-	    if test $SETNAME != "default"
-	    then
-		cp $SETTINGS $TMPFILE
-	    else
-		echo ""                              > $TMPFILE
-	    fi
-	    if test $FEASTOL != "default"
-	    then
-		echo primalTolerance $FEASTOL       >> $TMPFILE
-		echo integerTolerance $FEASTOL      >> $TMPFILE
-	    fi
-#workaround since CBC only looks at cpu-time
-TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
-	    echo seconds $TIMELIMIT                 >> $TMPFILE
+        LASTPROB=""
+        if test -f $i
+        then
+            rm -f $SETFILE
+            echo @01 $i ===========
+            echo @01 $i ===========                 >> $ERRFILE
+            echo @05 SETTINGS: $SETNAME
+            if test $SETNAME != "default"
+            then
+                cp $SETTINGS $TMPFILE
+            else
+                echo ""                              > $TMPFILE
+            fi
+            if test $FEASTOL != "default"
+            then
+                echo primalTolerance $FEASTOL       >> $TMPFILE
+                echo integerTolerance $FEASTOL      >> $TMPFILE
+            fi
+#workaround: since CBC only looks at cpu-time, we multiply the timelimit with the number of threads
+            TIMELIMIT=`expr $TIMELIMIT \* $THREADS`
+            echo seconds $TIMELIMIT                 >> $TMPFILE
 #$MEMLIMIT not supported (version 2.4)
-	    echo threads $THREADS                 >> $TMPFILE
-	    if test $MIPGAP != "default"
-	    then
-		echo ratioGap $MIPGAP               >> $TMPFILE
-	    fi
-	    echo maxNodes $NODELIMIT                >> $TMPFILE
-	    echo import $i                          >> $TMPFILE
-	    echo ratioGap                           >> $TMPFILE
-	    echo allowableGap                       >> $TMPFILE
-	    echo seconds                            >> $TMPFILE
-	    echo stat                               >> $TMPFILE
-	    echo solve                              >> $TMPFILE
-	    echo quit                               >> $TMPFILE
-	    cp $TMPFILE $SETFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
-	    echo -----------------------------
-	    date
-	    date >>$ERRFILE
-	    echo -----------------------------
-	    echo =ready=
-	else
-	    echo @02 FILE NOT FOUND: $i ===========
-	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
-	fi
+            echo threads $THREADS                   >> $TMPFILE
+            echo ratioGap 0.0                       >> $TMPFILE
+            echo maxNodes $NODELIMIT                >> $TMPFILE
+            echo import $i                          >> $TMPFILE
+            echo ratioGap                           >> $TMPFILE
+            echo allowableGap                       >> $TMPFILE
+            echo seconds                            >> $TMPFILE
+            echo stat                               >> $TMPFILE
+            echo solve                              >> $TMPFILE
+            echo quit                               >> $TMPFILE
+            cp $TMPFILE $SETFILE
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            date +"@03 %s"
+            bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
+            date +"@04 %s"
+            echo -----------------------------
+            date
+            date >>$ERRFILE
+            echo -----------------------------
+            echo =ready=
+        else
+            echo @02 FILE NOT FOUND: $i ===========
+            echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+        fi
     else
-	echo skipping $i
-	if test "$LASTPROB" = "$i"
-	then
-	    LASTPROB=""
+        echo skipping $i
+        if test "$LASTPROB" = "$i"
+        then
+            LASTPROB=""
         fi
     fi
 done | tee -a $OUTFILE
@@ -158,9 +156,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if test -f $TSTNAME.solu
-then
-    awk -f check_cbc.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-else
-    awk -f check_cbc.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-fi
+./evalcheck_cbc.sh $OUTFILE

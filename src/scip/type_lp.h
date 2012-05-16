@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,6 +67,9 @@ enum SCIP_LPAlgo
 };
 typedef enum SCIP_LPAlgo SCIP_LPALGO;
 
+typedef struct SCIP_ColSolVals SCIP_COLSOLVALS;   /**< collected values of a column which depend on the LP solution */
+typedef struct SCIP_RowSolVals SCIP_ROWSOLVALS;   /**< collected values of a row which depend on the LP solution */
+typedef struct SCIP_LpSolVals SCIP_LPSOLVALS;     /**< collected values of the LP data which depend on the LP solution */
 typedef struct SCIP_Col SCIP_COL;                 /**< column of an LP */
 typedef struct SCIP_Row SCIP_ROW;                 /**< row of an LP */
 typedef struct SCIP_Lp SCIP_LP;                   /**< current LP data */

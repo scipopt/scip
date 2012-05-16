@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,7 @@ struct SCIP_VarData
 
 extern "C"
 {
+
 /** frees user data of original variable (called when the original variable is freed) */
 static
 SCIP_DECL_VARDELORIG(varDelorigObj)
@@ -64,7 +65,7 @@ SCIP_DECL_VARDELORIG(varDelorigObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL; /*lint !e64*/
+   *vardata = 0; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -113,10 +114,43 @@ SCIP_DECL_VARDELTRANS(varDeltransObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL; /*lint !e64*/
+   *vardata = 0; /*lint !e64*/
+
+   return SCIP_OKAY;
+}
+
+/** copies user data if you want to copy it to a subscip */
+static
+SCIP_DECL_VARCOPY(varCopyObj)
+{  /*lint --e{715}*/
+   scip::ObjVardata* objvardata; /*lint !e78 !e40 !e55 !e530 !e522*/
+
+   assert(sourcedata != NULL);
+   assert(sourcedata->objvardata != NULL);
+   assert(targetdata != NULL);
+   assert(*targetdata == NULL);
+
+   /* call virtual method of probdata object */
+   SCIP_CALL( sourcedata->objvardata->scip_copy(scip, sourcescip, sourcevar, varmap, consmap, targetvar, &objvardata, result) ); /*lint !e40*/
+   
+   if( objvardata != 0 )
+   {
+      assert(*result == SCIP_SUCCESS);
+      
+      /* create transformed user problem data */
+      *targetdata = new SCIP_VARDATA;
+      (*targetdata)->objvardata = objvardata; /*lint !e40*/
+      (*targetdata)->deleteobject = sourcedata->deleteobject;
+   }
+   else
+   {
+      assert(*result == SCIP_DIDNOTRUN);
+      *targetdata = 0;
+   }
    
    return SCIP_OKAY;
 }
+
 }
 
 
@@ -152,7 +186,7 @@ SCIP_RETCODE SCIPcreateObjVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removable, 
-         varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
+         varDelorigObj, varTransObj, varDeltransObj, varCopyObj, vardata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

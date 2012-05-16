@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,10 +24,10 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "neos.sol" */
+/* #define SCIP_DEBUG_SOLUTION "neos.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
-/*#define SCIP_DEBUG_LP_INTERFACE*/
+/* #define SCIP_DEBUG_LP_INTERFACE */
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos         /**< number of bound changes in the conflict set */
    );
 
@@ -126,6 +127,26 @@ SCIP_RETCODE SCIPdebugCheckConflict(
 extern
 SCIP_RETCODE SCIPdebugIncludeProp(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** adds a solution value for a new variable in the transformed problem that has no original counterpart
+ * a value can only be set if no value has been set for this variable before
+ */
+extern
+SCIP_RETCODE SCIPdebugAddSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to add a value */
+   SCIP_Real             val                 /**< solution value for variable */
+   );
+
+/** gets value for a variable in the debug solution
+ * if no value is stored for the variable, gives 0.0
+ */
+extern
+SCIP_RETCODE SCIPdebugGetSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable for which to get the value */
+   SCIP_Real*            val                 /**< buffer to store solution value */
    );
 
 #else
@@ -138,8 +159,10 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
-#define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
+#define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
+#define SCIPdebugAddSolVal(scip,var,val) SCIP_OKAY
+#define SCIPdebugGetSolVal(scip,var,val) SCIP_OKAY
 #endif
 
 

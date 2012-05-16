@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dins.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  DINS primal heuristic
  * @author Robert Waniek
+ *
+ * DINS combines the ideas of RINS (see @ref heur_rins.h) and Local Branching (see @ref heur_localbranching.h). It
+ * defines the neighborhood by introducing a distance function between the incumbent solution and the optimum of the LP
+ * relaxation. When applied during a branch-and-bound search, it further takes into account how variables change their
+ * values at different nodes of the tree.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

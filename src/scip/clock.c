@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,7 @@
 #include <time.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
+#include "scip/pub_message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/clock.h"
@@ -76,7 +76,7 @@ SCIP_Real walltime2sec(
 static
 void sec2cputime(
    SCIP_Real             sec,                /**< seconds */
-   clock_t*         cputime             /**< pointer to store clock ticks for CPU time */
+   clock_t*              cputime             /**< pointer to store clock ticks for CPU time */
    )
 {
    clock_t clocks_per_second;
@@ -107,7 +107,7 @@ void sec2walltime(
    assert(wallusec != NULL);
 
    *wallsec = (long)sec;
-   *wallusec = (long)(sec * 1000000.0) - (*wallsec);
+   *wallusec = (long)((sec  - *wallsec) * 1000000.0);
 }
 
 
@@ -133,7 +133,7 @@ void clockSetType(
       else
       {
          SCIP_Real sec;
-         
+
          sec = SCIPclockGetTime(clck);
          clck->clocktype = newtype;
          SCIPclockSetTime(clck, sec);

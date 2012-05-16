@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_clique.c
- * @ingroup SEPARATORS
  * @brief  clique separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -23,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_clique.h"
 #include "tclique/tclique.h"
@@ -34,11 +34,12 @@
 #define SEPA_PRIORITY             -5000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
-#define DEFAULT_MAXTREENODES         -1 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
-#define DEFAULT_BACKTRACKFREQ     10000 /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
+#define DEFAULT_MAXTREENODES      10000 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+#define DEFAULT_BACKTRACKFREQ      1000 /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
 #define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
 #define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
 #define DEFAULT_CLIQUETABLEMEM  20000.0 /**< maximal memory size of dense clique table (in kb) */
@@ -66,7 +67,7 @@ struct SCIP_SepaData
    SCIP_Real             cliquetablemem;     /**< maximal memory size of dense clique table (in kb) */
    SCIP_Real             cliquedensity;      /**< minimal density of cliques to use a dense clique table */
    int                   ncuts;              /**< number of cuts found */
-   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
+   SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is already loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
 };
 
@@ -298,14 +299,14 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
       int value;
 
       var = vars[i];
+
       for( value = 0; value < 2; ++value )
       {
          assert(cliquegraphidx[value][i] == -1);
-
+         
          if( SCIPvarGetNCliques(var, (SCIP_Bool)value) >= 1 )
          {
             /* all cliques stored in the clique table are at least 3-cliques */
-            assert(SCIPcliqueGetNVars(SCIPvarGetCliques(var, (SCIP_Bool)value)[0]) >= 3);
             SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, var, (SCIP_Bool)value, &cliquegraphidx[value][i]) );
          }
       }
@@ -331,9 +332,14 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
    assert(cliquegraphidx[0] != NULL);
    assert(cliquegraphidx[1] != NULL);
 
+   /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
    /* get binary variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNBinVars(scip);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    assert(nvars > 0);
 
    /* detect 3-cliques in the clique graph: triples (x,y,z) in the implication graph with x -> y', x -> z', and y -> z';
@@ -344,11 +350,16 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
    for( xi = 0; xi < nvars-2 && !SCIPisStopped(scip); ++xi ) /* at least two variables must be left over for y and z */
    {
       SCIP_VAR* x;
-      int xindex;
       int xvalue;
+#ifndef NDEBUG
+      int xindex;
+#endif
 
       x = vars[xi];
+#ifndef NDEBUG
       xindex = SCIPvarGetIndex(x);
+#endif
+      assert(SCIPvarGetType(x) == SCIP_VARTYPE_BINARY);
 
       for( xvalue = 0; xvalue < 2; xvalue++ )
       {
@@ -357,20 +368,34 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
          int xnbinimpls;
          int i;
 
+         /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
          /* scan the implications of x == xvalue for potential y candidates */
          xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
          ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
 
-         /* ignore implicants with yindex <= xindex */
-         for( i = 0; i < xnbinimpls-1 && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
-         {}
+	 assert(xnbinimpls >= 0);
+	 if( xnbinimpls > 0 )
+	 {
+#ifndef NDEBUG
+	    SCIP_Bool found;
+
+	    /* search for the position in the sorted array (via binary search) */
+	    found = SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
+	    assert(!found); /* no implication to itself */
+	    assert(i >= 0 && i <= xnbinimpls);
+#else
+	    /* search for the position in the sorted array (via binary search) */
+	    (void) SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
+#endif
+	 }
+	 else
+	    i = 0;
 
          /* loop over all y > x */
          for( ; i < xnbinimpls-1 && !SCIPisStopped(scip); ++i ) /* at least one variable must be left over for z */
          {
             SCIP_VAR* y;
-            int yindex;
             int yvalue;
             int yi;
             SCIP_VAR** yimplvars;
@@ -378,11 +403,21 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             int ynbinimpls;
             int xk;
             int yk;
+#ifndef NDEBUG
+            int yindex;
+#endif
 
             y = ximplvars[i];
             yi = SCIPvarGetProbindex(y);
+#ifndef NDEBUG
             yindex = SCIPvarGetIndex(y);
-            assert(0 <= yi && yi < nvars);
+#endif
+            assert(yi < nvars);
+
+            /* consider only implications with active implvar y */
+            if( yi < 0 )
+               continue;
+
             assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
             assert(yindex < SCIPvarGetIndex(ximplvars[i+1]));
 
@@ -390,6 +425,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             yvalue = (int)(ximpltypes[i] == SCIP_BOUNDTYPE_UPPER);
             assert(0 <= yvalue && yvalue <= 1);
 
+            /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
             /* scan the remaining implications of x == xvalue and the implications of y == yvalue for equal entries */
             ynbinimpls = SCIPvarGetNBinImpls(y, (SCIP_Bool)yvalue);
             yimplvars = SCIPvarGetImplVars(y, (SCIP_Bool)yvalue);
@@ -397,8 +433,24 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
 
             /* we simultaneously scan both implication arrays for candidates z with x < y < z */
             xk = i+1;
-            for( yk = 0; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) <= yindex; ++yk )
-            {}
+
+	    assert(ynbinimpls >= 0);
+	    if( ynbinimpls > 0 )
+	    {
+#ifndef NDEBUG
+	       SCIP_Bool found;
+
+	       /* search for the position in the sorted array (via binary search) */
+	       found = SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
+	       assert(!found); /* no implication to itself */
+	       assert(yk >= 0 && yk <= ynbinimpls);
+#else
+	       (void) SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
+#endif
+	    }
+	    else
+	       yk = 0;
+
             while( xk < xnbinimpls && yk < ynbinimpls )
             {
                int zindex;
@@ -408,15 +460,19 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
 
                /* scan the implications of x */
                zindex = SCIPvarGetIndex(yimplvars[yk]);
-               while( xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex )
-                  xk++;
+
+               for(; xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex; ++xk ) 
+               {}
+
                if( xk >= xnbinimpls )
                   break;
 
                /* scan the implications of y */
                zindex = SCIPvarGetIndex(ximplvars[xk]);
-               while( yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex )
-                  yk++;
+
+               for(; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex; ++yk )
+               {}
+
                if( yk >= ynbinimpls )
                   break;
 
@@ -433,11 +489,16 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                   SCIP_VAR* z;
                   int zi;
                   int zvalue;
-
+                  
                   /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
                   z = ximplvars[xk];
                   zi = SCIPvarGetProbindex(z);
-                  assert(0 <= zi && zi < nvars);
+                  assert(zi < nvars);
+                  
+                  /* consider only implications with active implvar z */
+                  if( zi < 0 )
+                     continue;
+                  
                   assert(SCIPvarGetIndex(z) == zindex);
                   assert(xindex < yindex && yindex < zindex);
 
@@ -490,6 +551,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
    assert(cliquegraphidx[0] != NULL);
    assert(cliquegraphidx[1] != NULL);
 
+   /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
    /* get binary variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNBinVars(scip);
@@ -506,6 +568,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
       SCIP_Bool xvalue;
 
       x = vars[xi];
+
       for( xvalue = 0; xvalue < 2; xvalue++ )
       {
          SCIP_VAR** ximplvars;
@@ -517,6 +580,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
          if( cliquegraphidx[xvalue][xi] >= 0 )
             continue;
 
+         /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
          /* scan the implications of x == xvalue for potential y and z candidates */
          xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
@@ -532,7 +596,14 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
             y = ximplvars[yk];
             yi = SCIPvarGetProbindex(y);
+            assert(yi < nvars);
 
+            /* consider only implications with active implvar y */
+            if( yi < 0 )
+               continue;
+
+            assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
+            
             /* check, whether the implicant is y == 0 or y == 1 (y conflicts with x == xvalue) */
             yvalue = (ximpltypes[yk] == SCIP_BOUNDTYPE_UPPER);
             if( SCIPvarGetNCliques(y, yvalue) == 0 )
@@ -547,7 +618,14 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
 
                z = ximplvars[zk];
                zi = SCIPvarGetProbindex(z);
+               assert(zi < nvars);
 
+               /* consider only implications with active implvar z */
+               if( zi < 0 )
+                  continue;
+
+               assert(SCIPvarGetType(z) == SCIP_VARTYPE_BINARY);
+               
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
                zvalue = (ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
@@ -619,6 +697,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
       assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < SCIPgetNBinVars(scip));
       assert(cliquegraphidx[value][SCIPvarGetProbindex(var)] == i);
 
+      /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
       /* get implications on binary variables */
       nbinimpls = SCIPvarGetNBinImpls(var, value);
       implvars = SCIPvarGetImplVars(var, value);
@@ -631,7 +710,11 @@ SCIP_RETCODE tcliquegraphAddImplics(
 
          probidx = SCIPvarGetProbindex(implvars[j]);
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(0 <= probidx && probidx < SCIPgetNBinVars(scip));
+         assert(probidx < SCIPgetNVars(scip));
+                  
+         /* consider only implications with active implvar */
+         if( probidx < 0 )
+            continue;
 
          graphidx = cliquegraphidx[implvalue][probidx];
          if( graphidx >= 0 )
@@ -642,7 +725,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
             assert((implvalue == TRUE && tcliquegraph->vars[graphidx] == implvars[j])
                || (implvalue == FALSE && SCIPvarGetNegationVar(tcliquegraph->vars[graphidx]) == implvars[j]));
 
-            /* allocate memory for addional arc */
+            /* allocate memory for additional arc */
             SCIP_CALL( tcliquegraphEnsureAdjnodesSize(scip, tcliquegraph, nadjnodes+1) );
 
             /* store the adjacent node in the tclique graph data structure, sorted by index */
@@ -728,12 +811,20 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
+#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored, 
+        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if 
+        * this feature it incorporated. 
+        */
       assert(nvars <= tcliquegraph->nnodes);
+#endif
 
       /* get the node numbers of the variables */
       for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
       {
          SCIP_VAR* var;
+
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+            continue;
 
          var = (vals[u] ? vars[u] : SCIPvarGetNegatedVar(vars[u]));
          assert(var != NULL); /* var must exist even if negated, since it is stored in the tcliquegraph */
@@ -743,7 +834,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          varids[u] = v;
       }
 
-      /* flag the edges in the indicence matrix (excluding diagonal entries) */
+      /* flag the edges in the incidence matrix (excluding diagonal entries) */
       for( u = 0; u < nvars-1 && !SCIPisStopped(scip); ++u )
       {
          int nu;
@@ -751,17 +842,23 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          int colofs;
          unsigned int colmask;
 
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+            continue;
+
          nu = varids[u];
          rowstart = nu*tablewidth;
          colofs = nu/nbits;
-         colmask = 1 << (nu % nbits);
+         colmask = 1 << (nu % nbits); /*lint !e701*/
          for( v = u+1; v < nvars; ++v )
          {
             int nv;
             unsigned int mask;
 
+            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+               continue;
+
             nv = varids[v];
-            mask = 1 << (nv % nbits);
+            mask = 1 << (nv % nbits); /*lint !e701*/
             cliquetable[rowstart+nv/nbits] |= mask;
             cliquetable[nv*tablewidth+colofs] |= colmask;
          }
@@ -901,10 +998,10 @@ SCIP_Bool nodesHaveCommonClique(
 
       /* check entry in the table */
       nbits = 8*sizeof(unsigned int);
-      mask = (1 << (node2 % nbits));
+      mask = (1 << (node2 % nbits)); /*lint !e701*/
       colofs = node2 / nbits;
       assert(((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0)
-         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0));
+         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0)); /*lint !e701*/
       return ((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0);
    }
    else
@@ -1070,11 +1167,15 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
          SCIP_VAR** vars;
+#ifndef NDEBUG
          int nvars;
+#endif
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
 
+#ifndef NDEBUG
          nvars = sepadata->tcliquegraph->nnodes;
+#endif
          vars = sepadata->tcliquegraph->vars;
          assert(nvars > 0);
          assert(vars != NULL);
@@ -1096,7 +1197,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
 
          SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-         /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
          SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
@@ -1145,8 +1246,7 @@ SCIP_RETCODE separateCuts(
    int maxzeroextensions;
 
    assert(scip != NULL);
-
-   *result = SCIP_DIDNOTRUN;
+   assert(*result == SCIP_DIDNOTRUN);
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -1203,7 +1303,7 @@ SCIP_RETCODE separateCuts(
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
       cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
-      maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, &tcliquestatus);
+      maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, NULL, &tcliquestatus);
 
    SCIPdebugMessage("finished searching clique cuts: found %d cuts\n", sepadata->ncuts);
 
@@ -1227,6 +1327,21 @@ SCIP_RETCODE separateCuts(
 /*
  * Callback methods of separator
  */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyClique)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaClique(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -1282,6 +1397,22 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClique)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
 {
+   /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* separate cuts on the LP solution */
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
@@ -1293,6 +1424,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolClique)
 {
+   /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
    /* separate cuts on the given primal solution */
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
@@ -1324,8 +1459,9 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraphloaded = FALSE;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeClique, sepaInitClique, sepaExitClique,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyClique, sepaFreeClique, sepaInitClique, sepaExitClique,
          sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,
          sepadata) );

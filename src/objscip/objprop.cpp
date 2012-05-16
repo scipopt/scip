@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_PropData
 
 extern "C"
 {
+
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+   
+   assert(scip != NULL);
+   
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ != scip);
+
+   if( propdata->objprop->iscloneable() )
+   {
+      scip::ObjProp* newobjprop;
+      newobjprop = dynamic_cast<scip::ObjProp*> (propdata->objprop->clone(scip));
+
+      /* call include method of propagator object */
+      SCIP_CALL( SCIPincludeObjProp(scip, newobjprop, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_PROPFREE(propFreeObj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ == scip);
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_free(scip, prop) );
@@ -81,6 +108,7 @@ SCIP_DECL_PROPINIT(propInitObj)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
+   assert(propdata->objprop->scip_ == scip);
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_init(scip, prop) );
@@ -101,6 +129,40 @@ SCIP_DECL_PROPEXIT(propExitObj)
 
    /* call virtual method of prop object */
    SCIP_CALL( propdata->objprop->scip_exit(scip, prop) );
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+static
+SCIP_DECL_PROPINITPRE(propInitpreObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_initpre(scip, prop, isunbounded, isinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+static
+SCIP_DECL_PROPEXITPRE(propExitpreObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_exitpre(scip, prop, isunbounded, isinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -140,6 +202,27 @@ SCIP_DECL_PROPEXITSOL(propExitsolObj)
 }
 
 
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   /* call virtual method of prop object */
+   SCIP_CALL( propdata->objprop->scip_presol(scip, prop, nrounds,
+         nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+         nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecObj)
@@ -151,7 +234,7 @@ SCIP_DECL_PROPEXEC(propExecObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_exec(scip, prop, result) );
+   SCIP_CALL( propdata->objprop->scip_exec(scip, prop, proptiming, result) );
 
    return SCIP_OKAY;
 }
@@ -168,7 +251,7 @@ SCIP_DECL_PROPRESPROP(propRespropObj)
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
 
    return SCIP_OKAY;
 }
@@ -189,6 +272,9 @@ SCIP_RETCODE SCIPincludeObjProp(
 {
    SCIP_PROPDATA* propdata;
 
+   assert(scip != NULL);
+   assert(objprop != NULL);
+
    /* create propagator data */
    propdata = new SCIP_PROPDATA;
    propdata->objprop = objprop;
@@ -197,8 +283,10 @@ SCIP_RETCODE SCIPincludeObjProp(
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
-         propFreeObj, propInitObj, propExitObj, propInitsolObj, propExitsolObj,
-         propExecObj, propRespropObj,
+         objprop->scip_timingmask_, objprop->scip_presol_priority_, objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_,
+         propCopyObj,
+         propFreeObj, propInitObj, propExitObj, propInitpreObj, propExitpreObj, propInitsolObj, propExitsolObj,
+         propPresolObj, propExecObj, propRespropObj,
          propdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,8 +40,10 @@ struct SCIP_Prob
    SCIP_Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
    SCIP_Real             objscale;           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objlim;             /**< objective limit as external value */
+   SCIP_Real             objlim;             /**< objective limit as external value (original problem space) */
+   SCIP_Real             dualbound;          /**< dual bound as external value (original problem space) which is given or update during presolving */
    char*                 name;               /**< problem name */
+   SCIP_DECL_PROBCOPY    ((*probcopy));      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_DECL_PROBDELORIG ((*probdelorig));   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans));     /**< creates user data of transformed problem by transforming original user data */
    SCIP_DECL_PROBDELTRANS((*probdeltrans));  /**< frees user data of transformed problem */
@@ -65,6 +67,7 @@ struct SCIP_Prob
    int                   nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int                   deletedvarssize;    /**< available slots in deletedvars array */
    int                   ndeletedvars;       /**< number of deleted variables in the problem */
+   int                   nobjvars;           /**< number of variables with a non-zero objective coefficient */
    int                   consssize;          /**< available slots in conss array */
    int                   nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int                   maxnconss;          /**< maximum number of constraints existing at the same time */

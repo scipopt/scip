@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_strongcg.c
- * @ingroup SEPARATORS
  * @brief  Strong CG Cuts (Letchford & Lodi)
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -34,6 +33,7 @@
 #define SEPA_PRIORITY             -2000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
@@ -192,6 +192,20 @@ SCIP_RETCODE storeCutInArrays(
  * Callback methods
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyStrongcg)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
@@ -270,6 +284,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    /* only call the strong CG cut separator a given number of times at each node */
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
@@ -283,6 +301,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* get variables data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -292,8 +314,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
-#if 0
-   /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
+#if 0 /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
    if( ncols >= 50*nrows )
       return SCIP_OKAY;
    if( ncols >= 5*nrows )
@@ -413,6 +434,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
+#ifdef SCIP_DEBUG
+         /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
+         cutact = 0.0;
+         cutrhs = SCIPinfinity(scip);
+#endif
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
@@ -466,7 +492,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-               /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
                assert(success);
 #ifdef MAKECUTINTEGRAL
@@ -502,7 +528,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                      SCIPdebugMessage(" -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut));
-                     /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
                      success = FALSE;
                   }
                   else
@@ -512,7 +538,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                     /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
+                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
                      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                      if( !cutislocal )
                      {
@@ -575,8 +601,9 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    sepadata->lastncutsfound = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyStrongcg, sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
          sepaInitsolStrongcg, sepaExitsolStrongcg, 
          sepaExeclpStrongcg, sepaExecsolStrongcg,
          sepadata) );

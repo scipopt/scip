@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trivial.h
+ * @ingroup PRIMALHEURISTICS
  * @brief  trivial primal heuristic
  * @author Timo Berthold
+ *
+ * pre-root heuristic that tries some trivial (but often feasibile) solutions: all variables at their upper bounds, all
+ * variables at their lower bounds, all variables zero, all variables at the bound with the fewer locks. This will,
+ * e.g., find a start solution for all pure set covering or set packing problems.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,6 +38,13 @@ typedef struct SCIP_Sepa SCIP_SEPA;               /**< separator */
 typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator data */
 
 
+/** copy method for separator plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
+ */
+#define SCIP_DECL_SEPACOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** destructor of separator to free user data (called when SCIP is exiting)
  *
@@ -100,6 +107,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_NEWROUND   : a cutting plane was generated and a new separation round should immediately start
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
@@ -122,6 +130,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_NEWROUND   : a cutting plane was generated and a new separation round should immediately start
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again

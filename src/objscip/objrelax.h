@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objrelax.h
- * @brief  C++ wrapper for relaxators
+ * @brief  C++ wrapper for relaxation handlers
  * @author Tobias Achterberg
  */
 
@@ -26,15 +26,26 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
-/** C++ wrapper object for relaxators */
-class ObjRelax
+/** @brief C++ wrapper for relaxation handlers
+ *
+ *  This class defines the interface for relaxation handlers implemented in C++. Note that there is a pure virtual
+ *  function (this function has to be implemented). This function is: scip_exec().
+ *
+ *  - \ref RELAX "Instructions for implementing a relaxation handler"
+ *  - \ref type_relax.h "Corresponding C interface"
+ */
+class ObjRelax : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
 
    /** name of the relaxator */
    char* scip_name_;
@@ -50,26 +61,30 @@ public:
 
    /** default constructor */
    ObjRelax(
+      SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of relaxator */
       const char*        desc,               /**< description of relaxator */
       int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
       int                freq                /**< frequency for calling relaxator */
       )
-      : scip_name_(0),
+      : scip_(scip),
+        scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjRelax()
    {
+      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
-      SCIPfreeMemoryArray(scip, &scip_name_);
-      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
    /** destructor of relaxator to free user data (called when SCIP is exiting) */

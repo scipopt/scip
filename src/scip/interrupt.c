@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,7 +26,6 @@
 #include <signal.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/interrupt.h"
 
@@ -64,11 +63,11 @@ void interruptHandler(
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
-      SCIPmessagePrintInfo("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
       exit(1);
    }
    else
-      SCIPmessagePrintInfo("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
 }
 
 /** creates a CTRL-C interrupt data */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -36,7 +37,10 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a conjunction constraint */
+/** creates and captures a conjunction constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsConjunction(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -55,7 +59,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    );
 
 /** adds constraint to the conjunction of constraints */

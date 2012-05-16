@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,7 @@ struct SCIP_ProbData
 
 extern "C"
 {
+
 /** frees user data of original problem (called when the original problem is freed) */
 static
 SCIP_DECL_PROBDELORIG(probDelorigObj)
@@ -64,7 +65,7 @@ SCIP_DECL_PROBDELORIG(probDelorigObj)
 
    /* free probdata data */
    delete *probdata;
-   *probdata = NULL; /*lint !e64*/
+   *probdata = 0; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -113,8 +114,8 @@ SCIP_DECL_PROBDELTRANS(probDeltransObj)
 
    /* free probdata data */
    delete *probdata;
-   *probdata = NULL; /*lint !e64*/
-   
+   *probdata = 0; /*lint !e64*/
+
    return SCIP_OKAY;
 }
 
@@ -145,6 +146,39 @@ SCIP_DECL_PROBEXITSOL(probExitsolObj)
 
    return SCIP_OKAY;
 }
+
+/** copies user data if you want to copy it to a subscip */
+static
+SCIP_DECL_PROBCOPY(probCopyObj)
+{  /*lint --e{715}*/
+   scip::ObjProbData* objprobdata; /*lint !e78 !e40 !e55 !e530 !e522*/
+
+   assert(sourcedata != NULL);
+   assert(sourcedata->objprobdata != NULL);
+   assert(targetdata != NULL);
+   assert(*targetdata == NULL);
+
+   /* call virtual method of probdata object */
+   SCIP_CALL( sourcedata->objprobdata->scip_copy(scip, sourcescip, varmap, consmap, &objprobdata, global, result) ); /*lint !e40*/
+
+   if( objprobdata != 0 )
+   {
+      assert(*result == SCIP_SUCCESS);
+
+      /* create transformed user problem data */
+      *targetdata = new SCIP_PROBDATA;
+      (*targetdata)->objprobdata = objprobdata; /*lint !e40*/
+      (*targetdata)->deleteobject = sourcedata->deleteobject;
+   }
+   else
+   {
+      assert(*result == SCIP_DIDNOTRUN);
+      *targetdata = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
 }
 
 
@@ -172,7 +206,7 @@ SCIP_RETCODE SCIPcreateObjProb(
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
-         probInitsolObj, probExitsolObj, probdata) ); /*lint !e429*/
+         probInitsolObj, probExitsolObj, probCopyObj, probdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_impliedbounds.c
- * @ingroup SEPARATORS
  * @brief  implied bounds separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -23,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_impliedbounds.h"
 #include "scip/pub_misc.h"
@@ -33,9 +33,10 @@
 #define SEPA_PRIORITY               -50
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-
+#define RELCUTCOEFMAXRANGE          1.0 /**< maximal allowed range of cut coefficients, relative to 1/feastol */
 
 
 /*
@@ -82,7 +83,7 @@ SCIP_RETCODE addCut(
       
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);
-      SCIPprintRow(scip, cut, NULL);
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
       /* add cut */
@@ -157,6 +158,10 @@ SCIP_RETCODE separateCuts(
          assert(impltypes != NULL);
          assert(implbounds != NULL);
 
+         /* consider only implications with active implvar */
+         if( SCIPvarGetProbindex(implvars[j]) < 0 )
+            continue;
+
          solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
@@ -165,7 +170,8 @@ SCIP_RETCODE separateCuts(
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
             
-            if (SCIPisLE(scip, implbounds[j], ub))
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
@@ -180,7 +186,8 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
  
-            if (SCIPisGE(scip, implbounds[j], lb))
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
@@ -206,6 +213,10 @@ SCIP_RETCODE separateCuts(
       {
          SCIP_Real solval;
 
+         /* consider only implications with active implvar */
+         if( SCIPvarGetProbindex(implvars[j]) < 0 )
+            continue;
+
          solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
@@ -213,7 +224,9 @@ SCIP_RETCODE separateCuts(
          
             /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            if( SCIPisLE(scip, implbounds[j], ub) )
+
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
@@ -228,7 +241,8 @@ SCIP_RETCODE separateCuts(
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
             
-            if( SCIPisGE(scip, implbounds[j], lb) )
+            /* consider only nonredundant and numerical harmless implications */
+            if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             { 
                /* add cut if violated */
                SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
@@ -247,6 +261,20 @@ SCIP_RETCODE separateCuts(
 /*
  * Callback methods of separator
  */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyImpliedbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
@@ -399,8 +427,9 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    sepadata = NULL;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-         sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyImpliedbounds, sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
          sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,
          sepadata) );

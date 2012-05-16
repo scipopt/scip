@@ -2,9 +2,10 @@
 /*  stdio.h --  POSIX header
     Copyright 1992, Gimpel Software, All Rights Reserved
  */
-
-#if defined(_lint) && !defined(__STDIO_H)
+#ifndef __STDIO_H
 #define __STDIO_H
+#if defined(_lint)
+
 
 #ifndef __SIZE_T
 #define __SIZE_T
@@ -104,4 +105,4 @@ FILE *fdopen(int fildes, const char *type);
 int fileno(FILE *stream);
 
 #endif
-
+#endif

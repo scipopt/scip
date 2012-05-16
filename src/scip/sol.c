@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,13 +23,13 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/intervalarith.h"
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
+#include "scip/nlp.h"
 #include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/prob.h"
@@ -37,6 +37,7 @@
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/cons.h"
+#include "scip/pub_message.h"
 
 #ifndef NDEBUG
 #include "scip/struct_sol.h"
@@ -52,7 +53,6 @@ SCIP_RETCODE solClearArrays(
 {
    assert(sol != NULL);
 
-   SCIP_CALL( SCIPrealarrayClear(sol->vals) );
    SCIP_CALL( SCIPboolarrayClear(sol->valid) );
 
    return SCIP_OKAY;
@@ -72,6 +72,9 @@ SCIP_RETCODE solSetArrayVal(
    assert(sol != NULL);
 
    idx = SCIPvarGetIndex(var);
+
+   /* from now on, variable must not be deleted */
+   SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
    SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
@@ -97,11 +100,23 @@ SCIP_RETCODE solIncArrayVal(
 
    idx = SCIPvarGetIndex(var);
 
-   /* mark the variable valid */
-   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   /* from now on, variable must not be deleted */
+   SCIPvarMarkNotDeletable(var);
 
-   /* increase the value in the solution array */
-   SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+   /* if the variable was not valid, mark it to be valid and set the value to the incval (it is 0.0 if not valid) */
+   if( !SCIPboolarrayGetVal(sol->valid, idx) )
+   {
+      /* mark the variable valid */
+      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+
+      /* set the value in the solution array */
+      SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, incval) );
+   }
+   else
+   {
+      /* increase the value in the solution array */
+      SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+   }
 
    return SCIP_OKAY;
 }
@@ -126,8 +141,6 @@ SCIP_Real solGetArrayVal(
    }
    else
    {
-      assert(SCIPrealarrayGetVal(sol->vals, idx) == 0.0);
-
       /* return the variable's value corresponding to the origin */
       switch( sol->solorigin )
       {
@@ -137,6 +150,9 @@ SCIP_Real solGetArrayVal(
 
       case SCIP_SOLORIGIN_LPSOL:
          return SCIPvarGetLPSol(var);
+
+      case SCIP_SOLORIGIN_NLPSOL:
+         return SCIPvarGetNLPSol(var);
 
       case SCIP_SOLORIGIN_RELAXSOL:
          return SCIPvarGetRelaxSolTransVar(var);
@@ -174,8 +190,6 @@ SCIP_RETCODE solUnlinkVar(
    if( SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
       return SCIP_OKAY;
 
-   assert(SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var)) == 0.0);
-
    SCIPdebugMessage("unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
 
    /* store the correct solution value into the solution array */
@@ -191,6 +205,14 @@ SCIP_RETCODE solUnlinkVar(
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
       if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
+      {
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_NLPSOL:
+      solval = SCIPvarGetNLPSol(var);
+      if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -227,7 +249,7 @@ static
 void solStamp(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_Bool             checktime           /**< should the time be updated? */
    )
 {
@@ -240,7 +262,10 @@ void solStamp(
       sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
-   sol->depth = SCIPtreeGetCurrentDepth(tree);
+   if( tree == NULL )
+      sol->depth = -1;
+   else
+      sol->depth = SCIPtreeGetCurrentDepth(tree);
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -258,7 +283,7 @@ SCIP_RETCODE SCIPsolCreate(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -289,7 +314,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -298,7 +323,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -360,6 +385,27 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    return SCIP_OKAY;
 }
 
+/** creates primal CIP solution, initialized to the current NLP solution */
+SCIP_RETCODE SCIPsolCreateNLPSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(nlp != NULL);
+
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkNLPSol(*sol, stat, tree, nlp) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to the current relaxation solution */
 SCIP_RETCODE SCIPsolCreateRelaxSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -390,7 +436,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
@@ -445,7 +491,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
@@ -454,7 +500,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree,TRUE);
+   solStamp(*sol, stat, tree, TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -473,7 +519,6 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIPprimalSolFreed(primal, *sol);
 
-   SCIP_CALL( solClearArrays(*sol) );
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
    BMSfreeBlockMemory(blkmem, sol);
@@ -513,14 +558,14 @@ SCIP_RETCODE SCIPsolLinkLPSol(
          /* the objective value has to be calculated manually, because the LP's value is invalid;
           * use objective values of variables, because columns objective values are changed to dive values
           */
-         sol->obj = SCIPlpGetLooseObjval(lp, set);
+         sol->obj = SCIPlpGetLooseObjval(lp, set, prob);
          if( !SCIPsetIsInfinity(set, -sol->obj) )
          {
             SCIP_VAR* var;
             SCIP_COL** cols;
             int ncols;
             int c;
-         
+
             cols = SCIPlpGetCols(lp);
             ncols = SCIPlpGetNCols(lp);
             for( c = 0; c < ncols; ++c )
@@ -533,10 +578,61 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       else
       {
          /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-         sol->obj = SCIPlpGetObjval(lp, set);
+         sol->obj = SCIPlpGetObjval(lp, set, prob);
       }
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
+   solStamp(sol, stat, tree, TRUE);
+
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
+/** copies current NLP solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkNLPSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   assert(sol != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(nlp != NULL);
+   assert(SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_FEASIBLE);
+
+   SCIPdebugMessage("linking solution to NLP\n");
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* get objective value of NLP solution */
+   if( SCIPnlpIsDivingObjChanged(nlp) )
+   {
+      /* the objective value has to be calculated manually, because the NLP's value is invalid */
+
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
+      sol->obj = 0.0;
+
+      vars = SCIPnlpGetVars(nlp);
+      nvars = SCIPnlpGetNVars(nlp);
+      for( v = 0; v < nvars; ++v )
+      {
+         assert(SCIPvarIsActive(vars[v]));
+         sol->obj += SCIPvarGetObj(vars[v]) * SCIPvarGetNLPSol(vars[v]);
+      }
+   }
+   else
+   {
+      sol->obj = SCIPnlpGetObjval(nlp);
+   }
+
+   sol->solorigin = SCIP_SOLORIGIN_NLPSOL;
    solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
@@ -552,7 +648,7 @@ SCIP_RETCODE SCIPsolLinkRelaxSol(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    )
-{
+{  /*lint --e{715}*/
    assert(sol != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
@@ -580,7 +676,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -597,10 +693,10 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    if( set->misc_exactsolve )
       sol->obj = SCIPlpGetPrimalprovedPseudoObjval(set, prob);
    else
-      sol->obj = SCIPlpGetPseudoObjval(lp, set);
-   
+      sol->obj = SCIPlpGetPseudoObjval(lp, set, prob);
+
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -645,7 +741,7 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    return SCIP_OKAY;
 }
@@ -662,7 +758,7 @@ SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
 
    return SCIP_OKAY;
 }
@@ -771,7 +867,7 @@ SCIP_RETCODE SCIPsolSetVal(
                if( val != SCIP_UNKNOWN ) /*lint !e777*/
                   sol->obj += obj * val;
             }
-            solStamp(sol, stat, tree,FALSE);
+            solStamp(sol, stat, tree, FALSE);
          }
          return SCIP_OKAY;
       }
@@ -829,7 +925,7 @@ SCIP_RETCODE SCIPsolSetVal(
                sol->obj += obj * val;
          }
             
-         solStamp(sol, stat, tree,FALSE);
+         solStamp(sol, stat, tree, FALSE);
       }
       return SCIP_OKAY;
 
@@ -892,7 +988,7 @@ SCIP_RETCODE SCIPsolIncVal(
       {
          SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
          sol->obj += SCIPvarGetObj(var) * incval;
-         solStamp(sol, stat, tree,FALSE);
+         solStamp(sol, stat, tree, FALSE);
          return SCIP_OKAY;
       }
       else
@@ -903,7 +999,7 @@ SCIP_RETCODE SCIPsolIncVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
       sol->obj += SCIPvarGetObj(var) * incval;
-      solStamp(sol, stat, tree,FALSE);
+      solStamp(sol, stat, tree, FALSE);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -1021,6 +1117,75 @@ SCIP_Real SCIPsolGetVal(
    }
 }
 
+/** returns value of variable in primal ray represented by primal CIP solution */
+SCIP_Real SCIPsolGetRayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* scalars;
+   SCIP_Real solval;
+   SCIP_Real solvalsum;
+   int nvars;
+   int i;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
+   assert(var != NULL);
+
+   /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      return SCIPsolGetRayVal(sol, set, stat, SCIPvarGetTransVar(var));
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return solGetArrayVal(sol, var);
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      return 0.0; /* constants are ignored for computing the ray direction */
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      solval = SCIPsolGetRayVal(sol, set, stat, SCIPvarGetAggrVar(var));
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
+      assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+      return SCIPvarGetAggrScalar(var) * solval; /* constants are ignored for computing the ray direction */
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalars(var);
+      solvalsum = 0.0; /* constants are ignored for computing the ray direction */
+      for( i = 0; i < nvars; ++i )
+      {
+         solval = SCIPsolGetRayVal(sol, set, stat, vars[i]);
+         assert(solval != SCIP_UNKNOWN ); /*lint !e777*/
+         assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+         solvalsum += scalars[i] * solval;
+      }
+      return solvalsum;
+
+   case SCIP_VARSTATUS_NEGATED:
+      solval = SCIPsolGetRayVal(sol, set, stat, SCIPvarGetNegationVar(var));
+      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
+      assert(!SCIPsetIsInfinity(set, REALABS(solval)));
+      return -solval; /* constants are ignored for computing the ray direction */
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
 /** gets objective value of primal CIP solution in transformed problem */
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1077,10 +1242,12 @@ void SCIPsolUpdateVarObj(
 /** checks primal CIP solution for feasibility */
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
@@ -1105,13 +1272,14 @@ SCIP_RETCODE SCIPsolCheck(
    {
       int v;
 
-      for( v = 0; v < prob->nvars && *feasible; ++v )
+      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
 
          var = prob->vars[v];
          solval = SCIPsolGetVal(sol, set, stat, var);
+
          if( solval != SCIP_UNKNOWN ) /*lint !e777*/
          {
             SCIP_Real lb;
@@ -1123,10 +1291,16 @@ SCIP_RETCODE SCIPsolCheck(
                *feasible = *feasible && (solval >= lb) && (solval <= ub);
             else
                *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+            
+            if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
+            {
+               SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+            }
          }
 
 #ifdef SCIP_DEBUG
-         if( !(*feasible) )
+         if( !(*feasible) && !printreason )
          {
             SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -1135,10 +1309,10 @@ SCIP_RETCODE SCIPsolCheck(
       }
    }
 
-   for( h = 0; h < set->nconshdlrs && *feasible; ++h )
+   for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
-            checkintegrality, checklprows, FALSE, &result) );
+            checkintegrality, checklprows, printreason, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG
@@ -1273,7 +1447,8 @@ SCIP_RETCODE SCIPsolRetransform(
    nvars = origprob->nvars;
 
    /* allocate temporary memory for storing the original solution values */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, origprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, nvars) );
+   assert(solvals != NULL); /* for flexelint */
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )
@@ -1296,7 +1471,6 @@ SCIP_RETCODE SCIPsolRetransform(
    }
 
    /**@todo remember the variables without original counterpart (priced variables) in the solution */
-   /*???????????????????????? remember the variables without original counterpart (priced variables) in the solution */
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &solvals);
@@ -1304,27 +1478,83 @@ SCIP_RETCODE SCIPsolRetransform(
    return SCIP_OKAY;
 }
 
-/** returns whether the given solutions in transformed space are equal */
+/** recomputes the objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+void SCIPsolRecomputeObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+   int nvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(origprob != NULL);
+
+   vars = origprob->vars;
+   nvars = origprob->nvars;
+
+   /* recompute the objective value */
+   sol->obj = 0.0;
+   for( v = 0; v < nvars; ++v )
+   {
+      solval = SCIPsolGetVal(sol, set, stat, vars[v]);
+      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      {
+         sol->obj += SCIPvarGetObj(vars[v]) * solval;
+      }
+   }
+}
+
+/** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob                /**< transformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
+                                              *   defines in the original problem space */
    )
 {
+   SCIP_PROB* prob;
+   SCIP_Real obj1;
+   SCIP_Real obj2;
    int v;
 
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert(sol1->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-   assert(sol2->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-   assert(prob != NULL);
+   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL && sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL)
+      || transprob != NULL);
 
-   if( (set->misc_exactsolve && sol1->obj != sol2->obj) 
+   obj1 = sol1->obj;
+   obj2 = sol2->obj;
+
+   /* both objective values have to be defined on the same space */
+   if( sol1->solorigin != sol2->solorigin )
+   {
+      obj1 = SCIPsolGetObj(sol1, set, transprob);
+      obj2 = SCIPsolGetObj(sol2, set, transprob);
+   }
+
+   /* solutions with different objective values cannot be the same */
+   if( (set->misc_exactsolve && obj1 != obj2)
       || (!set->misc_exactsolve && !SCIPsetIsEQ(set, sol1->obj, sol2->obj)) )
       return FALSE;
 
+   /* if one of the solutions is defined in original space, the comparison has to be performed in the original space */
+   prob = transprob;
+   if( sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+      prob = origprob;
+   assert(prob != NULL);
+
+   /* compare each variable value */
    for( v = 0; v < prob->nvars; ++v )
    {
       SCIP_Real val1;
@@ -1343,6 +1573,7 @@ SCIP_Bool SCIPsolsAreEqual(
 SCIP_RETCODE SCIPsolPrint(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
@@ -1355,7 +1586,7 @@ SCIP_RETCODE SCIPsolPrint(
 
    assert(sol != NULL);
    assert(prob != NULL);
-   assert(prob->transformed || transprob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
@@ -1364,16 +1595,16 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
-         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-            SCIPmessageFPrintInfo(file, "              unknown");
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, "            +infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, "            -infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1382,16 +1613,16 @@ SCIP_RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
-         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-            SCIPmessageFPrintInfo(file, "              unknown");
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, "            +infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, "            -infinity");
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1408,16 +1639,16 @@ SCIP_RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
-            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-               SCIPmessageFPrintInfo(file, "              unknown");
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, "            +infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, "            -infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1429,16 +1660,125 @@ SCIP_RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
-            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-               SCIPmessageFPrintInfo(file, "              unknown");
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, "            +infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, "            -infinity");
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** outputs non-zero elements of solution representing a ray to file stream */
+SCIP_RETCODE SCIPsolPrintRay(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_Real solval;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
+
+   /* display variables of problem data */
+   for( v = 0; v < prob->nfixedvars; ++v )
+   {
+      assert(prob->fixedvars[v] != NULL);
+      solval = SCIPsolGetRayVal(sol, set, stat, prob->fixedvars[v]);
+      if( printzeros || !SCIPsetIsZero(set, solval) )
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+         else if( SCIPsetIsInfinity(set, solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+         else if( SCIPsetIsInfinity(set, -solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+         else
+            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+      }
+   }
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      assert(prob->vars[v] != NULL);
+      solval = SCIPsolGetRayVal(sol, set, stat, prob->vars[v]);
+      if( printzeros || !SCIPsetIsZero(set, solval) )
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+            SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+         else if( SCIPsetIsInfinity(set, solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+         else if( SCIPsetIsInfinity(set, -solval) )
+            SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+         else
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+      }
+   }
+
+   /* display additional priced variables (if given problem data is original problem) */
+   if( !prob->transformed && sol->solorigin != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      assert(transprob != NULL);
+      for( v = 0; v < transprob->nfixedvars; ++v )
+      {
+         assert(transprob->fixedvars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
+            continue;
+
+         solval = SCIPsolGetRayVal(sol, set, stat, transprob->fixedvars[v]);
+         if( printzeros || !SCIPsetIsZero(set, solval) )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+            else if( SCIPsetIsInfinity(set, solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+            else if( SCIPsetIsInfinity(set, -solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+         }
+      }
+      for( v = 0; v < transprob->nvars; ++v )
+      {
+         assert(transprob->vars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
+         solval = SCIPsolGetRayVal(sol, set, stat, transprob->vars[v]);
+         if( printzeros || !SCIPsetIsZero(set, solval) )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+               SCIPmessageFPrintInfo(messagehdlr, file, "              unknown");
+            else if( SCIPsetIsInfinity(set, solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            +infinity");
+            else if( SCIPsetIsInfinity(set, -solval) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }
@@ -1460,6 +1800,7 @@ SCIP_RETCODE SCIPsolPrint(
  */
 
 #undef SCIPsolGetOrigin
+#undef SCIPsolGetOrigObj
 #undef SCIPsolGetTime
 #undef SCIPsolGetNodenum
 #undef SCIPsolGetRunnum
@@ -1478,6 +1819,17 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
    assert(sol != NULL);
 
    return sol->solorigin;
+}
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Real SCIPsolGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+
+   return sol->obj;
 }
 
 /** gets clock time, when this solution was found */

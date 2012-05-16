@@ -1,0 +1,42 @@
+# this local Makefile includes the cluster targets
+
+OPTHOST	   	 := $(shell uname -n | tr -cd '[:alpha:]')
+
+-include $(SCIPDIR)/make/local/make.$(OPTHOST)
+
+.PHONY: testcluster
+testcluster:
+		cd check; \
+		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
+		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(VERSION) \
+		$(LPS) $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testclustercpx
+testclustercpx:
+		cd check; \
+		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testclustercbc
+testclustercbc:
+		cd check; \
+		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testgamscluster
+testgamscluster:
+		cd check; \
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+
+SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
+
+.PHONY: testexamples
+testexamples:
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
+

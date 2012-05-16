@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,9 @@ extern "C" {
 /** constraint data structure */
 struct SCIP_Cons
 {
+#ifndef NDEBUG
+   SCIP*                 scip;               /**< SCIP data structure */
+#endif
    SCIP_Real             age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    char*                 name;               /**< name of the constraint */
    SCIP_CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
@@ -69,7 +72,11 @@ struct SCIP_Cons
    unsigned int          stickingatnode:1;   /**< TRUE iff the node should always be kept at the node where it was added */
    unsigned int          original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int          deleteconsdata:1;   /**< TRUE iff constraint data has to be deleted if constraint is freed */
-   unsigned int          active:1;           /**< TRUE iff constraint is active in the current node */
+   unsigned int          active:1;           /**< TRUE iff constraint is active in the current node; a constraint is
+                                              *   active if it is global and was not removed during presolving or it was
+                                              *   added locally (in that case the local flag is TRUE) and the current
+                                              *   node belongs to the corresponding sub tree
+                                              */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int          deleted:1;          /**< TRUE iff constraint was globally deleted */
@@ -106,6 +113,8 @@ struct SCIP_Conshdlr
    SCIP_Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
+   SCIP_Longint          ncheckcalls;        /**< number of times, the feasibility check was called */
+   SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
@@ -119,6 +128,7 @@ struct SCIP_Conshdlr
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */
@@ -142,22 +152,33 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSDEACTIVE((*consdeactive));  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars));   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars));   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars));  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
+                                              *   ones; a constraint is active if it is global and was not removed
+                                              *   during presolving or it was added locally (in that case the local flag
+                                              *   is TRUE) and the current node belongs to the corresponding sub tree */
    SCIP_CONS**           initconss;          /**< array with active constraints that must enter the LP with their initial representation */
    SCIP_CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    SCIP_CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
    SCIP_CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
+   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this constraint handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
    SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
+   SCIP_CLOCK*           checktime;          /**< time used for feasibility check of this constraint handler */
+   SCIP_CLOCK*           resproptime;        /**< time used for resolve propagation of this constraint handler */
+   SCIP_Longint          lastsepalpcount;    /**< last LP number, where the separations was called */
+   SCIP_Longint          lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int                   sepapriority;       /**< priority of the constraint handler for separation */
    int                   enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int                   checkpriority;      /**< priority of the constraint handler for checking infeasibility */
@@ -188,26 +209,26 @@ struct SCIP_Conshdlr
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
    int                   nenabledconss;      /**< total number of enabled constraints of the handler */
-   int                   lastsepalpcount;    /**< last LP number, where the separations was called */
-   int                   lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int                   lastnusefulpropconss;/**< number of already propagated useful constraints on current domains */
    int                   lastnusefulsepaconss;/**< number of already separated useful constraints on current solution */
    int                   lastnusefulenfoconss;/**< number of already enforced useful constraints on current solution */
    int                   lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int                   lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int                   lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
-   int                   lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int                   lastnchgbds;        /**< number of variable bounds tightened before the last call to the presolver */
    int                   lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
    int                   lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
+   int                   lastnaddconss;      /**< number of added constraints before the last call to the presolver */
    int                   lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
    int                   lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
-   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call */
+   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call to the presolver */
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */
-   int                   nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int                   nchgbds;            /**< total number of variable bounds tightened by this presolver */
    int                   naddholes;          /**< total number of domain holes added by this presolver */
    int                   ndelconss;          /**< total number of deleted constraints by this presolver */
+   int                   naddconss;          /**< total number of added constraints by this presolver */
    int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
@@ -221,6 +242,7 @@ struct SCIP_Conshdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
+   SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
 };
 
 #ifdef __cplusplus

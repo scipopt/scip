@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_mostinf.c
- * @ingroup BRANCHINGRULES
  * @brief  most infeasible LP branching rule
  * @author Tobias Achterberg
  */
@@ -25,7 +24,6 @@
 #include <string.h>
 
 #include "scip/branch_mostinf.h"
-#include "scip/cons_linear.h"
 
 
 #define BRANCHRULE_NAME          "mostinf"
@@ -34,150 +32,193 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-/** branching rule data */
-struct SCIP_BranchruleData
-{
-   SCIP_Real             mindistbrpointtobound; /**< minimal (relative) distance of branching point to its bounds (for continuous variables) */
-};
-
 /*
  * Local methods
  */
 
-/** determines branching point for a variable */
+/** compares the so far best branching candidate with a new candidate and updates best candidate, if new candidate is better */
 static
-SCIP_RETCODE selectBranchingPoint(
-   SCIP*             scip,           /**< SCIP data structure */
-   SCIP_VAR*         var,            /**< branching variable */
-   SCIP_Real         suggestion,     /**< suggestion for branching point, or SCIP_INVALID if no suggestion */
-   SCIP_Real         mindistbrpointtobound, /**< minimal relative distance of branching point from variable bounds */
-   SCIP_Real*        leftub,         /**< buffer to store new upper bound of variable in left  branch */
-   SCIP_Real*        rightlb         /**< buffer to store new lower bound of variable in right branch */
+void updateBestCandidate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            bestvar,            /**< best branching candidate */
+   SCIP_Real*            bestscore,          /**< score of best branching candidate */
+   SCIP_Real*            bestobj,            /**< absolute objective value of best branching candidate */
+   SCIP_Real*            bestsol,            /**< proposed branching point of best branching candidate */
+   SCIP_VAR*             cand,               /**< branching candidate to consider */
+   SCIP_Real             candscore,          /**< scoring of branching candidate */
+   SCIP_Real             candsol             /**< proposed branching point of branching candidate */
    )
 {
-   SCIP_Real branchpoint;
-   SCIP_Real lb, ub;
-
+   SCIP_Real obj;
+   
    assert(scip != NULL);
-   assert(var  != NULL);
-   assert(leftub  != NULL);
-   assert(rightlb != NULL);
-
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-
-   if( suggestion != SCIP_INVALID && !SCIPisInfinity(scip, ABS(suggestion)) )
-   { /* user suggested branching point */
-      /* first, project it onto the current domain */
-      branchpoint = MAX(lb, MIN(suggestion, ub));
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-      { /* if it is a discrete variable, then round it down and up and accept this choice */
-         *leftub  = SCIPfloor(scip, branchpoint);
-         *rightlb = MAX(SCIPceil(scip, branchpoint), *leftub + 1);
-         return SCIP_OKAY;
-      }
-      else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
-      { /* if it is continuous and inside the box, then accept it */ 
-         *leftub = *rightlb = branchpoint;
-         return SCIP_OKAY;
-      }
-   }
-   else
-   { /* try the LP or pseudo LP solution */
-      branchpoint = SCIPgetVarSol(scip, var);
-   }
-
-   /* if value is at +/- infty, then choose some value a bit off from bounds or 0.0 */
-   if( SCIPisInfinity(scip, branchpoint) )
-   { /* if value is at +infty, then the upper bound should be at infinity; choose 0.0 or something above lower bound if lower bound > 0 */
-      assert(SCIPisInfinity(scip, ub));
-      if( SCIPisPositive(scip, lb) )
-         branchpoint = lb + 1000.0;
-      else
-         branchpoint = 0.0;
-   }
-   else if( SCIPisInfinity(scip, -branchpoint) )
-   { /* if value is at -infty, then the lower bound should be at -infinity; choose 0.0 or something below upper bound if upper bound < 0 */
-      assert(SCIPisInfinity(scip, -lb));
-      if( SCIPisNegative(scip, ub) )
-         branchpoint = ub - 1000.0;
-      else
-         branchpoint = 0.0;
-   }
-
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   assert(bestvar != NULL);
+   assert(bestscore != NULL);
+   assert(bestobj != NULL);
+   assert(*bestobj >= 0.0);
+   assert(cand != NULL);
+   
+   /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
+   assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
+      SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
+   
+   if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
-      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-      { /* if branching point is too close to the bounds, move more into the middle of the interval */
-         if ( branchpoint < (1.0 - mindistbrpointtobound) * lb + mindistbrpointtobound * ub )
-            branchpoint = (1.0 - mindistbrpointtobound) * lb + mindistbrpointtobound * ub;
-         else if( branchpoint > mindistbrpointtobound * lb + (1.0 - mindistbrpointtobound) * ub )
-            branchpoint = mindistbrpointtobound * lb + (1.0 - mindistbrpointtobound) * ub;
+      /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
+      SCIP_VAR** multvars;
+      int nmultvars;
+      int i;
+      SCIP_Bool success;
+      SCIP_Real multvarlb;
+      SCIP_Real multvarub;
 
-         /* for very tiny intervals we set it exactly into the middle */
-         if( SCIPisEQ(scip, lb/2.0, ub/2.0) )
-            branchpoint = (lb+ub)/2.0;
-      }
-      else if( !SCIPisLT(scip, lb, branchpoint) )
-      { /* if branching point is too close to the lower bound and there is no upper bound, then move it to somewhere away from the lower bound */
-         assert(SCIPisInfinity(scip,  ub));
-         branchpoint = lb + MAX(0.5*ABS(lb), 1000);
-      }
-      else if( !SCIPisGT(scip, ub, branchpoint) )
-      { /* if branching point is too close to the upper bound and there is no lower bound, then move it to somewhere away from the upper bound */
-         assert(SCIPisInfinity(scip, -lb));
-         branchpoint = ub - MAX(0.5*ABS(ub), 1000);
+      cand = SCIPvarGetProbvar(cand);
+      multvars = SCIPvarGetMultaggrVars(cand);
+      nmultvars = SCIPvarGetMultaggrNVars(cand);
+
+      /* if we have a candidate branching point, then first register only aggregation variables
+       * for which we can compute a corresponding branching point too (see also comments below)
+       * if this fails, then register all (unfixed) aggregation variables, thereby forgetting about candsol
+       */
+      success = FALSE;
+      if( candsol != SCIP_INVALID ) /*lint !e777*/
+      {
+         SCIP_Real* multscalars;
+         SCIP_Real minact;
+         SCIP_Real maxact;
+         SCIP_Real aggrvarsol;
+         SCIP_Real aggrvarsol1;
+         SCIP_Real aggrvarsol2;
+
+         multscalars = SCIPvarGetMultaggrScalars(cand);
+
+         /* for computing the branching point, we need the current bounds of the multi-aggregated variable */
+         minact = SCIPcomputeVarLbLocal(scip, cand);
+         maxact = SCIPcomputeVarUbLocal(scip, cand);
+
+         for( i = 0; i < nmultvars; ++i )
+         {
+            /* skip fixed variables */
+            multvarlb = SCIPcomputeVarLbLocal(scip, multvars[i]);
+            multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
+            if( SCIPisEQ(scip, multvarlb, multvarub) )
+               continue;
+
+            assert(multscalars != NULL);
+            assert(multscalars[i] != 0.0);
+
+            /* we cannot ensure that both the upper bound in the left node and the lower bound in the right node
+             * will be candsol by a clever choice for the branching point of multvars[i],
+             * but we can try to ensure that at least one of them will be at candsol
+             */
+            if( multscalars[i] > 0.0 )
+            {
+               /*    cand >= candsol
+                * if multvars[i] >= (candsol - (maxact - multscalars[i] * ub(multvars[i]))) / multscalars[i]
+                *                 = (candsol - maxact) / multscalars[i] + ub(multvars[i])
+                */
+               aggrvarsol1 = (candsol - maxact) / multscalars[i] + multvarub;
+
+               /*     cand <= candsol
+                * if multvars[i] <= (candsol - (minact - multscalar[i] * lb(multvars[i]))) / multscalars[i]
+                *                 = (candsol - minact) / multscalars[i] + lb(multvars[i])
+                */
+               aggrvarsol2 = (candsol - minact) / multscalars[i] + multvarlb;
+            }
+            else
+            {
+               /*    cand >= candsol
+                * if multvars[i] <= (candsol - (maxact - multscalars[i] * lb(multvars[i]))) / multscalars[i]
+                *                 = (candsol - maxact) / multscalars[i] + lb(multvars[i])
+                */
+               aggrvarsol2 = (candsol - maxact) / multscalars[i] + multvarlb;
+
+               /*    cand <= candsol
+                * if multvars[i] >= (candsol - (minact - multscalar[i] * ub(multvars[i]))) / multscalars[i]
+                *                 = (candsol - minact) / multscalars[i] + ub(multvars[i])
+                */
+               aggrvarsol1 = (candsol - minact) / multscalars[i] + multvarub;
+            }
+
+            /* by the above choice, aggrvarsol1 <= ub(multvars[i]) and aggrvarsol2 >= lb(multvars[i])
+             * if aggrvarsol1 <= lb(multvars[i]) or aggrvarsol2 >= ub(multvars[i]), then choose the other one
+             * if both are out of bounds, then give up
+             * if both are inside bounds, then choose the one closer to 0.0 (someone has better idea???)
+             */
+            if( SCIPisFeasLE(scip, aggrvarsol1, multvarlb) )
+            {
+               if( SCIPisFeasGE(scip, aggrvarsol2, multvarub) )
+                  continue;
+               else
+                  aggrvarsol = aggrvarsol2;
+            }
+            else
+            {
+               if( SCIPisFeasGE(scip, aggrvarsol2, multvarub) )
+                  aggrvarsol = aggrvarsol1;
+               else
+                  aggrvarsol = REALABS(aggrvarsol1) < REALABS(aggrvarsol2) ? aggrvarsol1 : aggrvarsol2;
+            }
+            success = TRUE;
+
+            updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
+                  multvars[i], candscore, aggrvarsol);
+         }
       }
 
-      *leftub = *rightlb = branchpoint;
+      if( !success )
+         for( i = 0; i < nmultvars; ++i )
+         {
+            /* skip fixed variables */
+            multvarlb = SCIPcomputeVarLbLocal(scip, multvars[i]);
+            multvarub = SCIPcomputeVarUbLocal(scip, multvars[i]);
+            if( SCIPisEQ(scip, multvarlb, multvarub) )
+               continue;
+
+            updateBestCandidate(scip, bestvar, bestscore, bestobj, bestsol,
+               multvars[i], candscore, SCIP_INVALID);
+         }
+
+      assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
+      
+      return;
    }
-   else
-   { /* integer variables */
-      assert(SCIPisInfinity(scip,  ub) || SCIPisLE(scip, branchpoint, ub));
-      assert(SCIPisInfinity(scip, -lb) || SCIPisGE(scip, branchpoint, lb));
-      if( SCIPisEQ(scip, branchpoint, lb) )
-      { /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
-         *leftub  = lb;
-         *rightlb = lb + 1.0;
-      }
-      else if( SCIPisEQ(scip, branchpoint, ub) )
-      { /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
-         *leftub  = ub - 1.0;
-         *rightlb = ub;
-      }
-      else if( SCIPisIntegral(scip, branchpoint) )
-      { /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
-           TODO: could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better? */
-         *leftub  = branchpoint - 1.0;
-         *rightlb = branchpoint;
-      }
-      else
-      { /* branchpoint is somewhere between bounds and not fractional, so just round down and up */
-         *leftub  = SCIPfloor(scip, branchpoint);
-         *rightlb = SCIPceil(scip, branchpoint);
-      }
+   
+   candscore *= SCIPvarGetBranchFactor(cand);
+   obj = SCIPvarGetObj(cand);
+   obj = REALABS(obj);
+   if( SCIPisInfinity(scip, candscore)
+      || (!SCIPisInfinity(scip, *bestscore) && 
+          (SCIPisGT(scip, candscore, *bestscore) || (SCIPisGE(scip, candscore, *bestscore) && obj > *bestobj))) )
+   {
+      *bestvar = cand;
+      *bestscore = candscore;
+      *bestobj = obj;
+      *bestsol = candsol;
    }
-
-   return SCIP_OKAY;
 }
 
 /*
  * Callback methods
  */
 
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_BRANCHFREE(branchFreeMostinf)
+SCIP_DECL_BRANCHCOPY(branchCopyMostinf)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
-   /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
-   SCIPbranchruleSetData(branchrule, NULL);
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
 
    return SCIP_OKAY;
 }
+
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+#define branchFreeMostinf NULL
+
 
 /** initialization method of branching rule (called after problem was transformed) */
 #define branchInitMostinf NULL
@@ -256,120 +297,71 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
    return SCIP_OKAY;
 }
 
-/** branching execution method for relaxation solutions */
+/** branching execution method for external candidates */
 static
-SCIP_DECL_BRANCHEXECREL(branchExecrelMostinf)
+SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_VAR** relaxcands;
-   SCIP_Real* relaxcandssol;
-   SCIP_Real* relaxcandsscore;
-   int nrelaxcands;
-   SCIP_Real score;
-   SCIP_Real obj;
+   SCIP_VAR** externcands;
+   SCIP_Real* externcandssol;
+   SCIP_Real* externcandsscore;
+   int nexterncands;
+   SCIP_VAR* bestcand;
    SCIP_Real bestscore;
    SCIP_Real bestobj;
-   int bestcand;
+   SCIP_Real bestsol;
+   SCIP_Real brpoint;
    int i;
-   SCIP_VAR* brvar;
-   SCIP_Real leftub, rightlb;
+   SCIP_NODE* downchild;
+   SCIP_NODE* eqchild;
+   SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execrel method of mostinf branching\n");
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
+   SCIPdebugMessage("Execext method of mostinf branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetRelaxBranchCands(scip, &relaxcands, &relaxcandssol, &relaxcandsscore, NULL, &nrelaxcands, NULL, NULL, NULL) );
-   assert(nrelaxcands > 0);
+   SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nexterncands, NULL, NULL, NULL) );
+   assert(nexterncands > 0);
 
-   /* search the least infeasible candidate */
+   /* search the most infeasible candidate */
    bestscore = SCIP_REAL_MIN;
    bestobj = 0.0;
-   bestcand = -1;
-   for( i = 0; i < nrelaxcands; ++i )
+   bestcand = NULL;
+   bestsol = SCIP_INVALID;
+   for( i = 0; i < nexterncands; ++i )
    {
-      assert(relaxcands[i] != NULL);
-
-      score = relaxcandsscore[i];
-      score *= SCIPvarGetBranchFactor(relaxcands[i]);
-      obj = SCIPvarGetObj(relaxcands[i]);
-      obj = REALABS(obj);
-      if( SCIPisInfinity(scip, score)
-         || (!SCIPisInfinity(scip, bestscore) && 
-             (SCIPisGT(scip, score, bestscore) || (SCIPisGE(scip, score, bestscore) && obj > bestobj))) )
-      {
-         bestscore = score;
-         bestobj = obj;
-         bestcand = i;
-      }
+      updateBestCandidate(scip, &bestcand, &bestscore, &bestobj, &bestsol, externcands[i], externcandsscore[i], externcandssol[i]);
    }
-   assert(bestcand >= 0);
-
-   brvar = relaxcands[bestcand];
-
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g)\n",
-      nrelaxcands, bestcand, SCIPvarGetName(brvar), relaxcandsscore[bestcand], bestobj,
-      SCIPvarGetBranchFactor(brvar), bestscore);
-
-   SCIP_CALL( selectBranchingPoint(scip, brvar, relaxcandssol[bestcand], branchruledata->mindistbrpointtobound, &leftub, &rightlb) );
    
-   /* perform the branching */
-   if( SCIPvarGetStatus(brvar) == SCIP_VARSTATUS_MULTAGGR )
+   if( bestcand == NULL )
    {
-      SCIP_NODE* node;
-      SCIP_CONS* cons;
-      SCIP_Real  one;
-      SCIP_Real  priority;
-      SCIP_Real  estimate;
+      SCIPerrorMessage("branchExecextMostinf failed to select a branching variable from %d candidates\n", nexterncands);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
-      one = 1.0;
+   brpoint = SCIPgetBranchingPoint(scip, bestcand, bestsol);
 
-      SCIPdebugMessage("branching on multiaggregated variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
-         SCIPvarGetName(brvar), SCIPvarGetLbLocal(brvar), leftub, rightlb, SCIPvarGetUbLocal(brvar));
+   SCIPdebugMessage(" -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
+      nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
+      SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 
-      priority = SCIPcalcNodeselPriority(scip, brvar, leftub);
-      estimate = SCIPcalcChildEstimate  (scip, brvar, leftub);
-      if( SCIPisInfinity(scip, estimate) )
-         estimate = SCIPinfinity(scip) / 5.0;
+   /* perform the branching */
+   SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, &downchild, &eqchild, &upchild) );
 
-      SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(brvar), leftub, priority, estimate);
-
-      SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &brvar, &one, SCIPvarGetLbLocal(brvar),
-            leftub, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-      if( leftub != rightlb )
-      {
-         priority = SCIPcalcNodeselPriority(scip, brvar, rightlb);
-         estimate = SCIPcalcChildEstimate  (scip, brvar, rightlb);
-         if( SCIPisInfinity(scip, estimate) )
-            estimate = SCIPinfinity(scip) / 5.0;
-      }
-
-      SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(brvar), rightlb, priority, estimate);
-
-      SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &brvar, &one, rightlb, SCIPvarGetUbLocal(brvar),
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   if( downchild != NULL || eqchild != NULL || upchild != NULL )
+   {
+      *result = SCIP_BRANCHED;
    }
    else
    {
-      SCIP_CALL( SCIPbranchVarVal(scip, brvar, (leftub + rightlb) / 2.0, NULL, NULL, NULL) );
+      /* if there are no children, then variable should have been fixed by SCIPbranchVarVal */
+      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand)));
+      *result = SCIP_REDUCEDDOM;
    }
-   
-   *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
@@ -385,26 +377,18 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelMostinf)
  * branching specific interface methods
  */
 
-/** creates the most infeasible LP braching rule and includes it in SCIP */
+/** creates the most infeasible LP branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* create inference branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyMostinf,
          branchFreeMostinf, branchInitMostinf, branchExitMostinf, branchInitsolMostinf, branchExitsolMostinf, 
-         branchExeclpMostinf, branchExecrelMostinf, branchExecpsMostinf,
-         branchruledata) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/mindistbrpointtobound",
-         "minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",
-         &branchruledata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );
+         branchExeclpMostinf, branchExecextMostinf, branchExecpsMostinf,
+         NULL) );
 
    return SCIP_OKAY;
 }

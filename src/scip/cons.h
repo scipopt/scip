@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_mem.h"
 #include "scip/type_misc.h"
+#include "scip/type_timing.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
@@ -53,17 +54,26 @@ extern "C" {
  * Constraint handler methods
  */
 
+/** copies the given constraint handler to a new scip */
+extern
+SCIP_RETCODE SCIPconshdlrCopyInclude(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
+   );
+
 /** creates a constraint handler */
 extern
 SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of constraint handler */
    const char*           desc,               /**< description of constraint handler */
    int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility (and propagation) */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
@@ -73,6 +83,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -96,9 +108,12 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSDELVARS ((*consdelvars)),   /**< variable deletion method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -134,6 +149,8 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -144,6 +161,8 @@ SCIP_RETCODE SCIPconshdlrExitpre(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
+   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -258,6 +277,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    int                   depth,              /**< depth of current node; -1 if preprocessing domain propagation */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -273,14 +293,26 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
    int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
    int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
    int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
+
+
+/** calls variable deletion method of constraint handler */
+extern
+SCIP_RETCODE SCIPconshdlrDelVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   );
+
 
 /** locks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
 SCIP_RETCODE SCIPconshdlrLockVars(
@@ -402,7 +434,7 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -424,11 +456,13 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */
    const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint handler for this constraint */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, must not be NULL! */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -440,12 +474,13 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
-/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
- *  creates and captures, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+/** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
+ *  created, captured, and inserted into the conss array of its constraint handler.
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -454,6 +489,7 @@ extern
 SCIP_RETCODE SCIPconsParse(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler of target SCIP */
    const char*           str,                /**< name of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -472,7 +508,7 @@ SCIP_RETCODE SCIPconsParse(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -503,12 +539,169 @@ SCIP_RETCODE SCIPconsRelease(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+
 /** outputs constraint information to file stream */
 extern
 SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** checks single constraint for feasibility of the given solution */
+extern
+SCIP_RETCODE SCIPconsCheck(
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** enforces single constraint for a given pseudo solution */
+extern
+SCIP_RETCODE SCIPconsEnfops(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** enforces single constraint for a given LP solution */
+extern
+SCIP_RETCODE SCIPconsEnfolp(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls LP initialization method for single constraint */
+extern
+SCIP_RETCODE SCIPconsInitlp(
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls separation method of single constraint for LP solution */
+extern
+SCIP_RETCODE SCIPconsSepalp(
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/** calls separation method of single constraint for given primal solution */
+extern
+SCIP_RETCODE SCIPconsSepasol(
+   SCIP_CONS*            cons,               /**< constraint to separate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/** calls domain propagation method of single constraint */
+extern
+SCIP_RETCODE SCIPconsProp(
+   SCIP_CONS*            cons,               /**< constraint to propagate */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving loop */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** resolves propagation conflict of single constraint */
+extern
+SCIP_RETCODE SCIPconsResprop(
+   SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< the conflict variable whose bound change has to be resolved */
+   int                   inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons() or SCIPinferVarUbCons() call */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound which is sufficient to be explained */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** presolves single constraint */
+extern
+SCIP_RETCODE SCIPconsPresol(
+   SCIP_CONS*            cons,               /**< constraint to presolve */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
+   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
+   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */
+   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolving method */
+   int                   nnewholes,          /**< number of domain holes added since the last call to the presolving method */
+   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolving method */
+   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolving method */
+   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolving method */
+   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolving method */
+   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolving method */
+   int*                  nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to count total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to count total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to count total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls constraint activation notification method of single constraint */
+extern
+SCIP_RETCODE SCIPconsActive(
+   SCIP_CONS*            cons,               /**< constraint to notify */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls constraint deactivation notification method of single constraint */
+extern
+SCIP_RETCODE SCIPconsDeactive(
+   SCIP_CONS*            cons,               /**< constraint to notify */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** method to collect the variables of a constraint
+ *
+ *  If the number of variables is greater than the available slots in the variable array, nothing happens except that
+ *  the success point is set to FALSE. With the method SCIPgetConsNVars() it is possible to get the number of variables
+ *  a constraint has in its scope.
+ *
+ *  @note The success pointer indicates if all variables were copied into the vars arrray.
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE.
+ */
+extern
+SCIP_RETCODE SCIPconsGetVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
+   int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
+   );
+
+/** methed to collect the number of variables of a constraint
+ *
+ *  @note The success pointer indicates if the contraint handler was able to return the number of variables
+ *
+ *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
+ *        set to FALSE
+ */
+extern
+SCIP_RETCODE SCIPconsGetNVars(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int*                  nvars,              /**< pointer to store the number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
@@ -579,6 +772,13 @@ extern
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
+   );
+
+/** sets the modifiable flag of the given constraint */
+extern
+void SCIPconsSetModifiable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             modifiable          /**< new value */
    );
 
 /** sets the dynamic flag of the given constraint */
@@ -729,7 +929,10 @@ SCIP_RETCODE SCIPconsResetAge(
    );
 
 /** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
  */
 extern
 SCIP_RETCODE SCIPconsResolvePropagation(
@@ -739,6 +942,7 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    int                   inferinfo,          /**< user inference information attached to the bound change */
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -750,20 +954,6 @@ SCIP_RETCODE SCIPconsAddLocks(
    int                   nlockspos,          /**< increase in number of rounding locks for constraint */
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    );
-
-/** checks single constraint for feasibility of the given solution */
-extern
-SCIP_RETCODE SCIPconsCheck(
-   SCIP_CONS*            cons,               /**< constraint to check */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
-   );
-
-
 
 
 /*

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_objpscostdiving.c
- * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */
@@ -35,6 +34,7 @@
 #define HEUR_FREQOFS          4
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
+#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 
@@ -98,12 +98,12 @@ void calcPscostQuot(
    /* bound fractions to not prefer variables that are nearly integral */
    frac = MAX(frac, 0.1);
    frac = MIN(frac, 0.9);
-   
+
    /* get pseudo cost quotient */
-   pscostdown = SCIPgetVarPseudocost(scip, var, 0.0-frac);
-   pscostup = SCIPgetVarPseudocost(scip, var, 1.0-frac);
+   pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0-frac);
+   pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
-   
+
    /* choose rounding direction */
    if( rounddir == -1 )
       *roundup = FALSE;
@@ -121,15 +121,15 @@ void calcPscostQuot(
       *roundup = FALSE;
    else
       *roundup = TRUE;
-   
+
    /* calculate pseudo cost quotient */
    if( *roundup )
       *pscostquot = sqrt(frac) * (1.0+pscostdown) / (1.0+pscostup);
    else
       *pscostquot = sqrt(1.0-frac) * (1.0+pscostup) / (1.0+pscostdown);
-   
+
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarIsBinary(var) )
       (*pscostquot) *= 1000.0;
 }
 
@@ -139,6 +139,20 @@ void calcPscostQuot(
 /*
  * Callback methods
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyObjpscostdiving)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -303,6 +317,13 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
+   /* get fractional variables that should be integral */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+
+   /* don't try to dive, if there are no fractional variables */
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal diving depth */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -321,19 +342,16 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   /* get LP objective value, and fractional variables, that should be integral */
-   lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
-
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
-    * - if the last objective change was in a direction, that corresponds to a feasibile rounding, we continue in any case
+    * - if the last objective change was in a direction, that corresponds to a feasible rounding, we continue in any case
     * - if possible, we dive at least with the depth 10
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    lperror = FALSE;
+   lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    divedepth = 0;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
@@ -342,11 +360,9 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
-	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
+            && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
-#ifdef NDEBUG
-      SCIP_RETCODE retstat;
-#endif
+      SCIP_RETCODE retcode;
 
       divedepth++;
 
@@ -386,7 +402,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
                else
                   calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup);
 
-               /* prefer variables, that have already been softrounded but failed to get integral */
+               /* prefer variables, that have already been soft rounded but failed to get integral */
                varidx = SCIPvarGetProbindex(var);
                assert(0 <= varidx && varidx < nvars);
                if( roundings[varidx] != 0 )
@@ -408,7 +424,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
             calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
 
-            /* prefer variables, that have already been softrounded but failed to get integral */
+            /* prefer variables, that have already been soft rounded but failed to get integral */
             varidx = SCIPvarGetProbindex(var);
             assert(0 <= varidx && varidx < nvars);
             if( roundings[varidx] != 0 )
@@ -431,19 +447,19 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       if( bestcandmayrounddown || bestcandmayroundup )
       {
          SCIP_Bool success;
-         
+
          /* create solution from diving LP and try to round it */
          SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
          SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
          if( success )
          {
-            SCIPdebugMessage("objpscostdiving found roundable primal solution: obj=%g\n", 
+            SCIPdebugMessage("objpscostdiving found roundable primal solution: obj=%g\n",
                SCIPgetSolOrigObj(scip, heurdata->sol));
-         
+
             /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
-            
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+
             /* check, if solution was feasible and good enough */
             if( success )
             {
@@ -489,7 +505,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             else
                newobj = -objscale * oldobj;
             newobj = MIN(newobj, -objscale);
-            
+
             /* remember, that this variable was soft rounded upwards */
             roundings[varidx] = +1;
          }
@@ -501,7 +517,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             else
                newobj = -objscale * oldobj;
             newobj = MAX(newobj, objscale);
-            
+
             /* remember, that this variable was soft rounded downwards */
             roundings[varidx] = -1;
          }
@@ -514,19 +530,23 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
+      retcode =  SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      lpsolstat = SCIPgetLPSolstat(scip);
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
-      if( retstat != SCIP_OKAY )
-      { 
-         SCIPwarningMessage("Error while solving LP in Objpscostdiving heuristic; LP solve terminated with code <%d>\n",retstat);
-      }
-#else
-      SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+      if( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         if( lpsolstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {
+            SCIP_CALL( retcode );
+         }
 #endif
+         SCIPwarningMessage(scip, "Error while solving LP in Objpscostdiving heuristic; LP solve terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(scip, "This does not affect the remaining solution procedure --> continue\n");
+      }
 
       if( lperror )
          break;
@@ -535,7 +555,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
       /* get LP solution status  and fractional variables, that should be integral */
-      lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new fractional variables */
@@ -554,7 +573,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       SCIPdebugMessage("objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )
@@ -597,30 +616,31 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
-         heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, 
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
+         heurCopyObjpscostdiving,
+         heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving,
          heurInitsolObjpscostdiving, heurExitsolObjpscostdiving, heurExecObjpscostdiving,
          heurdata) );
 
    /* objpscostdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/objpscostdiving/minreldepth", 
+         "heuristics/objpscostdiving/minreldepth",
          "minimal relative depth to start diving",
          &heurdata->minreldepth, TRUE, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/objpscostdiving/maxreldepth", 
+         "heuristics/objpscostdiving/maxreldepth",
          "maximal relative depth to start diving",
          &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/objpscostdiving/maxlpiterquot", 
+         "heuristics/objpscostdiving/maxlpiterquot",
          "maximal fraction of diving LP iterations compared to total iteration number",
          &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/objpscostdiving/maxlpiterofs", 
+         "heuristics/objpscostdiving/maxlpiterofs",
          "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/objpscostdiving/maxsols", 
+         "heuristics/objpscostdiving/maxsols",
          "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
          &heurdata->maxsols, TRUE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -631,7 +651,7 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
          "heuristics/objpscostdiving/depthfacnosol",
          "maximal diving depth factor if no feasible solution was found yet",
          &heurdata->depthfacnosol, TRUE, DEFAULT_DEPTHFACNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
 

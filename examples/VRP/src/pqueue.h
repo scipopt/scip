@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,6 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file pqueue.h
+ * @brief  class for priority queues
+ * @author Andreas Bley
+ * @author Marc Pfetsch
+ */
 
 #ifndef _PQUEUE_H
 #define _PQUEUE_H
@@ -22,53 +28,55 @@
 namespace std
 {
    ///
-   template<typename Key, 
+   template<typename Key,
             typename Data,
             typename Compare = less<Key> >
+
    class pqueue
    {
-   private:
+      private:
 
       //--------------------
       // item node class
       //--------------------
-      class node;
-      class node {
-         
-         friend class pqueue; 
+      class node
+      {
+         friend class pqueue;
 
-         // 
-         node
-         ( const Key&  k,
-           const Data& d ):
-            key   ( k ),
-            data  ( d ),
-            sleft ( 0 ),   
-            sright( 0 ),   
-            left  ( NULL ),
-            right ( NULL ),
-            father( NULL )
-         {}         
-         
-         // 
+         //
+         node(
+            const Key& k,
+            const Data& d ):
+            key   (k),
+            data  (d),
+            sleft (0),
+            sright(0),
+            left  (NULL),
+            right (NULL),
+            father(NULL)
+         {}
+
+         //
          ~node()
          {}
 
          //
-         void delete_children_recursive() 
+         void delete_children_recursive()
          {
-            if ( left != NULL ) {
+            if ( left != NULL )
+            {
                left->delete_children_recursive();
                delete left;
                left = NULL;
             }
-            if ( right != NULL ) {
+            if ( right != NULL )
+            {
                right->delete_children_recursive();
                delete right;
                right = NULL;
-            }            
+            }
          }
-         
+
          Key   key;
          Data  data;
          int   sleft;
@@ -77,193 +85,173 @@ namespace std
          node* right;
          node* father;
       };
-      
+
    public:
 
       typedef node* pqueue_item;
 
    private:
-      
+
       node*   root;
       Compare compare;
 
    public:
 
-      /**
-       *  @brief  Default constructor, creates empty priority queue.
-       */
+      /** Default constructor, creates empty priority queue. */
       pqueue():
          root( NULL )
       {}
 
-      /**
-       *  @brief  Destructs queue
-       */
+      /** Destructs queue */
       ~pqueue()
       {
          clear();
       }
-      
-      /**
-       *  @brief  Empties queue
-       */
+
+      /** Empties queue */
       void clear()
       {
-         if ( root != NULL ) {
+         if ( root != NULL )
+         {
             root->delete_children_recursive();
             delete root;
             root = NULL;
          }
       }
-      
-      /**
-       *  Returns true if the pqueue is empty.
-       */
-      bool
-      empty() 
-         const 
-      { 
-         return ( root == NULL ); 
+
+      /** Returns true if the pqueue is empty. */
+      bool empty() const
+      {
+         return ( root == NULL );
       }
 
-      /**
-       *  Returns size of queue.
-       */
-      int
-      size() 
-         const 
-      { 
-         return ( root == NULL ? 0 : root->sleft + root->sright + 1 ); 
+      /** Returns size of queue. */
+      int size() const
+      {
+         return ( root == NULL ? 0 : root->sleft + root->sright + 1 );
       }
 
-      /**
-       *  Returns key of queue item.
-       */
-      const Key&
-      get_key( pqueue_item it ) 
-         const
+      /** Returns key of queue item. */
+      const Key& get_key(
+         pqueue_item it
+         ) const
       {
          assert( it != NULL );
          return it->key;
       }
-      
-      /**
-       *  Returns data of queue item.
-       */
-      const Data&
-      get_data( pqueue_item it ) 
-         const
+
+      /** Returns data of queue item. */
+      const Data& get_data(
+         pqueue_item it
+         ) const
       {
          assert( it != NULL );
          return it->data;
       }
 
-      /**
-       *  Returns queue item at top (with lowers key).
-       */
-      pqueue_item
-      top() 
-         const
+      /** Returns queue item at top (with lowers key). */
+      pqueue_item top() const
       {
          return root;
       }
-      
-      /**
-       *  Inserts a new entry into the queue, returns new item
-       */
-      pqueue_item
-      insert
-      ( const Key&  key,
-        const Data& data )
+
+      /** Inserts a new entry into the queue, returns new item */
+      pqueue_item  insert(
+         const Key&  key,
+         const Data& data
+         )
       {
          node* nn = NULL;
-         if ( root == NULL ) {
+         if ( root == NULL )
+         {
             nn = new node(key,data);
-            if ( nn == NULL ) {
+            if ( nn == NULL )
                throw std::bad_alloc();
-            }
             root = nn;
          }
-         else {
-            nn = create_new_node( key, data, root );
-         }
-         rotate_backward( nn );
+         else
+            nn = create_new_node(key, data, root);
+
+         rotate_backward(nn);
          return nn;
       }
 
-      /**
-       *  Reduces the key a queue item.
-       */
-      void
-      decrease_key
-      ( pqueue_item item,
-        const Key&  new_key )
+      /** Reduces the key a queue item. */
+      void decrease_key(
+         pqueue_item item,
+         const Key&  new_key
+         )
       {
          assert( item );
-         assert( compare( new_key, item->key ) );
+         assert( compare(new_key, item->key) );
+
          item->key = new_key;
-         rotate_backward( item );
+         rotate_backward(item);
       }
 
-      /**
-       *  Removes the topmost item from the queue.
-       */
-      void
-      pop()
+      /** Removes the topmost item from the queue. */
+      void pop()
       {
          assert ( root != NULL );
          remove( root );
       }
 
-      /**
-       *  Removes the item from the queue
-       */
-      void
-      remove( node* item )
+      /** Removes the item from the queue */
+      void remove(
+         node* item
+         )
       {
          assert ( item != NULL );
          assert ( root != NULL );
 
          bool goto_left  = ( item->left  != NULL );
          bool goto_right = ( item->right != NULL );
-         if ( goto_left && goto_right ) {
+         if ( goto_left && goto_right )
+         {
             goto_right = ( compare( item->right->key, item->left->key ) );
             goto_left  = ! goto_right;
          }
-         if ( goto_right ) {
+         if ( goto_right )
+         {
             swap_with_father( item->right );
-            remove( item ); 
+            remove( item );
             return;
          }
-         if ( goto_left ) {
+         if ( goto_left )
+         {
             swap_with_father( item->left );
-            remove( item ); 
+            remove( item );
             return;
          }
          // at leave: remove and update all sizes
-         for( node* n = item, *f = n->father; 
-              f != NULL; 
-              n = f, f = n->father ) {
-            if ( f->left == n ) {
+         for (node* n = item, *f = n->father; f != NULL; n = f, f = n->father)
+         {
+            if ( f->left == n )
+            {
                f->sleft -= 1;
             }
-            else {
+            else
+            {
                assert( f->right == n );
                f->sright -= 1;
             }
          }
-         if ( item->father ) {
-            if ( item->father->left == item ) {
+         if ( item->father )
+         {
+            if ( item->father->left == item )
+            {
                assert( item->father->sleft == 0 );
                item->father->left = NULL;
             }
-            else {
+            else
+            {
                assert( item->father->right == item );
                assert( item->father->sright == 0 );
                item->father->right = NULL;
             }
          }
-         else {
+         else
+         {
             assert( item == root );
             root = NULL;
          }
@@ -273,24 +261,29 @@ namespace std
 
    private:
 
-      // creates new element in the tree such that tree remains balanced
-      node*
-      create_new_node
-      ( const Key&  key,
-        const Data& data,
-        node*      subproblem )
+      /** creates new element in the tree such that tree remains balanced */
+      node* create_new_node(
+         const Key&  key,
+         const Data& data,
+         node*       subproblem
+         )
       {
          assert( subproblem != NULL );
-         if ( subproblem->sleft == 0 ) {
+
+         if ( subproblem->sleft == 0 )
+         {
             assert( subproblem->left == NULL );
+
             node* nn = new node(key,data);
             subproblem->left  = nn;
             subproblem->sleft = 1;
             nn->father        = subproblem;
             return nn;
          }
-         if ( subproblem->sright == 0 ) {
+         if ( subproblem->sright == 0 )
+         {
             assert( subproblem->right == NULL );
+
             node* nn = new node(key,data);
             subproblem->right  = nn;
             subproblem->sright = 1;
@@ -300,17 +293,20 @@ namespace std
          assert( subproblem->left  != NULL );
          assert( subproblem->right != NULL );
 
-         if ( subproblem->sleft <= subproblem->sright ) {
+         if ( subproblem->sleft <= subproblem->sright )
+         {
             subproblem->sleft += 1;
-            return create_new_node( key, data, subproblem->left );
+            return create_new_node(key, data, subproblem->left);
          }
 
          subproblem->sright += 1;
-         return create_new_node( key, data, subproblem->right );
+         return create_new_node(key, data, subproblem->right);
       }
 
 
-      void swap_with_father( node* n1 )
+      void swap_with_father(
+         node* n1
+         )
       {
          int   n1_sleft  = n1->sleft;
          int   n1_sright = n1->sright;
@@ -319,17 +315,19 @@ namespace std
          node* n1_father = n1->father;
          assert( n1_father != NULL );
          assert( n1_father->left == n1 || n1_father->right == n1 );
-                  
-         if ( root == n1_father ) {
+
+         if ( root == n1_father )
             root = n1;
-         }         
-         
-         if ( n1_father->left == n1 ) {
+
+         if ( n1_father->left == n1 )
+         {
             n1->left   = n1_father;
             n1->right  = n1_father->right;
          }
-         else {
+         else
+         {
             assert( n1_father->right == n1 );
+
             n1->left          = n1_father->left;
             n1->right         = n1_father;
          }
@@ -344,26 +342,35 @@ namespace std
          n1->father        = n1_father->father;
          n1_father->father = n1;
 
-         if ( n1->left )         n1->left-> father = n1;
-         if ( n1->right )        n1->right->father = n1;
-         if ( n1_father->left  ) n1_father->left->father  = n1_father;
-         if ( n1_father->right ) n1_father->right->father = n1_father;
-         if ( n1->father ) {
+         if ( n1->left )
+            n1->left-> father = n1;
+         if ( n1->right )
+            n1->right->father = n1;
+         if ( n1_father->left  )
+            n1_father->left->father  = n1_father;
+         if ( n1_father->right )
+            n1_father->right->father = n1_father;
+         if ( n1->father )
+         {
             if ( n1->father->left == n1_father )
                n1->father->left = n1;
             if ( n1->father->right == n1_father )
                n1->father->right = n1;
-         }         
+         }
       }
-      
-      void rotate_backward( node* item )
+
+      void rotate_backward(
+         node* item
+         )
       {
          assert( item != NULL );
-         
-         if ( item->father ) {
-            if ( ! compare( item->father->key, item->key ) ) {
+
+         if ( item->father )
+         {
+            if ( ! compare( item->father->key, item->key ) )
+            {
                swap_with_father( item );
-               rotate_backward( item ); 
+               rotate_backward( item );
             }
          }
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.h
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -30,7 +31,7 @@
  * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
  * separate more inequalities.
  *
- * The name indicator apparently comes from ILOG CPLEX.
+ * The name indicator apparently comes from CPLEX.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,16 +52,22 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures an indicator constraint */
+/** creates and captures an indicator constraint
+ *
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 extern
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             binvar,             /**< binary indicator variable */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
    int                   nvars,              /**< number of variables in the inequality */
-   SCIP_VAR**            vars,               /**< array with variables of inequality */
-   SCIP_Real*            vals,               /**< values of variables in inequality */
+   SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
+   SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
    SCIP_Real             rhs,                /**< rhs of the inequality */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -75,7 +82,45 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures an indicator constraint with given linear constraint and slack variable
+ *
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_CONS*            lincons,            /**< linear constraint */
+   SCIP_VAR*             slackvar,           /**< slack variable */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -87,42 +132,58 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 extern
 SCIP_RETCODE SCIPaddVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_VAR*             var,                /**< variable to add to the inequality */
    SCIP_Real             val                 /**< value of variable */
    );
 
-/** gets the linear constraint corresponding to the indicator constraint */
+/** gets the linear constraint corresponding to the indicator constraint (may be NULL) */
 extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** sets the linear constraint corresponding to the indicator constraint (may be NULL) */
+extern
+SCIP_RETCODE SCIPsetLinearConsIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_CONS*            lincons             /**< linear constraint */
    );
 
 /** sets binary indicator variable for indicator constraint */
 extern
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
    );
 
 /** gets binary variable corresponding to indicator constraint */
 extern
 SCIP_VAR* SCIPgetBinaryVarIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** gets slack variable corresponding to indicator constraint */
 extern
 SCIP_VAR* SCIPgetSlackVarIndicator(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** sets slack variable corresponding to indicator constraint */
+extern
+SCIP_RETCODE SCIPsetSlackVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_VAR*             slackvar            /**< slack variable */
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */
 extern
 SCIP_Bool SCIPisViolatedIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< indicator constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
@@ -130,8 +191,34 @@ SCIP_Bool SCIPisViolatedIndicator(
 extern
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   );
+
+/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+extern
+SCIP_RETCODE SCIPmakeIndicatorsFeasible(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed             /**< whether the solution has been changed */
+   );
+
+/** adds additional linear constraint that is not connected by an indicator constraint, but can be used for separation */
+extern
+SCIP_RETCODE SCIPaddLinearConsIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_CONS*            lincons             /**< linear constraint */
+   );
+
+/** adds additional globally valid row that is not connected by an indicator constraint, but can be used for separation */
+extern
+SCIP_RETCODE SCIPaddRowIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
+   SCIP_ROW*             row                 /**< row to add */
    );
 
 #ifdef __cplusplus

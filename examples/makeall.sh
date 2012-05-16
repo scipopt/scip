@@ -1,61 +1,75 @@
-for i in Coloring LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP
+#!/usr/bin/env bash
+#
+# run with bash -e makeall.sh to stop on errors
+#
+
+EXAMPLES=(Coloring Binpacking Eventhdlr LOP MIPSolver Queens SamplePricer SamplePricer_C TSP VRP)
+LPSOLVERS=(clp cpx none spx)
+OPTS=(opt dbg)
+
+# determine architecture
+ARCH=`uname -m | \
+    sed \
+    -e 's/sun../sparc/' \
+    -e 's/i.86/x86/' \
+    -e 's/i86pc/x86/' \
+    -e 's/[0-9]86/x86/' \
+    -e 's/amd64/x86_64/' \
+    -e 's/IP../mips/' \
+    -e 's/9000..../hppa/' \
+    -e 's/Power\ Macintosh/ppc/' \
+    -e 's/00........../pwr4/'`
+OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
+    sed \
+    -e 's/cygwin.*/cygwin/' \
+    -e 's/irix../irix/' \
+    -e 's/windows.*/windows/' \
+    -e 's/mingw.*/mingw/'`
+
+for EXAMPLE in ${EXAMPLES[@]}
 do
     echo
-    echo ===== $i =====
     echo
-    cd $i
-    echo make OPT=dbg depend
-    make OPT=dbg depend
+    echo ===== $EXAMPLE =====
     echo
-    echo make OPT=opt depend
-    make OPT=opt depend
+    cd $EXAMPLE
     echo
-    echo make OPT=dbg clean
-    make OPT=dbg clean
-    echo
-    echo make OPT=dbg
-    make OPT=dbg
-    echo
-    echo make OPT=opt clean
-    make OPT=opt clean
-    echo
-    echo make OPT=opt
-    make OPT=opt
-    echo
-    echo make OPT=dbg LPS=clp clean
-    make OPT=dbg LPS=clp clean
-    echo
-    echo make OPT=dbg LPS=clp
-    make OPT=dbg LPS=clp
-    echo
-    echo make OPT=opt LPS=clp clean
-    make OPT=opt LPS=clp clean
-    echo
-    echo make OPT=opt LPS=clp
-    make OPT=opt LPS=clp
-    echo
-    echo make OPT=dbg LPS=cpx clean
-    make OPT=dbg LPS=cpx clean
-    echo
-    echo make OPT=dbg LPS=cpx
-    make OPT=dbg LPS=cpx
-    echo
-    echo make OPT=opt LPS=cpx clean
-    make OPT=opt LPS=cpx clean
-    echo
-    echo make OPT=opt LPS=cpx
-    make OPT=opt LPS=cpx
-    echo
-    echo make OPT=dbg LPS=none clean
-    make OPT=dbg LPS=none clean
-    echo
-    echo make OPT=dbg LPS=none
-    make OPT=dbg LPS=none
-    echo
-    echo make OPT=opt LPS=none clean
-    make OPT=opt LPS=none clean
-    echo
-    echo make OPT=opt LPS=none
-    make OPT=opt LPS=none
+    for OPT in ${OPTS[@]}
+    do
+#   currently do not run depend to detect errors
+#        echo make OPT=$OPT LPS=none ZIMPL=false depend
+#	if (! make OPT=$OPT LPS=none ZIMPL=false depend)
+#	then
+#	    exit
+#        fi
+	echo
+	for LPS in ${LPSOLVERS[@]}
+	do
+	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
+	    if test -e $LPILIB
+            then
+		SCIPLIB=../../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
+		if test -e $SCIPLIB
+		then
+		    echo make OPT=$OPT LPS=$LPS clean
+		    if (! make OPT=$OPT LPS=$LPS clean )
+		    then
+			exit $STATUS
+		    fi
+		    echo
+		    echo make OPT=$OPT LPS=$LPS
+		    if (! make OPT=$OPT LPS=$LPS )
+	            then
+			exit $STATUS
+		    fi
+		else
+		    echo $SCIPLIB" does not exist - skipping combination ("$OPT", "$LPS")"
+		fi
+            else
+		echo $LPILIB" does not exist - skipping combination ("$OPT", "$LPS")"
+            fi
+	    echo
+	done
+    done
     cd -
 done

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,12 @@ SCIP_Bool SCIPpresolIsInitialized(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+/** gets time in seconds used in this presolver for setting up for next stages */
+extern
+SCIP_Real SCIPpresolGetSetupTime(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 /** gets time in seconds used in this presolver */
 extern
 SCIP_Real SCIPpresolGetTime(
@@ -125,6 +131,12 @@ int SCIPpresolGetNAddHoles(
 /** gets number of constraints deleted in presolver */
 extern
 int SCIPpresolGetNDelConss(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of constraints added in presolver */
+extern
+int SCIPpresolGetNAddConss(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 

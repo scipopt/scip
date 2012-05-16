@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_implics.c
- * @ingroup PRESOLVERS
  * @brief  implics presolver
  * @author Tobias Achterberg
  */
@@ -22,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/presol_implics.h"
 
@@ -38,6 +38,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyImplics)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolImplics(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeImplics NULL
@@ -267,7 +282,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 
    /**@todo check cliques of x == 0 and x == 1 for equal entries y == b -> fix y == !b */
 
-   /* perform the bound changes */
+   /* perform the bound changes
+    *
+    * note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any 
+    * troubles as this case seems to be handled correctly in SCIPtightenVarLb/Ub().
+    */
    for( v = 0; v < nbdchgs && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;
@@ -299,7 +318,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
       }
    }
 
-   /* perform the aggregations */
+   /* perform the aggregations
+    * 
+    * note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any 
+    * troubles as this case seems to be handled correctly in SCIPaggregateVars().
+    */
    for( v = 0; v < naggregations && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;
@@ -359,6 +382,7 @@ SCIP_RETCODE SCIPincludePresolImplics(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyImplics,
          presolFreeImplics, presolInitImplics, presolExitImplics, 
          presolInitpreImplics, presolExitpreImplics, presolExecImplics,
          presoldata) );

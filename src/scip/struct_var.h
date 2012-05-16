@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -194,14 +194,20 @@ struct SCIP_Negate
 /** variable of the problem */
 struct SCIP_Var
 {
+#ifndef NDEBUG
+   SCIP*                 scip;               /**< SCIP data structure */
+#endif
    SCIP_Real             obj;                /**< objective function value of variable */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
    SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
    SCIP_Real             relaxsol;           /**< primal solution of variable in current relaxation solution, or SCIP_INVALID */
+   SCIP_Real             nlpsol;             /**< primal solution of variable in current NLP solution, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */
+   SCIP_Real             conflictrelaxedlb;  /**< minimal relaxed lower bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
+   SCIP_Real             conflictrelaxedub;  /**< minimal release upper bound of variable in the current conflict (conflictrelqxlb <= conflictlb) */
    SCIP_Real             lazylb;             /**< global lower bound that is ensured by constraints and has not to be added to the LP */
    SCIP_Real             lazyub;             /**< global upper bound that is ensured by constraints and has not to be added to the LP */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */
@@ -215,6 +221,7 @@ struct SCIP_Var
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
    char*                 name;               /**< name of the variable */
+   SCIP_DECL_VARCOPY     ((*varcopy));       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */
@@ -230,6 +237,7 @@ struct SCIP_Var
    SCIP_BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
    SCIP_HISTORY*         history;            /**< branching and inference history information */
    SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
+   SCIP_Longint          closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    int                   index;              /**< consecutively numbered variable identifier */
    int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int                   pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -250,13 +258,13 @@ struct SCIP_Var
    int                   conflictubcount;    /**< number of last conflict, the upper bound was member of */
    int                   closestvlbidx;      /**< index of closest VLB variable in current LP solution, or -1 */
    int                   closestvubidx;      /**< index of closest VUB variable in current LP solution, or -1 */
-   int                   closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
-   unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
+   unsigned int          deletable:1;        /**< TRUE iff the variable is removable from the problem */
+   unsigned int          deleted:1;          /**< TRUE iff variable was marked for deletion from the problem */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
-   unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
+   unsigned int          varstatus:3;        /**< status of variable: original, loose, column, fixed, aggregated, multiaggregated, negated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */

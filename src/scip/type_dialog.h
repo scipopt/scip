@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,12 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for user interface dialog
  * @author Tobias Achterberg
+ *
+ *  This file defines the interface for dialogs implemented in C.
+ *
+ * - \ref DIALOG "Instructions for implementing a dialog"
+ * - \ref DIALOGS "List of available dialogs"
+ * - \ref scip::ObjDialog "C++ wrapper class
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,6 +43,14 @@ typedef struct SCIP_DialogData SCIP_DIALOGDATA;   /**< user defined dialog data 
 typedef struct SCIP_Dialoghdlr SCIP_DIALOGHDLR;   /**< dialog handler */
 typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single input lines */
 
+
+/** copy method for dialog plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - dialog          : the dialog itself
+ */
+#define SCIP_DECL_DIALOGCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
 
 /** destructor of dialog to free user data (called when the dialog is not captured anymore)
  *

@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -186,7 +186,7 @@ void updateNeighbor(
    /* try to reduce the number of intervals */
    pgsd->satdeg = 0;
    apciv = head.next;
-   while( (pciv = apciv->next) != NULL )
+   while( (pciv = apciv->next) != NULL ) /*lint !e838*/
    {
       if( apciv->itv.sup < (pciv->itv.inf - 1) )
       {
@@ -309,6 +309,14 @@ TCLIQUE_WEIGHT tcliqueColoring(
       assert(V[i] <= Vadj[adjidx]); /* Vadj is a subset of V */
       if( V[i] == Vadj[adjidx] )
       {
+         /* node is adjacent to itself, but we do not need to color it again */
+         if( i == nodeVindex )
+         {
+            /* go to the next node in Vadj */
+            adjidx++;
+            continue;
+         }
+
          debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
             i, V[i], weights[V[i]], gsd[i].satdeg); 
                
@@ -520,7 +528,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
          tmpitem = item->next;                  
          BMSfreeChunkMemory(mem, &item);       
          item = tmpitem;                        
-      }                                     
+      }
 
       /* free data structure of neighbor colorinterval of node just colored */
       item = gsd[nodeVindex].lcitv;
@@ -529,10 +537,10 @@ TCLIQUE_WEIGHT tcliqueColoring(
          tmpitem = item->next;                  
          BMSfreeChunkMemory(mem, &item);       
          item = tmpitem;                        
-      }                                     
+      }
    }
    assert((workclique == clique) != (currentclique == clique));
-   
+
    /* update maximum weight clique found so far */
    if( weightcurrentclique > *weightclique )
    {

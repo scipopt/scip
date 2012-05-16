@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,7 +52,9 @@ enum SCIP_LPParam
    SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
    SCIP_LPPAR_LPTILIM        = 12,      /**< LP time limit */
    SCIP_LPPAR_MARKOWITZ      = 13,      /**< Markowitz tolerance */
-   SCIP_LPPAR_SIMPLEXROWREP  = 14       /**< should simplex algorithm use row representation of the basis? */
+   SCIP_LPPAR_ROWREPSWITCH   = 14,      /**< simplex algorithm shall use row representation of the basis
+                                         *   if number of rows divided by number of columns exceeds this value */
+   SCIP_LPPAR_THREADS        = 15       /**< number of threads used to solve the LP */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 
@@ -78,6 +80,14 @@ enum SCIP_BaseStat
    SCIP_BASESTAT_ZERO  = 3              /**< free variable is non-basic and set to zero */
 };
 typedef enum SCIP_BaseStat SCIP_BASESTAT;
+
+/** LP solution quality quantities */
+enum SCIP_LPSolQuality
+{
+   SCIP_LPSOLQUALITY_ESTIMCONDITION,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_EXACTCONDITION     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
+};
+typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
 typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,15 @@ extern "C" {
 typedef struct SCIP_Relax SCIP_RELAX;             /**< relaxator */
 typedef struct SCIP_Relaxation SCIP_RELAXATION;   /**< relaxator */
 typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator data */
+
+
+/** copy method for relaxator plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - relax           : the relaxator itself
+ */
+#define SCIP_DECL_RELAXCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** destructor of relaxator to free user data (called when SCIP is exiting)
  *

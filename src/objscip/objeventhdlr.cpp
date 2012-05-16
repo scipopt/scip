@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,32 @@ struct SCIP_EventhdlrData
 
 extern "C"
 {
+
+/** copy method for event handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_EVENTCOPY(eventhdlrCopyObj)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   
+   assert(scip != NULL);
+   
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+   assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ != scip);
+
+   if( eventhdlrdata->objeventhdlr->iscloneable() )
+   {
+      scip::ObjEventhdlr*  newobjeventhdlr;
+      newobjeventhdlr = dynamic_cast<scip::ObjEventhdlr*> (eventhdlrdata->objeventhdlr->clone(scip));
+
+      /* call include method of event handler object */
+      SCIP_CALL( SCIPincludeObjEventhdlr(scip, newobjeventhdlr, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
@@ -56,6 +82,7 @@ SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ == scip);
 
    /* call virtual method of eventhdlr object */
    SCIP_CALL( eventhdlrdata->objeventhdlr->scip_free(scip, eventhdlr) );
@@ -81,6 +108,7 @@ SCIP_DECL_EVENTINIT(eventhdlrInitObj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
+   assert(eventhdlrdata->objeventhdlr->scip_ == scip);
 
    /* call virtual method of eventhdlr object */
    SCIP_CALL( eventhdlrdata->objeventhdlr->scip_init(scip, eventhdlr) );
@@ -189,6 +217,9 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
+   assert(scip != NULL);
+   assert(objeventhdlr != NULL);
+
    /* create event handler data */
    eventhdlrdata = new SCIP_EVENTHDLRDATA;
    eventhdlrdata->objeventhdlr = objeventhdlr;
@@ -196,6 +227,7 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
+         eventhdlrCopyObj,
          eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj, 
          eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
          eventhdlrdata) ); /*lint !e429*/
