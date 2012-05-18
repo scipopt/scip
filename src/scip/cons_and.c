@@ -1896,9 +1896,9 @@ SCIP_RETCODE dualPresolve(
 	 SCIP_Bool resobjispos;
 	 SCIP_Bool linearize = FALSE;
 	 SCIP_Bool zerofix = FALSE;
-	 int oldnchgcoefs = *nchgcoefs;
 #ifndef NDEBUG
 	 SCIP_Real tmpobj;
+	 int oldnchgcoefs = *nchgcoefs;
 #endif
 
 	 /* get aggregated objective value of active variable */
