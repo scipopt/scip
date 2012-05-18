@@ -6,6 +6,7 @@
 =opt= flugpl                      1201500
 =opt= gt2                           21166
 =opt= lseu                           1120
+=opt= MANN_a9.clq                      16
 =opt= misc03                         3360
 =opt= modglob                  20740508.1
 =opt= p0033                          3089
@@ -33,5 +34,6 @@
 =opt= normalized-mds_10_4_3             2
 =opt= normalized-mds_50_25_5            3
 =opt= normalized-t2001.13queen13.1110976730--soft-33-100-0 4
-=opt= bart10.shuffled 0
+=opt= bart10.shuffled                   0
 =inf= homer06.shuffled
+=opt= linking                           2

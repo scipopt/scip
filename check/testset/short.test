@@ -1,3 +1,4 @@
+instances/CP/linking.cip
 instances/Indicator/mcf128-4-1.lp
 instances/Indicator/mcf64-4-1.lp
 instances/MIP/bell5.mps
@@ -8,6 +9,7 @@ instances/MIP/enigma.mps
 instances/MIP/flugpl.mps
 instances/MIP/gt2.mps
 instances/MIP/lseu.mps
+instances/MIP/MANN_a9.clq.lp
 instances/MIP/misc03.mps
 instances/MIP/modglob.mps
 instances/MIP/p0033.osil
