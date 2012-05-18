@@ -52,9 +52,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL*      trysol;             /**< storing solution passed to heuristic which has to tried (NULL if none) */
-   SCIP_SOL*      addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
-   SCIP_Bool      rec;                /**< whether we are within our own call */
+   SCIP_SOL*             trysol;             /**< storing solution passed to heuristic which has to tried (NULL if none) */
+   SCIP_SOL*             addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
+   SCIP_Bool             rec;                /**< whether we are within our own call */
 };
 
 

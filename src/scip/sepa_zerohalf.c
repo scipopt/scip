@@ -232,7 +232,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
          assert((void*)(source) != NULL);                       \
          memmove((void*)(ptr), (void*)(source), size__);        \
       }                                                         \
-   } /**< moves array at source with size num to ptr */                                                                 
+   } /** moves array at source with size num to ptr */
 #endif
 
 #ifdef  ZEROHALF__PRINT_STATISTICS
@@ -312,39 +312,49 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 
 #define BITARRAYBASETYPE                     unsigned int          /**< base type used for the bitarray data structures */
 #define BITARRAYBITMASKTYPE                  BITARRAYBASETYPE
-static const unsigned int Zerohalf_bitarraybasetypesize = sizeof(BITARRAYBASETYPE);       /**< size of BITARRAYBASETYPE */
-static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYBASETYPE) << 3;     /**< number of bits per
-                                                                                                      BITARRAYBASETYPE */
+
+/** size of BITARRAYBASETYPE */
+static const unsigned int Zerohalf_bitarraybasetypesize = sizeof(BITARRAYBASETYPE);
+
+/** number of bits per BITARRAYBASETYPE */
+static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYBASETYPE) << 3;
+
+
 #define BITARRAY                             BITARRAYBASETYPE*
-#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))            /**< get the bit mask where the pos-th bit is set */
 
-#define BITSET(var, pos)                     (var) |= BITMASK(pos)                       /**< set the pos-th bit of var */
-#define BITISSET(var, pos)                   (var & BITMASK(pos))                    /**< is the pos-th bit of var set? */
+/** get the bit mask where the pos-th bit is set */
+#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))
 
+/** set the pos-th bit of var */
+#define BITSET(var, pos)                     (var) |= BITMASK(pos)
+
+/** is the pos-th bit of var set? */
+#define BITISSET(var, pos)                   (var & BITMASK(pos))
+
+/** set the pos-th bit of bitarray barray */
 #define BITARRAYBITSET(barray, pos)          BITSET(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< set the pos-th bit
-                                                             of bitarray barray */
-#define BITARRAYBITISSET(barray, pos)        BITISSET(barray[DIV(pos,Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< is the pos-th bit of
-                                                             bitarray barray set?*/
-#define BITARRAYCLEAR(barray, barraysize)    BMSclearMemoryArray(barray,barraysize)                 /**< clear bitarray */
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
 
+/** is the pos-th bit of bitarray barray set? */
+#define BITARRAYBITISSET(barray, pos)        BITISSET(barray[DIV(pos,Zerohalf_bitarraybasetypesize_nbits)], \
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** clear bitarray */
+#define BITARRAYCLEAR(barray, barraysize)    BMSclearMemoryArray(barray,barraysize)
+
+/** calculates the number of array elements (w.r.t. the bitarray base type) required to create the bitarray */
 #define GETREQUIREDBITARRAYSIZE(nvalstostore)                           \
    ((((unsigned int)(nvalstostore)) % (Zerohalf_bitarraybasetypesize_nbits) == 0) \
       ? (((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) \
-      : ((((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) + 1))         /**< calculates the number of array elements
-                                                                                                   (w.r.t. the bitarray base type) required
-                                                                                                   to create the bitarray */
+      : ((((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) + 1))
 
-#define GETBITARRAYINDEX(pos)                DIV((pos),Zerohalf_bitarraybasetypesize_nbits) /**< get the corresponding
-                                                                                               array element of a bitarray
-                                                                                               position */
-#define GETBITARRAYMASK(pos)                 BITMASK(MOD((pos),Zerohalf_bitarraybasetypesize_nbits)) /**< get the bitmask
-                                                                                                        to mask all bits
-                                                                                                        except the pos-th
-                                                                                                        bit of an array
-                                                                                                        element */
+/** get the corresponding array element of a bitarray position */
+#define GETBITARRAYINDEX(pos)                DIV((pos),Zerohalf_bitarraybasetypesize_nbits)
 
+/** get the bitmask to mask all bits except the pos-th bit of an array element */
+#define GETBITARRAYMASK(pos)                 BITMASK(MOD((pos),Zerohalf_bitarraybasetypesize_nbits))
+
+/** apply operation op for all array elements of bitarray barray1 and barray2 */
 #define BITARRAYSFOREACH(barray1, barray2, size, op)                    \
    {                                                                    \
       int idx__;                                                        \
@@ -352,28 +362,38 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
       {                                                                 \
          barray2[idx__] op barray1[idx__];                              \
       }                                                                 \
-   }                                      /**< apply operation op for all array elements of bitarray barray1 and barray2 */
-#define BITARRAYSXOR(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,^=)           /**< barray2 =
-                                                                                                    barray1 XOR barray2 */
+   }
+
+/** barray2 = barray1 XOR barray2 */
+#define BITARRAYSXOR(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,^=)
+
+/** are barray1 and barray2 equal? */
 #define BITARRAYSAREEQUAL(barray1, barray2, size)                       \
-   (memcmp((void*)(barray1), (void*)(barray2), (size_t)((size) * (Zerohalf_bitarraybasetypesize))) == 0) /**< are barray1
-                                                                                                            and barray2
-                                                                                                            equal? */
+   (memcmp((void*)(barray1), (void*)(barray2), (size_t)((size) * (Zerohalf_bitarraybasetypesize))) == 0)
+
 #if 0 /* currently not used */
-#define BITCLEAR(var, pos)                   (var) &= ~BITMASK(pos)                    /**< clear the pos-th bit of var */
-#define BITFLIP(var, pos)                    (var) ^= BITMASK(pos)                      /**< flip the pos-th bit of var */
+/** clear the pos-th bit of var */
+#define BITCLEAR(var, pos)                   (var) &= ~BITMASK(pos)
+
+/** flip the pos-th bit of var */
+#define BITFLIP(var, pos)                    (var) ^= BITMASK(pos)
+
+/** clear the pos-th bit of bitarray barray */
 #define BITARRAYBITCLEAR(barray, pos)        BITCLEAR(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< clear the pos-th bit
-                                                             of bitarray barray */  
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** flip the pos-th bit of bitarray barray */
 #define BITARRAYBITFLIP(barray, pos)         BITFLIP(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< flip the pos-th bit
-                                                             of bitarray barray */
-#define BITARRAYSAND(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,&=)           /**< barray2 =
-                                                                                                    barray1 AND barray2 */
-#define BITARRAYSOR(barray1, barray2, size)  BITARRAYSFOREACH(barray1,barray2,size,|=)           /**< barray2 =
-                                                                                                    barray1 OR barray2 */
-#define BITARRAYSNOT(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,= ~)          /**< barray2 =
-                                                                                                    NOT barray1 */
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** barray2 = barray1 AND barray2 */
+#define BITARRAYSAND(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,&=)
+
+/** barray2 = barray1 OR barray2 */
+#define BITARRAYSOR(barray1, barray2, size)  BITARRAYSFOREACH(barray1,barray2,size,|=)
+
+/** barray2 = NOT barray1 */
+#define BITARRAYSNOT(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,= ~)
 #endif
 
 
@@ -427,18 +447,17 @@ struct SCIP_SepaData
    int*                  origrows;           /**< set of SCIP_ROW->index of all original LP rows */
 
    int                   maxnnonz;           /**< maximal number of nonzeros allowed in a zerohalf cut */
-   int                   maxtestdelta;             /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
+   int                   maxtestdelta;       /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling for cmir? */
 
    /* statistics */
-   int                   totalncutsfound;    /**< total number of separated zerohalf cuts,
-                                                including inefficious ones */
+   int                   totalncutsfound;    /**< total number of separated zerohalf cuts, including inefficious ones */
    int                   totalnsepacuts;     /**< total number of separated zerohalf cuts */
-   SCIP_CLOCK**          pptimers;           /**< timers of preprocessing methods */    
+   SCIP_CLOCK**          pptimers;           /**< timers of preprocessing methods */
    SCIP_CLOCK**          sepatimers;         /**< timers of separation algorithms */
    SCIP_CLOCK*           dtimer;             /**< timer of decomposition method */
    int*                  nsepacutsalgo;      /**< number zerohalf cuts separated by a specific separation algorithm,
-                                                including inefficious cuts */  
+                                              *   including inefficious cuts */
    int*                  nzerohalfcutsalgo;  /**< number zerohalf cuts separated by a specific separation algorithm */
 };
 
@@ -486,14 +505,14 @@ struct Zerohalf_LPData
    int*                  rrowsindexofrightrow;         /**< maps rows index of lhs <= a^Tx <= rhs to rrows index of  a^Tx <=  rhs */
 
    /* col related index sets */
-   int*                  subproblemsindexofcol;        /**< is cols index relevant? value <0: not relevant
-                                                          value >=0: index of subproblem containing the column */
-   int*                  rcolsindexofcol;              /**< maps cols index to rcols index */
+   int*                  subproblemsindexofcol; /**< is cols index relevant? value <0: not relevant
+                                                 *   value >=0: index of subproblem containing the column */
+   int*                  rcolsindexofcol;    /**< maps cols index to rcols index */
 
-   int*                  bestlbidxofcol;               /**< maps cols index of a continuous variable to the index of its
-                                                          best lower bound (-2: undetermined, -1: lb, >=0: index of vlb)*/
-   int*                  bestubidxofcol;               /**< maps cols index of a continuous variable to the index of its
-                                                          best upper bound (-2: undetermined, -1: ub, >=0: index of vub)*/
+   int*                  bestlbidxofcol;     /**< maps cols index of a continuous variable to the index of its
+                                              *   best lower bound (-2: undetermined, -1: lb, >=0: index of vlb)*/
+   int*                  bestubidxofcol;     /**< maps cols index of a continuous variable to the index of its
+                                              *   best upper bound (-2: undetermined, -1: ub, >=0: index of vub)*/
 
    /* statistics */
    int                   ndelvarbounds;      /**< number of deleted variable bounds by basic preprocessing */
@@ -618,15 +637,15 @@ typedef struct Zerohalf_CutData ZEROHALF_CUTDATA;
 /** auxiliary graph node data structure */
 struct Zerohalf_AuxGraph_Node;
 typedef struct Zerohalf_AuxGraph_Node ZEROHALF_AUXGRAPH_NODE;
+
 struct Zerohalf_AuxGraph_Node
 {  
-   ZEROHALF_AUXGRAPH_NODE**  neighbors;      /**< node adjacency list */
-   SCIP_Real*                edgeweights;    /**< weights of outgoing edges */
-   int*                      relatedrows;    /**< label mapping outgoing edges to mod 2 rows */
-   int                       nneighbors;     /**< number of adjacent nodes */
-  
-   SCIP_Real                 distance;       /**< actual distant from start node (used by Dijkstra)*/
-   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by Dijkstra) */
+   ZEROHALF_AUXGRAPH_NODE** neighbors;       /**< node adjacency list */
+   SCIP_Real*            edgeweights;        /**< weights of outgoing edges */
+   int*                  relatedrows;        /**< label mapping outgoing edges to mod 2 rows */
+   int                   nneighbors;         /**< number of adjacent nodes */
+   SCIP_Real             distance;           /**< actual distant from start node (used by Dijkstra)*/
+   ZEROHALF_AUXGRAPH_NODE* previous;         /**< previous node in shortest-path-tree (used by Dijkstra) */
 };
 
 
@@ -635,10 +654,9 @@ struct Zerohalf_AuxGraph_Node
 /** auxiliary graph data structure */
 struct Zerohalf_AuxGraph
 {
-   ZEROHALF_AUXGRAPH_NODE**  nodes;          /**< list of all original nodes */
-   ZEROHALF_AUXGRAPH_NODE**  nodecopies;     /**< list of all copies of original nodes */
-
-   int                       nnodes;         /**< number of original nodes (equals number of copies) */
+   ZEROHALF_AUXGRAPH_NODE** nodes;           /**< list of all original nodes */
+   ZEROHALF_AUXGRAPH_NODE** nodecopies;      /**< list of all copies of original nodes */
+   int                   nnodes;             /**< number of original nodes (equals number of copies) */
 };
 typedef struct Zerohalf_AuxGraph ZEROHALF_AUXGRAPH;
 
@@ -1070,7 +1088,7 @@ SCIP_RETCODE ZerohalfCutDataFree(
 /** creates and initializes auxiliary graph node data structures */
 static
 SCIP_RETCODE ZerohalfAuxGraphNodeCreate(
-   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    ZEROHALF_AUXGRAPH_NODE** node             /**< pointer to store pointer to created data structure */
    )
 {
@@ -1096,7 +1114,7 @@ SCIP_RETCODE ZerohalfAuxGraphNodeCreate(
 /** frees auxiliary graph node data structures */
 static
 SCIP_RETCODE ZerohalfAuxGraphNodeFree(
-   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    ZEROHALF_AUXGRAPH_NODE** node             /**< pointer to pointer of data structure */
    )
 {
@@ -1198,8 +1216,8 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
 /** returns a string containing the name of the symbolic constant (given as int value) */
 static
 char* getconstantname(
-   char* buffer,                             /**< string containing the name */
-   int value                                 /**< symbolic constant given as int value */
+   char*                 buffer,             /**< string containing the name */
+   int                   value               /**< symbolic constant given as int value */
    )
 {
    switch( value )
@@ -3358,7 +3376,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 
 
 
-/**< searches for trivial zerohalf cuts, given as (0,..0) row with rhs=1 and slack <= maxslack */
+/** searches for trivial zerohalf cuts, given as (0,..0) row with rhs=1 and slack <= maxslack */
 static
 SCIP_RETCODE preprocessTrivialZerohalfCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3488,9 +3506,9 @@ SCIP_RETCODE preprocessRows(
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
    int                   firstrowsind,       /**< first mod2data->rows index to be considered */
    int                   lastrowsind,        /**< last mod2data->rows index to be considered */
-   SCIP_Bool             removezerorows,           /**< should zero rows be removed? */
-   SCIP_Bool             removelargeslackrows,     /**< should rows with slack > maxslack be removed? */
-   SCIP_Bool             removeidenticalrows       /**< should identical rows be removed? */
+   SCIP_Bool             removezerorows,     /**< should zero rows be removed? */
+   SCIP_Bool             removelargeslackrows, /**< should rows with slack > maxslack be removed? */
+   SCIP_Bool             removeidenticalrows /**< should identical rows be removed? */
    )
 {
    int                   r1;
@@ -3627,9 +3645,9 @@ SCIP_RETCODE preprocessColumns(
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
    int                   firstcolsind,       /**< first mod2data->rows index to be considered */ 
    int                   lastcolsind,        /**< last mod2data->rows index to be considered */
-   SCIP_Bool             removezerocols,           /**< should zero columns be removed? */
-   SCIP_Bool             removecolsingletons,      /**< should column singletons be removed? */
-   SCIP_Bool             checkresultingrows        /**< should rows whose slack becomes larger than maxslack be removed? */
+   SCIP_Bool             removezerocols,     /**< should zero columns be removed? */
+   SCIP_Bool             removecolsingletons,/**< should column singletons be removed? */
+   SCIP_Bool             checkresultingrows  /**< should rows whose slack becomes larger than maxslack be removed? */
    )
 {
    SCIP_Real             maxslack;
@@ -6070,14 +6088,12 @@ SCIP_RETCODE addEdgeToAuxGraph(
     cannot be shorter than maxdistance */ 
 static
 SCIP_RETCODE dijkstra(
-   SCIP*                      scip,          /**< SCIP data structure */
-   ZEROHALF_AUXGRAPH*         graph,         /**< auxiliary graph */   
-   ZEROHALF_AUXGRAPH_NODE*    sourcenode,    /**< start node */
-   ZEROHALF_AUXGRAPH_NODE*    targetnode,    /**< end node */
-   SCIP_Real                  maxdistance    /**< calculation will be aborted if
-                                                a proof is found that no shortest
-                                                path with length less than
-                                                maxdistance exists */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ZEROHALF_AUXGRAPH*    graph,              /**< auxiliary graph */
+   ZEROHALF_AUXGRAPH_NODE* sourcenode,       /**< start node */
+   ZEROHALF_AUXGRAPH_NODE* targetnode,       /**< end node */
+   SCIP_Real             maxdistance         /**< calculation will be aborted if a proof is found that no shortest path with
+                                              *   length less than maxdistance exists */
    )
 {
    ZEROHALF_AUXGRAPH_NODE**   unprocessednodes;
@@ -7026,16 +7042,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       /* bubble sort indices (s.t. binary search can be used to find an index) */
       do                                                                  
       {                                                                   
-         issorted = TRUE;                                                  
-         for( i = 0 ; i < sepadata->norigrows - 1 ; ++i )                         
+         issorted = TRUE;
+         for( i = 0 ; i < sepadata->norigrows - 1 ; ++i )
+         {
             if( sepadata->origrows[i] > sepadata->origrows[i+1] )
-            {                                                               
-               temp = sepadata->origrows[i];                                           
-               sepadata->origrows[i] = sepadata->origrows[i+1];                                 
-               sepadata->origrows[i+1] = temp;                                         
-               issorted = FALSE;                                             
-            }                                                               
-      } while( !issorted );    
+            {
+               temp = sepadata->origrows[i];
+               sepadata->origrows[i] = sepadata->origrows[i+1];
+               sepadata->origrows[i+1] = temp;
+               issorted = FALSE;
+            }
+         }
+      }
+      while( !issorted );
    }
 
    /* get the maximal number of cuts allowed in a separation round */

@@ -2133,8 +2133,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
-   SCIP_LPI*             lpi,                 /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    assert(MosekEnv != NULL); 

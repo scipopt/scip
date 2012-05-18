@@ -1019,7 +1019,7 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue         /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** marks the LP to be flushed, even if the LP thinks it is not flushed */
@@ -1093,7 +1093,7 @@ SCIP_Real SCIPlpGetLooseObjval(
 extern
 void SCIPlpStoreRootObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
    );
 

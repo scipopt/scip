@@ -93,16 +93,13 @@ struct SCIP_HeurData
    SCIP_Bool             binarybounds;       /**< should general integers get binary bounds [floor(.),ceil(.)] ?      */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
-                                              *   to constraints in subproblem?
-                                              */
+                                              *   to constraints in subproblem? */
    SCIP_Bool             extratime;          /**< should the RENS sub-CIP get its own full time limit? This is only
-                                              *   implemented for testing and not recommended to be used!
-                                              */
-   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
-   SCIP_Bool             fullscale;           /**< should the RENS sub-CIP be solved with full-scale SCIP settings,
-                                               * including techniques that merely work on the dual bound, e.g., cuts?
-                                               * This is only implemented for testing and not recommended to be used!
-                                               */
+                                              *   implemented for testing and not recommended to be used! */
+   SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
+   SCIP_Bool             fullscale;          /**< should the RENS sub-CIP be solved with full-scale SCIP settings,
+                                              * including techniques that merely work on the dual bound, e.g., cuts?
+                                              * This is only implemented for testing and not recommended to be used! */
 };
 
 

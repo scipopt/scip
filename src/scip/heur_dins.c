@@ -239,11 +239,11 @@ SCIP_RETCODE createSubproblem(
 /** create the extra constraint of local branching and add it to subscip */
 static
 SCIP_RETCODE addLocalBranchingConstraint(
-   SCIP*                 scip,          /**< SCIP data structure of the original problem */
-   SCIP*                 subscip,       /**< SCIP data structure of the subproblem       */
-   SCIP_VAR**            subvars,       /**< variables of the subproblem                 */
-   SCIP_HEURDATA*        heurdata,      /**< heuristic's data structure                  */
-   SCIP_Bool*            fixed          /**< TRUE --> include variable in LB constraint  */
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem       */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem                 */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic's data structure                  */
+   SCIP_Bool*            fixed               /**< TRUE --> include variable in LB constraint  */
    )
 {
    SCIP_CONS* cons;                     /* local branching constraint to create          */

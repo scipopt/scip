@@ -937,7 +937,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  */
 extern 
 SCIP_RETCODE SCIPsetPresolving(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -950,7 +950,7 @@ SCIP_RETCODE SCIPsetPresolving(
  */
 extern 
 SCIP_RETCODE SCIPsetSeparating(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -1898,13 +1898,13 @@ SCIP_RETCODE SCIPfreeProb(
 /** permutes parts of the problem data structure */
 extern
 SCIP_RETCODE SCIPpermuteProb(
-   SCIP*                 scip,              /**< SCIP data structure */
-   unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
-   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
-   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< seed value for random generator */
+   SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
    );
 
 /** gets user problem data */
@@ -2865,11 +2865,9 @@ extern
 SCIP_RETCODE SCIPgetActiveVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
@@ -7281,8 +7279,8 @@ SCIP_RETCODE SCIPretransformSol(
 /** reads a given solution file, problem has to be transformed in advance */
 extern
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */

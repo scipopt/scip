@@ -2345,7 +2345,7 @@ void SCIPsortedvecInsertIntPtrIntIntBoolBool(
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
    int                   keyval,             /**< key value of new element */
-   void*                 field1val,           /**< additional value of new element */
+   void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    SCIP_Bool             field4val,          /**< additional value of new element */
@@ -2956,7 +2956,7 @@ void SCIPsortedvecInsertDownIntPtrIntIntBoolBool(
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
    int                   keyval,             /**< key value of new element */
-   void*                 field1val,           /**< additional value of new element */
+   void*                 field1val,          /**< additional value of new element */
    int                   field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
    SCIP_Bool             field4val,          /**< additional value of new element */

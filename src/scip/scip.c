@@ -4757,13 +4757,13 @@ SCIP_RETCODE SCIPfreeProb(
 
 /** permutes parts of the problem data structure */
 SCIP_RETCODE SCIPpermuteProb(
-   SCIP*                 scip,              /**< SCIP data structure */
-   unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
-   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
-   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< seed value for random generator */
+   SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
    )
 {
    SCIP_VAR** vars;
@@ -16587,7 +16587,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
 /** writes current NLP to a file */
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename             /**< file name */
+   const char*           filename            /**< file name */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -20221,8 +20221,8 @@ SCIP_RETCODE SCIPretransformSol(
 
 /** reads a given solution file, problem has to be transformed in advance */
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );

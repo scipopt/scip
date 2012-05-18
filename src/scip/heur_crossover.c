@@ -160,8 +160,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSols)
 /** calculates a hash key for a given tuple of solution indices */
 static
 unsigned int calculateHashKey(
-   int* indices,                            /**< indices of solutions                                            */
-   int size                                 /**< number of solutions                                             */
+   int*                  indices,            /**< indices of solutions */
+   int                   size                /**< number of solutions */
    )
 {
    int i;
@@ -178,10 +178,10 @@ unsigned int calculateHashKey(
 }
 
 
-/**< insertion sort for a small int array */
+/** insertion sort for a small int array */
 static void sortArray(
-   int* a,                                  /**< array to be sorted                                              */
-   int size                                 /**< size of array                                                   */
+   int*                  a,                  /**< array to be sorted */
+   int                   size                /**< size of array */
    )
 {
    int i;
@@ -206,11 +206,11 @@ static void sortArray(
 /** creates a new tuple of solutions */
 static
 SCIP_RETCODE createSolTuple(
-   SCIP*                 scip,              /**< original SCIP data structure                                    */
-   SOLTUPLE**            elem,              /**< tuple of solutions which should be created                      */
-   int*                  indices,           /**< indices of solutions                                            */
-   int                   size,              /**< number of solutions                                             */
-   SCIP_HEURDATA*        heurdata           /**< primal heuristic data                                           */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SOLTUPLE**            elem,               /**< tuple of solutions which should be created */
+   int*                  indices,            /**< indices of solutions */
+   int                   size,               /**< number of solutions */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
    /* memory allocation */
@@ -251,10 +251,10 @@ SCIP_Bool solHasNewSource(
 /** randomly selects the solutions crossover will use from the pool of all solutions found so far */
 static
 SCIP_RETCODE selectSolsRandomized(
-   SCIP*                 scip,              /**< original SCIP data structure                         */
-   int*                  selection,         /**< pool of solutions crossover uses                     */
-   SCIP_HEURDATA*        heurdata,          /**< primal heuristic data                                */
-   SCIP_Bool*            success            /**< pointer to store whether the process was successful  */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   int*                  selection,          /**< pool of solutions crossover uses  */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
 
@@ -316,11 +316,11 @@ SCIP_RETCODE selectSolsRandomized(
 
 /** creates the all variables of the subproblem */
 static SCIP_RETCODE fixVariables(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   int*                  selection,          /**< pool of solutions crossover will use                          */
-   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data                                          */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblemd */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   int*                  selection,          /**< pool of solutions crossover will use */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -389,9 +389,9 @@ static SCIP_RETCODE fixVariables(
 /** creates the rows of the subproblem */
 static
 SCIP_RETCODE createRows(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem                               */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars             /**< the variables of the subproblem */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -450,11 +450,11 @@ SCIP_RETCODE createRows(
 /** creates a subproblem for subscip by fixing a number of variables */
 static
 SCIP_RETCODE setupSubproblem(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   int*                  selection,          /**< pool of solutions crossover will use                          */
-   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data                                         */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   int*                  selection,          /**< pool of solutions crossover will use */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -543,12 +543,12 @@ SCIP_RETCODE setupSubproblem(
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< crossover heuristic structure                       */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   int*                  solindex,           /**< index of the solution                               */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_HEUR*            heur,               /**< crossover heuristic structure */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   int*                  solindex,           /**< index of the solution */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
@@ -590,8 +590,8 @@ SCIP_RETCODE createNewSol(
 /** updates heurdata after a run of crossover */
 static
 void updateFailureStatistic(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP_HEURDATA*        heurdata            /**< primal heuristic data                               */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
    /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */

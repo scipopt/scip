@@ -40,20 +40,17 @@
 					 *   limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
-#define DEFAULT_MAXDOMAINSIZE SCIP_LONGINT_MAX /**< absolute value of maximum domain size which will be converted */
-#define DEFAULT_ONLYPOWERSOFTWO          FALSE /**< should only integer variables with a domain size of 2^p - 1 be
-						*   converted(, there we don't need an knapsack-constraint)*/
-#define DEFAULT_SAMELOCKSINBOTHDIRECTIONS FALSE /**< should only integer variables with uplocks equals downlocks be
-						 *   converted */
+#define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
+#define DEFAULT_ONLYPOWERSOFTWO           FALSE   /**< should only integer variables with a domain size of 2^p - 1 be
+						   *   converted(, there we don't need an knapsack-constraint) */
+#define DEFAULT_SAMELOCKSINBOTHDIRECTIONS FALSE   /**< should only integer variables with uplocks equals downlocks be converted */
 
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Longint          maxdomainsize;         /**< absolute value of maximum domain size */
-   SCIP_Bool             onlypoweroftwo;        /**< should only integer variables with a domain size of 2^p - 1 be
-						 *   converted */
-   SCIP_Bool             samelocksinbothdirections; /**< should only integer variables with uplocks equals downlocks be
-						     *   converted */
+   SCIP_Longint          maxdomainsize;      /**< absolute value of maximum domain size */
+   SCIP_Bool             onlypoweroftwo;     /**< should only integer variables with a domain size of 2^p - 1 be converted */
+   SCIP_Bool             samelocksinbothdirections; /**< should only integer variables with uplocks equals downlocks be converted */
 };
 
 /*

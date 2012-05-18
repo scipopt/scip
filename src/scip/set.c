@@ -2060,7 +2060,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value              /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    SCIP_RETCODE retcode;
@@ -2083,7 +2083,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value              /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
@@ -3880,7 +3880,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
 
 /** returns the estimated number of bytes used by extern software, e.g., the LP solver */
 SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*              set                /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    return set->mem_externestim;

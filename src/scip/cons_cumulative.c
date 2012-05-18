@@ -2643,10 +2643,10 @@ SCIP_Bool checkDemands(
 /** creates covering cuts for jobs violating resource constraints */
 static
 SCIP_RETCODE createCoverCutsTimepoint(
-   SCIP*            scip,                 /**< SCIP data structure */
-   SCIP_CONS*       cons,                 /**< constraint to be checked */
-   int*             startvalues,          /**< upper bounds on finishing time per job for activities from 0,..., nactivities -1 */
-   int              time                  /**< at this point in time covering constraints are valid */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be checked */
+   int*                  startvalues,        /**< upper bounds on finishing time per job for activities from 0,..., nactivities -1 */
+   int                   time                /**< at this point in time covering constraints are valid */
    )
 {
    SCIP_VAR** binvars;    /* binary variables of some integer variable */
@@ -2880,8 +2880,8 @@ SCIP_RETCODE createCoverCutsTimepoint(
 /** method to construct cover cuts for all points in time */
 static
 SCIP_RETCODE createCoverCuts(
-   SCIP*            scip,                      /**< SCIP data structure */
-   SCIP_CONS*       cons                       /**< constraint to be separated */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be separated */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2890,8 +2890,8 @@ SCIP_RETCODE createCoverCuts(
    int* endvalues;          /* stores when each job ends */
    int* startvaluessorted;  /* stores when each job is starting */
    int* endvaluessorted;    /* stores when each job ends */
-   int* startindices;     /* we sort the startvalues, so we need to know which index of a job it corresponds to */
-   int* endindices;       /* we sort the endvalues, so we need to know which index of a job it corresponds to */
+   int* startindices;       /* we sort the startvalues, so we need to know which index of a job it corresponds to */
+   int* endindices;         /* we sort the endvalues, so we need to know which index of a job it corresponds to */
 
    int nvars;               /* number of jobs for this constraint */
    int freecapacity;        /* remaining capacity */

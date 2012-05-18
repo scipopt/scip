@@ -73,15 +73,15 @@ extern "C" {
  */
 extern
 SCIP_RETCODE SCIPgenVBoundAdd(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_PROP*            genvboundprop,       /**< genvbound propagator */
-   SCIP_VAR**            vars,                /**< array of RHSs variables */
-   SCIP_VAR*             var,                 /**< LHSs variable */
-   SCIP_Real*            coefs,               /**< array of coefficients for the RHSs variables */
-   int                   ncoefs,              /**< size of coefs array */
-   SCIP_Real             coefprimalbound,     /**< nonpositive value of the primal bounds multiplier */
-   SCIP_Real             constant,            /**< constant term */
-   SCIP_BOUNDTYPE        boundtype            /**< type of bound provided by the genvbound */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
+   SCIP_VAR**            vars,               /**< array of RHSs variables */
+   SCIP_VAR*             var,                /**< LHSs variable */
+   SCIP_Real*            coefs,              /**< array of coefficients for the RHSs variables */
+   int                   ncoefs,             /**< size of coefs array */
+   SCIP_Real             coefprimalbound,    /**< nonpositive value of the primal bounds multiplier */
+   SCIP_Real             constant,           /**< constant term */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    );
 
 /** creates the genvbounds propagator and includes it in SCIP */

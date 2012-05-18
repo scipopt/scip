@@ -137,8 +137,8 @@ SCIP_VAR** SCIPnlrowGetQuadVars(
 /** gives position of variable in quadvars array of row, or -1 if not found */
 extern
 int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_VAR*             var                 /**< variable to search for */
    );
 
 /** gets number of quadratic elements in quadratic part */

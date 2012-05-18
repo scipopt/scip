@@ -364,9 +364,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -380,9 +380,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -2286,7 +2286,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    int solntype;
@@ -3719,8 +3719,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   return the value set by SCIP and not the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  return the value set by SCIP and not the real thread count */
       *ival = lpi->pseudonthreads;
       assert(getIntParam(lpi, CPX_PARAM_THREADS) == 1);
 #else
@@ -3818,8 +3818,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   store the value set by SCIP and return it later instead of the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  store the value set by SCIP and return it later instead of the real thread count */
       lpi->pseudonthreads = ival;
       ival = 1;
 #else

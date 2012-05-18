@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
 /** captures message handler */
 extern
 void SCIPmessagehdlrCapture(
-   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler, or NULL */
    );
 
 /** releases message handler */

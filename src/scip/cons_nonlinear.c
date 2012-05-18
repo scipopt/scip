@@ -123,10 +123,10 @@ struct SCIP_ConsData
 /** nonlinear constraint update method */
 struct SCIP_NlConsUpgrade
 {
-   SCIP_DECL_NONLINCONSUPGD((*nlconsupgd));    /**< method to call for upgrading nonlinear constraint */
+   SCIP_DECL_NONLINCONSUPGD((*nlconsupgd));  /**< method to call for upgrading nonlinear constraint */
    SCIP_DECL_EXPRGRAPHNODEREFORM((*nodereform));/**< method to call for reformulating an expression graph node */
-   int                     priority;           /**< priority of upgrading method */
-   SCIP_Bool               active;             /**< is upgrading enabled */
+   int                   priority;           /**< priority of upgrading method */
+   SCIP_Bool             active;             /**< is upgrading enabled */
 };
 typedef struct SCIP_NlConsUpgrade SCIP_NLCONSUPGRADE;
 
@@ -1714,7 +1714,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
             continue;
          }
 
-      } while( FALSE );
+      }
+      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -3806,7 +3807,8 @@ SCIP_RETCODE addLinearization(
          SCIPfreeBufferArray(scip, &grad);
          return SCIP_OKAY;
       }
-   } while( TRUE );  /*lint !e506*/
+   }
+   while( TRUE );  /*lint !e506*/
 
    /* add linearization to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
@@ -5394,7 +5396,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    SCIP_VAR*             var,                /**< variable which domain we might reduce */
    SCIP_Real             bnd,                /**< new lower bound for variable */
    SCIP_RESULT*          result,             /**< result to update if there was a tightening or cutoff */
-   int*                  nchgbds            /**< counter to increase if a bound was tightened */
+   int*                  nchgbds             /**< counter to increase if a bound was tightened */
    )
 {
    SCIP_Bool infeas;
@@ -6004,8 +6006,8 @@ SCIP_RETCODE propagateBounds(
             success = TRUE;
          }
       }
-
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -8116,12 +8118,12 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
 /** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
-   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_NONLINCONSUPGD((*nonlinconsupgd)),/**< method to call for upgrading nonlinear constraint, or NULL */
    SCIP_DECL_EXPRGRAPHNODEREFORM((*nodereform)),/**< method to call for reformulating expression graph node, or NULL */
-   int                     priority,           /**< priority of upgrading method */
-   SCIP_Bool               active,             /**< should the upgrading method by active by default? */
-   const char*             conshdlrname        /**< name of the constraint handler */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    )
 {
    SCIP_CONSHDLR*        conshdlr;

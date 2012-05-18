@@ -652,7 +652,8 @@ SCIP_RETCODE innerPresolve(
             (*nblocks)++;
          }
          startindex = v;
-      } else if( v == nvars - 1 && v - startindex >= 2 )
+      }
+      else if( v == nvars - 1 && v - startindex >= 2 )
       {
          assert(*nblocks < nvars/2);
          (*nblockvars) += v - startindex + 1;
@@ -857,18 +858,18 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
  */
 static
 SCIP_RETCODE optimize(
-   SCIP*                scip,               /**< current SCIP instance */
-   SCIP_SOL*            worksol,            /**< working solution */
-   SCIP_VAR**           vars,               /**< binary or integer variables */
-   int*                 blockstart,         /**< contains start indices of blocks */
-   int*                 blockend,           /**< contains end indices of blocks */
-   int                  nblocks,            /**< the number of blocks */
-   OPTTYPE              opttype,            /**< are binaries or integers optimized */
-   SCIP_Real*           activities,         /**< the LP-row activities */
-   int                  nrows,              /**< the number of LP rows */
-   SCIP_Bool*           improvement,        /**< was there a successful shift? */
-   SCIP_Bool*           varboundserr,       /**< has the current incumbent already been cut off */
-   SCIP_HEURDATA*       heurdata            /**< the heuristic data */
+   SCIP*                 scip,               /**< current SCIP instance */
+   SCIP_SOL*             worksol,            /**< working solution */
+   SCIP_VAR**            vars,               /**< binary or integer variables */
+   int*                  blockstart,         /**< contains start indices of blocks */
+   int*                  blockend,           /**< contains end indices of blocks */
+   int                   nblocks,            /**< the number of blocks */
+   OPTTYPE               opttype,            /**< are binaries or integers optimized */
+   SCIP_Real*            activities,         /**< the LP-row activities */
+   int                   nrows,              /**< the number of LP rows */
+   SCIP_Bool*            improvement,        /**< was there a successful shift? */
+   SCIP_Bool*            varboundserr,       /**< has the current incumbent already been cut off */
+   SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {  /*lint --e{715}*/
    int b;

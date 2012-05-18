@@ -109,7 +109,7 @@ struct SCIP_ConshdlrData
    int                   nsolutions;         /**< number of solution stored */
    int                   ssolutions;         /**< size of the solution array */
    int                   feasST;             /**< number of non trivial feasible subtrees */
-   int                   nDiscardSols ;      /**< number of discard solutions */
+   int                   nDiscardSols;       /**< number of discard solutions */
    int                   nNonSparseSols;     /**< number of non sparse solutions */
    Int                   nsols;              /**< number of solutions */
    CUTOFF_CONSTRAINT((*cutoffSolution));     /**< method for cutting of a solution */
@@ -139,7 +139,7 @@ struct SCIP_ConshdlrData
 /** allocates memory for the value pointer */
 static
 void allocInt(
-   Int*          value                       /**< pointer to the value to allocate memory */
+   Int*                  value               /**< pointer to the value to allocate memory */
    )
 {  /*lint --e{715}*/
 #ifdef WITH_GMP
@@ -151,8 +151,8 @@ void allocInt(
 /** sets the value pointer to the new value */
 static
 void setInt(
-   Int*          value,                       /**< pointer to the value to initialize */
-   SCIP_Longint  newvalue                     /**< new value */
+   Int*                  value,              /**< pointer to the value to initialize */
+   SCIP_Longint          newvalue            /**< new value */
    )
 {
 #ifdef WITH_GMP
@@ -166,7 +166,7 @@ void setInt(
 /** free memory */
 static
 void freeInt(
-   Int*          value                      /**< pointer to the value to free */
+   Int*                  value               /**< pointer to the value to free */
    )
 {  /*lint --e{715}*/
 #ifdef WITH_GMP
@@ -178,7 +178,7 @@ void freeInt(
 /** adds one to the given value */
 static
 void addOne(
-   Int*          value                      /**< pointer to the value to increase */
+   Int*                  value               /**< pointer to the value to increase */
    )
 {
 #ifdef WITH_GMP
@@ -192,8 +192,8 @@ void addOne(
 /** adds the summand to the given value */
 static
 void addInt(
-   Int*          value,                     /**< pointer to the value to increase */
-   Int*          summand                    /**< summand to add on */
+   Int*                  value,              /**< pointer to the value to increase */
+   Int*                  summand             /**< summand to add on */
    )
 {
 #ifdef WITH_GMP
@@ -207,8 +207,8 @@ void addInt(
 /** multiplies the factor by the given value */
 static
 void multInt(
-   Int*          value,                     /**< pointer to the value to increase */
-   SCIP_Longint  factor                     /**< factor to multiply with */
+   Int*                  value,              /**< pointer to the value to increase */
+   SCIP_Longint          factor              /**< factor to multiply with */
    )
 {
 #ifdef WITH_GMP
@@ -222,9 +222,9 @@ void multInt(
 /* method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
 static
 void toString(
-   Int      value,                          /**< number */
-   char**   buffer,                         /**< pointer to buffer for storing the string */
-   int      buffersize                      /**< length of the buffer */
+   Int                   value,              /**< number */
+   char**                buffer,             /**< pointer to buffer for storing the string */
+   int                   buffersize          /**< length of the buffer */
    )
 {
 #ifdef WITH_GMP
@@ -238,8 +238,8 @@ void toString(
 /* method for creating a SCIP_Longing out of an Int */
 static
 SCIP_Longint getNCountedSols(
-   Int                   value,             /**< number to convert */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   Int                   value,              /**< number to convert */
+   SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    )
 {
 #ifdef WITH_GMP
@@ -277,8 +277,8 @@ SCIP_Bool varIsUnfixedLocal(
 /** creates the constraint handler data */
 static
 SCIP_RETCODE conshdlrdataCreate(
-   SCIP*                      scip,            /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**        conshdlrdata     /**< pointer to store constraint handler data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store constraint handler data */
    )
 {
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
@@ -308,9 +308,9 @@ SCIP_RETCODE conshdlrdataCreate(
 /** check solution in original space */
 static
 void checkSolutionOrig(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_SOL*                sol,             /**< solution to add */
-   SCIP_CONSHDLRDATA*       conshdlrdata     /**< constraint handler data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to add */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
    SCIP_Bool feasible;
@@ -344,7 +344,7 @@ void checkSolutionOrig(
 /** check if the current parameter setting is correct for a save counting process */
 static
 SCIP_RETCODE checkParameters(
-   SCIP*                      scip             /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEUR** heuristics;
@@ -584,9 +584,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
 /** collect given solution or local domains as sparse solution */
 static
 SCIP_RETCODE collectSolution(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
-   SCIP_SOL*                  sol               /**< solution, or NULL if local domains */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_SOL*             sol                 /**< solution, or NULL if local domains */
    )
 {
    SPARSESOLUTION* solution;
@@ -662,11 +662,11 @@ SCIP_RETCODE collectSolution(
 /** counts the number of solutions represented by sol */
 static
 SCIP_RETCODE countSparsesol(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_SOL*                  sol,              /**< solution */
-   SCIP_Bool                  feasible,         /**< is solution feasible? */
-   SCIP_CONSHDLRDATA*         conshdlrdata,     /**< constraint handler data */
-   SCIP_RESULT*               result            /**< pointer to store the result of the checking process */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool             feasible,           /**< is solution feasible? */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the checking process */
    )
 {
    assert( scip != NULL );
@@ -777,10 +777,10 @@ SCIP_RETCODE countSparsesol(
 /** checks if the new solution is feasible for the logicor constraints */
 static
 SCIP_RETCODE checkLogicor(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the logicor constraints are not fully propagated; therefore, we have to check
@@ -848,10 +848,10 @@ SCIP_RETCODE checkLogicor(
 /** checks if the new solution is feasible for the knapsack constraints */
 static
 SCIP_RETCODE checkKnapsack(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the knapsack constraints are not fully propagated; therefore, we have to check
@@ -942,10 +942,10 @@ SCIP_RETCODE checkKnapsack(
 /** checks if the new solution is feasible for the bounddisjunction constraints */
 static
 SCIP_RETCODE checkBounddisjunction(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the bounddisjunction constraints are not fully propagated; therefore, we have to check
@@ -1019,10 +1019,10 @@ SCIP_RETCODE checkBounddisjunction(
 /** checks if the new solution is feasible for the varbound constraints */
 static
 SCIP_RETCODE checkVarbound(
-   SCIP*                      scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,         /**< constraint handler */
-   int                        nconss,           /**< number of enabled constraints */
-   SCIP_Bool*                 satisfied         /**< pointer to store if the logicor constraints a satisfied */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nconss,             /**< number of enabled constraints */
+   SCIP_Bool*            satisfied           /**< pointer to store if the logicor constraints a satisfied */
    )
 {
    /**@note the varbound constraints are not fully propagated; therefore, we have to check
@@ -1093,9 +1093,9 @@ SCIP_RETCODE checkVarbound(
 /** check if the current node initializes a non trivial unrestricted subtree */
 static
 SCIP_RETCODE checkFeasSubtree(
-   SCIP* scip,                         /**< SCIP main data structure */
-   SCIP_SOL* sol,                      /**< solution to check */
-   SCIP_Bool* feasible                 /**< pointer to store the result of the check */
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Bool*            feasible            /**< pointer to store the result of the check */
    )
 {
    int h;
@@ -1195,10 +1195,10 @@ SCIP_RETCODE checkFeasSubtree(
 /** check the given solution */
 static
 SCIP_RETCODE checkSolution(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_SOL*                sol,             /**< solution to add */
-   SCIP_CONSHDLRDATA*       conshdlrdata,    /**< constraint handler data */
-   SCIP_RESULT*             result           /**< pointer to store the result of the checking process */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to add */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the checking process */
    )
 {
    SCIP_Longint nsols;
@@ -2383,7 +2383,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 /** create the interactive shell dialogs for the counting process */
 static
 SCIP_RETCODE createCountDialog(
-   SCIP*                    scip             /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_DIALOG* root;
@@ -2620,8 +2620,8 @@ SCIP_RETCODE SCIPcount(
  *  a SCIP_Longint the valid flag is set to FALSE
  */
 SCIP_Longint SCIPgetNCountedSols(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    )
 {
    SCIP_CONSHDLR* conshdlr;

@@ -111,7 +111,7 @@ SCIP_Bool SCIPpricerIsDelayed(
 /** is variable pricer initialized? */
 extern
 SCIP_Bool SCIPpricerIsInitialized(
-   SCIP_PRICER*            pricer                /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 #ifdef __cplusplus

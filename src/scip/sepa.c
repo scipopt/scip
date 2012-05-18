@@ -634,7 +634,7 @@ SCIP_Real SCIPsepaGetMaxbounddist(
    return sepa->maxbounddist;
 }
 
-/**< does the separator use a secondary SCIP instance? */
+/** does the separator use a secondary SCIP instance? */
 SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */
    )

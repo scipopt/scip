@@ -113,12 +113,12 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 /** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 extern
 SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
-   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_NONLINCONSUPGD((*nonlinconsupgd)),/**< method to call for upgrading nonlinear constraint, or NULL */
    SCIP_DECL_EXPRGRAPHNODEREFORM((*nodereform)),/**< method to call for reformulating expression graph node, or NULL */
-   int                     priority,           /**< priority of upgrading method */
-   SCIP_Bool               active,             /**< should the upgrading method by active by default? */
-   const char*             conshdlrname        /**< name of the constraint handler */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    );
 
 /** creates and captures a nonlinear constraint

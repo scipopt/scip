@@ -335,7 +335,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Char parameter */
@@ -873,9 +873,9 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
-					      *   problem was already declared unbounded, it is already stored */
+                                              *   problem was already declared unbounded, it is already stored */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
-					      *   problem was already declared infeasible, it is already stored */
+                                              *   problem was already declared infeasible, it is already stored */
    );
 
 /** calls initsol methods of all plugins */
@@ -898,7 +898,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
 /** returns the estimated number of bytes used by external software, e.g., the LP solver */
 extern
 SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*              set                /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */

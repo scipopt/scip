@@ -1179,7 +1179,7 @@ SCIP_Bool conflictsetIsRedundant(
 /** prints a conflict set to the screen */
 static
 void conflictsetPrint(
-   SCIP_CONFLICTSET*          conflictset              /**< conflict set */
+   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
    )
 {
    int i;

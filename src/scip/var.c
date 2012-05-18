@@ -5287,7 +5287,7 @@ void SCIPvarSetProbindex(
  */
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
-   const char*          name                /**< new name of variable */
+   const char*           name                /**< new name of variable */
    )
 {
    assert(var != NULL);

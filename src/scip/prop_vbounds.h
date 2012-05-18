@@ -59,15 +59,15 @@ SCIP_RETCODE SCIPcreateTopoSortedVars(
 /** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
 extern
 SCIP_Bool SCIPisPropagatedVbounds(
-   SCIP*                 scip                 /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** performs propagation of variables lower and upper bounds */
 extern
 SCIP_RETCODE SCIPexecPropVbounds(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Bool             force,               /**< should domain changes be forced */
-   SCIP_RESULT*          result               /**< pointer to store result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             force,              /**< should domain changes be forced */
+   SCIP_RESULT*          result              /**< pointer to store result */
    );
 
 #ifdef __cplusplus

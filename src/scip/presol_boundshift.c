@@ -51,9 +51,9 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Longint          maxshift;         /**< absolute value of maximum shift */
-   SCIP_Bool             flipping;         /**< is flipping allowed? */
-   SCIP_Bool             integer;          /**< shift only integer values? */
+   SCIP_Longint          maxshift;           /**< absolute value of maximum shift */
+   SCIP_Bool             flipping;           /**< is flipping allowed? */
+   SCIP_Bool             integer;            /**< shift only integer values? */
 };
 
 

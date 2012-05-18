@@ -144,7 +144,7 @@ GENVBOUND* getGenVBound(
 static
 void printGenVBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   GENVBOUND*               genvbound              /**< genvbound to be printed */
+   GENVBOUND*            genvbound           /**< genvbound to be printed */
    )
 {
    int i;
@@ -1233,15 +1233,15 @@ SCIP_RETCODE addNewGenVBound(
  *  "boundtype" of variable "var", it will be replaced
  */
 SCIP_RETCODE SCIPgenVBoundAdd(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_PROP*            genvboundprop,       /**< genvbound propagator */
-   SCIP_VAR**            vars,                /**< array of RHSs variables */
-   SCIP_VAR*             var,                 /**< LHSs variable */
-   SCIP_Real*            coefs,               /**< array of coefficients for the RHSs variables */
-   int                   ncoefs,              /**< size of coefs array */
-   SCIP_Real             coefcutoffbound,     /**< nonpositive value of the cutoff bounds multiplier */
-   SCIP_Real             constant,            /**< constant term */
-   SCIP_BOUNDTYPE        boundtype            /**< type of bound provided by the genvbound */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
+   SCIP_VAR**            vars,               /**< array of RHSs variables */
+   SCIP_VAR*             var,                /**< LHSs variable */
+   SCIP_Real*            coefs,              /**< array of coefficients for the RHSs variables */
+   int                   ncoefs,             /**< size of coefs array */
+   SCIP_Real             coefcutoffbound,    /**< nonpositive value of the cutoff bounds multiplier */
+   SCIP_Real             constant,           /**< constant term */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    )
 {
    /** @todo in debug mode: check if genvbound is nontrivial */

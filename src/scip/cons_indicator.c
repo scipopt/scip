@@ -813,7 +813,7 @@ SCIP_RETCODE checkIIS(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_HASHMAP* varhash;           /**< hash map from variable to column index in auxiliary LP */
+   SCIP_HASHMAP* varhash;   /** hash map from variable to column index in auxiliary LP */
    SCIP_LPI* lp;
    int nvars;
    int c;

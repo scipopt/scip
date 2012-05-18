@@ -98,11 +98,11 @@ struct SCIP_HeurData
 /* copies SCIP to probing SCIP and creates variable hashmap */
 static
 SCIP_RETCODE setupProbingSCIP(
-   SCIP*                 scip,                /**< SCIP data structure  */
-   SCIP**                probingscip,         /**< sub-SCIP data structure  */
-   SCIP_HASHMAP**        varmapfw,            /**< mapping of SCIP variables to sub-SCIP variables */
-   SCIP_Bool             copycuts,            /**< should all active cuts from cutpool of scip copied to constraints in subscip */
-   SCIP_Bool*            success              /**< was copying successful? */
+   SCIP*                 scip,               /**< SCIP data structure  */
+   SCIP**                probingscip,        /**< sub-SCIP data structure  */
+   SCIP_HASHMAP**        varmapfw,           /**< mapping of SCIP variables to sub-SCIP variables */
+   SCIP_Bool             copycuts,           /**< should all active cuts from cutpool of scip copied to constraints in subscip */
+   SCIP_Bool*            success             /**< was copying successful? */
    )
 {
    /* initializing the subproblem */

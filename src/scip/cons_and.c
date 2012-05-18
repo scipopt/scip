@@ -921,7 +921,7 @@ SCIP_RETCODE applyFixings(
 static 
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons               /**< constraint to check */
+   SCIP_CONS*            cons                /**< constraint to check */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3716,7 +3716,7 @@ SCIP_DECL_EVENTEXEC(eventExecAnd)
 
 /** creates the handler for and constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrAnd(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;

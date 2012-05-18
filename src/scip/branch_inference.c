@@ -55,10 +55,10 @@ struct SCIP_BranchruleData
 /** evaluate the given candidate with the given score against the currently best know candidate */
 static
 void evaluateCand(
-   SCIP_VAR*            cand,                /**< candidate to be checked */
-   SCIP_Real            score,               /**< score of the candidate */
-   SCIP_VAR**           bestcand,            /**< pointer to the currently best candidate */
-   SCIP_Real*           bestscore            /**< pointer to the score of the currently best candidate */
+   SCIP_VAR*             cand,               /**< candidate to be checked */
+   SCIP_Real             score,              /**< score of the candidate */
+   SCIP_VAR**            bestcand,           /**< pointer to the currently best candidate */
+   SCIP_Real*            bestscore           /**< pointer to the score of the currently best candidate */
    )
 {
 

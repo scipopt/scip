@@ -3654,7 +3654,7 @@ void SCIPprofilePrint(
  */
 static
 SCIP_Bool profileFindLeft(
-   SCIP_PROFILE*        profile,           /**< stair map to search */
+   SCIP_PROFILE*         profile,            /**< stair map to search */
    int                   timepoint,          /**< time point to search for */
    int*                  pos                 /**< pointer to store the position */
    )
@@ -3679,7 +3679,7 @@ SCIP_Bool profileFindLeft(
  */
 static
 SCIP_Bool profileFindRight(
-   SCIP_PROFILE*        profile,           /**< stair map to search */
+   SCIP_PROFILE*         profile,            /**< stair map to search */
    int                   timepoint,          /**< time point to search for */
    int*                  pos                 /**< pointer to store the position */
    )
@@ -3698,7 +3698,7 @@ SCIP_Bool profileFindRight(
  */
 static
 int profileInsertTimepoint(
-   SCIP_PROFILE*        profile,           /**< stair map to insert the time point */
+   SCIP_PROFILE*         profile,            /**< stair map to insert the time point */
    int                   timepoint           /**< time point to insert */
    )
 {
@@ -3744,7 +3744,7 @@ int profileInsertTimepoint(
 /** updates the stair map due to inserting of a stair */
 static
 void profileUpdate(
-   SCIP_PROFILE*        profile,           /**< profile to update */
+   SCIP_PROFILE*         profile,            /**< profile to update */
    int                   left,               /**< left side of stair interval */
    int                   right,              /**< right side of stair interval */
    int                   height,             /**< height of the stair */
@@ -5215,7 +5215,8 @@ SCIP_Longint SCIPcalcGreComDiv(
          do 
          {
             val1 >>= 1;   /*lint !e704*/
-         } while( !(val1 & 1) );
+         }
+         while( !(val1 & 1) );
       }
       else 
       {
@@ -5224,7 +5225,8 @@ SCIP_Longint SCIPcalcGreComDiv(
          do 
          {
             val2 >>= 1;  /*lint !e704*/
-         } while( !(val2 & 1) );
+         }
+         while( !(val2 & 1) );
       }
    }
 

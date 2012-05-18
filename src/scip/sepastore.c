@@ -74,7 +74,7 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
 
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreCreate(
-   SCIP_SEPASTORE**           sepastore                /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreFree(
-   SCIP_SEPASTORE**           sepastore                /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1032,7 +1032,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROW** SCIPsepastoreGetCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1042,7 +1042,7 @@ SCIP_ROW** SCIPsepastoreGetCuts(
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreGetNCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1052,7 +1052,7 @@ int SCIPsepastoreGetNCuts(
 
 /** get total number of cuts found so far */
 int SCIPsepastoreGetNCutsFound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1062,7 +1062,7 @@ int SCIPsepastoreGetNCutsFound(
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreGetNCutsFoundRound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1072,7 +1072,7 @@ int SCIPsepastoreGetNCutsFoundRound(
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreGetNCutsApplied(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);

@@ -156,42 +156,41 @@ struct SCIP_ConsData
 struct SCIP_QuadConsUpgrade
 {
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd));  /**< method to call for upgrading quadratic constraint */
-   int                     priority;         /**< priority of upgrading method */
-   SCIP_Bool               active;           /**< is upgrading enabled */
+   int                   priority;           /**< priority of upgrading method */
+   SCIP_Bool             active;             /**< is upgrading enabled */
 };
 typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
-   int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
-   SCIP_Bool             binreforminitial;          /**< whether to make constraints added due to replacing products with binary variables initial */
-   SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;     /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-   SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
-   SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
-   SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Bool             linearizeheursol;          /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
-   SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
-   SCIP_Bool             checkfactorable;           /**< whether functions should be checked to be factorable */
-   SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
-   int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
-   int                   maxproproundspresolve;     /**< limit on number of propagation rounds for a single constraint within one presolving round */
-   SCIP_Bool             sepanlp;                   /**< where linearization of the NLP relaxation solution added? */
+   int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
+   int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
+   SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
+   SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
+   SCIP_Bool             doscaling;          /**< should constraints be scaled in the feasibility check ? */
+   SCIP_Real             defaultbound;       /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
+   SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
+   SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
+   SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
+   SCIP_Bool             checkfactorable;    /**< whether functions should be checked to be factorable */
+   SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
+   SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
+   int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
+   int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
 
-   SCIP_HEUR*            subnlpheur;                /**< a pointer to the subnlp heuristic, if available */
-   SCIP_HEUR*            trysolheur;                /**< a pointer to the trysol heuristic, if available */
-   SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
-   int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if caught */
-   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
-   SCIP_NODE*            lastenfolpnode;            /**< the node for which enforcement was called the last time (and some constraint was violated) */
-   int                   nenfolprounds;             /**< counter on number of enforcement rounds for the current node */
-
-   SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
-   int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
-   int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
+   SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
+   SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for variable bound change events */
+   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
+   SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
+   int                   quadconsupgradessize; /**< size of quadconsupgrade array */
+   int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
 };
 
 
@@ -6650,9 +6649,9 @@ SCIP_RETCODE generateCut(
             SCIPdebugMessage("skip cut\n");
             success = FALSE;
          }
-
          break;
-      } while( TRUE );  /*lint !e506 */
+      }
+      while( TRUE );  /*lint !e506 */
 
       if( !SCIPisInfinity(scip, -lhs) )
       {
@@ -8651,7 +8650,8 @@ SCIP_RETCODE propagateBounds(
          }
       }
 
-   } while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -10237,7 +10237,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                havechange = TRUE;
             }
 
-         } while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
+         }
+         while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
 
          if( redundant )
             continue;

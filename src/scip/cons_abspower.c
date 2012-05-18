@@ -64,7 +64,7 @@
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
-/**< power function type to be used by a constraint instead of the general pow */
+/** power function type to be used by a constraint instead of the general pow */
 #define DECL_MYPOW(x) SCIP_Real x (SCIP_Real base, SCIP_Real exponent)
 
 /** sign of a value (-1 or +1)
@@ -153,13 +153,13 @@ struct SCIP_ConshdlrData
  */
 
 enum Proprule
-   {
-      PROPRULE_1,                          /**< left hand side and bounds on z -> lower bound on x */
-      PROPRULE_2,                          /**< left hand side and upper bound on x -> bound on z */
-      PROPRULE_3,                          /**< right hand side and bounds on z -> upper bound on x */
-      PROPRULE_4,                          /**< right hand side and lower bound on x -> bound on z */
-      PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
-   };
+{
+   PROPRULE_1,                               /**< left hand side and bounds on z -> lower bound on x */
+   PROPRULE_2,                               /**< left hand side and upper bound on x -> bound on z */
+   PROPRULE_3,                               /**< right hand side and bounds on z -> upper bound on x */
+   PROPRULE_4,                               /**< right hand side and lower bound on x -> bound on z */
+   PROPRULE_INVALID                          /**< propagation was applied without a specific propagation rule */
+};
 typedef enum Proprule PROPRULE;
 
 /*
@@ -1077,15 +1077,15 @@ SCIP_RETCODE presolveFindDuplicates(
 /** given a variable and an interval, tightens the local bounds of this variable to the given interval */
 static
 SCIP_RETCODE tightenBounds(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_VAR*             var,               /**< variable which bounds to tighten */
-   SCIP_INTERVAL         bounds,            /**< new bounds */
-   SCIP_Bool             force,             /**< force tightening even if below bound strengthening tolerance */
-   SCIP_CONS*            cons,              /**< constraint that is propagated */
-   SCIP_RESULT*          result,            /**< pointer to store the result of the propagation call */
-   int*                  nchgbds,           /**< buffer where to add the number of changed bounds */
-   int*                  nfixedvars,        /**< buffer where to add the number of fixed variables, can be equal to nchgbds */
-   int*                  naddconss          /**< buffer where to add the number of added constraints, can be NULL if force is FALSE */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to tighten */
+   SCIP_INTERVAL         bounds,             /**< new bounds */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_CONS*            cons,               /**< constraint that is propagated */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the propagation call */
+   int*                  nchgbds,            /**< buffer where to add the number of changed bounds */
+   int*                  nfixedvars,         /**< buffer where to add the number of fixed variables, can be equal to nchgbds */
+   int*                  naddconss           /**< buffer where to add the number of added constraints, can be NULL if force is FALSE */
    )
 {
    SCIP_Bool infeas;
@@ -1922,8 +1922,8 @@ SCIP_RETCODE registerBranchingCandidates(
          onlynonfixedsign = FALSE;
          continue;
       }
-
-   } while( FALSE );
+   }
+   while( FALSE );
 
    return SCIP_OKAY;
 }

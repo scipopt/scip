@@ -345,9 +345,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -361,9 +361,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -1999,7 +1999,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    SCIP_RETCODE retval;
@@ -2667,7 +2667,8 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi->solstat >= 0);
 
 #if OLDRAYCODE
-   if (lpi->solmethod != 'p') {
+   if (lpi->solmethod != 'p')
+   {
       /* We can only get a dual ray from primal. */
       SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    }
@@ -2763,7 +2764,9 @@ SCIP_Bool SCIPlpiIsStable(
 
       if( pinfeas )
          return FALSE;
-   } else if ( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS ) {
+   }
+   else if ( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+   {
       /* Presolved problem was solved to optimality but infeasibilities */
       /* were introduced by postsolve. */
       return FALSE;

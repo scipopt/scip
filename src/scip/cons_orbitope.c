@@ -242,12 +242,12 @@ void printMatrix(
 /** Print SCI in nice form for debugging */
 static
 SCIP_RETCODE printSCI(
-   SCIP* scip,                /**< SCIP pointer */
-   int   p,                   /**< number of rows */
-   int   q,                   /**< number of columns */
-   int** cases,               /**< SCI dynamic programming table */
-   int i,                     /**< row position of bar */
-   int j                      /**< column position of bar */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   p,                  /**< number of rows */
+   int                   q,                  /**< number of columns */
+   int**                 cases,              /**< SCI dynamic programming table */
+   int                   i,                  /**< row position of bar */
+   int                   j                   /**< column position of bar */
    )
 {
    int k;

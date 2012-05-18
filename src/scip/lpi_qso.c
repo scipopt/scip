@@ -36,22 +36,22 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   QSprob prob;     /**< LP struct pointer */
-   int solstat;     /**< solution status of last optimization call */
-   int previt;      /**< previous number of simplex iterations performed */
-   int rowspace;    /**< current size of internal row-related arrays */
-   char* isen;      /**< array of length rowspace */
-   double* irhs;    /**< array of rhs rowspace */
-   double* irng;    /**< array of range rowspace */
-   int* ircnt;      /**< array of count rowspace */
-   int* irbeg;      /**< array of beginning index rowspace */
-   int colspace;    /**< current size of internal column-related arrays */
-   int* iccnt;      /**< array of length colspace */
-   char* iccha;     /**< array of type colspace */
-   int tbsz;        /**< current size of tableau-related arrays */
-   double* itab;    /**< array of length tbsz */
-   char* ibas;      /**< array of length tbsz */
-   int pricing;     /**< SCIP pricing option */
+   QSprob                prob;               /**< LP struct pointer */
+   int                   solstat;            /**< solution status of last optimization call */
+   int                   previt;             /**< previous number of simplex iterations performed */
+   int                   rowspace;           /**< current size of internal row-related arrays */
+   char*                 isen;               /**< array of length rowspace */
+   double*               irhs;               /**< array of rhs rowspace */
+   double*               irng;               /**< array of range rowspace */
+   int*                  ircnt;              /**< array of count rowspace */
+   int*                  irbeg;              /**< array of beginning index rowspace */
+   int                   colspace;           /**< current size of internal column-related arrays */
+   int*                  iccnt;              /**< array of length colspace */
+   char*                 iccha;              /**< array of type colspace */
+   int                   tbsz;               /**< current size of tableau-related arrays */
+   double*               itab;               /**< array of length tbsz */
+   char*                 ibas;               /**< array of length tbsz */
+   int                   pricing;            /**< SCIP pricing option */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -139,9 +139,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -155,9 +155,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -2918,8 +2918,8 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information from a file */
 SCIP_RETCODE SCIPlpiReadState(
-   SCIP_LPI*             lpi,               /**< LP interface structure */
-   const char*           fname              /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    int rval = 0;
@@ -2941,8 +2941,8 @@ SCIP_RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    QSbas bas = 0;

@@ -164,7 +164,7 @@ static
 SCIP_RETCODE catchRhsVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons               /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -254,7 +254,7 @@ static
 SCIP_RETCODE dropRhsVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons               /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1154,7 +1154,8 @@ SCIP_RETCODE generateSparseCut(
          x[ind[i]] = SCIPgetSolVal(scip, sol, consdata->vars[ind[i]]);
 
       maxnz = nextmaxnz;
-   } while( TRUE );  /*lint !e506*/
+   }
+   while( TRUE );  /*lint !e506*/
 
    SCIPfreeBufferArray(scip, &x);
    SCIPfreeBufferArray(scip, &dist);
@@ -2476,10 +2477,10 @@ SCIP_RETCODE presolveCreateOuterApprox(
 /** propagates variable bounds */
 static
 SCIP_RETCODE propagateBounds(
-   SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONS*      cons,      /**< constraint */
-   SCIP_RESULT*    result,    /**< buffer to store result of propagation */
-   int*            nchgbds    /**< buffer where to add number of tightened bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_RESULT*          result,             /**< buffer to store result of propagation */
+   int*                  nchgbds             /**< buffer where to add number of tightened bounds */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2659,10 +2660,10 @@ SCIP_RETCODE propagateBounds(
 /** tries to adjust a solution such that it satisfies a given constraint by increasing the value for the constraints right hand side variable */
 static
 SCIP_RETCODE polishSolution(
-   SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONS*      cons,      /**< constraint */
-   SCIP_SOL*       sol,       /**< solution to polish */
-   SCIP_Bool*      success    /**< buffer to store whether polishing was successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to polish */
+   SCIP_Bool*            success             /**< buffer to store whether polishing was successful */
    )
 {
    SCIP_CONSDATA* consdata;

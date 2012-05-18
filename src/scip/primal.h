@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
  */
 extern
 SCIP_Bool SCIPprimalUpperboundIsSol(
-   SCIP_PRIMAL*          primal,              /**< primal data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< transformed problem after presolve */
    );

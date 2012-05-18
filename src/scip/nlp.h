@@ -174,10 +174,10 @@ SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
 /** adds variable to quadvars array of row */
 extern
 SCIP_RETCODE SCIPnlrowAddQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,               /**< block memory */
-   SCIP_SET*             set,                  /**< global SCIP settings */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< variable to search for */
    );
 
 /** ensures, that quadratic elements array of nonlinear row can store at least num entries */

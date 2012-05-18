@@ -248,8 +248,8 @@ struct SCIP_ConshdlrData
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
-   SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
 };
 
 /** linear constraint update method */

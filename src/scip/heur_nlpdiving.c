@@ -799,7 +799,7 @@ SCIP_RETCODE chooseDoubleVar(
    SCIP_VAR**            pseudocands,        /**< array of non-fixed variables */
    SCIP_Real*            pseudocandsnlpsol,  /**< array of NLP solution values */
    SCIP_Real*            pseudocandslpsol,   /**< array of LP solution values */
-   int                   npseudocands,          /**< number of NLP fractional variables */
+   int                   npseudocands,       /**< number of NLP fractional variables */
    SCIP_HASHMAP*         varincover,         /**< hash map for variables */
    SCIP_Bool             covercomputed,      /**< has a minimal cover been computed? */
    int*                  bestcand,           /**< pointer to store the index of the best candidate variable */

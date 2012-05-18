@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
 /** get cuts in the separation storage */
 extern
 SCIP_ROW** SCIPsepastoreGetCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
@@ -158,13 +158,13 @@ int SCIPsepastoreGetNCutsFound(
 /** get number of cuts found so far in current separation round */
 extern
 int SCIPsepastoreGetNCutsFoundRound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
 extern
 int SCIPsepastoreGetNCutsApplied(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 #ifdef __cplusplus

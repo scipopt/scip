@@ -107,8 +107,8 @@ struct SCIP_SepaData
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
-   int                   maxtestdelta;             /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxconts;             /**< maximal number of active continuous variables in aggregated row */
+   int                   maxtestdelta;       /**< maximal number of different deltas to try (-1: unlimited) */
+   int                   maxconts;           /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */

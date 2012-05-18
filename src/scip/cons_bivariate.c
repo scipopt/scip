@@ -729,7 +729,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
             continue;
          }
 
-      } while( FALSE );
+      }
+      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -4630,12 +4631,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 /** tightens bounds on a variable to given interval */
 static
 SCIP_RETCODE propagateBoundsTightenVar(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_VAR*             var,               /**< variable which bounds to tighten */
-   SCIP_INTERVAL         bounds,            /**< new bounds */
-   SCIP_CONS*            cons,              /**< constraint that is propagated */
-   SCIP_RESULT*          result,            /**< pointer where to update the result of the propagation call */
-   int*                  nchgbds            /**< buffer where to add the the number of changed bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to tighten */
+   SCIP_INTERVAL         bounds,             /**< new bounds */
+   SCIP_CONS*            cons,               /**< constraint that is propagated */
+   SCIP_RESULT*          result,             /**< pointer where to update the result of the propagation call */
+   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
    )
 {
    SCIP_Bool infeas;
@@ -4956,8 +4957,8 @@ SCIP_RETCODE propagateBounds(
          *result = propresult;
          success = TRUE;
       }
-
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }

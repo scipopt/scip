@@ -32,7 +32,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE     /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHT_INEQUALITY   1   /**< the heuristic row weight for inequalities */
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equations */
@@ -40,12 +40,12 @@
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
 #define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
-#define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
+#define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
-#define SORTKEYS                  "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
+#define SORTKEYS                 "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
 
 /* enable statistic output by defining macro STATISTIC_INFORMATION */
 #ifdef STATISTIC_INFORMATION
@@ -61,18 +61,18 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool            relax;              /**< should continuous variables be relaxed from the problem */
-   SCIP_Bool            probing;            /**< should probing be executed? */
-   SCIP_Bool            onlywithoutsol;     /* Should heuristic only be executed if no primal solution was found, yet? */
-   int                  nproprounds;        /**< The default number of propagation rounds for each propagation used */
-   int                  cutoffbreaker;      /**< the number of cutoffs before heuristic execution is stopped, or -1 for no
+   SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
+   SCIP_Bool             probing;            /**< should probing be executed? */
+   SCIP_Bool             onlywithoutsol;     /**< Should heuristic only be executed if no primal solution was found, yet? */
+   int                   nproprounds;        /**< The default number of propagation rounds for each propagation used */
+   int                   cutoffbreaker;      /**< the number of cutoffs before heuristic execution is stopped, or -1 for no
                                                * limit */
-   unsigned int         randseed;           /**< seed for random number generation */
-   char                 sortkey;            /**< the key by which variables are sorted */
-   SCIP_Bool            sortvars;           /**< should variables be processed in sorted order? */
+   unsigned int          randseed;           /**< seed for random number generation */
+   char                  sortkey;            /**< the key by which variables are sorted */
+   SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
 
    STATISTIC(
-      SCIP_LPSOLSTAT     lpsolstat;           /**< the probing status after probing */
+      SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
       SCIP_Longint       nlpiters;           /**< number of LP iterations which the heuristic needed */
       int                nremainingviols;    /**< the number of remaining violations */
