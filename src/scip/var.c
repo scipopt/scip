@@ -14653,7 +14653,86 @@ SCIP_Real SCIPvarGetObj(
 
    return var->obj;
 }
-   
+
+
+/** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
+ *  e.g. obj(x) = 1 this method returns for ~x the value -1
+ */
+SCIP_RETCODE SCIPvarGetAggregatedObj(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
+   )
+{
+   SCIP_VAR* probvar = var;
+   SCIP_Real mult = 1.0;
+
+   assert(probvar != NULL);
+   assert(aggrobj != NULL);
+
+   while( probvar != NULL )
+   {
+      switch( SCIPvarGetStatus(probvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+	 (*aggrobj) = mult * SCIPvarGetObj(probvar);
+	 return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+	 assert(SCIPvarGetObj(probvar) == 0.0);
+	 (*aggrobj) = 0.0;
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( probvar->data.multaggr.nvars == 1 )
+         {
+            assert( probvar->data.multaggr.vars != NULL );
+            assert( probvar->data.multaggr.scalars != NULL );
+            assert( probvar->data.multaggr.vars[0] != NULL );
+            mult *= probvar->data.multaggr.scalars[0];
+            probvar = probvar->data.multaggr.vars[0];
+            break;
+         }
+	 else
+	 {
+	    SCIP_Real tmpobj;
+	    int v;
+
+	    (*aggrobj) = 0.0;
+
+	    for( v = probvar->data.multaggr.nvars - 1; v >= 0; --v )
+	    {
+	       SCIP_CALL( SCIPvarGetAggregatedObj(probvar->data.multaggr.vars[v], &tmpobj) );
+	       (*aggrobj) += probvar->data.multaggr.scalars[v] * tmpobj;
+	    }
+	    return SCIP_OKAY;
+	 }
+
+      case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
+         assert(probvar->data.aggregate.var != NULL);
+         mult *= probvar->data.aggregate.scalar;
+         probvar = probvar->data.aggregate.var;
+         break;
+
+      case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
+         assert(probvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(probvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(probvar->negatedvar->negatedvar == probvar);
+         mult *= -1.0;
+         probvar = probvar->negatedvar;
+         break;
+
+      default:
+	 SCIPABORT();
+	 return SCIP_INVALIDDATA; /*lint !e527*/
+      }
+   }
+
+   return SCIP_INVALIDDATA;
+}
+
 /** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_Real SCIPvarGetLbOriginal(
    SCIP_VAR*             var                 /**< original problem variable */

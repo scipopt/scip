@@ -104,6 +104,8 @@ interface
 - new methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
   the fixing status of a parameter can be requested by SCIPparamIsFixed();
   in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
+- added new method SCIPvarGetAggregatedObj() which computes for a (not active) variable the corresponding objective
+  value
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -197,6 +199,7 @@ parameters:
   them as they are (0)
 - new parameter <reading/cnfreader/useobj> to state whether an artificial objective, depending on the number of clauses
   a variable appears in, should be used, by default set to FALSE, old default behavior of reader corresponds to TRUE
+- new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -223,6 +226,7 @@ features:
 - parametes can now be fixed, which means that their value cannot be changed unless they are unfixed, first;
   the fixing status of a parameter is copied to sub-SCIPs, which allows to ensure that certain parameters
   are also not changed when, e.g., heuristics change emphasis settings or also specific parameters
+- added dual presolving for and-constraints
 
 SCIP version 2.1.2
 ==================
