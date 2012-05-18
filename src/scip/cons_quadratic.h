@@ -426,6 +426,16 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP_Real*            violation           /**< buffer to store violation of constraint */
    );
 
+/** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
+ *
+ * That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
+ */
+extern
+SCIP_Bool SCIPisLinearLocalQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+);
+
 /** Adds the constraint to an NLPI problem. */
 extern
 SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(

@@ -359,7 +359,7 @@ ALLSRC		+=	$(LPILIBSRC)
 
 NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
-		  nlpi/expr.o \
+		  nlpi/expr.o
 
 NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
@@ -851,7 +851,7 @@ githash::	# do not remove the double-colon
 # include install/uninstall targets
 -include make/make.install
 
-# the testgams target need to come after make/local/make.targets has been included, because the latter may assing a value to CLIENTTMPDIR
+# the testgams target need to come after make/local/make.targets has been included (if any), because the latter may assign a value to CLIENTTMPDIR
 .PHONY: testgams
 testgams:
 ifeq ($(CLIENTTMPDIR),)

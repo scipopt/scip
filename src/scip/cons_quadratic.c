@@ -11958,6 +11958,55 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    return SCIP_OKAY;
 }
 
+/** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
+ *
+ * That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
+ */
+SCIP_Bool SCIPisLinearLocalQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check all square terms */
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      if( consdata->quadvarterms[i].sqrcoef == 0.0 )
+         continue;
+
+      var1 = consdata->quadvarterms[i].var;
+      assert(var1 != NULL);
+
+      if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetUbLocal(var1)) )
+         return FALSE;
+   }
+
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      var1 = consdata->bilinterms[i].var1;
+      var2 = consdata->bilinterms[i].var2;
+
+      assert(var1 != NULL);
+      assert(var2 != NULL);
+
+      if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetUbLocal(var1)) &&
+         ! SCIPisRelEQ(scip, SCIPvarGetLbLocal(var2), SCIPvarGetUbLocal(var2)) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /** Adds the constraint to an NLPI problem. */
 SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
