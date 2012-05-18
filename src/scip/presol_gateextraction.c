@@ -599,7 +599,25 @@ SCIP_RETCODE correctPresoldata(
    /* check if there already exist some set-packing and some logicor constraints with the right amount of variables */
    if( !presoldata->usefulsetppcexist || !presoldata->usefullogicorexist )
    {
+      SCIP_Bool usefullogicorexisted = presoldata->usefullogicorexist;
+
       SCIP_CALL( createPresoldata(scip, presoldata, setppcs, nsetppcs, logicors, nlogicors) );
+
+      /* if we already had useful logicor constraints but did not find any useful setppc constraint, the maximal number
+       * of variables appearing in a logicor constraint was not updated, so we do it here
+       */
+      if( usefullogicorexisted && !presoldata->usefulsetppcexist )
+      {
+	 /* correct maximal number of varables in logicor constraints */
+	 for( c = nlogicors - 1; c >= 0; --c )
+	 {
+	    assert(SCIPconsIsActive(logicors[c]));
+
+	    /* update maximal entries in a logicor constraint */
+	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
+	 }
+      }
 
       /* no correct logicor or set-packing constraints available, so abort */
       if( !presoldata->usefulsetppcexist || !presoldata->usefullogicorexist )
