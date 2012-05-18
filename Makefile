@@ -66,7 +66,7 @@ ZLIB		=	true
 GMP		=	auto
 ZIMPL		=	true
 IPOPT		=	false
-EXPRINT		=	none
+EXPRINT		=	cppad
 LPSCHECK	=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
@@ -468,9 +468,6 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR) $(CPPAD_FLAGS)
-SOFTLINKS	+=	$(LIBDIR)/cppad
-LPIINSTMSG	+=	" -> \"cppad\" is a directory containing the CppAD header files, i.e., \"cppad/cppad.hpp\" should exist.\n"
 endif
 
 ifeq ($(READLINE),true)
@@ -742,7 +739,7 @@ LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)
 endif
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -955,6 +952,7 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
+		| sed '\''s|$(LIBDIR)/cpxinc/cpxconst.h||g'\'' \
 		| sed '\''s|$(LIBDIR)/spxinc[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
@@ -972,7 +970,6 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		| sed '\''s|$(LIBDIR)/ipopt[^ ]*||g'\'' \
-		| sed '\''s|$(LIBDIR)/cppad[^ ]*||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 

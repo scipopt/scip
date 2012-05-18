@@ -32,7 +32,7 @@ do
     # dependencies of nlpi libraries
     for EXPRINT in ${EXPRINTS[@]}
     do
-        if test "$EXPRINT" == "none" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
+        if test "$EXPRINT" == "none" -o "$EXPRINT" == "cppad" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
         then
             make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=false nlpidepend
 

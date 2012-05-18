@@ -142,8 +142,8 @@ Here is what you have to do to get SCIP running:
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT)
    - "IPOPT=false"     to disable IPOPT interface (default)
    
-   - "EXPRINT=cppad"   to use CppAD as expressions interpreter
-   - "EXPRINT=none"    to use no expressions interpreter (default)
+   - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
+   - "EXPRINT=none"    to use no expressions interpreter
  
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
@@ -183,7 +183,7 @@ III Examples
 ---
 make[1]: Entering directory `/sw/scip'
 
-** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt EXPRINT=none
+** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt EXPRINT=cppad
 
 ** creating directory "lib/zimplinc"
 ** missing soft-link "lib/spxinc"
@@ -261,7 +261,6 @@ make[1]: Entering directory `/sw/scip'
 
   -> "clp.*" is a directory containing the Clp installation, i.e., "clp.*/include/coin/ClpModel.hpp" should exist.
   -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/include/coin/IpIpoptApplication.hpp", "ipopt.*/lib/libipopt*", ... should exist.
-  -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
 - preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
 > Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed): 

@@ -228,6 +228,10 @@ features:
   are also not changed when, e.g., heuristics change emphasis settings or also specific parameters
 - added dual presolving for and-constraints
 
+Makefile
+- CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
+  the default for EXPRINT has changed from none to cppad
+
 SCIP version 2.1.2
 ==================
 
