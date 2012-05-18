@@ -56,7 +56,7 @@ SOFTLINKS	=
 
 INSTALLDIR	=	
 
-#will this be compiled for parascip, necessary for dbg-builds to make it threadsafe
+#will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
 SHARED		=	false

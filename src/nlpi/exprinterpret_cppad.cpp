@@ -33,10 +33,10 @@ using std::vector;
 /* CppAD is not thread-safe by itself, but uses some static datastructures
  * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
  * This allocator requires to know the number of threads and a thread number for each thread.
- * Conveniently, SCIPs message handler has currently still the same issue, so we can use its routines here.
+ * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
 #ifndef NPARASCIP
-#include "scip/message.h"
+#include <pthread.h>
 
 /** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
 #define CPPAD_MAX_NUM_THREADS 48
@@ -73,23 +73,71 @@ using CppAD::SCIPInterval;
 
 #ifndef NPARASCIP
 
+/** mutex for locking in pthread case */
+static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
+
+/** key for accessing thread specific information */
+static pthread_key_t thread_specific_key;
+
+/** currently registered number of threads */
+static size_t ncurthreads = 0;
+
 /** CppAD callback function that indicates whether we are running in parallel mode */
-static bool in_parallel(void)
+static
+bool in_parallel(void)
 {
-   return SCIPmessagehdlrGetNThreads() > 0;
+   return ncurthreads > 1;
 }
 
-/** CppAD callback function that returns the number of the current thread */
+/** CppAD callback function that returns the number of the current thread
+ * assigns a new number to the thread if new
+ */
+static
 size_t thread_num(void)
 {
-   return SCIPmessagehdlrGetThreadNum();
+   size_t threadnum;
+   void* specific;
+
+   specific = pthread_getspecific(thread_specific_key);
+
+   /* if no data for this thread yet, then assign a new thread number to the current thread
+    * we store the thread number incremented by one, to distinguish the absence of data (=0) from existing data
+    */
+   if( specific == NULL )
+   {
+      pthread_mutex_lock(&cppadmutex);
+
+      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", ncurthreads, (void*)pthread_self());
+
+      pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
+
+      threadnum = ncurthreads;
+
+      ++ncurthreads;
+
+      pthread_mutex_unlock(&cppadmutex);
+
+      assert(pthread_getspecific(thread_specific_key) != NULL);
+      assert((size_t)pthread_getspecific(thread_specific_key) == threadnum + 1);
+   }
+   else
+   {
+      threadnum = (size_t)(specific) - 1;
+   }
+
+   assert(threadnum < ncurthreads);
+
+   return threadnum;
 }
 
 /** sets up CppAD's datastructures for running in multithreading mode
  * it must be called once before multithreading is started
  */
-static char init_parallel(void)
+static
+char init_parallel(void)
 {
+   pthread_key_create(&thread_specific_key, NULL);
+
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();
