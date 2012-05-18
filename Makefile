@@ -858,7 +858,7 @@ ifeq ($(CLIENTTMPDIR),)
 		CLIENTTMPDIR=/tmp
 endif
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
