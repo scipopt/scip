@@ -835,11 +835,6 @@ testblis:
 		cd check; \
 		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
-.PHONY: testgams
-testgams:
-		cd check; \
-		$(SHELL) ./check_gams.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(SCRDIR)" "$(CONVERTSCIP)";
-
 .PHONY: tags
 tags:
 		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
@@ -855,6 +850,15 @@ githash::	# do not remove the double-colon
 
 # include install/uninstall targets
 -include make/make.install
+
+# the testgams target need to come after make/local/make.targets has been included, because the latter may assing a value to CLIENTTMPDIR
+.PHONY: testgams
+testgams:
+ifeq ($(CLIENTTMPDIR),)
+		CLIENTTMPDIR=/tmp
+endif
+		cd check; \
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@

@@ -5596,7 +5596,7 @@
  *  Additional advanced options specific to this target are:
  *    GAMS to specify the GAMS executable (default: gams),
  *    GAP to specify a gap limit (default: 0.0),
- *    SCRDIR to specify a directory where GAMS should put its scratch files (default: gams decides),
+ *    CLIENTTMPDIR to specify a directory where GAMS should put its scratch files (default: /tmp),
  *    CONVERTSCIP to specify a SCIP which can be used to convert non-gams files into gams format (default: bin/scip, if existing; set to "no" to disable conversion).
  *  The following options are NOT supported (and ignored): MEM, DISPFREQ, FEASTOL, LOCK.
  *

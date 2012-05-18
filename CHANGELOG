@@ -106,6 +106,7 @@ interface
   in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
 - added new method SCIPvarGetAggregatedObj() which computes for a (not active) variable the corresponding objective
   value
+- renamed parameter SCRDIR of "make testgams" to CLIENTTMPDIR and changed its default to "/tmp"
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

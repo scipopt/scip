@@ -40,7 +40,8 @@ $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_blis.sh $NAME/check/evalcheck_blis.sh $NAME/check/check_blis.awk \
 $NAME/check/check_cbc.sh $NAME/check/evalcheck_cbc.sh $NAME/check/check_cbc.awk \
 $NAME/check/check_cplex.sh $NAME/check/evalcheck_cplex.sh $NAME/check/check_cplex.awk \
-$NAME/check/check_gams.sh $NAME/check/evalcheck_gams.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
+$NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
+$NAME/check/evalcheck_gamscluster.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
 $NAME/check/check_glpk.sh $NAME/check/evalcheck_glpk.sh $NAME/check/check_glpk.awk \
 $NAME/check/check_gurobi.sh $NAME/check/evalcheck_gurobi.sh $NAME/check/check_gurobi.awk \
 $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mosek.awk \
