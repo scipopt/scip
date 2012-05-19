@@ -1587,8 +1587,8 @@ void SCIPcliquelistRemoveFromCliques(
             /* remove the entry from the clique */
             if( clique->nvars - pos - 1 > 0 )
             {
-               memmove(&clique->vars[pos], &clique->vars[pos+1], sizeof(clique->vars[0]) * (clique->nvars - pos - 1));
-               memmove(&clique->values[pos], &clique->values[pos+1], sizeof(clique->values[0]) * (clique->nvars - pos - 1));
+               BMSmoveMemoryArray(&(clique->vars[pos]), &(clique->vars[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
+               BMSmoveMemoryArray(&(clique->values[pos]), &(clique->values[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
             }
             clique->nvars--;
 
