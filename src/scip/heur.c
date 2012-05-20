@@ -48,11 +48,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-   {
-      assert(heur1 == heur2 || heur1->delaypos == -1);
-      assert(heur1 == heur2 || heur2->delaypos == -1);
       return heur2->priority - heur1->priority; /* prefer higher priorities */
-   }
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
