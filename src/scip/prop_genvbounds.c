@@ -22,7 +22,8 @@
 
 /**@todo should we only discard events catched from nodes that are not the current node's ancestors? */
 /**@todo improve computation of minactivity */
-/**@todo keep after restart and use in presolving */
+/**@todo in exitpre, remove fixed, aggregated, negated, or multaggr vars from right-hand sides */
+/**@todo for multaggr vars on left-hand side, create a linear constraint, probably in exitpre */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -42,7 +43,7 @@
                                                     *   constraint handlers); combined with presolvers */
 #define PROP_PRESOL_DELAY               FALSE      /**< should presolving be delay, if other presolvers found
                                                     *   reductions? */
-#define PROP_PRESOL_MAXROUNDS               0      /**< maximal number of presolving rounds the presolver participates
+#define PROP_PRESOL_MAXROUNDS              -1      /**< maximal number of presolving rounds the presolver participates
                                                     *   in (-1: no limit) */
 
 #define EVENTHDLR_NAME                  "genvbounds"
@@ -105,6 +106,7 @@ struct SCIP_PropData
                                               *   propagation of an improved primal bound, should start */
    int*                  gstartcomponents;   /**< components corresponding to indices stored in gstartindices array */
    SCIP_Real             lastcutoff;         /**< cutoff bound's value last time genvbounds propagator was called */
+   int                   genvboundstoresize; /**< size of genvboundstore array */
    int                   ngenvbounds;        /**< number of genvbounds stored in genvboundstore array */
    int                   ncomponents;        /**< number of components in genvboundstore array */
    int                   nindices;           /**< number of indices stored in startindices array */
@@ -368,6 +370,8 @@ SCIP_RETCODE fillGlobalStartingData(
 
       for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
       {
+         assert(j < propdata->ngenvbounds);
+
          if( !SCIPisZero(scip, propdata->genvboundstore[j]->cutoffcoef) )
          {
             assert(SCIPisNegative(scip, propdata->genvboundstore[j]->cutoffcoef));
@@ -999,10 +1003,10 @@ SCIP_RETCODE applyGenVBound(
 
    assert(scip != NULL);
    assert(genvbound != NULL);
+   assert(genvbound->var != NULL);
+   assert(SCIPvarGetStatus(genvbound->var) != SCIP_VARSTATUS_MULTAGGR);
    assert(result != NULL);
-
-   if( *result == SCIP_DIDNOTRUN )
-      *result = SCIP_DIDNOTFIND;
+   assert(*result != SCIP_DIDNOTRUN);
 
    /* get bound value provided by genvbound */
    boundval = getGenVBoundsBound(scip, genvbound, global);
@@ -1079,7 +1083,7 @@ SCIP_RETCODE applyGenVBound(
    }
    else if( tightened )
    {
-      *result = SCIP_REDUCEDDOM;
+      *result = SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING ? SCIP_SUCCESS : SCIP_REDUCEDDOM;
       SCIPdebugMessage("    tightened!\n");
    }
 
@@ -1343,7 +1347,7 @@ SCIP_RETCODE setUpEvents(
    SCIPdebugMessage("set up events\n");
 
    /* allocate lbevents, ubevents, and their hashmaps */
-   nprobvars = SCIPgetNVars(scip);
+   nprobvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->lbevents), nprobvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->ubevents), nprobvars) );
    SCIP_CALL( SCIPhashmapCreate(&(propdata->lbeventsmap), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
@@ -1362,8 +1366,9 @@ SCIP_RETCODE setUpEvents(
          GENVBOUND* genvbound;
          int k;
 
-         genvbound = propdata->genvboundstore[j];
+         assert(j < propdata->ngenvbounds);
 
+         genvbound = propdata->genvboundstore[j];
          assert(genvbound != NULL);
 
          /* loop over all coefficients in this genvbound */
@@ -1471,6 +1476,8 @@ SCIP_RETCODE sortGenVBounds(
       GENVBOUND* genvbound;
       int j;
 
+      assert(i < propdata->ngenvbounds);
+
       genvbound = propdata->genvboundstore[i];
 
       for( j = 0; j < genvbound->ncoefs; j++ )
@@ -1513,6 +1520,7 @@ SCIP_RETCODE sortGenVBounds(
 
       for( j = 0; j < nnodes; j++ )
       {
+         assert(nodes[j] < propdata->ngenvbounds);
          genvboundssorted[sortedindex] = propdata->genvboundstore[nodes[j]];
          sortedindex++;
       }
@@ -1526,6 +1534,7 @@ SCIP_RETCODE sortGenVBounds(
    for( i = 0; i < propdata->ngenvbounds; i++ )
    {
       assert(genvboundssorted[i] != NULL);
+
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
@@ -1584,6 +1593,9 @@ SCIP_RETCODE applyGenVBounds(
    startingindices = global ? propdata->gstartindices : propdata->startindices;
    nindices = global ? propdata->ngindices : propdata->nindices;
 
+   if( *result == SCIP_DIDNOTRUN )
+      *result = SCIP_DIDNOTFIND;
+
    for( i = 0; i < nindices && *result != SCIP_CUTOFF; i++ )
    {
       int j;
@@ -1592,8 +1604,17 @@ SCIP_RETCODE applyGenVBounds(
       for( j = startingindices[i]; j < propdata->componentsstart[startingcomponents[i] + 1] &&
          *result != SCIP_CUTOFF; j++ )
       {
-         SCIPdebugMessage("applying genvbound with index %d, component %d\n", j, startingcomponents[i]);
-         SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+         assert(j < propdata->ngenvbounds);
+
+         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            /**@todo resolve multiaggregation in exitpre */
+         }
+         else
+         {
+            SCIPdebugMessage("applying genvbound with index %d, component %d\n", j, startingcomponents[i]);
+            SCIP_CALL( applyGenVBound(scip, prop, propdata->genvboundstore[j], global, result) );
+         }
       }
    }
 
@@ -1654,11 +1675,86 @@ SCIP_RETCODE addNewGenVBound(
 
    hashmap = genvbound->boundtype == SCIP_BOUNDTYPE_LOWER ? propdata->lbgenvbounds : propdata->ubgenvbounds;
 
+   /* e.g., during presolving after a restart, new variables might have been created; in this case, we need to extend
+    * the genvboundstore; the new size may even exceed 2*SCIPgetNVars() if we have genvbounds with nonactive left-hand
+    * side variables
+    */
+   assert(propdata->ngenvbounds <= propdata->genvboundstoresize);
+   if( propdata->ngenvbounds == propdata->genvboundstoresize )
+   {
+      propdata->genvboundstoresize = 2*propdata->genvboundstoresize + 1;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize) );
+   }
+
    /* new index is propdata->ngenvbounds */
    SCIP_CALL( SCIPhashmapInsert(hashmap, genvbound->var, genvbound) );
    propdata->genvboundstore[propdata->ngenvbounds] = genvbound;
    genvbound->index = propdata->ngenvbounds;
    propdata->ngenvbounds++;
+
+   assert(propdata->ngenvbounds <= propdata->genvboundstoresize);
+
+   return SCIP_OKAY;
+}
+
+/** runs propagation routine */
+static
+SCIP_RETCODE execGenVBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< data of the genvbounds propagator */
+   SCIP_RESULT*          result              /**< result pointer */
+   )
+{
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(propdata->prop != NULL);
+   assert(result != NULL);
+
+   if( !propdata->sorted )
+   {
+      *result = SCIP_DIDNOTFIND;
+
+      SCIPdebugMessage("genvbounds are not sorted\n");
+
+      /* drop and free old events */
+      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
+
+      /* free old starting data */
+      SCIP_CALL( freeStartingData(scip, propdata) );
+
+      /* free sorted components data */
+      SCIP_CALL( freeComponentsData(scip, propdata) );
+
+      /* sort genvbounds */
+      SCIP_CALL( sortGenVBounds(scip, propdata) );
+
+      /* create starting data */
+      SCIP_CALL( createStartingData(scip, propdata) );
+
+      /* fill global starting data */
+      SCIP_CALL( fillGlobalStartingData(scip, propdata) );
+
+      /* set up new events to catch */
+      SCIP_CALL( setUpEvents(scip, propdata) );
+   }
+
+   /* apply global propagation if primal bound has improved */
+   if( SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
+   {
+      if( propdata->ngindices > 0 )
+      {
+         SCIP_CALL( applyGenVBounds(scip, propdata->prop, TRUE, result) );
+         assert(*result != SCIP_DIDNOTRUN);
+      }
+      propdata->lastcutoff = SCIPgetCutoffbound(scip);
+   }
+
+   /* apply local propagation if bound change events were caught */
+   if( *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
+   {
+      SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result) );
+      assert(*result != SCIP_DIDNOTRUN);
+   }
 
    return SCIP_OKAY;
 }
@@ -1684,7 +1780,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    )
 {
-   /** @todo in debug mode: check if genvbound is nontrivial */
+   /**@todo in debug mode: check if genvbound is nontrivial */
 
    SCIP_PROPDATA* propdata;
    GENVBOUND* genvbound;
@@ -1789,9 +1885,12 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+#define propCopyGenvbounds NULL
+
+/** initialization method of propagator (called after problem was transformed) */
 static
-SCIP_DECL_PROPINITSOL(propInitsolGenvbounds)
+SCIP_DECL_PROPINIT(propInitGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
@@ -1832,6 +1931,49 @@ SCIP_DECL_PROPINITSOL(propInitsolGenvbounds)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of propagator (called before transformed problem is freed) */
+#define propExitGenvbounds NULL
+
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+#define propInitpreGenvbounds NULL
+
+/** presolving deinitialization method of propagator (called after presolving has been finished) */
+#define propExitpreGenvbounds NULL
+
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   SCIPdebugMessage("proppresol in problem <%s>\n", SCIPgetProbName(scip));
+
+   /* do not run if no genvbounds were added yet */
+   if( propdata->ngenvbounds < 1 )
+   {
+      SCIPdebugMessage("no bounds were added yet\n");
+      return SCIP_OKAY;
+   }
+
+   /* propagate */
+   SCIP_CALL( execGenVBounds(scip, propdata, result) );
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
+#define propInitsolGenvbounds NULL
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecGenvbounds)
@@ -1842,15 +1984,11 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    assert(prop != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* do not run in presolving */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
 
    SCIPdebugMessage("propexec in problem <%s> at depth %d%s\n", SCIPgetProbName(scip), SCIPgetDepth(scip),
       SCIPinProbing(scip) ? " in probing" : "");
@@ -1870,51 +2008,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
       return SCIP_OKAY;
    }
 
-   if( !propdata->sorted )
-   {
-      *result = SCIP_DIDNOTFIND;
-
-      SCIPdebugMessage("genvbounds are not sorted\n");
-
-      /* drop and free old events */
-      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
-
-      /* free old starting data */
-      SCIP_CALL( freeStartingData(scip, propdata) );
-
-      /* free sorted components data */
-      SCIP_CALL( freeComponentsData(scip, propdata) );
-
-      /* sort genvbounds */
-      SCIP_CALL( sortGenVBounds(scip, propdata) );
-
-      /* create starting data */
-      SCIP_CALL( createStartingData(scip, propdata) );
-
-      /* fill global starting data */
-      SCIP_CALL( fillGlobalStartingData(scip, propdata) );
-
-      /* set up new events to catch */
-      SCIP_CALL( setUpEvents(scip, propdata) );
-   }
-
-   /* apply global propagation if primal bound has improved */
-   if( SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
-   {
-      if( propdata->ngindices > 0 )
-      {
-         SCIP_CALL( applyGenVBounds(scip, prop, TRUE, result) );
-         assert(*result != SCIP_DIDNOTRUN);
-      }
-      propdata->lastcutoff = SCIPgetCutoffbound(scip);
-   }
-
-   /* apply local propagation if bound change events were caught */
-   if( *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
-   {
-      SCIP_CALL( applyGenVBounds(scip, prop, FALSE, result) );
-      assert(*result != SCIP_DIDNOTRUN);
-   }
+   /* propagate */
+   SCIP_CALL( execGenVBounds(scip, propdata, result) );
 
    return SCIP_OKAY;
 }
@@ -1997,7 +2092,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   if( propdata->genvboundstore != NULL )
+   if( !SCIPisInRestart(scip) && propdata->genvboundstore != NULL )
    {
       /* free genvbounds */
       for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
@@ -2043,24 +2138,6 @@ SCIP_DECL_PROPFREE(propFreeGenvbounds)
 
    return SCIP_OKAY;
 }
-
-/** copy method for propagator plugins (called when SCIP copies plugins) */
-#define propCopyGenvbounds NULL
-
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitGenvbounds NULL
-
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitGenvbounds NULL
-
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreGenvbounds NULL
-
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreGenvbounds NULL
-
-/** presolving method of propagator */
-#define propPresolGenvbounds NULL
 
 
 
