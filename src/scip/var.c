@@ -2963,11 +2963,6 @@ SCIP_RETCODE SCIPvarAddLocks(
 	 return SCIP_INVALIDDATA;
       }
    }
-
-   assert(lockvar->nlocksdown >= 0);
-   assert(lockvar->nlocksup >= 0);
-
-   return SCIP_OKAY;
 }
 
 /** gets number of locks for rounding down */
@@ -15498,7 +15493,7 @@ SCIP_Real SCIPbdchginfoGetRelaxedBound(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
    )
 {
-   return bdchginfo->boundtype == SCIP_BOUNDTYPE_LOWER ? bdchginfo->var->conflictrelaxedlb : bdchginfo->var->conflictrelaxedub;
+   return ((SCIP_BOUNDTYPE)(bdchginfo->boundtype) == SCIP_BOUNDTYPE_LOWER ? bdchginfo->var->conflictrelaxedlb : bdchginfo->var->conflictrelaxedub);
 }
 
 

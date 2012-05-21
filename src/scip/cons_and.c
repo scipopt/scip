@@ -1904,7 +1904,7 @@ SCIP_RETCODE dualPresolve(
 	 /* get aggregated objective value of active variable */
 	 SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &resobj) );
 
-	 resobjispos = SCIPisGT(scip, resobj, 0);
+	 resobjispos = SCIPisGT(scip, resobj, 0.0);
 
 	 /* we can only aggregate when the objective contribution of the resultant is less or equal to 0 */
 	 if( !resobjispos )
@@ -1922,7 +1922,7 @@ SCIP_RETCODE dualPresolve(
 		* to 0, and the absolute value of the contribution of the resultant exceeds can be eliminated and
 		* aggregated to the resultant
 		*/
-	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, obj, 0) && SCIPisGE(scip, REALABS(resobj), obj) )
+	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, obj, 0.0) && SCIPisGE(scip, REALABS(resobj), obj) )
 	       {
 		  linearize = TRUE;
 
@@ -1946,7 +1946,7 @@ SCIP_RETCODE dualPresolve(
 		   * negative to positive
 		   */
 		  SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &tmpobj) );
-		  assert(resobjispos == SCIPisGT(scip, tmpobj, 0));
+		  assert(resobjispos == SCIPisGT(scip, tmpobj, 0.0));
 #endif
 	       }
 	    }
@@ -1957,7 +1957,7 @@ SCIP_RETCODE dualPresolve(
 	     * to positive
 	     */
 	    SCIP_CALL( SCIPvarGetAggregatedObj(resvar, &tmpobj) );
-	    assert(resobjispos == SCIPisGT(scip, tmpobj, 0));
+	    assert(resobjispos == SCIPisGT(scip, tmpobj, 0.0));
 #endif
 	 }
 	 /* if the downlocks of the resultant are only from this constraint and the objective contribution is positive,
@@ -1991,7 +1991,7 @@ SCIP_RETCODE dualPresolve(
 		* to 0, and the absolute value of the contribution of the resultant exceeds can be eliminated and
 		* aggregated to the resultant
 	        */
-	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, obj, 0) )
+	       if( SCIPvarGetNLocksUp(var) == 1 && SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, obj, 0.0) )
 	       {
 		  SCIPdebugMessage("dualfix operand <%s> in constraint <%s> to 0\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
@@ -2013,7 +2013,7 @@ SCIP_RETCODE dualPresolve(
 	    {
 	       assert(!zerofix);
 	       /* objective contribution needs to be negative, otherwise, the variable should already be fixed to 0 */
-	       assert(SCIPisLT(scip, maxobj, 0));
+	       assert(SCIPisLT(scip, maxobj, 0.0));
 
 	       SCIPdebugMessage("dualfix operand <%s> with worst contribution in constraint <%s> to 0\n", SCIPvarGetName(vars[maxpos]), SCIPconsGetName(cons));
 

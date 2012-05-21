@@ -4110,7 +4110,7 @@ SCIP_RETCODE applyFixings(
 	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
 	    assert(activevar != NULL);
-	    SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant);
+	    SCIP_CALL( SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant) );
 	    assert(activevar != NULL);
 
 	    if( !SCIPisZero(scip, activescalar) )
