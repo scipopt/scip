@@ -74,6 +74,7 @@
 #define DEFAULT_VARSELRULE          'f' /**< which variable selection should be used? ('f'ractionality, 'c'oefficient,
                                          *   'p'seudocost, 'g'uided, 'd'ouble)
                                          */
+#define DEFAULT_NLPFASTFAIL        TRUE /**< should the NLP solver stop early if it converges slow? */
 
 #define MINNLPITER                  200 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
@@ -107,6 +108,7 @@ struct SCIP_HeurData
    SCIP_Bool             preferlpfracs;      /**< prefer variables that are also fractional in LP solution? */
    SCIP_Bool             prefercover;        /**< should variables in a minimal cover be preferred? */
    SCIP_Bool             solvesubmip;        /**< should a sub-MIP be solved if all cover variables are fixed? */
+   SCIP_Bool             nlpfastfail;        /**< should the NLP solver stop early if it converges slow? */
    char                  nlpstart;           /**< which point should be used as starting point for the NLP solver? */
    char                  varselrule;         /**< which variable selection should be used? ('f'ractionality, 'c'oefficient,
                                               *   'p'seudocost, 'g'uided, 'd'ouble)
@@ -1212,8 +1214,8 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    }
    assert(0 <= heurdata->nfixedcovervars && heurdata->nfixedcovervars <= SCIPgetNVars(scip));
 
-   SCIPdebugMessage("changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
-      oldbound, newbound, heurdata->nfixedcovervars);
+   /* SCIPdebugMessage("changed bound of cover variable <%s> from %f to %f (nfixedcovervars: %d).\n", SCIPvarGetName(var),
+      oldbound, newbound, heurdata->nfixedcovervars); */
 
    return SCIP_OKAY;
 }
@@ -1308,7 +1310,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    STATISTIC(
       if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPinfoMessage(scip, NULL, "%-20s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
+         SCIPinfoMessage(scip, NULL, "%-30s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
             (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
@@ -1366,7 +1368,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_Real searchbound;
    SCIP_Real objval;
    SCIP_Real oldobjval;
-   SCIP_Real origfeastol;
    SCIP_Real fixquot;
    SCIP_Real bestboundval;
    SCIP_Bool bestcandmayround;
@@ -1395,6 +1396,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    int nfeasnlps;
    int bestcand;
    int origiterlim;
+   int origfastfail;
    int c;
    int       backtrackdepth;   /* depth where to go when backtracking */
    SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
@@ -1499,13 +1501,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 #if 0 /* def SCIP_DEBUG */
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
-   /* tighten NLP solver feasibility tolerance to avoid fail due to small inaccuracies (for now) */
-   SCIP_CALL( SCIPgetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, &origfeastol) );
-   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, 0.01*SCIPfeastol(scip)) );
 
    /* set iteration limit */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, (int) maxnnlpiterations) );
+
+   /* set whether NLP solver should fail fast */
+   SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, heurdata->nlpfastfail) );
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1545,8 +1548,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          }
 
          /* reset changed NLP parameters */
-         SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
          SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+         SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
          /* free copied best solution */
          if( heurdata->varselrule == 'g' )
@@ -1608,8 +1611,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       }
 
       /* reset changed NLP parameters */
-      SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
       SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
       /* free copied best solution */
       if( heurdata->varselrule == 'g' )
@@ -2124,6 +2127,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_NLPSTATISTICS* nlpstatistics;
 
             /* set iteration limit */
+            /* @todo MINNLPITER seem to be too large
+             * @todo better increase maxnnlpiterations by 10 or so for each successful solve?
+             */
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
@@ -2328,8 +2334,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    }
 
    /* reset changed NLP parameters */
-   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_FEASTOL, origfeastol) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
    /* free copied best solution */
    if( heurdata->varselrule == 'g' )
@@ -2462,6 +2468,10 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          "heuristics/"HEUR_NAME"/solvesubmip",
          "should a sub-MIP be solved if all cover variables are fixed?",
          &heurdata->solvesubmip, FALSE, DEFAULT_SOLVESUBMIP, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/"HEUR_NAME"/nlpfastfail",
+         "should the NLP solver stop early if it converges slow?",
+         &heurdata->nlpfastfail, FALSE, DEFAULT_NLPFASTFAIL, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "heuristics/"HEUR_NAME"/nlpstart",
          "which point should be used as starting point for the NLP solver? ('n'one, last 'f'easible, from dive's'tart)",
