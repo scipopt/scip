@@ -1567,6 +1567,54 @@ SCIP_RETCODE treeAddPendingBdchg(
    tree->pendingbdchgs[tree->npendingbdchgs].probingchange = probingchange;
    tree->npendingbdchgs++;
 
+   /* check global pending boundchanges against debug solution */
+   if( node->depth == 0 )
+   {
+#ifndef NDEBUG
+      SCIP_Real bound = newbound;
+
+      /* get bound adjusted for integrality(, this should already be done) */
+      SCIPvarAdjustBd(var, set, boundtype, &bound);
+
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+	 /* check that the bound is feasible */
+	 if( bound > SCIPvarGetUbGlobal(var) )
+	 {
+	    /* due to numerics we only want to be feasible in feasibility tolerance */
+	    assert(SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)));
+	    bound = SCIPvarGetUbGlobal(var);
+	 }
+      }
+      else
+      {
+	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+	 /* check that the bound is feasible */
+	 if( bound < SCIPvarGetLbGlobal(var) )
+	 {
+	    /* due to numerics we only want to be feasible in feasibility tolerance */
+	    assert(SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)));
+	    bound = SCIPvarGetLbGlobal(var);
+	 }
+      }
+      /* check that the given bound was already adjusted for integrality */
+      assert(SCIPsetIsEQ(set, newbound, bound));
+#endif
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+	 /* check bound on debugging solution */
+	 SCIP_CALL( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+      }
+      else
+      {
+	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+	 /* check bound on debugging solution */
+	 SCIP_CALL( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+      }
+   }
+
    return SCIP_OKAY;
 }
 
