@@ -1039,9 +1039,9 @@ public:
       clear();
 
       if ( m_rownames != 0 )
-	 delete m_rownames;
+         delete m_rownames;
       if ( m_colnames != 0 )
-	 delete m_colnames;
+         delete m_colnames;
       m_rownames = new NameSet;
       m_colnames = new NameSet;
 
