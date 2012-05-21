@@ -3581,9 +3581,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize2 = 1;
    ntmpvars2 = 0;
 
-   /* use memory array allocation because it's possible to reallocate for these arrays a too big size later on, which we don't want to 
-    * keep in scip
-    */
+   /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpscalars2, tmpvarssize2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
@@ -3592,7 +3590,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpscalars, scalars, ntmpvars) );
 
    /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
-    * first, first get all corresponding variables with status loose, column, multaggr or fixed 
+    * first, first get all corresponding variables with status loose, column, multaggr or fixed
     */
    for( v = ntmpvars - 1; v >= 0; --v )
    {
@@ -3606,12 +3604,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
        */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
       assert( var != NULL );
-      
+
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
-      
+
       tmpvars[v] = var;
       tmpscalars[v] = scalar;
    }
@@ -3633,7 +3631,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    /* sort all variables again to combine equal variables later on */
    if( noldtmpvars > ntmpvars )
       SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
-   
+
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
    {
@@ -3646,7 +3644,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       if( scalar == 0 )
          continue;
-      
+
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
@@ -3711,7 +3709,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
 
             activeconstant += scalar * multconstant;
-           
+
             if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
             {
                assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
@@ -3739,7 +3737,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                tmpscalars2[v] = tmpscalars2[ntmpvars2];
             }
          }
-         
+
          for( v = 0; v < ntmpvars2; ++v )
          {
             tmpvars[ntmpvars] = tmpvars2[v];
