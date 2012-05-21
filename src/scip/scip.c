@@ -22511,19 +22511,20 @@ void printBranchruleStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    /* sort branching rules  w.r.t. their name */
    SCIPsetSortBranchrulesName(scip->set);
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetSetupTime(scip->set->branchrules[i]),
-         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNExternCalls(scip->set->branchrules[i])
-         ,
+         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNExternCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
