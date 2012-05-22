@@ -177,6 +177,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    );
 
 /** resolve propagation w.r.t. the cumulative condition */
+extern
 SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -189,6 +190,13 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   );
+
+/** this method visualizes the cumulative structure in GML format */
+extern
+SCIP_RETCODE SCIPconsdataVisualize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< cumulative constraint */
    );
 
 #ifdef __cplusplus

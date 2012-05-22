@@ -285,6 +285,7 @@ int inferInfoGetData1(
    return inferinfo.val.asbits.data1;
 }
 
+#if 0
 /** returns data field two of the inference information */
 static
 int inferInfoGetData2(
@@ -293,6 +294,7 @@ int inferInfoGetData2(
 {
    return inferinfo.val.asbits.data2;
 }
+#endif
 
 
 /** constructs an inference information out of a propagation rule, an earliest start and a latest completion time */
@@ -341,149 +343,6 @@ int convertBoundToInt(
 #else
 #define convertBoundToInt(x, y) ((int)((y) + 0.5))
 #endif
-
-/** this method visualizes the cumulative structure in GML format */
-static
-SCIP_RETCODE consdataVisualize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< cumulative constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_HASHTABLE* vars;
-   FILE* file;
-   SCIP_VAR* var;
-   char filename[SCIP_MAXSTRLEN];
-   int nvars;
-   int v;
-
-   /* open file */
-   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.gml", SCIPconsGetName(cons));
-   file = fopen(filename, "w");
-
-   /* check if the file was open */
-   if( file == NULL )
-   {
-      SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
-      SCIPprintSysError(filename);
-      return SCIP_FILECREATEERROR;
-   }
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   nvars = consdata->nvars;
-
-   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars),
-         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
-
-   /* create opening of the GML format */
-   fprintf(file, "graph\n");
-   fprintf(file, "[\n");
-   fprintf(file, "  hierarchic      1\n");
-   fprintf(file, "  directed        1\n");
-
-   for( v = 0; v < nvars; ++v )
-   {
-      char color[SCIP_MAXSTRLEN];
-
-      var = consdata->vars[v];
-      assert(var != NULL);
-
-      SCIP_CALL( SCIPhashtableInsert(vars, (void*)var) );
-
-      if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 )
-         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#0000ff");
-      else if( !consdata->downlocks[v] || !consdata->uplocks[v] )
-         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#00ff00");
-      else
-         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#ff0000");
-
-      fprintf(file, "  node\n");
-      fprintf(file, "  [\n");
-      fprintf(file, "    id      %d\n", (int)(size_t)var);
-      fprintf(file, "    label   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "    graphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      w       120.0\n");
-      fprintf(file, "      h       30.0\n");
-      fprintf(file, "      type    \"%s\"\n", "rectangle");
-      fprintf(file, "      fill    \"%s\"\n", color);
-      fprintf(file, "      outline \"%s\"\n", "#000000");
-      fprintf(file, "    ]\n");
-      fprintf(file, "    LabelGraphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      text   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "      fontSize  13\n");
-      fprintf(file, "      fontName  \"Dialog\"\n");
-      fprintf(file, "      anchor    \"c\"\n");
-      fprintf(file, "    ]\n");
-      fprintf(file, "  ]\n");
-   }
-
-   for( v = 0; v < nvars; ++v )
-   {
-      SCIP_VAR** vbdvars;
-      int nvbdvars;
-      int b;
-
-      var = consdata->vars[v];
-      assert(var != NULL);
-
-      vbdvars = SCIPvarGetVlbVars(var);
-      nvbdvars = SCIPvarGetNVlbs(var);
-
-      for( b = 0; b < nvbdvars; ++b )
-      {
-         if( SCIPhashtableExists(vars, (void*)vbdvars[b]) )
-         {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    target  %d\n", (int)(size_t)var);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
-         }
-      }
-
-#if 0
-      vbdvars = SCIPvarGetVubVars(var);
-      nvbdvars = SCIPvarGetNVubs(var);
-
-      for( b = 0; b < nvbdvars; ++b )
-      {
-         if( SCIPhashtableExists(vars, vbdvars[b]) )
-         {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)var);
-            fprintf(file, "    target  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
-         }
-      }
-#endif
-   }
-
-   /* create closing of the GML format */
-   fprintf(file, "]\n");
-
-   /* close file */
-   fclose(file);
-
-   SCIPhashtableFree(&vars);
-
-   return SCIP_OKAY;
-}
-
 
 /** returns the implied earliest start time */
 static
@@ -2144,134 +2003,6 @@ SCIP_RETCODE checkCons(
  * @{
  */
 
-/** finds all candidates that still might be reported for conflict at timepoint 'curtime' */
-static
-SCIP_RETCODE findCoreCandidates(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< array of start time variables */
-   int*                  durations,          /**< array of durations */
-   int*                  demands,            /**< array of demands */
-   int                   capacity,           /**< capacity to exceed */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< the bound change index, or NULL for local bounds */
-   int                   curtime,            /**< time point to be considered */
-   int*                  cands,              /**< indices of variable having a core */
-   SCIP_Bool*            collected,          /**< bool array to mark candidates which variables have been collected */
-   int                   ncands,             /**< number of candidates */
-   SCIP_Bool*            success             /**< pointer to store whether at this point in time enough cores are available */
-   )
-{
-   int j;
-
-   assert(curtime >= 0);
-
-   *success = FALSE;
-
-   for( j = 0; j < ncands && capacity >= 0; ++j )
-   {
-      SCIP_VAR* var;
-      int ect;
-      int lst;
-      int idx;
-
-      idx = cands[j];
-      assert(idx >= 0 && idx < nvars);
-
-      var = vars[idx];
-      assert(var != NULL);
-
-      /* collect core information */
-      lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
-      ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + durations[idx];
-
-      /* check if the time point is part of the core, if so mark candidate to be reported and subtract its demand */
-      if( lst <= curtime && curtime < ect )
-      {
-         collected[j] = TRUE;
-         capacity -= demands[idx];
-      }
-   }
-
-   if( capacity < 0 )
-      *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** collect all variables which have a core in the given time interval */
-static
-SCIP_RETCODE collectCoreVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< array of start time variables */
-   int*                  durations,          /**< array of durations */
-   int*                  demands,            /**< array of demands */
-   SCIP_VAR*             infervar,           /**< inference variable */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< the bound change index, or NULL for local bounds */
-   int                   leftbound,          /**< left bound of the responsible time window */
-   int                   rightbound,         /**< right bound of the responsible time window */
-   int*                  cands,              /**< array to store the indices of the variable which have a core */
-   int*                  ncands,             /**< pointer to store the number of variable with core */
-   int*                  capacity            /**< pointer to store the remaining cumulative capacity */
-   )
-{
-   SCIP_VAR* var;
-   int duration;
-   int lst;
-   int ect;
-   int j;
-
-   /* collect all cores of the variables which lay in the considered time window except the inference variable */
-   for ( j = 0; j < nvars; ++j )
-   {
-      var = vars[j];
-      assert(var != NULL);
-
-      /* skip inference variable */
-      if( var == infervar )
-         continue;
-
-      duration = durations[j];
-      assert(duration > 0);
-
-      /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
-      assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
-      assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
-      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
-
-      /* collect local core information */
-      ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
-      lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
-
-      if( lst < ect && leftbound <= ect && lst <= rightbound )
-      {
-         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)",
-            SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
-            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[j]);
-
-         /* collect global core information */
-         ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
-         lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
-
-         /* if global core overlap whole the time interval, this demand of the job can be subtracted from capacity */
-         if( ect > rightbound && lst <= leftbound )
-         {
-            SCIPdebugPrintf(" --> decrease capacity\n");
-            (*capacity) -= demands[j];
-         }
-         else
-         {
-            SCIPdebugPrintf(" --> collected\n");
-            cands[*ncands] = j;
-            (*ncands)++;
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** resolves the propagation of the core time algorithm */
 static
 SCIP_RETCODE resolvePropagationCoretimes(
@@ -2327,6 +2058,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
          SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
             SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
             SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[j], demands[j]);
+
+         /* check the current status of the variable in */
 
          /*@todo bound widening ??????????????????????? */
          SCIP_CALL( SCIPaddConflictLb(scip, vars[j], bdchgidx) );
@@ -6848,6 +6581,7 @@ SCIP_RETCODE tightenCoefs(
    return SCIP_OKAY;
 }
 
+#if 0
 /** try to reformulate constraint by replacing certain jobs */
 static
 SCIP_RETCODE reformulateCons(
@@ -6937,6 +6671,7 @@ SCIP_RETCODE reformulateCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** presolve given constraint */
 static
@@ -7120,9 +6855,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
          assert(consdata != NULL);
 
          SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
-#if 0
-         SCIP_CALL( consdataVisualize(scip, conss[c]) );
-#endif
       }
    }
 
@@ -8450,6 +8182,147 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
          infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
+
+   return SCIP_OKAY;
+}
+
+/** this method visualizes the cumulative structure in GML format */
+SCIP_RETCODE SCIPconsdataVisualize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< cumulative constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_HASHTABLE* vars;
+   FILE* file;
+   SCIP_VAR* var;
+   char filename[SCIP_MAXSTRLEN];
+   int nvars;
+   int v;
+
+   /* open file */
+   (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.gml", SCIPconsGetName(cons));
+   file = fopen(filename, "w");
+
+   /* check if the file was open */
+   if( file == NULL )
+   {
+      SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_FILECREATEERROR;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nvars = consdata->nvars;
+
+   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars),
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+
+   /* create opening of the GML format */
+   fprintf(file, "graph\n");
+   fprintf(file, "[\n");
+   fprintf(file, "  hierarchic      1\n");
+   fprintf(file, "  directed        1\n");
+
+   for( v = 0; v < nvars; ++v )
+   {
+      char color[SCIP_MAXSTRLEN];
+
+      var = consdata->vars[v];
+      assert(var != NULL);
+
+      SCIP_CALL( SCIPhashtableInsert(vars, (void*)var) );
+
+      if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 )
+         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#0000ff");
+      else if( !consdata->downlocks[v] || !consdata->uplocks[v] )
+         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#00ff00");
+      else
+         (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#ff0000");
+
+      fprintf(file, "  node\n");
+      fprintf(file, "  [\n");
+      fprintf(file, "    id      %d\n", (int)(size_t)var);
+      fprintf(file, "    label   \"%s\"\n", SCIPvarGetName(var));
+      fprintf(file, "    graphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      w       120.0\n");
+      fprintf(file, "      h       30.0\n");
+      fprintf(file, "      type    \"%s\"\n", "rectangle");
+      fprintf(file, "      fill    \"%s\"\n", color);
+      fprintf(file, "      outline \"%s\"\n", "#000000");
+      fprintf(file, "    ]\n");
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text   \"%s\"\n", SCIPvarGetName(var));
+      fprintf(file, "      fontSize  13\n");
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+      fprintf(file, "  ]\n");
+   }
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR** vbdvars;
+      int nvbdvars;
+      int b;
+
+      var = consdata->vars[v];
+      assert(var != NULL);
+
+      vbdvars = SCIPvarGetVlbVars(var);
+      nvbdvars = SCIPvarGetNVlbs(var);
+
+      for( b = 0; b < nvbdvars; ++b )
+      {
+         if( SCIPhashtableExists(vars, (void*)vbdvars[b]) )
+         {
+            fprintf(file, "  edge\n");
+            fprintf(file, "  [\n");
+            fprintf(file, "    source  %d\n", (int)(size_t)vbdvars[b]);
+            fprintf(file, "    target  %d\n", (int)(size_t)var);
+            fprintf(file, "    graphics\n");
+            fprintf(file, "    [\n");
+            fprintf(file, "      fill    \"%s\"\n", "#000000");
+            fprintf(file, "      targetArrow     \"standard\"\n");
+            fprintf(file, "    ]\n");
+            fprintf(file, "  ]\n");
+         }
+      }
+
+#if 0
+      vbdvars = SCIPvarGetVubVars(var);
+      nvbdvars = SCIPvarGetNVubs(var);
+
+      for( b = 0; b < nvbdvars; ++b )
+      {
+         if( SCIPhashtableExists(vars, vbdvars[b]) )
+         {
+            fprintf(file, "  edge\n");
+            fprintf(file, "  [\n");
+            fprintf(file, "    source  %d\n", (int)(size_t)var);
+            fprintf(file, "    target  %d\n", (int)(size_t)vbdvars[b]);
+            fprintf(file, "    graphics\n");
+            fprintf(file, "    [\n");
+            fprintf(file, "      fill    \"%s\"\n", "#000000");
+            fprintf(file, "      targetArrow     \"standard\"\n");
+            fprintf(file, "    ]\n");
+            fprintf(file, "  ]\n");
+         }
+      }
+#endif
+   }
+
+   /* create closing of the GML format */
+   fprintf(file, "]\n");
+
+   /* close file */
+   fclose(file);
+
+   SCIPhashtableFree(&vars);
 
    return SCIP_OKAY;
 }
