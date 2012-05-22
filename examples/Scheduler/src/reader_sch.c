@@ -133,7 +133,7 @@ SCIP_RETCODE parseDetails(
             {
                distance = (int)(value + 0.5);
 
-               SCIP_CALL( SCIPdigraphAddArcWithData(precedencegraph, job, successors[s], (void*)(size_t)distance) );
+               SCIP_CALL( SCIPdigraphAddArc(precedencegraph, job, successors[s], (void*)(size_t)distance) );
 
                SCIPdebugPrintf(" %d[%d] ", successors[s], distance);
             }

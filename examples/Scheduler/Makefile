@@ -33,8 +33,6 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-CHECKDIR	=	check
-
 MAINNAME	=	scip
 MAINOBJ		=	cmain.o \
 			heur_listscheduling.o \
@@ -100,6 +98,9 @@ test:		$(CHECKDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastproblem.awk);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+
+# include local targets
+-include $(SCIPDIR)/make/local/make.targets
 
 .PHONY: clean
 clean:		$(OBJDIR)

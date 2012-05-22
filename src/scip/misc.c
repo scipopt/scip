@@ -3567,26 +3567,24 @@ void SCIPsortDown(
 
 /** creates resource profile */
 SCIP_RETCODE SCIPprofileCreate(
-   SCIP_PROFILE**        profile,            /**< pointer to store the created resource profile */
-   int                   upperbound,         /**< upper bound of the profile */
-   int                   ntimepoints         /**< minimum size to ensure */
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
    )
 {
    assert(profile != NULL);
-   assert(upperbound > 0);
-   assert(ntimepoints > 0);
+   assert(capacity > 0);
 
    SCIP_ALLOC( BMSallocMemory(profile) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, ntimepoints) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->freecapacities, ntimepoints) );
+
+   (*profile)->arraysize = 10;
+   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, (*profile)->arraysize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->loads, (*profile)->arraysize) );
 
    /* setup resource profile for use */
-   (*profile)->ntimepoints = 2;
+   (*profile)->ntimepoints = 1;
    (*profile)->timepoints[0] = 0;
-   (*profile)->timepoints[1] = INT_MAX;
-   (*profile)->freecapacities[0] = upperbound;
-   (*profile)->freecapacities[1] = 0;
-   (*profile)->arraysize = ntimepoints;
+   (*profile)->loads[0] = 0;
+   (*profile)->capacity = capacity;
 
    return SCIP_OKAY;
 }
@@ -3600,31 +3598,9 @@ void SCIPprofileFree(
    assert(*profile != NULL);
 
    /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*profile)->freecapacities);
+   BMSfreeMemoryArray(&(*profile)->loads);
    BMSfreeMemoryArray(&(*profile)->timepoints);
    BMSfreeMemory(profile);
-}
-
-/** resizes the resource profile arrays */
-SCIP_RETCODE SCIPprofileResize(
-   SCIP_PROFILE*         profile,            /**< resource profile to resize */
-   int                   ntimepoints         /**< minimum size to ensure */
-   )
-{
-   assert(profile != NULL);
-   assert(ntimepoints >= 0);
-   assert(profile->timepoints != NULL);
-   assert(profile->freecapacities != NULL);
-
-   if( profile->ntimepoints >= ntimepoints )
-      return SCIP_OKAY;
-
-   /* grow arrays of times and free capacity */
-   SCIP_ALLOC( BMSreallocMemoryArray(&profile->timepoints, ntimepoints) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&profile->freecapacities, ntimepoints) );
-   profile->arraysize = ntimepoints;
-
-   return SCIP_OKAY;
 }
 
 /** output of the given resource profile */
@@ -3636,25 +3612,88 @@ void SCIPprofilePrint(
 {
    int t;
 
-   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> --> ", profile);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
 
    for( t = 0; t < profile->ntimepoints; ++t )
    {
       if( t == 0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%d:(%d,%d)", t, profile->timepoints[t], profile-> freecapacities[t]);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%d:(%d,%d)", t, profile->timepoints[t], profile->loads[t]);
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, ", %d:(%d,%d)", t, profile->timepoints[t], profile-> freecapacities[t]);
+         SCIPmessageFPrintInfo(messagehdlr, file, ", %d:(%d,%d)", t, profile->timepoints[t], profile->loads[t]);
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file,"\n");
 }
 
-/** returns if the given time point exists in the stair map and stores the position of the given time point if it
+/** returns the capacity of the resource profile */
+int SCIPprofileGetCapacity(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->capacity;
+}
+
+/** returns the number time points of the resource profile */
+int SCIPprofileGetNTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->ntimepoints;
+}
+
+/** returns the time points of the resource profile */
+int* SCIPprofileGetTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->timepoints;
+}
+
+/** returns the loads of the resource profile */
+int* SCIPprofileGetLoads(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->loads;
+}
+
+/** returns the time point for given position of the resource profile */
+int SCIPprofileGetTime(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos                 /**< position */
+   )
+{
+   assert(profile != NULL);
+   assert(pos >= 0 && pos < profile->ntimepoints);
+
+   return profile->timepoints[pos];
+}
+
+/** returns the loads of the resource profile at the given position */
+int SCIPprofileGetLoad(
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   pos                 /**< position */
+   )
+{
+   assert(profile != NULL);
+   assert(pos >= 0 && pos < profile->ntimepoints);
+
+   return profile->loads[pos];
+}
+
+/** returns if the given time point exists in the resource profile and stores the position of the given time point if it
  *  exists; otherwise the position of the next smaller existing time point is stored
  */
-static
-SCIP_Bool profileFindLeft(
-   SCIP_PROFILE*         profile,            /**< stair map to search */
+SCIP_Bool SCIPprofileFindLeft(
+   SCIP_PROFILE*         profile,            /**< resource profile to search */
    int                   timepoint,          /**< time point to search for */
    int*                  pos                 /**< pointer to store the position */
    )
@@ -3674,60 +3713,57 @@ SCIP_Bool profileFindLeft(
    return FALSE;
 }
 
-/** returns if the given time point exists in the stair map and stores the position of the given time point if it
- *  exists; otherwise the position of the next larger existing time point is stored
- */
+/* ensures that resource profile arrays is big enough */
 static
-SCIP_Bool profileFindRight(
-   SCIP_PROFILE*         profile,            /**< stair map to search */
-   int                   timepoint,          /**< time point to search for */
-   int*                  pos                 /**< pointer to store the position */
+SCIP_RETCODE ensureProfileSize(
+   SCIP_PROFILE*         profile,            /**< resource profile to insert the time point */
+   int                   neededsize          /**< needed size */
    )
 {
-   assert(profile != NULL);
-   assert(timepoint >= 0);
-   assert(profile->ntimepoints > 0);
-   assert(profile->timepoints[0] == 0);
+   assert(profile->arraysize > 0);
 
-   /* find the position of time point in the time points array via binary search */
-   return SCIPsortedvecFindInt(profile->timepoints, timepoint, profile->ntimepoints, pos);
+   /* check whether the arrays are big enough */
+   if( neededsize <= profile->arraysize )
+      return SCIP_OKAY;
+
+   profile->arraysize *= 2;
+
+   SCIP_ALLOC( BMSreallocMemoryArray(&profile->timepoints, profile->arraysize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&profile->loads, profile->arraysize) );
+
+   return SCIP_OKAY;
 }
 
-/** inserts the given time point into the profile if it this time point does not exists yet; returns its position in the
- *  time point array
+/** inserts the given time point into the resource profile if it this time point does not exists yet; returns its
+ *  position in the time point array
  */
 static
-int profileInsertTimepoint(
-   SCIP_PROFILE*         profile,            /**< stair map to insert the time point */
-   int                   timepoint           /**< time point to insert */
+SCIP_RETCODE profileInsertTimepoint(
+   SCIP_PROFILE*         profile,            /**< resource profile to insert the time point */
+   int                   timepoint,          /**< time point to insert */
+   int*                  pos                 /**< pointer to store the insert position */
    )
 {
-   int pos;
-
    assert(profile != NULL);
    assert(timepoint >= 0);
    assert(profile->arraysize >= profile->ntimepoints);
 
-   if( timepoint == 0 )
-      return 0;
-
-   /* get the position of the given time point in the stair map array if it exists; otherwise the position of the next
-    * smaller existing time point
+   /* get the position of the given time point in the resource profile array if it exists; otherwise the position of the
+    * next smaller existing time point
     */
-   if( profileFindLeft(profile, timepoint, &pos) )
+   if( !SCIPprofileFindLeft(profile, timepoint, pos) )
    {
-      /* if the time point exists return the corresponding position */
-      assert(pos >= 0 && pos < profile->ntimepoints);
-      return pos;
+      assert(*pos >= 0 && *pos < profile->ntimepoints);
+      assert(timepoint >= profile->timepoints[*pos]);
+
+      /* ensure that the arrays are big enough */
+      SCIP_CALL( ensureProfileSize(profile, profile->ntimepoints + 1) );
+      assert(profile->arraysize > profile->ntimepoints);
+
+      /* insert new time point into the (sorted) resource profile */
+      SCIPsortedvecInsertIntInt(profile->timepoints, profile->loads, timepoint, profile->loads[*pos],
+         &profile->ntimepoints, pos);
    }
-
-   assert(pos >= 0 && pos < profile->ntimepoints);
-   assert(timepoint >= profile->timepoints[pos]);
-   assert(pos + 1 < profile->arraysize);
-
-   /* insert new time point into the (sorted) stair map */
-   SCIPsortedvecInsertIntInt(profile->timepoints, profile->freecapacities, timepoint, profile->freecapacities[pos],
-      &profile->ntimepoints, NULL);
 
 #ifndef NDEBUG
    /* check if the time points are sorted */
@@ -3738,16 +3774,17 @@ int profileInsertTimepoint(
    }
 #endif
 
-   return pos+1;
+   return SCIP_OKAY;
 }
 
-/** updates the stair map due to inserting of a stair */
+/** updates the resource profile due to inserting of a core */
 static
-void profileUpdate(
-   SCIP_PROFILE*         profile,            /**< profile to update */
-   int                   left,               /**< left side of stair interval */
-   int                   right,              /**< right side of stair interval */
-   int                   height,             /**< height of the stair */
+SCIP_RETCODE profileUpdate(
+   SCIP_PROFILE*         profile,            /**< resource profile to update */
+   int                   left,               /**< left side of core interval */
+   int                   right,              /**< right side of core interval */
+   int                   demand,             /**< demand of the core */
+   int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
    )
 {
@@ -3762,269 +3799,397 @@ void profileUpdate(
    assert(infeasible != NULL);
 
    (*infeasible) = FALSE;
+   (*pos) = -1;
 
    /* get position of the starttime in profile */
-   startpos = profileInsertTimepoint(profile, left);
+   SCIP_CALL( profileInsertTimepoint(profile, left, &startpos) );
    assert(profile->timepoints[startpos] == left);
 
    /* get position of the endtime in profile */
-   endpos = profileInsertTimepoint(profile, right);
+   SCIP_CALL( profileInsertTimepoint(profile, right, &endpos) );
    assert(profile->timepoints[endpos] == right);
 
    assert(startpos < endpos);
    assert(profile->arraysize >= profile->ntimepoints);
 
-   /* remove/add the given height from the stair map */
+   /* remove/add the given demand from the core */
    for( i = startpos; i < endpos; ++i )
    {
-      profile->freecapacities[i] -= height;
+      profile->loads[i] += demand;
 
-      if( profile->freecapacities[i] < 0 )
+      /* check if the core fits */
+      if( profile->loads[i] > profile->capacity )
       {
-         *infeasible = TRUE;
+         SCIPdebugMessage("core insertion detected infeasibility (pos %d)\n", i);
 
-         /* remove infeasible stair */
+         (*infeasible) = TRUE;
+         (*pos) = i;
+
+         /* remove the partly inserted core since it does fit completely */
          for( ; i >= startpos; --i ) /*lint !e445*/
-            profile->freecapacities[i] += height;
+            profile->loads[i] -= demand;
 
          break;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** insert a core into resource profile; if the core is non-empty the resource profile will be updated otherwise nothing
  *  happens
  */
-void SCIPprofileInsertCore(
-   SCIP_PROFILE*         profile,            /**< resource profile to use */
+SCIP_RETCODE SCIPprofileInsertCore(
+   SCIP_PROFILE*         profile,            /**< resource profile */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
+   int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    )
 {
    assert(profile != NULL);
    assert(left < right);
-   assert(height >= 0);
+   assert(demand >= 0);
    assert(infeasible != NULL);
 
    (*infeasible) = FALSE;
+   (*pos) = -1;
 
-   /* insert stair into the stair map */
-   SCIPdebugMessage("insert stair [%d,%d] with height %d\n", left, right, height);
+   /* insert core into the resource profile */
+   SCIPdebugMessage("insert core [%d,%d] with demand %d\n", left, right, demand);
 
-   if( height == 0 )
-      return;
+   if( demand > 0 )
+   {
+      /* try to insert core into the resource profile */
+      SCIP_CALL( profileUpdate(profile, left, right, demand, pos, infeasible) );
+   }
 
-   /* try to insert stair into the stair map */
-   profileUpdate(profile, left, right, height, infeasible);
+   return SCIP_OKAY;
 }
 
-/** subtracts the height from the resource profile during core time */
-void SCIPprofileDeleteCore(
+/** subtracts the demand from the resource profile during core time */
+SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height              /**< height of the core */
+   int                   demand              /**< demand of the core */
    )
 {
    SCIP_Bool infeasible;
+   int pos;
 
    assert(left < right);
 #ifndef NDEBUG
    {
-      /* check if the begin and end time points of the stair correspond to a time point in the profile; this should be
-       * the case since we added the stair before to the stair map
+      /* check if the left and right time points of the core correspond to a time point in the resource profile; this
+       * should be the case since we added the core before to the resource profile
        */
-      int pos;
-      assert(profileFindLeft(profile, left, &pos));
-      assert(profileFindLeft(profile, right, &pos));
+      assert(SCIPprofileFindLeft(profile, left, &pos));
+      assert(SCIPprofileFindLeft(profile, right, &pos));
    }
 #endif
 
-      /* remove the stair from the current stair map */
-      SCIPdebugMessage("delete stair [%d,%d] with height %d\n", left, right, height);
+   /* remove the core from the resource profile */
+   SCIPdebugMessage("delete core [%d,%d] with demand %d\n", left, right, demand);
 
-      profileUpdate(profile, left, right, -height, &infeasible);
-      assert(!infeasible);
+   SCIP_CALL( profileUpdate(profile, left, right, -demand, &pos, &infeasible) );
+   assert(!infeasible);
+
+   return SCIP_OKAY;
 }
 
-/** returns the time point at the given position */
-int SCIPprofileGetTimepoint(
+/** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */
+static
+int profileFindFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   pos                 /**< position */
-   )
-{
-   assert(profile != NULL);
-   assert(pos < profile->ntimepoints);
-
-   return profile->timepoints[pos];
-}
-
-/** returns TRUE if the core (given by its height and during) can be inserted at the given time point; otherwise FALSE */
-SCIP_Bool SCIPprofileIsFeasibleStart(
-   SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   timepoint,          /**< time point to start */
+   int                   pos,                /**< pointer to store the position in the profile to start the serch */
+   int                   lst,                /**< latest start time */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
+   int                   demand,             /**< demand of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    )
 {
-   int endtime;
+   int remainingduration;
    int startpos;
-   int endpos;
-   int p;
 
    assert(profile != NULL);
-   assert(timepoint >= 0);
-   assert(height >= 0);
-   assert(pos != NULL);
+   assert(pos >= 0);
+   assert(pos < profile->ntimepoints);
+   assert(duration > 0);
+   assert(demand > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
 
-   if( duration == 0 || height == 0 )
-      return TRUE;
+   remainingduration = duration;
+   startpos = pos;
+   (*infeasible) = FALSE;
 
-   endtime = timepoint + duration;
-
-   /* check if the activity fits at timepoint */
-   (void)profileFindLeft(profile, timepoint, &startpos);
-   (void)profileFindRight(profile, endtime, &endpos);
-
-   assert(profile->timepoints[startpos] <= timepoint);
-   assert(profile->timepoints[endpos] >= endtime);
-
-   for( p = startpos; p < endpos; ++p )
+   if( profile->timepoints[startpos] > lst )
    {
-      if( profile->freecapacities[p] < height )
-      {
-         (*pos) = p;
-         return FALSE;
-      }
+      (*infeasible) = TRUE;
+      return pos;
    }
 
-   return TRUE;
+   while( pos < profile->ntimepoints - 1 )
+   {
+      if( profile->loads[pos] + demand > profile->capacity )
+      {
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", profile, profile->timepoints[pos], pos);
+         startpos = pos + 1;
+         remainingduration = duration;
+
+         if( profile->timepoints[startpos] > lst )
+         {
+            (*infeasible) = TRUE;
+            return pos;
+         }
+      }
+      else
+         remainingduration -= profile->timepoints[pos+1] - profile->timepoints[pos];
+
+      if( remainingduration <= 0 )
+         break;
+
+      pos++;
+   }
+
+   return startpos;
 }
 
-/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
+/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its demand
  *  and duration)
  */
 int SCIPprofileGetEarliestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   lb,                 /**< earliest starting time of the given core */
-   int                   ub,                 /**< latest starting time of the given core */
+   int                   est,                /**< earliest starting time of the given core */
+   int                   lst,                /**< latest starting time of the given core */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    )
 {
-   int starttime;
+   SCIP_Bool found;
    int pos;
 
    assert(profile != NULL);
-   assert(lb >= 0);
+   assert(est >= 0);
+   assert(est <= lst);
    assert(duration >= 0);
-   assert(height >= 0);
+   assert(demand >= 0);
    assert(infeasible != NULL);
-   assert(profile->timepoints[profile->ntimepoints-1] > ub);
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
 
-   if( lb > ub )
-   {
-      *infeasible = TRUE;
-      return lb;
-   }
+   SCIPdebugMessage("profile <%p>: find earliest start time (demad %d, duration %d) [%d,%d]\n", profile, demand, duration, est, lst);
 
-   if( duration == 0 || height == 0 )
+   if( duration == 0 || demand == 0 )
    {
       *infeasible = FALSE;
-      return lb;
+      return est;
    }
 
-   starttime = lb;
+   found = SCIPprofileFindLeft(profile, est, &pos);
+   SCIPdebugMessage("profile <%p>: earliest start time does %s exist as time point (pos %d)\n", profile, found ? "" : "not", pos);
 
-   (void)profileFindLeft(profile, starttime, &pos);
-   assert(profile->timepoints[pos] <= starttime);
-
-   (*infeasible) = TRUE;
-
-   while( starttime <= ub )
+   /* if the position is the last time point in the profile, the core can be inserted at its earliest start time */
+   if( pos == profile->ntimepoints - 1 )
    {
-      if( SCIPprofileIsFeasibleStart(profile, starttime, duration, height, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-
-      /* the stair did not fit into the stair map since at time point "pos" not enough capacity is available; therefore we
-       * can proceed with the next time point
-       */
-      assert(profile->freecapacities[pos] < height);
-      pos++;
-
-      /* check if we exceed the time point array */
-      if( pos >= profile->ntimepoints )
-         break;
-
-      starttime = profile->timepoints[pos];
+      (*infeasible) = FALSE;
+      return est;
    }
 
-   assert(*infeasible || starttime <= ub);
-   return starttime;
+   if( found )
+   {
+      /* if the start time matches a time point in the profile we can just search */
+      assert(profile->timepoints[pos] == est);
+      pos = profileFindFeasibleStart(profile, pos, lst, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints);
+      est = profile->timepoints[pos];
+   }
+   else if( profile->loads[pos] + demand > profile->capacity )
+   {
+      /* if the the time point left to the start time has not enough free capacity we can just search the profile
+       * starting from the next time point
+       */
+      assert(profile->timepoints[pos] <= est);
+      pos = profileFindFeasibleStart(profile, pos+1, lst, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints);
+      est = profile->timepoints[pos];
+   }
+   else
+   {
+      int remainingduration;
+
+      /* check if the core can be placed at its earliest start time */
+
+      assert(pos < profile->ntimepoints - 1);
+
+      remainingduration = duration - (profile->timepoints[pos+1] - est);
+      SCIPdebugMessage("remaining duration %d\n", remainingduration);
+
+
+      if( remainingduration <= 0 )
+         (*infeasible) = FALSE;
+      else
+      {
+         pos = profileFindFeasibleStart(profile, pos+1, profile->timepoints[pos+1], remainingduration, demand, infeasible);
+         SCIPdebugMessage("remaining duration can%s be processed\n", *infeasible ? "not" : "");
+
+         if( *infeasible )
+         {
+            pos = profileFindFeasibleStart(profile, pos+1, lst, duration, demand, infeasible);
+
+            assert(pos < profile->ntimepoints);
+            est = profile->timepoints[pos];
+         }
+      }
+   }
+
+   return est;
 }
 
-/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
+/** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */
+static
+int profileFindDownFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos,                /**< pointer to store the position in the profile to start the search */
+   int                   ect,                /**< earliest completion time */
+   int                   duration,           /**< duration of the core */
+   int                   demand,             /**< demand of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
+   )
+{
+   int remainingduration;
+   int endpos;
+
+   assert(profile != NULL);
+   assert(pos >= 0);
+   assert(pos < profile->ntimepoints);
+   assert(duration > 0);
+   assert(demand > 0);
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
+
+   remainingduration = duration;
+   endpos = pos;
+   (*infeasible) = TRUE;
+
+   if( profile->timepoints[endpos] < ect - duration )
+      return pos;
+
+   while( pos > 0 )
+   {
+      if( profile->loads[pos-1] + demand > profile->capacity )
+      {
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", profile, profile->timepoints[pos-1], pos-1);
+
+         endpos = pos - 1;
+         remainingduration = duration;
+
+         if( profile->timepoints[endpos] < ect - duration )
+            return pos;
+      }
+      else
+         remainingduration -= profile->timepoints[pos] - profile->timepoints[pos-1];
+
+      if( remainingduration <= 0 )
+      {
+         *infeasible = FALSE;
+         break;
+      }
+
+      pos--;
+   }
+
+   return endpos;
+}
+
+/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its demand and
  *  duration)
  */
 int SCIPprofileGetLatestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
+   int                   est,                /**< earliest possible start point */
+   int                   lst,                /**< latest possible start point */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    )
 {
-   int starttime;
+   SCIP_Bool found;
+   int ect;
+   int lct;
    int pos;
 
    assert(profile != NULL);
-   assert(lb >= 0);
-   assert(lb <= ub);
+   assert(est >= 0);
+   assert(est <= lst);
    assert(duration >= 0);
-   assert(height >= 0);
+   assert(demand >= 0);
    assert(infeasible != NULL);
-   assert(profile->timepoints[profile->ntimepoints-1] > ub);
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
 
-   if( duration == 0 || height == 0 )
+   if( duration == 0 || demand == 0 )
    {
-      (*infeasible) = FALSE;
-      return ub;
+      *infeasible = FALSE;
+      return lst;
    }
 
-   starttime = ub;
-   (void)profileFindLeft(profile, starttime, &pos);
-   assert(profile->timepoints[pos] <= starttime);
+   ect = est + duration;
+   lct = lst + duration;
 
-   (*infeasible) = TRUE;
+   found = SCIPprofileFindLeft(profile, lct, &pos);
+   SCIPdebugMessage("profile <%p>: latest completion time %d does %s exist as time point (pos %d)\n", profile, lct, found ? "" : "not", pos);
 
-   while( starttime >= lb )
+   if( found )
    {
-      if( SCIPprofileIsFeasibleStart(profile, starttime, duration, height, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-      assert(pos >= 0);
+      /* if the start time matches a time point in the profile we can just search */
+      assert(profile->timepoints[pos] == lct);
+      pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
 
-      /* the stair did not fit into the stair map since at time point "pos" not enough capacity is available; therefore
-       * we can proceed with the next time point
+      assert(pos < profile->ntimepoints && pos >= 0);
+      lct = profile->timepoints[pos];
+   }
+   else if( profile->loads[pos] + demand > profile->capacity )
+   {
+      /* if the time point left to the start time has not enough free capacity we can just search the profile starting
+       * from the next time point
        */
-      assert(profile->freecapacities[pos] < height);
+      assert(profile->timepoints[pos] < lct);
+      pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
 
-      starttime = profile->timepoints[pos] - duration;
+      assert(pos < profile->ntimepoints && pos >= 0);
+      lct = profile->timepoints[pos];
+   }
+   else
+   {
+      int remainingduration;
+
+      /* check if the core can be placed at its latest start time */
+      assert(profile->timepoints[pos] < lct);
+
+      remainingduration = duration - (lct - profile->timepoints[pos]);
+
+      if( remainingduration <= 0 )
+         (*infeasible) = FALSE;
+      else
+      {
+         pos = profileFindDownFeasibleStart(profile, pos, profile->timepoints[pos], remainingduration, demand, infeasible);
+
+         if( *infeasible )
+         {
+            pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
+
+            assert(pos < profile->ntimepoints && pos >= 0);
+            lct = profile->timepoints[pos];
+         }
+      }
    }
 
-   assert(*infeasible || (starttime >= lb && starttime <= ub));
-
-   return starttime;
+   return lct - duration;
 }
 
 /*

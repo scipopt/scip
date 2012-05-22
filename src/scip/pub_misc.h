@@ -366,22 +366,14 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 /** creates resource profile */
 extern
 SCIP_RETCODE SCIPprofileCreate(
-   SCIP_PROFILE**        profile,            /**< pointer to store the created resource profile */
-   int                   upperbound,         /**< upper bound of the profile */
-   int                   ntimepoints         /**< minimum size to ensure */
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
    );
 
 /** frees given resource profile */
 extern
 void SCIPprofileFree(
    SCIP_PROFILE**        profile             /**< pointer to the resource profile */
-   );
-
-/** resizes the resource profile arrays */
-extern
-SCIP_RETCODE SCIPprofileResize(
-   SCIP_PROFILE*         profile,            /**< resource profile to resize */
-   int                   ntimepoints         /**< minimum size to ensure */
    );
 
 /** output of the given resource profile */
@@ -392,42 +384,74 @@ void SCIPprofilePrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** returns the capacity of the resource profile */
+extern
+int SCIPprofileGetCapacity(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   );
+
+/** returns the number time points of the resource profile */
+extern
+int SCIPprofileGetNTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   );
+
+/** returns the time points of the resource profile */
+extern
+int* SCIPprofileGetTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   );
+
+/** returns the loads of the resource profile */
+extern
+int* SCIPprofileGetLoads(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   );
+
+/** returns the time point for given position of the resource profile */
+extern
+int SCIPprofileGetTime(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos                 /**< position */
+   );
+
+/** returns the loads of the resource profile at the given position */
+extern
+int SCIPprofileGetLoad(
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   pos                 /**< position */
+   );
+
+/** returns if the given time point exists in the resource profile and stores the position of the given time point if it
+ *  exists; otherwise the position of the next smaller existing time point is stored
+ */
+extern
+SCIP_Bool SCIPprofileFindLeft(
+   SCIP_PROFILE*         profile,            /**< resource profile to search */
+   int                   timepoint,          /**< time point to search for */
+   int*                  pos                 /**< pointer to store the position */
+   );
+
 /** insert a core into resource profile; if the core is non-empty the resource profile will be updated otherwise nothing
  *  happens
  */
 extern
-void SCIPprofileInsertCore(
+SCIP_RETCODE SCIPprofileInsertCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
    int                   height,             /**< height of the core */
+   int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    );
 
 /** subtracts the height from the resource profile during core time */
 extern
-void SCIPprofileDeleteCore(
+SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
    int                   height              /**< height of the core */
-   );
-
-/** returns the time point at the given position */
-extern
-int SCIPprofileGetTimepoint(
-   SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   pos                 /**< position */
-   );
-
-/** returns TRUE if the core (given by its height and during) can be inserted at the given time point; otherwise FALSE */
-extern
-SCIP_Bool SCIPprofileIsFeasibleStart(
-   SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
    );
 
 /** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
@@ -436,8 +460,8 @@ SCIP_Bool SCIPprofileIsFeasibleStart(
 extern
 int SCIPprofileGetEarliestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   lb,                 /**< earliest starting time of the given core */
-   int                   ub,                 /**< latest starting time of the given core */
+   int                   est,                /**< earliest starting time of the given core */
+   int                   lst,                /**< latest starting time of the given core */
    int                   duration,           /**< duration of the core */
    int                   height,             /**< height of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
@@ -638,7 +662,7 @@ extern
 SCIP_RETCODE SCIPbstnodeCreate(
    SCIP_BST*             tree,               /**< binary search tree */
    SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
-   void*                 key,                /**< sorting key */
+   void*                 key,                /**< sorting key, or NULL */
    void*                 dataptr             /**< user node data pointer, or NULL */
    );
 

@@ -243,7 +243,7 @@ SCIP_RETCODE constructSolution(
 static
 void profilesInsertJob(
    SCIP*                 scip,
-   SCIP_PROFILE**       profiles,           /**< array of resource profiles */
+   SCIP_PROFILE**        profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
    int                   starttime,          /**< start time of the job */
    int                   duration,           /**< duration of the job */
@@ -251,13 +251,14 @@ void profilesInsertJob(
    )
 {
    SCIP_Bool infeasible;
+   int pos;
    int p;
 
    /* found a feasible start time, insert the job into all profiles */
    for( p = 0; p < nprofiles; ++p )
    {
       /* add job to resource profile */
-      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &infeasible);
+      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &pos, &infeasible);
       assert(!infeasible);
    }
 }
@@ -308,6 +309,8 @@ int profilesFindEarliestFeasibleStart(
       }
    }
    while( changed );
+
+   SCIPdebugMessage("earliest feasible start time: %d\n", est);
 
    return est;
 }
@@ -475,7 +478,7 @@ SCIP_RETCODE performForwardScheduling(
    for( j = 0; j < nresources; ++j )
    {
       assert(heurdata->capacities[j] > 0);
-      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
+      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j]) );
    }
 
    for( j = 0; j < njobs && !(*infeasible); ++j )
@@ -556,7 +559,7 @@ SCIP_RETCODE performBackwardScheduling(
    for( j = 0; j < nresources; ++j )
    {
       assert(heurdata->capacities[j] > 0);
-      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j], 2*njobs) );
+      SCIP_CALL( SCIPprofileCreate(&profiles[j], heurdata->capacities[j]) );
    }
 
    for( j = 0; j < njobs; ++j )

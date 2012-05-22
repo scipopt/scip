@@ -133,7 +133,8 @@ struct SCIP_PtrArray
 struct SCIP_Profile
 {
    int*                  timepoints;         /**< time point array */
-   int*                  freecapacities;     /**< array holding corresponding available capacity */
+   int*                  loads;              /**< array holding the load for each time point */
+   int                   capacity;           /**< capacity of the resource profile */
    int                   ntimepoints;        /**< current number of entries */
    int                   arraysize;          /**< current array size */
 };

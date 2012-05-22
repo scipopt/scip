@@ -274,6 +274,9 @@ SCIP_RETCODE getResourcesNames(
 
    do
    {
+      while(isspace(*name))
+         name++;
+
       SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->resourcenames[r], name, strlen(name) + 1) );
       r++;
    }
@@ -397,13 +400,11 @@ SCIP_RETCODE getPrecedence(
       succ = strtol(s,&s,10)-1;
 
       /* add precedence to digraph */
-      SCIP_CALL( SCIPdigraphAddArc(rcpspdata->precedencegraph, pred, succ) );
+      SCIP_CALL( SCIPdigraphAddArc(rcpspdata->precedencegraph, pred, succ, (void*)(size_t)INT_MAX) );
    }
 
    if(pred == rcpspdata->njobs-1)
-   {
       *state = NEXT;
-   }
 
    return SCIP_OKAY;
 }
@@ -571,7 +572,7 @@ SCIP_DECL_READERREAD(readerReadSm)
    SCIP_CALL( readFile(scip, filename, &rcpspdata) );
 
    /* output rcpspdata to check it */
-   SCIPdebug( outputRcpspData(scip, rcpspdata) );
+   SCIPdebug( outputRcpspData(scip, &rcpspdata) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateSchedulingProblem(scip, filename, rcpspdata.jobnames, rcpspdata.resourcenames, rcpspdata.demands,
@@ -748,12 +749,10 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, successors[i]);
 
-            if( distances == NULL )
+            distance = (int)(size_t)distances[i];
+
+            if( distance == INT_MAX )
                distance = durations[j];
-            else if ( distances[i] == NULL )
-               distance = 0;
-            else
-               distance = (int)(size_t)distances[i];
 
             SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, succvar, -1.0,
                   -SCIPinfinity(scip), -distance,
@@ -798,7 +797,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
       {
          /* construct constraint name */
          if( resourcenames != NULL )
-            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", resourcenames[r]);
+            (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "R%s", resourcenames[r]);
          else
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "R%d", r);
 
