@@ -683,6 +683,15 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
    );
 
+/** indicates whether there exists a row that contains a continuous variable in a nonlinear term
+ *
+ * @note The method may have to touch every row and nonlinear term to compute its result.
+ */
+extern
+SCIP_Bool SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   );
+
 /** gives dual solution values associated with lower bounds of NLP variables */
 extern
 SCIP_Real* SCIPnlpGetVarsLbDualsol(

@@ -4731,7 +4731,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAbspower)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    int c;
 
    assert(scip  != NULL);
@@ -4745,20 +4744,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      if( SCIPconsIsEnabled(conss[c]) )
+      if( SCIPconsIsAdded(conss[c]) )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
-         if( SCIPvarGetType(consdata->x) >= SCIP_VARTYPE_CONTINUOUS )
-         {
-            SCIPmarkContinuousNonlinearitiesPresent(scip);
-            break;
-         }
-         else
-         {
-            SCIPmarkNonlinearitiesPresent(scip);
-         }
+         SCIPenableNLP(scip);
+         break;
       }
    }
 

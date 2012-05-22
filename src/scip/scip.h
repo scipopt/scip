@@ -5551,49 +5551,39 @@ SCIP_RETCODE SCIPprintRow(
 /**@name NLP Methods */
 /**@{ */
 
-/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
- * and that are still nonlinear after fixing all discrete variables in the CIP.
+/** returns whether the NLP relaxation has been enabled
  * 
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ * To check whether an NLP is existing, use SCIPisNLPConstructed().
  * 
- */ 
+ * @see SCIPenableNLP
+ */
 extern
-void SCIPmarkContinuousNonlinearitiesPresent(
+SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** marks that there are constraints that are representable by nonlinear constraints
+/** marks that there are constraints that are representable by nonlinear rows
+ *
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
- * 
+ *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
- */ 
-extern
-void SCIPmarkNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
- * @see SCIPmarkContinuousNonlinearitiesPresent
  */
 extern
-SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present
- * @see SCIPmarkNonlinearitiesPresent
- */
-extern
-SCIP_Bool SCIPhasNonlinearitiesPresent(
+void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns, whether an NLP has been constructed */
 extern
 SCIP_Bool SCIPisNLPConstructed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the NLP has a continuous variable in a nonlinear term
+ */
+extern
+SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

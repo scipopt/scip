@@ -9219,17 +9219,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #endif
 
       /* tell SCIP that we have something nonlinear */
-      if( SCIPconsIsEnabled(conss[c]) && consdata->nquadvars > 0 )
-      {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
-            for( i = 0; i < consdata->nquadvars; ++i )
-               if( SCIPvarGetType(consdata->quadvarterms[i].var) >= SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIPmarkContinuousNonlinearitiesPresent(scip);
-                  break;
-               }
-      }
+      if( SCIPconsIsAdded(conss[c]) && consdata->nquadvars > 0 )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;

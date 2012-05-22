@@ -7468,9 +7468,8 @@ SCIP_RETCODE initSolve(
    /* switch stage to INITSOLVE */
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
-   /* initialize NLP if there are nonlinearities and there is someone who can make use of it and the user did not switch it off */
-   assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continuous nonlinearity, then there should be nonlinearity in general */
-   if( scip->set->nonlinearitypresent && !scip->set->nlp_disable )
+   /* initialize NLP if there are nonlinearities */
+   if( scip->set->nlpenabled && !scip->set->nlp_disable )
    {
       SCIPdebugMessage("constructing empty NLP\n");
 
@@ -7593,8 +7592,7 @@ SCIP_RETCODE freeSolve(
    {
       SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
    }
-   scip->set->continnonlinpresent = FALSE;
-   scip->set->nonlinearitypresent = FALSE;
+   scip->set->nlpenabled = FALSE;
    
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
@@ -15966,61 +15964,37 @@ SCIP_RETCODE SCIPprintRow(
  * NLP methods
  */
 
-/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
- * and that are still nonlinear after fixing all discrete variables in the CIP.
- * 
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- */ 
-void SCIPmarkContinuousNonlinearitiesPresent(
+/** returns whether the NLP relaxation has been enabled
+ *
+ * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ * To check whether an NLP is existing, use SCIPisNLPConstructed().
+ *
+ * @see SCIPenableNLP
+ */
+extern
+SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   scip->set->continnonlinpresent = TRUE;
-   scip->set->nonlinearitypresent = TRUE;
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPEnabled", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return scip->set->nlpenabled;
 }
 
-/** marks that there are constraints that are representable by nonlinear constraints
+/** marks that there are constraints that are representable by nonlinear rows
+ *
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
- * 
+ *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
- */ 
-void SCIPmarkNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   scip->set->nonlinearitypresent = TRUE;
-}
-
-/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
- * @see SCIPmarkContinuousNonlinearitiesPresent
  */
-SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
+extern
+void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   return scip->set->continnonlinpresent;
-}
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPenableNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-/** returns whether constraints representable as nonlinear rows are present
- * @see SCIPmarkNonlinearitiesPresent
- */
-SCIP_Bool SCIPhasNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   return scip->set->nonlinearitypresent;
+   scip->set->nlpenabled = TRUE;
 }
 
 /** returns, whether an NLP has been constructed */
@@ -16031,6 +16005,27 @@ SCIP_Bool SCIPisNLPConstructed(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPConstructed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return (scip->nlp != NULL);
+}
+
+/** returns whether the NLP has a continuous variable in a nonlinear term
+ */
+SCIP_Bool SCIPhasNLPContinuousNonlinearity(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp != NULL )
+   {
+      return SCIPnlpHasContinuousNonlinearity(scip->nlp);
+   }
+   else
+   {
+      SCIPerrorMessage("NLP has not been not constructed.\n");
+      SCIPABORT();
+   }
+
+   return FALSE;
 }
 
 /** gets current NLP variables along with the current number of NLP variables */

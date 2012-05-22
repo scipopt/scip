@@ -6371,8 +6371,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    SCIP_Bool          havegraphchange;
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
+#ifndef NDEBUG
    int i;
    int j;
+#endif
    int c;
 
    assert(scip != NULL);
@@ -6461,17 +6463,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 #endif
 
          /* tell SCIP that we have something nonlinear */
-         if( SCIPconsIsEnabled(conss[c]) )
-         {
-            SCIPmarkNonlinearitiesPresent(scip);
-            for( j = 0; !SCIPhasContinuousNonlinearitiesPresent(scip) && j < consdata->nexprtrees; ++j )
-               for( i = 0; i < SCIPexprtreeGetNVars(consdata->exprtrees[j]); ++i )
-                  if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->exprtrees[j])[i]) >= SCIP_VARTYPE_CONTINUOUS )
-                  {
-                     SCIPmarkContinuousNonlinearitiesPresent(scip);
-                     break;
-                  }
-         }
+         if( SCIPconsIsAdded(conss[c]) )
+            SCIPenableNLP(scip);
       }
    }
 

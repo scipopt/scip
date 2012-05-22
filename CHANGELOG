@@ -107,6 +107,9 @@ interface
 - added new method SCIPvarGetAggregatedObj() which computes for a (not active) variable the corresponding objective
   value
 - renamed parameter SCRDIR of "make testgams" to CLIENTTMPDIR and changed its default to "/tmp"
+- renamed SCIPmarkNonlinearitiesPresent() to SCIPenableNLP(), removed SCIPmarkContinuousNonlinearitiesPresent(),
+  renamed SCIPhasContinuousNonlinearitiesPresent() to SCIPhasNLPContinuousNonlinearity() and allow call only during
+  initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

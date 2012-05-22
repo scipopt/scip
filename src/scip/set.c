@@ -187,7 +187,7 @@
 /* NLP */
 
 #define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
-#define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be disabled? */
+#define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be always disabled? */
 
 /* Memory */
 
@@ -721,8 +721,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
-   (*set)->continnonlinpresent = FALSE;
-   (*set)->nonlinearitypresent = FALSE;
+   (*set)->nlpenabled = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -1154,7 +1153,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "nlp/disable",
-         "should the NLP be disabled?",
+         "should the NLP relaxation be always disabled (also for NLPs/MINLPs)?",
          &(*set)->nlp_disable, FALSE, SCIP_DEFAULT_NLP_DISABLE,
          NULL, NULL) );
 

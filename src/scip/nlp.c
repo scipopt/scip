@@ -5799,6 +5799,48 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    return SCIP_OKAY;
 }
 
+
+/** indicates whether there exists a row that contains a continuous variable in a nonlinear term
+ *
+ * @note The method may have to touch every row and nonlinear term to compute its result.
+ */
+SCIP_Bool SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   SCIP_NLROW* nlrow;
+   int c;
+   int i;
+
+   assert(nlp != NULL);
+
+   for( c = 0; c < nlp->nnlrows; ++c )
+   {
+      nlrow = nlp->nlrows[c];
+      assert(nlrow != NULL);
+
+      for( i = 0; i < nlrow->nquadvars; ++i )
+         if( SCIPvarGetType(nlrow->quadvars[i]) == SCIP_VARTYPE_CONTINUOUS )
+            return TRUE;
+
+      if( nlrow->exprtree != NULL )
+      {
+         SCIP_VAR** exprtreevars;
+         int nexprtreevars;
+
+         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
+         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
+         assert(exprtreevars != NULL || nexprtreevars == 0);
+
+         for( i = 0; i < nexprtreevars; ++i )
+            if( SCIPvarGetType(exprtreevars[i]) == SCIP_VARTYPE_CONTINUOUS )
+               return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** gives dual solution values associated with lower bounds of NLP variables */
 SCIP_Real* SCIPnlpGetVarsLbDualsol(
    SCIP_NLP*             nlp                 /**< current NLP data */

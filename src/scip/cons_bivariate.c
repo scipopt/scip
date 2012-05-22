@@ -5636,25 +5636,22 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
       /* make sure variable fixations have been resolved */
       SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
       assert(!upgraded);
 
+#ifndef NDEBUG
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
       assert(consdata->f != NULL);
       assert(SCIPexprtreeGetNVars(consdata->f) == 2);
       assert(consdata->z == NULL || SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
+#endif
 
       /* tell SCIP that we have something nonlinear */
-      if( SCIPconsIsEnabled(conss[c]) )
-      {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-            SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
-            SCIPmarkContinuousNonlinearitiesPresent(scip);
-      }
+      if( SCIPconsIsAdded(conss[c]) )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;

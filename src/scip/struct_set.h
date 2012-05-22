@@ -131,8 +131,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
-   SCIP_Bool             continnonlinpresent;/**< marks whether any constraints with continuous nonlinear variables are present */
-   SCIP_Bool             nonlinearitypresent;/**< marks whether any constraints with discrete nonlinear variables are present */
+   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
@@ -253,7 +252,7 @@ struct SCIP_Set
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
 
    /* NLP settings */
-   SCIP_Bool             nlp_disable;        /**< should the NLP be disabled? */
+   SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */

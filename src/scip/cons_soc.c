@@ -3081,7 +3081,6 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    int c;
 
    assert(scip != NULL);
@@ -3094,23 +3093,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
    /* tell SCIP that we have something nonlinear */
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsEnabled(conss[c]) )
+      if( SCIPconsIsAdded(conss[c]) )
       {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
-         {
-            int i;
-
-            consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
-            assert(consdata != NULL);
-
-            for( i = 0; i < consdata->nvars; ++i )
-               if( SCIPvarGetType(consdata->vars[i]) >= SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIPmarkContinuousNonlinearitiesPresent(scip);
-                  break;
-               }
-         }
+         SCIPenableNLP(scip);
+         break;
       }
    }
 

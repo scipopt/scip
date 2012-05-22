@@ -1156,6 +1156,8 @@
 =opt= RSyn0810M04M        6581.93694
 =opt= RSyn0815M           1269.92565
 =opt= RSyn0815M02M        1774.39805
+=opt= RSyn0815M03M        2827.92723
+=opt= RSyn0815M04M        3410.85508
 =opt= RSyn0820H           1150.30107
 =opt= RSyn0820M           1150.30053
 =opt= RSyn0820M02H        1092.09159
@@ -1222,6 +1224,7 @@
 =opt= Syn30H               138.161699
 =opt= Syn30M               138.160141
 =opt= Syn30M02M            399.683144
+=opt= Syn30M04M            865.724998
 =opt= Syn40H                67.7133866
 =opt= Syn40M                67.7132559
 =opt= Syn40M02H            388.772734

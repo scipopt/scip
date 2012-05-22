@@ -1886,7 +1886,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
       return SCIP_OKAY;
 
    /* do not setup sub-SCIP if no continuous nonlinear variables are present */
-   if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+   if( !SCIPisNLPConstructed(scip) || !SCIPhasNLPContinuousNonlinearity(scip) )
       return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
