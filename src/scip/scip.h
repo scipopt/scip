@@ -4304,15 +4304,17 @@ SCIP_RETCODE SCIPisConflictVarUsed(
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
    );
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 extern
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *  upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarUb(
@@ -4320,8 +4322,8 @@ SCIP_Real SCIPgetConflictVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedLb(
@@ -4329,8 +4331,8 @@ SCIP_Real SCIPgetConflictVarRelaxedLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
+ *  global upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedUb(

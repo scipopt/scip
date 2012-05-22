@@ -13721,7 +13721,9 @@ SCIP_RETCODE SCIPisConflictVarUsed(
    return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
 }
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -13729,11 +13731,11 @@ SCIP_Real SCIPgetConflictVarLb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarLb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarLb(scip->conflict, var);
 }
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *  upper bound
  */
 SCIP_Real SCIPgetConflictVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13742,11 +13744,11 @@ SCIP_Real SCIPgetConflictVarUb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarUb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarUb(scip->conflict, var);
 }
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 SCIP_Real SCIPgetConflictVarRelaxedLb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13755,11 +13757,11 @@ SCIP_Real SCIPgetConflictVarRelaxedLb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarRelaxedLb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarRelaxedLb(scip->conflict, var);
 }
 
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
+ *  global upper bound
  */
 SCIP_Real SCIPgetConflictVarRelaxedUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13768,7 +13770,7 @@ SCIP_Real SCIPgetConflictVarRelaxedUb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarRelaxedUb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarRelaxedUb(scip->conflict, var);
 }
 
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
