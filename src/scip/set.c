@@ -1915,14 +1915,13 @@ SCIP_RETCODE SCIPsetGetStringParam(
 /** changes the fixing status of an existing parameter */
 SCIP_RETCODE SCIPsetChgParamFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
    )
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetFix(set->paramset, messagehdlr, name, fixed) );
+   SCIP_CALL( SCIPparamsetFix(set->paramset, name, fixed) );
 
    return SCIP_OKAY;
 }

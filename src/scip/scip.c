@@ -2416,7 +2416,7 @@ SCIP_RETCODE SCIPfixParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetChgParamFixed(scip->set, scip->messagehdlr, name, TRUE) );
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, name, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2429,7 +2429,7 @@ SCIP_RETCODE SCIPunfixParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPunfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetChgParamFixed(scip->set, scip->messagehdlr, name, FALSE) );
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, name, FALSE) );
 
    return SCIP_OKAY;
 }

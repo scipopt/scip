@@ -5893,6 +5893,7 @@ SCIP_Real SCIProwGetRelaxFeasibility(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_Real inf;
    SCIP_Real activity;
    SCIP_COL* col;
    int c;
@@ -5937,6 +5938,10 @@ SCIP_Real SCIProwGetRelaxFeasibility(
       }
    }
 #endif
+   inf = SCIPsetInfinity(set);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
+
    return MIN(row->rhs - activity, activity - row->lhs);
 }
 
@@ -5944,13 +5949,13 @@ SCIP_Real SCIProwGetRelaxFeasibility(
  *
  *  @todo Implement calculation of activities similar to LPs.
  */
-extern
 SCIP_Real SCIProwGetNLPFeasibility(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_Real inf;
    SCIP_Real activity;
    SCIP_COL* col;
    int c;
@@ -5995,6 +6000,10 @@ SCIP_Real SCIProwGetNLPFeasibility(
       }
    }
 #endif
+   inf = SCIPsetInfinity(set);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
+
    return MIN(row->rhs - activity, activity - row->lhs);
 }
 
@@ -6483,7 +6492,6 @@ SCIP_Real SCIProwGetRelaxEfficacy(
 }
 
 /** returns row's efficacy with respect to the NLP solution: e = -feasibility/norm */
-extern
 SCIP_Real SCIProwGetNLPEfficacy(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */

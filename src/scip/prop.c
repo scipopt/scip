@@ -860,7 +860,6 @@ SCIP_Real SCIPpropGetSetupTime(
 }
 
 /** sets frequency of propagator */
-extern
 void SCIPpropSetFreq(
    SCIP_PROP*            prop,               /**< propagator */
    int                   freq                /**< new frequency of propagator */

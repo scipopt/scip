@@ -796,6 +796,7 @@ SCIP_RETCODE computeScore(
       break;
    case SCIP_EFFICIACYCHOICE_NLP:
       cutefficacy = SCIProwGetNLPEfficacy(cut, set, stat);
+      break;
    default:
       SCIPerrorMessage("Invalid efficiacy choice.\n");
       return SCIP_INVALIDCALL;

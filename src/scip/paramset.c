@@ -1813,7 +1813,6 @@ SCIP_RETCODE SCIPparamsetGetString(
 /** changes the fixing status of an existing parameter */
 SCIP_RETCODE SCIPparamsetFix(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
    )

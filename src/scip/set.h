@@ -261,7 +261,6 @@ SCIP_RETCODE SCIPsetGetStringParam(
 extern
 SCIP_RETCODE SCIPsetChgParamFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
    );
