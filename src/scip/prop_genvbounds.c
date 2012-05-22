@@ -631,7 +631,8 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    GENVBOUND*            genvbound,          /**< genvbound data structure */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
-   SCIP_Real*            boundval            /**< pointer to lower bound value on +/- left-hand side variable */
+   SCIP_Real*            boundval,           /**< pointer to lower bound value on +/- left-hand side variable */
+   SCIP_Bool*            success             /**< was the explanation succesful? */
    )
 {
    SCIP_VAR* lhsvar;
@@ -644,6 +645,9 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    assert(scip != NULL);
    assert(genvbound != NULL);
    assert(boundval != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* get left-hand side variable */
    lhsvar = genvbound->var;
@@ -687,10 +691,15 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    SCIPdebugMessage("minactivity of right-hand side is minactivity=%.15g\n", minactivity);
 
-   /* check that propagation at the bound change index was correct; note that by now, with smaller cutoff bound, we
-    * might even perform a stronger propagation
+   /* a genvbound might have been replaced since the propagation took place, hence we have to check that the current
+    * genvbound can explain the propagation at the given bound change index; note that by now, with smaller cutoff
+    * bound, we might even perform a stronger propagation
     */
-   assert(SCIPisGE(scip, minactivity, *boundval));
+   if( SCIPisLT(scip, minactivity, *boundval) )
+   {
+      SCIPdebugMessage("minactivity is too small to explain propagation; was genvbound replaced?\n");
+      return SCIP_OKAY;
+   }
 
    slack = MAX(minactivity - *boundval, 0.0);
 
@@ -812,6 +821,8 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    *boundval += genvbound->cutoffcoef * SCIPgetCutoffbound(scip);
    *boundval += genvbound->constant;
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -824,6 +835,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
    )
 {
    SCIP_Real infeasthreshold;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(genvbound != NULL);
@@ -872,13 +884,15 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       {
          /* add right-hand side variables that force the lower bound of the left-hand side variable above conflictub */
          boundval = conflictub + infeasthreshold;
-         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval, &success) );
+         assert(success);
       }
       else
       {
          /* add right-hand side variables that force the lower bound of the left-hand side variable above relaxub */
          boundval = relaxub + infeasthreshold;
-         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval, &success) );
+         assert(success);
 
          /* upper bound of the left-hand side variable leading to infeasibility */
          boundval = MIN(boundval - infeasthreshold, SCIPvarGetUbGlobal(genvbound->var));
@@ -931,13 +945,15 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       {
          /* add right-hand side variables that force the upper bound of the left-hand side variable below conflictlb */
          boundval = -conflictlb + infeasthreshold;
-         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval, &success) );
+         assert(success);
       }
       else
       {
          /* add right-hand side variables that force the upper bound of the left-hand side variable below relaxlb */
          boundval = -relaxlb + infeasthreshold;
-         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval) );
+         SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, NULL, &boundval, &success) );
+         assert(success);
 
          /* lower bound of the left-hand side variable leading to infeasibility */
          boundval = MAX(-boundval + infeasthreshold, SCIPvarGetLbGlobal(genvbound->var));
@@ -1910,6 +1926,7 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    SCIP_PROPDATA* propdata;
    GENVBOUND* genvbound;
    SCIP_Real boundval;
+   SCIP_Bool success;
 
    SCIPdebugMessage("explain %s bound change of variable <%s>\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
@@ -1921,11 +1938,12 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* check also in optimized mode that inferinfo is correct */
    if( inferinfo >= propdata->ngenvbounds)
    {
       SCIPerrorMessage("generalized variable bounds propagator received inferinfo out of range; propagation not resolved, safe to continue\n");
-      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
@@ -1938,7 +1956,6 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    if( genvbound->var != infervar )
    {
       SCIPerrorMessage("generalized variable bounds propagator received incorrect inferinfo; propagation not resolved, safe to continue\n");
-      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
@@ -1955,9 +1972,10 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    }
 
    /* resolve propagation */
-   SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, bdchgidx, &boundval) );
+   SCIP_CALL( resolveGenVBoundPropagation(scip, genvbound, bdchgidx, &boundval, &success) );
 
-   *result = SCIP_SUCCESS;
+   if( success )
+      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
