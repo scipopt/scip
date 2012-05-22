@@ -9181,8 +9181,10 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
-   int                i;
    int                c;
+#ifndef NDEBUG
+   int                i;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);

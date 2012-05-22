@@ -5611,10 +5611,12 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA*     consdata;
    int                c;
    SCIP_Bool          changed;
    SCIP_Bool          upgraded;
+#ifndef NDEBUG
+   SCIP_CONSDATA*     consdata;
+#endif
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
