@@ -1,0 +1,93 @@
+STATISTICS
+  Problem name     : data/j301_2.sm
+  Variables        : 32 (0 binary, 32 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 52 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <start_0>: obj=0, original bounds=[0,16000]
+  [integer] <start_1>: obj=0, original bounds=[0,16000]
+  [integer] <start_2>: obj=0, original bounds=[0,16000]
+  [integer] <start_3>: obj=0, original bounds=[0,16000]
+  [integer] <start_4>: obj=0, original bounds=[0,16000]
+  [integer] <start_5>: obj=0, original bounds=[0,16000]
+  [integer] <start_6>: obj=0, original bounds=[0,16000]
+  [integer] <start_7>: obj=0, original bounds=[0,16000]
+  [integer] <start_8>: obj=0, original bounds=[0,16000]
+  [integer] <start_9>: obj=0, original bounds=[0,16000]
+  [integer] <start_10>: obj=0, original bounds=[0,16000]
+  [integer] <start_11>: obj=0, original bounds=[0,16000]
+  [integer] <start_12>: obj=0, original bounds=[0,16000]
+  [integer] <start_13>: obj=0, original bounds=[0,16000]
+  [integer] <start_14>: obj=0, original bounds=[0,16000]
+  [integer] <start_15>: obj=0, original bounds=[0,16000]
+  [integer] <start_16>: obj=0, original bounds=[0,16000]
+  [integer] <start_17>: obj=0, original bounds=[0,16000]
+  [integer] <start_18>: obj=0, original bounds=[0,16000]
+  [integer] <start_19>: obj=0, original bounds=[0,16000]
+  [integer] <start_20>: obj=0, original bounds=[0,16000]
+  [integer] <start_21>: obj=0, original bounds=[0,16000]
+  [integer] <start_22>: obj=0, original bounds=[0,16000]
+  [integer] <start_23>: obj=0, original bounds=[0,16000]
+  [integer] <start_24>: obj=0, original bounds=[0,16000]
+  [integer] <start_25>: obj=0, original bounds=[0,16000]
+  [integer] <start_26>: obj=0, original bounds=[0,16000]
+  [integer] <start_27>: obj=0, original bounds=[0,16000]
+  [integer] <start_28>: obj=0, original bounds=[0,16000]
+  [integer] <start_29>: obj=0, original bounds=[0,16000]
+  [integer] <start_30>: obj=0, original bounds=[0,16000]
+  [integer] <makespan>: obj=1, original bounds=[0,16000]
+CONSTRAINTS
+  [varbound] <precedences_(0,1)>: <start_0>[I] -1<start_1>[I] <= 0;
+  [varbound] <precedences_(0,2)>: <start_0>[I] -1<start_2>[I] <= 0;
+  [varbound] <precedences_(0,3)>: <start_0>[I] -1<start_3>[I] <= 0;
+  [varbound] <precedences_(1,9)>: <start_1>[I] -1<start_9>[I] <= -2;
+  [varbound] <precedences_(2,4)>: <start_2>[I] -1<start_4>[I] <= -10;
+  [varbound] <precedences_(2,8)>: <start_2>[I] -1<start_8>[I] <= -10;
+  [varbound] <precedences_(2,14)>: <start_2>[I] -1<start_14>[I] <= -10;
+  [varbound] <precedences_(3,6)>: <start_3>[I] -1<start_6>[I] <= -7;
+  [varbound] <precedences_(3,12)>: <start_3>[I] -1<start_12>[I] <= -7;
+  [varbound] <precedences_(4,5)>: <start_4>[I] -1<start_5>[I] <= -1;
+  [varbound] <precedences_(4,16)>: <start_4>[I] -1<start_16>[I] <= -1;
+  [varbound] <precedences_(5,12)>: <start_5>[I] -1<start_12>[I] <= -3;
+  [varbound] <precedences_(5,15)>: <start_5>[I] -1<start_15>[I] <= -3;
+  [varbound] <precedences_(5,17)>: <start_5>[I] -1<start_17>[I] <= -3;
+  [varbound] <precedences_(6,7)>: <start_6>[I] -1<start_7>[I] <= -6;
+  [varbound] <precedences_(6,10)>: <start_6>[I] -1<start_10>[I] <= -6;
+  [varbound] <precedences_(6,18)>: <start_6>[I] -1<start_18>[I] <= -6;
+  [varbound] <precedences_(7,26)>: <start_7>[I] -1<start_26>[I] <= -2;
+  [varbound] <precedences_(8,13)>: <start_8>[I] -1<start_13>[I] <= -10;
+  [varbound] <precedences_(8,27)>: <start_8>[I] -1<start_27>[I] <= -10;
+  [varbound] <precedences_(9,11)>: <start_9>[I] -1<start_11>[I] <= -5;
+  [varbound] <precedences_(9,21)>: <start_9>[I] -1<start_21>[I] <= -5;
+  [varbound] <precedences_(10,20)>: <start_10>[I] -1<start_20>[I] <= -9;
+  [varbound] <precedences_(10,25)>: <start_10>[I] -1<start_25>[I] <= -9;
+  [varbound] <precedences_(11,23)>: <start_11>[I] -1<start_23>[I] <= -4;
+  [varbound] <precedences_(12,24)>: <start_12>[I] -1<start_24>[I] <= -4;
+  [varbound] <precedences_(13,24)>: <start_13>[I] -1<start_24>[I] <= -2;
+  [varbound] <precedences_(14,20)>: <start_14>[I] -1<start_20>[I] <= -4;
+  [varbound] <precedences_(15,19)>: <start_15>[I] -1<start_19>[I] <= -10;
+  [varbound] <precedences_(15,25)>: <start_15>[I] -1<start_25>[I] <= -10;
+  [varbound] <precedences_(16,20)>: <start_16>[I] -1<start_20>[I] <= -10;
+  [varbound] <precedences_(16,25)>: <start_16>[I] -1<start_25>[I] <= -10;
+  [varbound] <precedences_(16,28)>: <start_16>[I] -1<start_28>[I] <= -10;
+  [varbound] <precedences_(17,22)>: <start_17>[I] -1<start_22>[I] <= -7;
+  [varbound] <precedences_(18,24)>: <start_18>[I] -1<start_24>[I] <= -10;
+  [varbound] <precedences_(19,30)>: <start_19>[I] -1<start_30>[I] <= -7;
+  [varbound] <precedences_(20,30)>: <start_20>[I] -1<start_30>[I] <= -2;
+  [varbound] <precedences_(21,26)>: <start_21>[I] -1<start_26>[I] <= -1;
+  [varbound] <precedences_(21,28)>: <start_21>[I] -1<start_28>[I] <= -1;
+  [varbound] <precedences_(22,30)>: <start_22>[I] -1<start_30>[I] <= -2;
+  [varbound] <precedences_(23,28)>: <start_23>[I] -1<start_28>[I] <= -2;
+  [varbound] <precedences_(24,29)>: <start_24>[I] -1<start_29>[I] <= -2;
+  [varbound] <precedences_(25,26)>: <start_25>[I] -1<start_26>[I] <= -9;
+  [varbound] <precedences_(26,29)>: <start_26>[I] -1<start_29>[I] <= -1;
+  [varbound] <precedences_(27,29)>: <start_27>[I] -1<start_29>[I] <= -4;
+  [varbound] <precedences_(28,31)>: <start_28>[I] -1<makespan>[I] <= -7;
+  [varbound] <precedences_(29,31)>: <start_29>[I] -1<makespan>[I] <= -8;
+  [varbound] <precedences_(30,31)>: <start_30>[I] -1<makespan>[I] <= -9;
+  [cumulative] <R1  >: cumulative(<start_4>(1)[8], <start_9>(5)[1], <start_10>(9)[2], <start_15>(10)[10], <start_17>(7)[5], <start_21>(1)[10], <start_22>(2)[8], <start_25>(9)[7], <start_27>(4)[8])[0,2147483647) <= 14;
+  [cumulative] <R2  >: cumulative(<start_2>(10)[8], <start_7>(2)[9], <start_12>(4)[5], <start_20>(2)[7], <start_28>(7)[3], <start_30>(9)[6])[0,2147483647) <= 10;
+  [cumulative] <R3  >: cumulative(<start_1>(2)[2], <start_3>(7)[7], <start_6>(6)[5], <start_11>(4)[6], <start_13>(2)[10], <start_16>(10)[7], <start_19>(7)[3], <start_29>(8)[8])[0,2147483647) <= 11;
+  [cumulative] <R4>: cumulative(<start_5>(3)[8], <start_8>(10)[2], <start_14>(4)[10], <start_18>(10)[7], <start_23>(2)[8], <start_24>(2)[7], <start_26>(1)[1])[0,2147483647) <= 14;
+END

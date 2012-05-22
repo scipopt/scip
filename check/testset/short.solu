@@ -8,13 +8,12 @@
 =opt= lseu                           1120
 =opt= MANN_a9.clq                      16
 =opt= misc03                         3360
-=opt= modglob                  20740508.1
 =opt= p0033                          3089
 =opt= p0548                          8691
 =opt= parincQuadratic          49920.5564
-=opt= pp08a                          7350
 =opt= rgn                      82.1999974
 =opt= stein27                          18
+=inf= stein27_inf
 =opt= vpm2                          13.75
 =opt= mcf64-4-1                        10
 =opt= mcf128-4-1                       14
@@ -34,6 +33,10 @@
 =opt= normalized-mds_10_4_3             2
 =opt= normalized-mds_50_25_5            3
 =opt= normalized-t2001.13queen13.1110976730--soft-33-100-0 4
+=inf= normalized-t2001.13queen13.1111218308
 =opt= bart10.shuffled                   0
-=inf= homer06.shuffled
 =opt= linking                           2
+=opt= j301_2                           47
+=opt= gastrans                   89.08584
+=opt= ex1224                 -0.943470548
+=opt= m3	                     37.8
