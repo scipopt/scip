@@ -643,6 +643,14 @@ int primalSearchSolPos(
    }
    assert(left == right-1);
 
+   /* prefer solutions that live in the transformed space */
+   if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      while( right > 0 && SCIPsolGetOrigin(sols[right-1]) == SCIP_SOLORIGIN_ORIGINAL
+            && SCIPsetIsEQ(set, SCIPsolGetObj(sols[right-1], set, prob), obj) )
+         --right;
+   }
+
    return right;
 }
 
