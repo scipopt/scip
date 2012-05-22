@@ -7441,6 +7441,75 @@ SCIP_RETCODE presolve(
    return SCIP_OKAY;
 }
 
+/** tries to transform original solutions to the transformed problem space */
+static
+SCIP_RETCODE transformSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_SOL** sols;
+   SCIP_SOL* sol;
+   SCIP_Real* solvals;
+   SCIP_Bool* solvalset;
+   SCIP_Bool added;
+   int nsols;
+   int ntransvars;
+   int naddedsols;
+   int s;
+
+   nsols = SCIPgetNSols(scip);
+
+   /* no solution to transform */
+   if( nsols == 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("try to transfer %d original solutions into the transformed problem space\n", nsols);
+
+   ntransvars = scip->transprob->nvars;
+   naddedsols = 0;
+
+   /* It might happen, that the added transferred solution does not equal the corresponding original one, which might
+    * result in the array of solutions being changed.  Thus we temporarily copy the array and traverse it in reverse
+    * order to ensure that the regarded solution in the copied array was not already freed when new solutions were added
+    * and the worst solutions were freed.
+    */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
+
+   for( s = nsols - 1; s >= 0; --s )
+   {
+      sol = sols[s];
+
+      /* it might happen that a transferred original solution has a better objective than its original counterpart
+       * (e.g., because multi-aggregated variables get another value, but the solution is still feasible);
+       * in this case, it might happen that the solution is not an original one and we just skip this solution
+       */
+      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+         continue;
+
+      SCIP_CALL( SCIPprimalTransformSol(scip->primal, sol, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, solvals,
+            solvalset, ntransvars, &added) );
+
+      if( added )
+         ++naddedsols;
+   }
+
+   if( naddedsols > 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "transformed %d/%d original solutions to the transformed problem space\n",
+         naddedsols, nsols);
+   }
+
+   SCIPfreeBufferArray(scip, &solvals);
+   SCIPfreeBufferArray(scip, &solvalset);
+   SCIPfreeBufferArray(scip, &sols);
+
+   return SCIP_OKAY;
+}
+
 /** initializes solution process data structures */
 static
 SCIP_RETCODE initSolve(
@@ -7497,6 +7566,12 @@ SCIP_RETCODE initSolve(
 
    /* switch stage to SOLVING */
    scip->set->stage = SCIP_STAGE_SOLVING;
+
+   /* try to transform original solutions to the transformed problem space */
+   if( scip->set->misc_transorigsols )
+   {
+      SCIP_CALL( transformSols(scip) );
+   }
 
    /* inform the transformed problem that the branch and bound process starts now */
    SCIP_CALL( SCIPprobInitSolve(scip->transprob, scip->set) );

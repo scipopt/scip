@@ -296,6 +296,32 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+/** tries to transform original solution to the transformed problem space */
+extern
+SCIP_RETCODE SCIPprimalTransformSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_Real*            solvals,            /**< array for internal use to store solution values, or NULL;
+                                              *   if the method is called multiple times in a row, an array with size >=
+                                              *   number of active variables should be given for performance reasons */
+   SCIP_Bool*            solvalset,          /**< array for internal use to store which solution values were set, or NULL;
+                                              *   if the method is called multiple times in a row, an array with size >=
+                                              *   number of active variables should be given for performance reasons */
+   int                   solvalssize,        /**< size of solvals and solvalset arrays, should be >= number of active
+                                              *   variables */
+   SCIP_Bool*            added               /**< pointer to store whether the solution was added */
+   );
+
 #ifdef __cplusplus
 }
 #endif

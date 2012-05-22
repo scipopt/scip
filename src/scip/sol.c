@@ -361,6 +361,52 @@ SCIP_RETCODE SCIPsolCopy(
    return SCIP_OKAY;
 }
 
+/** transformes given original solution to the transformed space; a corresponding transformed solution has to be given
+ *  which is copied into the existing solution and freed afterwards
+ */
+SCIP_RETCODE SCIPsolTransform(
+   SCIP_SOL*             sol,                /**< primal CIP solution to change, living in original space */
+   SCIP_SOL**            transsol,           /**< pointer to corresponding transformed primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal              /**< primal data */
+   )
+{  /*lint --e{715}*/
+   SCIP_REALARRAY* tmpvals;
+   SCIP_BOOLARRAY* tmpvalid;
+   SCIP_SOL* tsol;
+
+   assert(sol != NULL);
+   assert(transsol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(sol->primalindex > -1);
+
+   tsol = *transsol;
+   assert(tsol != NULL);
+   assert(tsol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+
+   /* switch vals and valid arrays; the exisiting solution gets the arrays of the transformed solution;
+    * the transformed one gets the original arrays, because they have to be freed anyway and freeing the transsol
+    * automatically frees its arrays
+    */
+   tmpvals = sol->vals;
+   tmpvalid = sol->valid;
+   sol->vals = tsol->vals;
+   sol->valid = tsol->valid;
+   tsol->vals = tmpvals;
+   tsol->valid = tmpvalid;
+
+   /* copy solorigin and objective (should be the same, only to avoid numerical issues);
+    * we keep the other statistics of the original solution, since that was the first time that this solution as found
+    */
+   sol->solorigin = tsol->solorigin;
+   sol->obj = tsol->obj;
+
+   SCIP_CALL( SCIPsolFree(transsol, blkmem, primal) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
