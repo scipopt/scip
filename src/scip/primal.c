@@ -412,7 +412,8 @@ SCIP_RETCODE primalAddSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -437,8 +438,8 @@ SCIP_RETCODE primalAddSol(
    assert(sol != NULL);
 
    SCIPdebugMessage("insert primal solution %p with obj %g at position %d (replace=%u):\n",
-      (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos, replace);
-   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, prob, NULL, NULL, FALSE) ) );
+      (void*)sol, SCIPsolGetObj(sol, set, transprob), insertpos, replace);
+   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
 
 #if 0
 #ifndef NDEBUG
@@ -448,11 +449,11 @@ SCIP_RETCODE primalAddSol(
    if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
    {
       SCIP_Bool feasible;
-      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, prob, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, &feasible) );
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, stat, transprob, NULL, NULL, FALSE) );
       }
       assert(feasible);
    }
@@ -460,7 +461,7 @@ SCIP_RETCODE primalAddSol(
 #endif
 
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
-   SCIP_CALL( SCIPsolUnlink(sol, set, prob) );
+   SCIP_CALL( SCIPsolUnlink(sol, set, transprob) );
 
    /* allocate memory for solution storage */
    SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxsol) );
@@ -512,8 +513,8 @@ SCIP_RETCODE primalAddSol(
       stat->firstprimalheur = SCIPsolGetHeur(sol);
       stat->firstprimaltime = SCIPsolGetTime(sol);
       stat->firstprimaldepth = SCIPsolGetDepth(sol);
-      primalsolval = SCIPsolGetObj(sol, set, prob);
-      stat->firstprimalbound = SCIPprobExternObjval(prob, set, primalsolval);
+      primalsolval = SCIPsolGetObj(sol, set, transprob);
+      stat->firstprimalbound = SCIPprobExternObjval(transprob, set, primalsolval);
       SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
       SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
          stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
@@ -525,7 +526,7 @@ SCIP_RETCODE primalAddSol(
    /* update the solution value sums in variables */
    if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
    {
-      SCIPsolUpdateVarsum(sol, set, stat, prob,
+      SCIPsolUpdateVarsum(sol, set, stat, transprob,
          (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
    }
 
@@ -533,11 +534,11 @@ SCIP_RETCODE primalAddSol(
    SCIPvbcFoundSolution(stat->vbc, set, stat, SCIPtreeGetCurrentNode(tree));
 
    /* check, if the global upper bound has to be updated */
-   obj = SCIPsolGetObj(sol, set, prob);
+   obj = SCIPsolGetObj(sol, set, transprob);
    if( obj < primal->upperbound )
    {
       /* update the upper bound */
-      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, prob, tree, lp, obj) );
+      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, obj) );
 
       /* issue BESTSOLFOUND event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
@@ -556,6 +557,20 @@ SCIP_RETCODE primalAddSol(
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )
    {
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, TRUE) );
+   }
+
+   /* if an original solution was added during solving, try to transfer it to the transformed space */
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING
+      && set->misc_transorigsols )
+   {
+      SCIP_Bool added;
+
+      SCIP_CALL( SCIPprimalTransformSol(primal, sol, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
+            eventqueue, eventfilter, NULL, NULL, 0, &added) );
+
+      SCIPdebugMessage("original solution %p was successfully transferred to the transformed problem space\n",
+         (void*)sol);
+
    }
 
    return SCIP_OKAY;
@@ -913,7 +928,7 @@ SCIP_RETCODE SCIPprimalAddSol(
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
       
       /* insert copied solution into solution storage */
-      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, transprob,
+      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
 
       *stored = TRUE;
@@ -956,7 +971,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
       assert(insertpos >= 0 && insertpos < set->limit_maxsol);
 
       /* insert solution into solution storage */
-      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, transprob,
+      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
@@ -1172,7 +1187,7 @@ SCIP_RETCODE SCIPprimalTrySol(
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
 
       /* insert copied solution into solution storage */
-      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, transprob,
+      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
 
       *stored = TRUE;
@@ -1234,7 +1249,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
       assert(insertpos >= 0 && insertpos < set->limit_maxsol);
 
       /* insert solution into solution storage */
-      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, transprob,
+      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
             tree, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
@@ -1439,7 +1454,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
       localsolvalset = solvalset;
    }
 
-   BMSclearMemoryArray(solvalset, ntransvars);
+   BMSclearMemoryArray(localsolvalset, ntransvars);
    feasible = TRUE;
    (*added) = FALSE;
    nvarsset = 0;
@@ -1478,13 +1493,13 @@ SCIP_RETCODE SCIPprimalTransformSol(
          /* if we already assigned a solution value to the transformed variable, check that it corresponds to the
           * value obtained from the currently regarded original variable
           */
-         if( solvalset[SCIPvarGetProbindex(var)] )
+         if( localsolvalset[SCIPvarGetProbindex(var)] )
          {
-            if( !SCIPsetIsEQ(set, solval, scalar * solvals[SCIPvarGetProbindex(var)] + constant) )
+            if( !SCIPsetIsEQ(set, solval, scalar * localsolvals[SCIPvarGetProbindex(var)] + constant) )
             {
                SCIPdebugMessage("original variable <%s> (solval=%g) resolves to active variable <%s> with assigned solval %g (original solval=%g)\n",
-                  SCIPvarGetName(origvars[v]), solval, SCIPvarGetName(var), solvals[SCIPvarGetProbindex(var)],
-                  scalar * solvals[SCIPvarGetProbindex(var)] + constant);
+                  SCIPvarGetName(origvars[v]), solval, SCIPvarGetName(var), localsolvals[SCIPvarGetProbindex(var)],
+                  scalar * localsolvals[SCIPvarGetProbindex(var)] + constant);
                feasible = FALSE;
             }
          }
@@ -1493,8 +1508,8 @@ SCIP_RETCODE SCIPprimalTransformSol(
          {
             assert(scalar != 0.0);
 
-            solvals[SCIPvarGetProbindex(var)] = (solval - constant) / scalar;
-            solvalset[SCIPvarGetProbindex(var)] = TRUE;
+            localsolvals[SCIPvarGetProbindex(var)] = (solval - constant) / scalar;
+            localsolvalset[SCIPvarGetProbindex(var)] = TRUE;
             ++nvarsset;
          }
       }
@@ -1517,9 +1532,9 @@ SCIP_RETCODE SCIPprimalTransformSol(
       /* set solution values for variables to which we assigned a value */
       for( v = 0; v < ntransvars; ++v )
       {
-         if( solvalset[v] )
+         if( localsolvalset[v] )
          {
-            SCIP_CALL( SCIPsolSetVal(transsol, set, stat, tree, transvars[v], solvals[v]) );
+            SCIP_CALL( SCIPsolSetVal(transsol, set, stat, tree, transvars[v], localsolvals[v]) );
          }
       }
 
