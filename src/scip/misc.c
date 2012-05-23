@@ -5950,13 +5950,18 @@ SCIP_Longint SCIPcalcBinomCoef(
    if( m == 1 )
       return n;
 
+   /* simple case m == 2 */
+   if( m == 2 )
+   {
+      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 )
+	 return (n*(n-1)/2); /*lint !e647*/
+      else
+	 return -1;
+   }
+
    /* abort on to big numbers */
    if( m > 16 || n > 33 )
       return -1;
-
-   /* simple case m == 2 */
-   if( m == 2 )
-      return (n*(n-1)/2); /*lint !e647*/
 
    /* simple case m == 3 */
    if( m == 3 )
