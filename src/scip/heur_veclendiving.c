@@ -366,7 +366,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
          allroundable = allroundable && (SCIPvarMayRoundDown(var) || SCIPvarMayRoundUp(var));
 
          /* smaller score is better */
-         score = (objdelta + 1e-6)/((SCIP_Real)colveclen+1.0);
+         score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)colveclen+1.0);
 
          /* prefer decisions on binary variables */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
