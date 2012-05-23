@@ -105,7 +105,6 @@
 
 /* propagation */
 #define DEFAULT_USECORETIMES            TRUE /**< should core-times be propagated? */
-#define DEFAULT_USESHORTCORETIMES      FALSE /**< should core-times be propagated in single steps? */
 #define DEFAULT_USECHECKEDGEFINDING     TRUE /**< should edge finding checking be used? */
 
 /* presolving */
@@ -184,7 +183,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             usebinvars;         /**< should the binary variables be used? */
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
    SCIP_Bool             usecoretimes;       /**< should core-times be propagated? */
-   SCIP_Bool             useshortcoretimes;  /**< should core-times be propagated in single steps? */
    SCIP_Bool             usecheckedgefinding;/**< should edge finding checking be performed */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
@@ -223,8 +221,8 @@ struct SCIP_ConshdlrData
 enum Proprule
 {
    PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
-   PROPRULE_2_EDGEFINDING        = 3,        /**< edge-finder */
-   PROPRULE_3_ENERGETICREASONING = 4         /**< energetic reasoning */
+   PROPRULE_2_EDGEFINDING        = 2,        /**< edge-finder */
+   PROPRULE_3_ENERGETICREASONING = 3         /**< energetic reasoning */
 };
 typedef enum Proprule PROPRULE;
 
@@ -2158,6 +2156,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
    )
 {
    SCIP_VAR* var;
+   SCIP_Bool* reported;
    int duration;
    int ect;
    int lst;
@@ -2172,8 +2171,13 @@ SCIP_RETCODE resolvePropagationCoretimes(
 
    capacity -= inferdemand;
 
-   /* collect all cores of the variables which lay in the considered time window except the inference variable */
-   for ( j = 0; j < nvars && capacity >= 0; ++j )
+   SCIP_CALL( SCIPallocBufferArray(scip, &reported, nvars) );
+   BMSclearMemoryArray(reported, nvars);
+
+   /* first we loop over all variable adjust the capacity with those which provide a global core at the inference peak
+    * and those where the current conflict bounds provide a core at the inference peak
+    */
+   for( j = 0; j < nvars && capacity >= 0; ++j )
    {
       var = vars[j];
       assert(var != NULL);
@@ -2191,19 +2195,58 @@ SCIP_RETCODE resolvePropagationCoretimes(
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
       assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
 
+      SCIPdebugMessage("variable <%s>: glb=[%g,%g] conflict=[%g,%g] (duration %d, demand %d)\n",
+         SCIPvarGetName(var),  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+         SCIPgetConflictVarLb(scip, var), SCIPgetConflictVarUb(scip, var), duration, demands[j]);
+
+      /* collect the conflict bound core (the conflict bounds are those bounds which are already part of the conflict)
+       * hence these bound are already reported by other resolve propation steps. In case a bound (lower or upper) is
+       * not part of the conflict yet we get the global bounds back.
+       */
+      ect = convertBoundToInt(scip, SCIPgetConflictVarRelaxedLb(scip, var)) + duration;
+      lst = convertBoundToInt(scip, SCIPgetConflictVarRelaxedUb(scip, var));
+
+      /* check if the inference peak is part of the global/conflict bound core; if so we decreasing the capacity by the
+       * demand of that job without adding anything to the explanation
+       */
+      if( inferpeak < ect && lst <= inferpeak )
+      {
+         capacity -= demands[j];
+         reported[j] = TRUE;
+      }
+   }
+
+   /* collect all cores of the variables which lay in the considered time window except the inference variable */
+   for( j = 0; j < nvars && capacity >= 0; ++j )
+   {
+      var = vars[j];
+      assert(var != NULL);
+
+      /* skip inference variable */
+      if( var == infervar || reported[j] )
+         continue;
+
+      duration = durations[j];
+      assert(duration > 0);
+
+      /* compute cores of jobs; if core overlaps interval of inference variable add this job to the array */
+      assert(SCIPisFeasEQ(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)));
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)));
+      assert(SCIPisFeasIntegral(scip, SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)));
+
       /* collect local core information */
       ect = convertBoundToInt(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) + duration;
       lst = convertBoundToInt(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
 
       SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
          SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
-         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[j], demands[j]);
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[j]);
 
       /* check if the inference peak is part of the core */
       if( inferpeak < ect && lst <= inferpeak )
       {
-         SCIP_Real lb;
-         SCIP_Real ub;
+         int aggrpeak;
 
          /* check the current status of the variable in */
          SCIPdebugMessage("variable <%s> (durations %d demands %d) loc=[%g,%g] glb=[%g,%g] conflict=[%g,%g]\n",
@@ -2212,41 +2255,34 @@ SCIP_RETCODE resolvePropagationCoretimes(
             SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             SCIPgetConflictVarLb(scip, var), SCIPgetConflictVarUb(scip, var));
 
-         lb = SCIPvarGetLbGlobal(var);
-         ub = SCIPvarGetUbGlobal(var);
+         aggrpeak = inferpeak;
 
-         /* check if the variable is globally fixed; if so we can decrease the capacity and continue with the next variable */
-         if( ub - lb > 0.5 )
+         if( !SCIPvarIsActive(var) )
          {
-            int aggrpeak;
+            SCIP_Real scalar;
+            SCIP_Real constant;
 
-            aggrpeak = inferpeak;
+            scalar = 1.0;
+            constant = 0.0;
 
-            if( !SCIPvarIsActive(var) )
-            {
-               SCIP_Real scalar;
-               SCIP_Real constant;
+            SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+            assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN);
+            assert(!SCIPisZero(scip, scalar));
 
-               scalar = 1.0;
-               constant = 0.0;
-
-               SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
-               assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN);
-               assert(!SCIPisZero(scip, scalar));
-
-               /* compute inference peak w.r.t. aggregation */
-               aggrpeak = convertBoundToInt(scip, (aggrpeak - constant) / scalar);
-            }
-
-            SCIP_CALL( relaxVarLb(scip, var, aggrpeak - duration + 1, bdchgidx) );
-            SCIP_CALL( relaxVarUb(scip, var, aggrpeak, bdchgidx) );
+            /* compute inference peak w.r.t. aggregation */
+            aggrpeak = convertBoundToInt(scip, (aggrpeak - constant) / scalar);
          }
+
+         SCIP_CALL( relaxVarLb(scip, var, aggrpeak - duration + 1, bdchgidx) );
+         SCIP_CALL( relaxVarUb(scip, var, aggrpeak, bdchgidx) );
 
          capacity -= demands[j];
       }
    }
 
    assert(capacity < 0);
+
+   SCIPfreeBufferArray(scip, &reported);
 
    return SCIP_OKAY;
 }
@@ -4129,7 +4165,11 @@ int computeHmax(
 
    return INT_MIN;
 }
-/** ?????????????????????? */
+/** For each variable we compute an alternative lower and upper bounds. That is, if the variable is not fixed to its
+ *  lower or upper bound the next reasonable lower or upper bound would be this alternative bound (implying that certain
+ *  values are not of interest). An alternative bound for a particular is only valied if the cumulative constarints are
+ *  the only one locking this variable in the corresponding direction.
+ */
 static
 SCIP_RETCODE computeAlternativeBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4144,10 +4184,10 @@ SCIP_RETCODE computeAlternativeBounds(
 {
    int c;
 
+
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
-      SCIP_PROFILE* profile;
       SCIP_CONS* cons;
       SCIP_VAR* var;
       int nvars;
@@ -4158,31 +4198,35 @@ SCIP_RETCODE computeAlternativeBounds(
       cons = conss[c];
       assert(cons != NULL);
 
-      if( SCIPconsIsDeleted(cons) )
+      /* ignore constraints which are already deletet and those which are not check constraints */
+      if( SCIPconsIsDeleted(cons) || SCIPconsIsChecked(cons) )
          continue;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
       assert(consdata->nvars > 1);
 
-      /* create empty resource profile with infinity resource capacity */
-      SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
-
-      SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
-
+      /* compute the hmin and hmax */
       if( local )
       {
+         SCIP_PROFILE* profile;
+
+         /* create empty resource profile with infinity resource capacity */
+         SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
+
+         SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
+
          hmin = computeHmin(scip, profile, consdata->capacity);
          hmax = computeHmax(scip, profile, consdata->capacity);
+
+         /* free worst case profile */
+         SCIPprofileFree(&profile);
       }
       else
       {
          hmin = consdata->hmin;
          hmax = consdata->hmax;
       }
-
-      if( SCIPconsIsDeleted(cons) )
-         return SCIP_OKAY;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
@@ -4228,19 +4272,18 @@ SCIP_RETCODE computeAlternativeBounds(
          assert(idx >= 0);
 
          /* first check lower bound fixing */
-         if( consdata->downlocks )
+         if( consdata->downlocks[v] )
          {
             int ect;
             int est;
 
             /* the variable has a down locked */
-
             est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
             ect = est + consdata->durations[v];
 
             if( ect <= hmin || hmin >= hmax )
                downlocks[idx]++;
-            else if( est < hmin && alternativelbs[idx] >= hmin + 1)
+            else if( est < hmin && alternativelbs[idx] >= hmin + 1 - constant )
             {
                alternativelbs[idx] = hmin + 1 - constant;
                downlocks[idx]++;
@@ -4254,22 +4297,18 @@ SCIP_RETCODE computeAlternativeBounds(
             int lst;
 
             /* the variable has a up lock locked */
-
             lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
             lct = lst + consdata->durations[v];
 
             if( lst >= hmax || hmin >= hmax  )
                uplocks[idx]++;
-            else if( lct > hmax && alternativeubs[idx] <= hmax - 1 )
+            else if( lct > hmax && alternativeubs[idx] <= hmax - 1 - constant )
             {
                alternativeubs[idx] = hmax - 1 - constant;
                uplocks[idx]++;
             }
          }
       }
-
-      /* free worst case profile */
-      SCIPprofileFree(&profile);
    }
 
    return SCIP_OKAY;
@@ -4304,6 +4343,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
+      /* ignore fixed variables */
       if( ub - lb < 0.5 )
          continue;
 
@@ -4369,10 +4409,10 @@ SCIP_RETCODE propagateAllConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &alternativeubs, nvars) );
 
    /* initialize arrays */
-   BMSclearMemoryArray(downlocks, nvars);
-   BMSclearMemoryArray(uplocks, nvars);
    for( v = 0; v < nvars; ++v )
    {
+      downlocks[v] = 0;
+      uplocks[v] = 0;
       alternativelbs[v] = INT_MAX;
       alternativeubs[v] = INT_MIN;
    }
@@ -7938,9 +7978,6 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usecoretimes", "should coretimes be propagated?",
          &conshdlrdata->usecoretimes, FALSE, DEFAULT_USECORETIMES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/useshortcoretimes", "should coretimes be propagated with single steps?",
-         &conshdlrdata->useshortcoretimes, FALSE, DEFAULT_USESHORTCORETIMES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/localcuts", "should cuts be added only locally?",
          &conshdlrdata->localcuts, FALSE, DEFAULT_LOCALCUTS, NULL, NULL) );
