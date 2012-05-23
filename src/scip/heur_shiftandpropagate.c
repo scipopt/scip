@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
@@ -47,12 +48,6 @@
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
 #define SORTKEYS                 "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -71,7 +66,7 @@ struct SCIP_HeurData
    char                  sortkey;            /**< the key by which variables are sorted */
    SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
 
-   STATISTIC(
+   SCIPstatistic(
       SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
       SCIP_Longint       nlpiters;           /**< number of LP iterations which the heuristic needed */
@@ -79,7 +74,7 @@ struct SCIP_HeurData
       int                nprobings;          /**< how many probings has the heuristic executed? */
       int                ncutoffs;           /**< has the probing node been cutoff? */
       int                nredundantrows;     /**< how many rows were redundant after relaxation? */
-      )
+      );
 };
 
 /** status of a variable in heuristic transformation */
@@ -1199,19 +1194,19 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    }
 
    /* if statistic mode is enabled, statistics are printed to console */
-   STATISTIC(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+   SCIPstatistic(
+      SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat,
          heurdata->nredundantrows);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPstatisticMessage(
          "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
          heurdata->nlpiters);
-      )
+      );
 
    return SCIP_OKAY;
 }
@@ -1219,7 +1214,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 /** initialization method of primal heuristic(called after problem was transformed). We only need this method for
  *  statistic mode of heuristic.
  */
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
 static
 SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1344,9 +1339,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   STATISTIC(
-      heurdata->nlpiters = SCIPgetNLPIterations(scip);
-      )
+   SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
 
    nlprows = SCIPgetNLPRows(scip);
 
@@ -1591,9 +1584,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
          ++nprobings;
-         STATISTIC(
-            heurdata->ntotaldomredsfound += ndomredsfound;
-            )
+         SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
          SCIPdebugMessage("Propagation finished! <%lld> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
@@ -1722,12 +1713,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
          /* print the solution value to the console */
-         STATISTIC(
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
-                  SCIPgetSolOrigObj(scip, sol));
-         )
+         SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
       }
-
    }
    else if( nviolatedrows == 0 && !cutoff )
    {
@@ -1747,7 +1734,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-     {
+      {
          SCIP_Bool retstat;
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
@@ -1784,22 +1771,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIPdebugMessage("found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
-            STATISTIC(
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
-                  SCIPgetSolOrigObj(scip, sol));
-               )
+            SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
          }
       }
 
-      STATISTIC(
-         heurdata->lpsolstat = SCIPgetLPSolstat(scip);
-         )
+      SCIPstatistic( heurdata->lpsolstat = SCIPgetLPSolstat(scip) );
    }
 
-   STATISTIC(
+   SCIPstatistic(
       heurdata->nremainingviols = nviolatedrows;
       heurdata->nredundantrows = nredundantrows;
-      )
+      );
 
  TERMINATE2:
    /* free all allocated memory */
@@ -1811,11 +1793,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
  TERMINATE:
    /* terminate probing mode and free the remaining memory */
-   STATISTIC(
+   SCIPstatistic(
       heurdata->ncutoffs += ncutoffs;
       heurdata->nprobings += nprobings;
       heurdata->nlpiters = SCIPgetNLPIterations(scip) - heurdata->nlpiters;
-      )
+      );
 
    SCIP_CALL( SCIPendProbing(scip) );
    freeMatrix(scip, &matrix);
@@ -1857,7 +1839,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/onlywithoutsol", "Should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
-           &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
+         &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms or (r)andom",
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",

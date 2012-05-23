@@ -13,9 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* uncomment to get statistical output at the end of SCIP run */
-/* #define STATISTIC_INFORMATION */
-
 /**@file   heur_nlpdiving.c
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
@@ -78,14 +75,6 @@
 
 #define MINNLPITER                  200 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                {x}
-#else
-#define STATISTIC(x)             /**/
-#endif
-
-
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
@@ -117,7 +106,7 @@ struct SCIP_HeurData
    SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    int                   nfixedcovervars;    /**< number of variables in the cover that are already fixed */
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    int                   nnlpsolves;         /**< number of NLP solves */
    int                   nfailcutoff;        /**< number of fails due to cutoff */
    int                   nfaildepth;         /**< number of fails due to too deep */
@@ -1280,7 +1269,7 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    heurdata->nnlpiterations = 0;
    heurdata->nsuccess = 0;
    heurdata->nfixedcovervars = 0;
-   STATISTIC(
+   SCIPstatistic(
       heurdata->nnlpsolves = 0;
       heurdata->nfailcutoff = 0;
       heurdata->nfaildepth = 0;
@@ -1307,10 +1296,10 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
-   STATISTIC(
+   SCIPstatistic(
       if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPinfoMessage(scip, NULL, "%-30s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
+         SCIPstatisticMessage("%-30s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
             (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
@@ -1520,7 +1509,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIP_NLPSTATISTICS* nlpstatistics;
 
       SCIP_CALL( SCIPsolveNLP(scip) );
-      STATISTIC( ++heurdata->nnlpsolves; )
+      SCIPstatistic( ++heurdata->nnlpsolves );
 
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
@@ -1540,11 +1529,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
          if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
          {
-            STATISTIC( heurdata->nfailcutoff++; )
+            SCIPstatistic( heurdata->nfailcutoff++ );
          }
          else
          {
-            STATISTIC( heurdata->nfailnlperror++; )
+            SCIPstatistic( heurdata->nfailnlperror++ );
          }
 
          /* reset changed NLP parameters */
@@ -2143,7 +2132,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             SCIP_CALL( SCIPsolveNLP(scip) );
-            STATISTIC( ++heurdata->nnlpsolves; )
+            SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);
             if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
@@ -2237,19 +2226,18 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIPdebugMessage("   -> nlpsolstat=%d, objval=%g/%g, nfrac nlp=%d lp=%d\n", nlpsolstat, objval, searchbound, nnlpcands, nlpbranchcands);
    }
 
-#if 1
- /*lint --e{774}*/
+   /*lint --e{774}*/
    SCIPdebugMessage("NLP nlpdiving ABORT due to ");
    if( nlperror || (nlpsolstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE && nlpsolstat != SCIP_NLPSOLSTAT_UNKNOWN) )
    {
       SCIPdebugPrintf("NLP bad status - nlperror: %ud nlpsolstat: %d \n", nlperror, nlpsolstat);
-      STATISTIC( heurdata->nfailnlperror++; )
-         }
+      SCIPstatistic( heurdata->nfailnlperror++ );
+   }
    else if( SCIPisStopped(scip) || cutoff )
    {
       SCIPdebugPrintf("LIMIT hit - stop: %ud cutoff: %ud \n", SCIPisStopped(scip), cutoff);
-      STATISTIC( heurdata->nfailcutoff++; )
-         }
+      SCIPstatistic( heurdata->nfailcutoff++ );
+   }
    else if(! (divedepth < 10
          || nnlpcands <= startnnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nnlpiterations < maxnnlpiterations && objval < searchbound) ) )
@@ -2257,8 +2245,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       SCIPdebugPrintf("TOO DEEP - divedepth: %4d cands halfed: %d ltmaxdepth: %d ltmaxiter: %d bound: %d\n", divedepth,
          (nnlpcands > startnnlpcands - divedepth/2), (divedepth >= maxdivedepth), (heurdata->nnlpiterations >= maxnnlpiterations),
          (objval >= searchbound));
-      STATISTIC( heurdata->nfaildepth++; )
-         }
+      SCIPstatistic( heurdata->nfaildepth++ );
+   }
    else if( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
       SCIPdebugPrintf("SUCCESS\n");
@@ -2267,7 +2255,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    {
       SCIPdebugPrintf("UNKNOWN, very mysterical reason\n");
    }
-#endif
 
    /* check if a solution has been found */
    if( nnlpcands == 0 && !nlperror && !cutoff && nlpsolstat <= SCIP_NLPSOLSTAT_FEASIBLE )

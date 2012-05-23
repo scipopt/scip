@@ -20,8 +20,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/* #define STATISTIC_INFORMATION uncomment to get statistical output at the end of RENS run */
-
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -67,13 +65,6 @@
                                          * techniques that merely work on the dual bound, e.g., cuts?  This is only
                                          * implemented for testing and not recommended to be used!
                                          */
-
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x 
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -422,9 +413,7 @@ SCIP_RETCODE SCIPapplyRens(
 
    if( !success )
    {
-      STATISTIC(
-         SCIPinfoMessage(scip, NULL, "RENS statistic: fixed only %5.2f integer variables --> abort \n", intfixingrate)
-         );
+      SCIPstatisticPrintf("RENS statistic: fixed only %5.2f integer variables --> abort \n", intfixingrate);
       return SCIP_OKAY;
    }
 
@@ -635,17 +624,13 @@ SCIP_RETCODE SCIPapplyRens(
             *result = SCIP_FOUNDSOL;
       }
 
-      STATISTIC(
-         SCIPinfoMessage(scip, NULL, "RENS statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %d nodes, solution %10.4f found at node %"SCIP_LONGINT_FORMAT"\n",
-            intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
-            nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 )
-         );
+      SCIPstatisticPrintf("RENS statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %"SCIP_LONGINT_FORMAT" nodes, solution %10.4f found at node %"SCIP_LONGINT_FORMAT"\n",
+         intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
+         nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
    }
    else
    {
-      STATISTIC(
-         SCIPinfoMessage(scip, NULL, "RENS statistic: fixed only %6.3f integer variables, %6.3f all variables --> abort \n", intfixingrate, allfixingrate)
-         );
+      SCIPstatisticPrintf("RENS statistic: fixed only %6.3f integer variables, %6.3f all variables --> abort \n", intfixingrate, allfixingrate);
    }
 
    /* free subproblem */

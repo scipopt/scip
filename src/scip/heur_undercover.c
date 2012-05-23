@@ -13,9 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* uncomment to get statistical output at the end of undercover run */
-/* #define STATISTIC_INFORMATION */
-
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MINLPs
  * @author Timo Berthold
@@ -98,13 +95,6 @@
 #define MINTIMELEFT             1.0          /**< don't start expensive parts of the heuristics if less than this amount of time left */
 #define SUBMIPSETUPCOSTS        200          /**< number of nodes equivalent for the costs for setting up the sub-CIP */
 
-
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                {x}
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -1312,17 +1302,17 @@ SCIP_RETCODE createCoveringProblem(
    /* free expression interpreter */
    SCIP_CALL( SCIPexprintFree(&exprint) );
 
-   STATISTIC(
+   SCIPstatistic(
       int nnonzs;
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          nnonzs += termcounter[i];
-      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
+      SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          if( conscounter[i] > 0 )
             nnonzs++;
-      SCIPinfoMessage(scip, NULL, "UCstats nlvars: %6d\n", nnonzs);
+      SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
       );
 
    /* free counter arrays for weighted objectives */
@@ -2796,9 +2786,9 @@ SCIP_RETCODE SCIPapplyUndercover(
          SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
                timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, maxcoversize, &success) );
 
-         STATISTIC(
+         SCIPstatistic(
             if( ncovers == 0 && success )
-               SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
             );
 
          assert(coversize >= 0);

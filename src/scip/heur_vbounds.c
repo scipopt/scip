@@ -51,12 +51,6 @@
                                          *   constraints of the subscip
                                          */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -260,12 +254,9 @@ SCIP_RETCODE initializeCandsLists(
    heurdata->usednodes = 0;
    heurdata->initialized = TRUE;
 
-   STATISTIC(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "lbvars %.3g\%, ubvars %.3g\%, impvars %.3g\% (%s)\n",
-         (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
-         ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
-      )
+   SCIPstatisticMessage("lbvars %.3g, ubvars %.3g, impvars %.3g (%s)\n",
+      (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
+      ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
 
    return SCIP_OKAY;
 }

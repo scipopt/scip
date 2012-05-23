@@ -234,6 +234,8 @@ features:
 - the statistics shows for a branching rule the number of calls for LP, extern, and pseudo candidates
 - new NLPI parameter SCIP_NLPPAR_FASTFAIL to enable convergence checks in NLP solver to stop early on seemingly
   difficult instances (no guarantees)
+- new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
+  statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

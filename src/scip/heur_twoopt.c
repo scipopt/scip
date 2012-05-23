@@ -78,7 +78,7 @@ struct SCIP_HeurData
                                               * necessary structure for execution of heuristic? */
    unsigned int          randseed;           /**< seed value for random number generator */
    int                   maxnslaves;         /**< delimits the maximum number of slave candidates for a master variable */
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    /* statistics */
    int                   ntotalbinvars;      /**< total number of binary variables over all runs */
    int                   ntotalintvars;      /**< total number of Integer variables over all runs */
@@ -718,14 +718,14 @@ SCIP_RETCODE presolveTwoOpt(
 
    heurdata->execute = nbinvars > 1 && heurdata->nbinblocks > 0;
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    /* update statistics */
    heurdata->binnblocks += (heurdata->nbinblocks);
    heurdata->binnblockvars += nbinblockvars;
    heurdata->ntotalbinvars += nbinvars;
    heurdata->maxbinblocksize = MAX(maxbinblocksize, heurdata->maxbinblocksize);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n",
+   SCIPstatisticMessage("   Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n",
       heurdata->nbinblocks, nbinblockvars);
 
 #endif
@@ -738,15 +738,15 @@ SCIP_RETCODE presolveTwoOpt(
 
       heurdata->execute = heurdata->execute || heurdata->nintblocks > 0;
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
       /* update statistics */
       heurdata->intnblocks += heurdata->nintblocks;
       heurdata->intnblockvars += nintblockvars;
       heurdata->ntotalintvars += nintvars;
       heurdata->maxintblocksize = MAX(maxintblocksize, heurdata->maxintblocksize);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n",
+     SCIPstatisticMessage("   Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n",
          heurdata->nintblocks, nintblockvars);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   INTEGER coefficients are all equal \n");
+     SCIPstatisticMessage("   INTEGER coefficients are all equal \n");
 #endif
    }
    heurdata->nintvars = nintvars;
@@ -819,7 +819,7 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
 
    heurdata->randseed = 0;
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    /* initialize statistics */
    heurdata->binnexchanges = 0;
    heurdata->intnexchanges = 0;
@@ -1205,7 +1205,7 @@ SCIP_RETCODE optimize(
             SCIPdebugMessage("                  <%s>[%g, %g] (obj: %f)  <%f> --> <%f>\n",
                SCIPvarGetName(slave), SCIPvarGetLbGlobal(slave), SCIPvarGetUbGlobal(slave), slaveobj, slavesolval, SCIPgetSolVal(scip, worksol, slave));
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
             /* update statistics */
             if( opttype == OPTTYPE_BINARY )
                ++(heurdata->binnexchanges);
@@ -1238,9 +1238,9 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    assert(heurdata->nbinvars <= 1 || heurdata->binvars != NULL);
 
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    /* print relevant statistics to console */
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+   SCIPstatisticMessage(
       "  Twoopt Binary Statistics  :   "
       "%6.2g   %6.2g   %4.2g   %4.0g %6d (blocks/run, variables/run, varpercentage, avg. block size, max block size) \n",
       heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->binnblocks/(heurdata->nruns),
@@ -1249,7 +1249,7 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
       heurdata->binnblocks == 0 ? 0.0 : heurdata->binnblockvars/(SCIP_Real)(heurdata->binnblocks),
       heurdata->maxbinblocksize);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+   SCIPstatisticMessage(
       "   Twoopt Integer statistics :   "
       "%6.2g   %6.2g   %4.2g   %4.0g %6d (blocks/run, variables/run, varpercentage, avg block size, max block size) \n",
       heurdata->nruns == 0 ? 0.0 : (SCIP_Real)heurdata->intnblocks/(heurdata->nruns),
@@ -1257,7 +1257,8 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
       heurdata->ntotalintvars == 0 ? 0.0 : (SCIP_Real)heurdata->intnblockvars/(heurdata->ntotalintvars) * 100.0,
       heurdata->intnblocks == 0 ? 0.0 : heurdata->intnblockvars/(SCIP_Real)(heurdata->intnblocks),
       heurdata->maxintblocksize);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+
+   SCIPstatisticMessage(
       "  Twoopt results            :   "
       "%6d   %6d   %4d   %4.2g  (runs, binary exchanges, Integer shiftings, matching rate)\n",
       heurdata->nruns,
@@ -1340,7 +1341,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolTwoopt)
    heurdata->lastsolindex = -1;
    heurdata->presolved = FALSE;
 
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
    ++(heurdata->nruns);
 #endif
 
@@ -1592,8 +1593,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
          *result = SCIP_FOUNDSOL;
 
-#ifdef STATISTIC_INFORMATION
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***Twoopt improved solution found by %10s . \n",
+#ifdef SCIP_STATISTIC
+        SCIPstatisticMessage("***Twoopt improved solution found by %10s . \n",
             SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) :"Tree");
 
 #endif
@@ -1693,8 +1694,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
             *result = SCIP_FOUNDSOL;
 
-#ifdef STATISTIC_INFORMATION
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***   Twoopt improved solution found by %10s . \n",
+#ifdef SCIP_STATISTIC
+           SCIPstatisticMessage("***   Twoopt improved solution found by %10s . \n",
                SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) :"Tree");
 #endif
          }

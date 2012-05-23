@@ -41,12 +41,6 @@
 #define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
 #define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -821,9 +815,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          SCIPdebugMessage("found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
-         STATISTIC(
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
-            )
+         SCIPstatisticMessage("  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
+
          *result = SCIP_FOUNDSOL;
       }
    }
