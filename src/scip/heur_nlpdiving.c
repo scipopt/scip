@@ -1007,8 +1007,6 @@ SCIP_RETCODE chooseDoubleVar(
       assert(bestfrac < SCIP_INVALID);
    }
 
-   printf("var %s lpsol %f nlpsol %f\n", SCIPvarGetName(pseudocands[*bestcand]), pseudocandslpsol[*bestcand], pseudocandsnlpsol[*bestcand]);
-
    if( *bestcandroundup )
       *bestboundval -= 0.5;
    else
