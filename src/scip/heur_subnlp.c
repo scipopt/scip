@@ -2104,10 +2104,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    BMSclearMemory(heurdata);
 
    /* include variable event handler */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   heurdata->eventhdlr = SCIPfindEventhdlr(scip, HEUR_NAME);
+   heurdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &heurdata->eventhdlr, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
+         processVarEvent, NULL) );
+   assert(heurdata->eventhdlr != NULL);
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

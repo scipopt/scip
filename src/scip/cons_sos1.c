@@ -2114,16 +2114,16 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,NULL, NULL, NULL, NULL, NULL, NULL, eventExecSOS1, NULL) );
+
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
 
-   /* get event handler for bound change events */
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   conshdlrdata->eventhdlr = NULL;
+   /* create event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecSOS1, NULL) );
    if ( conshdlrdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for SOS1 constraints not found.\n");

@@ -459,6 +459,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    SCIP_SEPADATA* sepadata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SEPA* sepa;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create intobj separator data */
    SCIP_CALL( sepadataCreate(scip, &sepadata) );
@@ -478,12 +479,14 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolIntobj) );
 
    /* include event handler for objective change events */
+   eventhdlr = NULL;
    eventhdlrdata = (SCIP_EVENTHDLRDATA*)sepadata;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL,
-         eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
-         eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecIntobj, eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitIntobj) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitIntobj) );
 
    return SCIP_OKAY;
 }

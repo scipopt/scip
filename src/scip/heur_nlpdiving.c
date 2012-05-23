@@ -2446,12 +2446,13 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          heurInitsolNlpdiving, heurExitsolNlpdiving, heurExecNlpdiving,
          heurdata) );
 
-   /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,NULL, NULL, NULL, NULL, NULL, NULL, eventExecNlpdiving, NULL) );
+
 
    /* get event handler for bound change events */
-   heurdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   heurdata->eventhdlr = NULL;
+   /* create event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &heurdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecNlpdiving, NULL) );
    if ( heurdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");

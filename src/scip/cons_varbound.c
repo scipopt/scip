@@ -3629,10 +3629,8 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecVarbound,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecVarbound, eventhdlrdata) );
 
    /* add varbound constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

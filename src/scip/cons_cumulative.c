@@ -8218,7 +8218,6 @@ SCIP_RETCODE SCIPcreateConsBasicCumulative(
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
-
 }
 
 /** set the left bound of the time axis to be considered (including hmin) */

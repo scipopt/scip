@@ -5658,16 +5658,19 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    /* create constraint handler data (used in conflicthdlrdata) */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   conshdlrdata->eventhdlrbound = NULL;
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicatorBound, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrbound),
+         EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC, eventExecIndicatorBound, NULL) );
+   assert(conshdlrdata->eventhdlrbound != NULL);
 
+   conshdlrdata->eventhdlrrestart = NULL;
    /* create event handler for restart events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicatorRestart, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrrestart), EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
+         eventExecIndicatorRestart, NULL) );
+   assert(conshdlrdata->eventhdlrrestart != NULL);
 
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlrbound = SCIPfindEventhdlr(scip, EVENTHDLR_BOUND_NAME);
    if ( conshdlrdata->eventhdlrbound == NULL )
    {
       SCIPerrorMessage("event handler for indicator constraints not found.\n");
@@ -5675,7 +5678,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    }
 
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlrrestart = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
    if ( conshdlrdata->eventhdlrrestart == NULL )
    {
       SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");

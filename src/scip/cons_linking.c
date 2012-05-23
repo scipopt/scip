@@ -2986,8 +2986,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecBinvar, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecBinvar, NULL) );
    
    /* create linking constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

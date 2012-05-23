@@ -1621,8 +1621,8 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecVbound, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecVbound, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/"PROP_NAME"/usebdwidening", "should bound widening be used to initialize conflict analysis?",

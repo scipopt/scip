@@ -5181,6 +5181,142 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    return SCIP_OKAY;
 }
 
+/** creates an event handler and includes it in SCIP with all its non-fundamental callbacks set
+ *  to NULL; if needed, non-fundamental callbacks can be set afterwards via setter functions
+ *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
+ *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
+ */
+SCIP_RETCODE SCIPincludeEventhdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
+   const char*           name,               /**< name of event handler */
+   const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether event handler is already present */
+   if( SCIPfindEventhdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("event handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventexec,
+         eventhdlrdata) );
+   SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
+
+   if( eventhdlrptr != NULL )
+           *eventhdlrptr = eventhdlr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrCopy(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback of the event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetCopy(eventhdlr, eventcopy);
+        return SCIP_OKAY;
+}
+
+/** sets deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrFree(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTFREE   ((*eventfree))      /**< deinitialization callback of the event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetFree(eventhdlr, eventfree);
+        return SCIP_OKAY;
+}
+
+/** sets initialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrInit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialize event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetInit(eventhdlr, eventinit);
+        return SCIP_OKAY;
+}
+
+/** sets deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrExit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialize event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetExit(eventhdlr, eventexit);
+        return SCIP_OKAY;
+}
+
+/** sets solving process initialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrInitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetInitsol(eventhdlr, eventinitsol);
+        return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrExitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetExitsol(eventhdlr, eventexitsol);
+        return SCIP_OKAY;
+}
+
+/** sets callback of the event handler to free specific event data */
+SCIP_RETCODE SCIPsetEventhdlrDelete(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< free specific event data */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetDelete(eventhdlr, eventdelete);
+        return SCIP_OKAY;
+}
+
 /** returns the event handler of the given name, or NULL if not existing */
 SCIP_EVENTHDLR* SCIPfindEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */

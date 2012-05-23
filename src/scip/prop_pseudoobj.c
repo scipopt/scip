@@ -3381,9 +3381,6 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
 
-   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
@@ -3391,8 +3388,11 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* reset propagator data structure */
    propdataReset(scip, propdata);
 
-   /* get event handler for bound change events */
-   propdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   propdata->eventhdlr = NULL;
+   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecPseudoobj, NULL) );
+
    if( propdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for pseudo objective propagator not found\n");

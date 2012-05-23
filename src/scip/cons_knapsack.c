@@ -9243,18 +9243,16 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   /* include event handler for bound change events */
-   eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecKnapsack,
-         eventhdlrdata) );
-
    /* create knapsack constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   /* include event handler for bound change events */
+   eventhdlrdata = NULL;
+   conshdlrdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr), EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecKnapsack, eventhdlrdata) );
+
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( conshdlrdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for knapsack constraints not found\n");

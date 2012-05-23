@@ -163,17 +163,28 @@ SCIP_RETCODE SCIPincludeEventHdlrXyz(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create xyz event handler data */
    eventhdlrdata = NULL;
    /* TODO: (optional) create event handler specific data here */
 
+   eventhdlr = NULL;
    /* include event handler into SCIP */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventCopyXyz,
          eventFreeXyz, eventInitXyz, eventExitXyz, 
          eventInitsolXyz, eventExitsolXyz, eventDeleteXyz, eventExecXyz,
          eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyXyz) );
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeXyz) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitXyz) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitXyz) );
+   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolXyz) );
+   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolXyz) );
+   SCIP_CALL( SCIPsetEventhdlrDelete(scip, eventhdlr, eventDeleteXyz) );
 
    /* add xyz event handler parameters */
    /* TODO: (optional) add event handler specific parameters with SCIPaddTypeParam() here */
