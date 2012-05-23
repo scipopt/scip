@@ -475,6 +475,83 @@ void SCIPpricerSetData(
    pricer->pricerdata = pricerdata;
 }
 
+/** sets copy callback of pricer */
+void SCIPpricerSetCopy(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy))      /**< copy callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricercopy = pricercopy;
+}
+
+/** sets destructor callback of pricer */
+void SCIPpricerSetFree(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE  ((*pricerfree))     /**< destructor of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerfree = pricerfree;
+}
+
+/** sets initialization callback of pricer */
+void SCIPpricerSetInit(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT ((*pricerinit))     /**< initialize pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerinit = pricerinit;
+}
+
+/** sets deinitialization callback of pricer */
+void SCIPpricerSetExit(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT ((*pricerexit))     /**< deinitialize pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerexit = pricerexit;
+}
+
+/** sets solving process initialization callback of pricer */
+void SCIPpricerSetInitsol(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerinitsol = pricerinitsol;
+}
+
+/** sets solving process deinitialization callback of pricer */
+void SCIPpricerSetExitsol(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL ((*pricerexitsol))/**< solving process deinitialization callback of pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerexitsol = pricerexitsol;
+}
+
+/** sets Farkas pricing method of variable pricer for infeasible LPs */
+void SCIPpricerSetFarkas(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->pricerfarkas = pricerfarkas;
+}
+
 /** gets name of variable pricer */
 const char* SCIPpricerGetName(
    SCIP_PRICER*          pricer              /**< variable pricer */

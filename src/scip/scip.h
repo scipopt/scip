@@ -1091,6 +1091,87 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    );
 
+/** creates a variable pricer and includes it in SCIP with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetPricerCopy(), SCIPsetPricerFree(),
+ *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), SCIPsetPricerExitsol(),
+ *  SCIPsetPricerFarkas();
+ *
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
+extern
+SCIP_RETCODE SCIPincludePricerBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   );
+
+/** sets copy method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERCOPY ((*pricercopy))     /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE ((*pricerfree))      /**< destructor of pricer */
+   );
+
+/** sets initialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit))     /**< initialize pricer */
+   );
+
+/** sets deinitialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit))     /**< deinitialize pricer */
+   );
+
+/** sets solving process initialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization method of pricer */
+   );
+
+/** sets solving process deinitialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
+   );
+
+/** sets Farkas pricing method of variable pricer for infeasible LPs */
+extern
+SCIP_RETCODE SCIPsetPricerFarkas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
+   );
+
 /** returns the variable pricer of the given name, or NULL if not existing */
 extern
 SCIP_PRICER* SCIPfindPricer(

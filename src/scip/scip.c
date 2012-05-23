@@ -3050,6 +3050,165 @@ SCIP_RETCODE SCIPincludePricer(
    return SCIP_OKAY;
 }
 
+/** creates a variable pricer and includes it in SCIP with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetPricerCopy(), SCIPsetPricerFree(),
+ *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), SCIPsetPricerExitsol(),
+ *  SCIPsetPricerFarkas();
+ *
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
+SCIP_RETCODE SCIPincludePricerBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   )
+{
+   SCIP_PRICER* pricer;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePricerBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether pricer is already present */
+   if( SCIPfindPricer(scip, name) != NULL )
+   {
+      SCIPerrorMessage("pricer <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, delay,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, pricerredcost, NULL, pricerdata) );
+   SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
+
+   if( pricerptr != NULL )
+      *pricerptr = pricer;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of pricer */
+SCIP_RETCODE SCIPsetPricerCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERCOPY ((*pricercopy))     /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetCopy(pricer, pricercopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of pricer */
+SCIP_RETCODE SCIPsetPricerFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE ((*pricerfree))      /**< destructor of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetFree(pricer, pricerfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of pricer */
+SCIP_RETCODE SCIPsetPricerInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit))     /**< initialize pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetInit(pricer, pricerinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of pricer */
+SCIP_RETCODE SCIPsetPricerExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit))     /**< deinitialize pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetExit(pricer, pricerexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of pricer */
+SCIP_RETCODE SCIPsetPricerInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization method of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetInitsol(pricer, pricerinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of pricer */
+SCIP_RETCODE SCIPsetPricerExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetExitsol(pricer, pricerexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets Farkas pricing method of variable pricer for infeasible LPs */
+SCIP_RETCODE SCIPsetPricerFarkas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerFarkas", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetFarkas(pricer, pricerfarkas);
+
+   return SCIP_OKAY;
+}
+
 /** returns the variable pricer of the given name, or NULL if not existing */
 SCIP_PRICER* SCIPfindPricer(
    SCIP*                 scip,               /**< SCIP data structure */
