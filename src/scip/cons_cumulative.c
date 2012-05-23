@@ -6896,10 +6896,12 @@ SCIP_RETCODE presolveCons(
    SCIP_Bool*            unbounded           /**< pointer to store if the problem is unbounded */
    )
 {
+#ifdef SCIP_STATISTIC
    SCIP_CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+#endif
 
    /* over sized jobs should be removed */
    assert(checkDemands(scip, cons));
