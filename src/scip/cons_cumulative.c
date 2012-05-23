@@ -5551,7 +5551,7 @@ SCIP_RETCODE deleteTrivilCons(
 }
 
 /** remove jobs which have a duration or demand of zero (zero energy) or lay outside the efficient horizon [hmin, hmax);
- *   this is done in the SCIP_DECL_CONSINITPRE()allback
+ *  this is done in the SCIP_DECL_CONSINITPRE() callback
  */
 static
 SCIP_RETCODE removeIrrelevantJobs(
@@ -6973,7 +6973,9 @@ SCIP_RETCODE presolveCons(
 
    assert(checkDemands(scip, cons) || *cutoff);
 
-   //         SCIP_CALL( reformulateCons(scip, cons, naggrvars) );
+#if 0
+   SCIP_CALL( reformulateCons(scip, cons, naggrvars) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -7056,12 +7058,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL )
+   for( c = 0; c < nconss; ++c )
    {
-      for( c = 0; c < nconss; ++c )
-      {
-         SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
-      }
+      SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
+
+      SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
    }
 
    SCIPstatisticMessage("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
