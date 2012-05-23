@@ -163,16 +163,18 @@ struct SCIP_ConsData
    int                   hmin;               /**< left bound of time axis to be considered (including hmin) */
    int                   hmax;               /**< right bound of time axis to be considered  (not including hmax) */
 
+   unsigned int          normalized:1;       /**< is the constraint normalized */
+   unsigned int          covercuts:1;        /**< cover cuts are created? */
+   unsigned int          propagated:1;       /**< is constraint propagted */
+
+#ifdef SCIP_STATISTIC
    int                   maxpeak;
    int                   nirrelevantjobs;
    int                   nalwaysruns;
    int                   ndualfixs;
    int                   nremovedlocks;
    int                   ndecomps;
-
-   unsigned int          normalized:1;       /**< is the constraint normalized */
-   unsigned int          covercuts:1;        /**< cover cuts are created? */
-   unsigned int          propagated:1;       /**< is constraint propagted */
+#endif
 };
 
 /** constraint handler data */
@@ -908,6 +910,7 @@ void createSelectedSortedEventpointsSol(
 #endif
 }
 
+#ifdef SCIP_STATISTIC
 /** this method checks for relevant intervals for energetic reasoning */
 static
 SCIP_RETCODE computeRelevantEnergyIntervals(
@@ -1181,12 +1184,13 @@ SCIP_RETCODE evaluateCumulativeness(
       consdata->estimatedstrength = (SCIP_Real)(capacity - minfreecapacity) / (SCIP_Real) capacity;
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cumulative constraint<%s>: DISJ1=%g, DISJ2=%g, CUM=%g, RS1 = %g, RS2 = %g, EST = %g\n",
+   SCIPstatisticMessage("cumulative constraint<%s>: DISJ1=%g, DISJ2=%g, CUM=%g, RS1 = %g, RS2 = %g, EST = %g\n",
       SCIPconsGetName(cons), consdata->disjfactor1, disjfactor2, cumfactor1, resstrength1, resstrength2,
       consdata->estimatedstrength);
 
    return SCIP_OKAY;
 }
+#endif
 
 /**@} */
 
@@ -1362,11 +1366,13 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->covercuts = FALSE;
    (*consdata)->normalized = FALSE;
 
+#ifdef SCIP_STATISTIC
    (*consdata)->nirrelevantjobs = 0;
    (*consdata)->nalwaysruns = 0;
    (*consdata)->ndualfixs = 0;
    (*consdata)->nremovedlocks = 0;
    (*consdata)->ndecomps = 0;
+#endif
 
    if( nvars > 0 )
    {
@@ -1427,7 +1433,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->disjfactor1 = -1.0;
    (*consdata)->disjfactor2 = -1.0;
    (*consdata)->estimatedstrength = -1.0;
-   (*consdata)->maxpeak = -1;
+
+   SCIPstatistic( (*consdata)->maxpeak = -1 );
 
    return SCIP_OKAY;
 }
@@ -6064,7 +6071,7 @@ SCIP_RETCODE computeEffectiveHorizon(
 
             assert(consdata->hmin < consdata->hmax);
 
-            consdata->ndecomps++;
+            SCIPstatistic( consdata->ndecomps++ );
             (*naddconss)++;
             break;
          }
@@ -6165,7 +6172,7 @@ SCIP_RETCODE presolveConsEst(
          /* adjust nvars after deleting the variable */
          nvars = consdata->nvars;
 
-         consdata->nirrelevantjobs++;
+         SCIPstatistic( consdata->nirrelevantjobs++ );
       }
       else if( ect <= hmin )
       {
@@ -6186,7 +6193,7 @@ SCIP_RETCODE presolveConsEst(
 
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
-            consdata->ndualfixs++;
+            SCIPstatistic( consdata->ndualfixs++ );
          }
       }
       else if( lst <= hmin )
@@ -6220,7 +6227,7 @@ SCIP_RETCODE presolveConsEst(
 
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
-            consdata->nalwaysruns++;
+            SCIPstatistic( consdata->nalwaysruns++ );
          }
          else if( downlock )
          {
@@ -6231,7 +6238,7 @@ SCIP_RETCODE presolveConsEst(
             consdata->downlocks[v] = FALSE;
             (*nchgsides)++;
 
-            consdata->nremovedlocks++;
+            SCIPstatistic( consdata->nremovedlocks++ );
          }
       }
       else if ( est >= hmin )
@@ -6330,7 +6337,7 @@ SCIP_RETCODE presolveConsLct(
          /* adjust nvars after deleting the variable */
          nvars = consdata->nvars;
 
-         consdata->nirrelevantjobs++;
+         SCIPstatistic( consdata->nirrelevantjobs++ );
       }
       else if( lst >= hmax )
       {
@@ -6351,7 +6358,7 @@ SCIP_RETCODE presolveConsLct(
 
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
-            consdata->ndualfixs++;
+            SCIPstatistic( consdata->ndualfixs++ );
          }
       }
       else if( ect >= hmax )
@@ -6386,7 +6393,7 @@ SCIP_RETCODE presolveConsLct(
             /* adjust nvars after deleting the variable */
             nvars = consdata->nvars;
 
-            consdata->nalwaysruns++;
+            SCIPstatistic( consdata->nalwaysruns++ );
          }
          else if( uplock )
          {
@@ -6397,7 +6404,7 @@ SCIP_RETCODE presolveConsLct(
             consdata->uplocks[v] = FALSE;
             (*nchgsides)++;
 
-            consdata->nremovedlocks++;
+            SCIPstatistic( consdata->nremovedlocks++ );
          }
       }
       else if( lct <= hmax )
@@ -6900,7 +6907,7 @@ SCIP_RETCODE presolveCons(
 
    if( conshdlrdata->dualpresolve )
    {
-      conshdlrdata->ndecomps -= consdata->ndecomps;
+      SCIPstatistic( conshdlrdata->ndecomps -= consdata->ndecomps );
 
       /* in case the cumulative constraint is independent of every else, solve the cumulative problem and apply the
        * fixings (dual reductions)
@@ -6913,15 +6920,15 @@ SCIP_RETCODE presolveCons(
       /* computes the effective horizon and checks if the constraint can be decompesd */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
 
-      conshdlrdata->ndecomps += consdata->ndecomps;
+      SCIPstatistic( conshdlrdata->ndecomps += consdata->ndecomps );
 
       if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
 
-      conshdlrdata->nirrelevantjobs -= consdata->nirrelevantjobs;
-      conshdlrdata->nremovedlocks -= consdata->nremovedlocks;
-      conshdlrdata->ndualfixs -= consdata->ndualfixs;
-      conshdlrdata->nalwaysruns -= consdata->nalwaysruns;
+      SCIPstatistic( conshdlrdata->nirrelevantjobs -= consdata->nirrelevantjobs );
+      SCIPstatistic( conshdlrdata->nremovedlocks -= consdata->nremovedlocks );
+      SCIPstatistic( conshdlrdata->ndualfixs -= consdata->ndualfixs );
+      SCIPstatistic( conshdlrdata->nalwaysruns -= consdata->nalwaysruns );
 
       /* presolve constraint form the earlier start time point of view */
       SCIP_CALL( presolveConsEst(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
@@ -6929,10 +6936,10 @@ SCIP_RETCODE presolveCons(
       /* presolve constraint form the latest completion time point of view */
       SCIP_CALL( presolveConsLct(scip, cons, nfixedvars, nchgcoefs, nchgsides, cutoff) );
 
-      conshdlrdata->nirrelevantjobs += consdata->nirrelevantjobs;
-      conshdlrdata->nremovedlocks += consdata->nremovedlocks;
-      conshdlrdata->ndualfixs += consdata->ndualfixs;
-      conshdlrdata->nalwaysruns += consdata->nalwaysruns;
+      SCIPstatistic( conshdlrdata->nirrelevantjobs += consdata->nirrelevantjobs );
+      SCIPstatistic( conshdlrdata->nremovedlocks += consdata->nremovedlocks );
+      SCIPstatistic( conshdlrdata->ndualfixs += consdata->ndualfixs );
+      SCIPstatistic( conshdlrdata->nalwaysruns += consdata->nalwaysruns );
 
       /* remove jobs which have a duration or demand of zero ????????????? */
       SCIP_CALL( removeOversizedJobs(scip, cons, nchgbds, nchgcoefs, naddconss, cutoff) );
@@ -7037,6 +7044,7 @@ SCIP_DECL_CONSINITPRE(consInitpreCumulative)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#ifdef SCIP_STATISTIC
 static
 SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
 {  /*lint --e{715}*/
@@ -7054,15 +7062,18 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
       }
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@44  dual %d\n", conshdlrdata->ndualfixs);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@55  locks %d\n", conshdlrdata->nremovedlocks);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@66  decomp %d\n", conshdlrdata->ndecomps);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@77  allconsdual %d\n", conshdlrdata->nallconsdualfixs);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "@88  alwaysruns %d\n", conshdlrdata->nalwaysruns);
+   SCIPstatisticMessage("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
+   SCIPstatisticMessage("@44  dual %d\n", conshdlrdata->ndualfixs);
+   SCIPstatisticMessage("@55  locks %d\n", conshdlrdata->nremovedlocks);
+   SCIPstatisticMessage("@66  decomp %d\n", conshdlrdata->ndecomps);
+   SCIPstatisticMessage("@77  allconsdual %d\n", conshdlrdata->nallconsdualfixs);
+   SCIPstatisticMessage("@88  alwaysruns %d\n", conshdlrdata->nalwaysruns);
 
    return SCIP_OKAY;
 }
+#else
+#define consExitpreCumulative NULL
+#endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
