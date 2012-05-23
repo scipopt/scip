@@ -383,13 +383,17 @@ SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_BRANCHRULE* branchrule;
+
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyLeastinf,
-         branchFreeLeastinf, branchInitLeastinf, branchExitLeastinf, branchInitsolLeastinf, branchExitsolLeastinf, 
-         branchExeclpLeastinf, branchExecextLeastinf, branchExecpsLeastinf,
-         NULL) );
+   branchrule = NULL;
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, NULL) );
+   assert(branchrule != NULL);
+
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyLeastinf) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLeastinf) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextLeastinf) );
 
    return SCIP_OKAY;
 }

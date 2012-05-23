@@ -2274,9 +2274,14 @@ SCIP_RETCODE SCIPincludeReaderOsil(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_READER* reader;
+
    /* include osil reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyOsil, readerFreeOsil, readerReadOsil, readerWriteOsil, NULL) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
+         NULL) );
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOsil) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadOsil) );
 
    return SCIP_OKAY;
 }

@@ -8063,6 +8063,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsCumulative) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreCumulative) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCumulative) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCumulative) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCumulative) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ) );
