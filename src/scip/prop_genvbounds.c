@@ -899,10 +899,12 @@ SCIP_RETCODE analyzeGenVBoundConflict(
          assert(success);
 
          /* upper bound of the left-hand side variable leading to infeasibility */
-         boundval = MIN(boundval - infeasthreshold, SCIPvarGetUbGlobal(genvbound->var));
+         boundval -= infeasthreshold;
+         if( boundval > SCIPvarGetUbGlobal(genvbound->var) )
+            boundval = SCIPvarGetUbGlobal(genvbound->var);
 
          /* try to widen the bound one last time (in resolveGenVBoundPropagation(), boundval may increase) */
-         if( SCIPisGE(scip, boundval, SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, FALSE)) )
+         if( SCIPisGT(scip, boundval, SCIPvarGetUbAtIndex(genvbound->var, bdchgidx, FALSE)) )
          {
             SCIP_CALL( widenGenVBoundVarUb(scip, genvbound->var, &bdchgidx, boundval) );
          }
@@ -960,10 +962,12 @@ SCIP_RETCODE analyzeGenVBoundConflict(
          assert(success);
 
          /* lower bound of the left-hand side variable leading to infeasibility */
-         boundval = MAX(-boundval + infeasthreshold, SCIPvarGetLbGlobal(genvbound->var));
+         boundval = -boundval + infeasthreshold;
+         if( boundval < SCIPvarGetLbGlobal(genvbound->var) )
+            boundval = SCIPvarGetLbGlobal(genvbound->var);
 
          /* try to widen the bound one last time (in resolveGenVBoundPropagation(), boundval may increase) */
-         if( SCIPisLE(scip, boundval, SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, FALSE)) )
+         if( SCIPisLT(scip, boundval, SCIPvarGetLbAtIndex(genvbound->var, bdchgidx, FALSE)) )
          {
             SCIP_CALL( widenGenVBoundVarLb(scip, genvbound->var, &bdchgidx, boundval) );
          }
@@ -2062,8 +2066,12 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    /* if left-hand side variable is integer, it suffices to explain a bound change greater than boundval - 1 */
    if( SCIPvarIsIntegral(genvbound->var) )
    {
+      SCIP_Real roundedboundval;
+
       assert(SCIPisIntegral(scip, boundval));
-      boundval = MIN(boundval, SCIPfeasCeil(scip, boundval - 1.0) + 2 * SCIPfeastol(scip));
+
+      roundedboundval = SCIPfeasCeil(scip, boundval - 1.0) + 2 * SCIPfeastol(scip);
+      boundval = MIN(boundval, roundedboundval);
    }
 
    /* resolve propagation */
