@@ -316,6 +316,20 @@ SCIP_DECL_DISPCOPY(dispCopyDefault)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of display column (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_DISPINITSOL(SCIPdispInitsolSolFound)
+{  /*lint --e{715}*/
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
+   assert(scip != NULL);
+
+   SCIPdispSetData(disp, (SCIP_DISPDATA*)SCIPgetBestSol(scip));
+
+   return SCIP_OKAY;
+}
+
 /** output method of display column to output file stream 'file' for character of best solution */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
@@ -937,7 +951,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
       SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_SOLFOUND, DISP_DESC_SOLFOUND, DISP_HEAD_SOLFOUND,
             SCIP_DISPSTATUS_AUTO, 
             dispCopyDefault,
-            NULL, NULL, NULL, NULL, NULL, SCIPdispOutputSolFound, NULL, 
+            NULL, NULL, NULL, SCIPdispInitsolSolFound, NULL, SCIPdispOutputSolFound, NULL,
             DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
    }
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_TIME);
