@@ -5331,6 +5331,69 @@ void SCIPbstFree(
    BMSfreeMemory(tree);
 }
 
+/** prints the rooted subtree of the given binary search tree node in GML format into the given file */
+static
+void bstPrintSubtree(
+   SCIP_BSTNODE*         node,               /**< binary search tree node */
+   FILE*                 file,               /**< file to write to */
+   int*                  nnodes              /**< pointer to count the number of nodes */
+   )
+{
+   SCIP_BSTNODE* left;
+   SCIP_BSTNODE* right;
+   char label[SCIP_MAXSTRLEN];
+
+   assert(node != NULL);
+
+   (*nnodes)++;
+   (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", *nnodes);
+
+   SCIPgmlWriteNode(file, (unsigned int)(size_t)node, label, "circle", NULL, NULL);
+
+   left = SCIPbstnodeGetLeftchild(node);
+   right = SCIPbstnodeGetRightchild(node);
+
+   if( left != NULL )
+   {
+      bstPrintSubtree(left, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)left, NULL, NULL);
+   }
+
+   if( right != NULL )
+   {
+      bstPrintSubtree(right, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)right, NULL, NULL);
+   }
+}
+
+/** prints the binary search tree in GML format into the given file */
+void SCIPbstPrintGml(
+   SCIP_BST*             tree,               /**< binary search tree */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   /* write GML opening */
+   SCIPgmlOpen(file, TRUE);
+
+   if( !SCIPbstIsEmpty(tree) )
+   {
+      SCIP_BSTNODE* root;
+      int nnodes;
+
+      root = SCIPbstGetRoot(tree);
+      assert(root != NULL);
+
+      nnodes = 0;
+
+      bstPrintSubtree(root, file, &nnodes);
+   }
+
+   /* write GML closing */
+   SCIPgmlClose(file);
+}
+
 /** returns whether the binary search tree is empty (has no nodes) */
 SCIP_Bool SCIPbstIsEmpty(
    SCIP_BST*             tree                /**< binary search tree */

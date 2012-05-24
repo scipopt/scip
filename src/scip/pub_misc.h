@@ -838,6 +838,13 @@ void SCIPbstFree(
    SCIP_BST**            tree                /**< pointer to binary search tree */
    );
 
+/** prints the binary search tree in GML format into the given file */
+extern
+void SCIPbstPrintGml(
+   SCIP_BST*             tree,               /**< binary search tree */
+   FILE*                 file                /**< file to write to */
+   );
+
 /** returns whether the binary search tree is empty (has no nodes) */
 extern
 SCIP_Bool SCIPbstIsEmpty(
