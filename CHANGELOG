@@ -110,6 +110,7 @@ interface
 - renamed SCIPmarkNonlinearitiesPresent() to SCIPenableNLP(), removed SCIPmarkContinuousNonlinearitiesPresent(),
   renamed SCIPhasContinuousNonlinearitiesPresent() to SCIPhasNLPContinuousNonlinearity() and allow call only during
   initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
+- new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

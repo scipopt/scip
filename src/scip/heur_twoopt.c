@@ -1459,7 +1459,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
 
    /* we can only work on solutions valid in the transformed space */
-   if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(bestsol) )
       return SCIP_OKAY;
 
 #ifdef SCIP_DEBUG

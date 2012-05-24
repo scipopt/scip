@@ -355,7 +355,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       
       if( heur == NULL )
       {
-         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+         if( SCIPsolIsOriginal(sol) )
             c = '#';
          else
             c = '*';

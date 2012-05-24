@@ -5800,7 +5800,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL) )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolIsOriginal(sol)) )
    {
       if( vars != NULL )
          *vars = scip->origprob->vars;
@@ -7489,7 +7489,7 @@ SCIP_RETCODE transformSols(
        * (e.g., because multi-aggregated variables get another value, but the solution is still feasible);
        * in this case, it might happen that the solution is not an original one and we just skip this solution
        */
-      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(sol) )
          continue;
 
       SCIP_CALL( SCIPprimalTransformSol(scip->primal, sol, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -7743,7 +7743,7 @@ SCIP_RETCODE freeTransform(
       sol = scip->primal->sols[s];
       assert(sol != NULL);
       
-      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(sol) )
       {
          /* retransform solution into the original problem space */
          SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
@@ -19659,7 +19659,7 @@ SCIP_RETCODE SCIPsetSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
          SCIPvarGetName(var));
@@ -19687,7 +19687,7 @@ SCIP_RETCODE SCIPsetSolVals(
 
    SCIP_CALL( checkStage(scip, "SCIPsetSolVals", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       for( v = 0; v < nvars; ++v )
       {
@@ -19718,7 +19718,7 @@ SCIP_RETCODE SCIPincSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPincSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot increase value of transformed variable <%s> in original space solution\n",
          SCIPvarGetName(var));
@@ -19739,7 +19739,7 @@ SCIP_Real SCIPgetSolVal(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( sol != NULL && SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIP_VAR* origvar;
       SCIP_Real scalar;
@@ -19787,7 +19787,7 @@ SCIP_RETCODE SCIPgetSolVals(
    {
       int v;
 
-      if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      if( SCIPsolIsOriginal(sol) )
       {
          SCIP_VAR* origvar;
          SCIP_Real scalar;
@@ -19837,7 +19837,7 @@ SCIP_Real SCIPgetSolOrigObj(
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
    {
       SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
@@ -19985,7 +19985,7 @@ SCIP_RETCODE SCIPprintSol(
    }
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
       objvalue = SCIPsolGetOrigObj(sol);
    else
       objvalue = SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
@@ -20024,7 +20024,7 @@ SCIP_RETCODE SCIPprintTransSol(
             scip->tree, scip->lp, NULL) );
    }
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("cannot print original space solution as transformed solution\n");
       return SCIP_INVALIDCALL;
@@ -20219,7 +20219,7 @@ SCIP_RETCODE SCIPprintBestTransSol(
 
    sol = SCIPgetBestSol(scip);
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("best solution is defined in original space - cannot print it as transformed solution\n");
       return SCIP_INVALIDCALL;
@@ -20244,7 +20244,7 @@ SCIP_RETCODE SCIProundSol(
 {
    SCIP_CALL( checkStage(scip, "SCIProundSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("cannot round original space solution\n");
       return SCIP_INVALIDCALL;
@@ -20322,7 +20322,7 @@ SCIP_RETCODE SCIPaddSol(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL );
+      assert( SCIPsolIsOriginal(sol) );
       SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -20333,7 +20333,7 @@ SCIP_RETCODE SCIPaddSol(
       /* if the solution is added during presolving and it is not defined on original variables, 
        * presolving operations will destroy its validity, so we retransform it to the original space
        */
-      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(sol) )
       {
          SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
@@ -20368,7 +20368,7 @@ SCIP_RETCODE SCIPaddSolFree(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL );
+      assert( SCIPsolIsOriginal(*sol) );
       SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -20379,7 +20379,7 @@ SCIP_RETCODE SCIPaddSolFree(
       /* if the solution is added during presolving and it is not defined on original variables, 
        * presolving operations will destroy its validity, so we retransform it to the original space
        */
-      if( SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(*sol) )
       {
          SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
@@ -20434,13 +20434,13 @@ SCIP_RETCODE SCIPtrySol(
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
     */ 
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
    {
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
 
@@ -20483,13 +20483,13 @@ SCIP_RETCODE SCIPtrySolFree(
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
     */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
    {
       SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
       SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   if( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(*sol) )
    {
       SCIP_Bool feasible;
 
@@ -20552,7 +20552,7 @@ SCIP_RETCODE SCIPcheckSol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
       SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );

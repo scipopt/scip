@@ -1791,7 +1791,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       /* get best solution that should guide the search; if this solution lives in the original variable space,
        * we cannot use it since it might violate the global bounds of the current problem
        */
-      if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+      if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
 
       SCIP_CALL( SCIPcreateSolCopy(scip, &bestsol, SCIPgetBestSol(scip)) );

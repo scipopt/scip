@@ -324,7 +324,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* we can only work on solutions valid in the transformed space */
-   if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(bestsol) )
       return SCIP_OKAY;
 
    /* get problem variables */

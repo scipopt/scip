@@ -374,7 +374,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    /* only call heuristic, if the best solution comes from transformed problem */
    assert( SCIPgetBestSol(scip) != NULL );
-   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */

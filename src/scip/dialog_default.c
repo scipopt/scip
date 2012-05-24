@@ -1249,7 +1249,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    SCIPdialogMessage(scip, NULL, "\n");
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+      if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       {
          SCIPdialogMessage(scip, NULL, "best solution exists only in original problem space\n");
       }

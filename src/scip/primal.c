@@ -373,7 +373,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    {
       SCIP_Real obj;
 
-      assert(SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
+      assert(SCIPsolIsOriginal(primal->sols[0]));
       obj = SCIPsolGetObj(primal->sols[0], set, prob);
       upperbound = MIN(upperbound, obj);
    }
@@ -446,7 +446,7 @@ SCIP_RETCODE primalAddSol(
    /* check solution again completely
     * (this may fail, because in the LP solver, the feasibility tolerance is a relative measure against the row's norm
     */
-   if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( !SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
       SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, &feasible) );
@@ -524,7 +524,7 @@ SCIP_RETCODE primalAddSol(
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */
-   if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( !SCIPsolIsOriginal(sol) )
    {
       SCIPsolUpdateVarsum(sol, set, stat, transprob,
          (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
@@ -560,8 +560,7 @@ SCIP_RETCODE primalAddSol(
    }
 
    /* if an original solution was added during solving, try to transfer it to the transformed space */
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING
-      && set->misc_transorigsols )
+   if( SCIPsolIsOriginal(sol) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING && set->misc_transorigsols )
    {
       SCIP_Bool added;
 
@@ -659,10 +658,10 @@ int primalSearchSolPos(
    assert(left == right-1);
 
    /* prefer solutions that live in the transformed space */
-   if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( !SCIPsolIsOriginal(sol) )
    {
-      while( right > 0 && SCIPsolGetOrigin(sols[right-1]) == SCIP_SOLORIGIN_ORIGINAL
-            && SCIPsetIsEQ(set, SCIPsolGetObj(sols[right-1], set, prob), obj) )
+      while( right > 0 && SCIPsolIsOriginal(sols[right-1])
+         && SCIPsetIsEQ(set, SCIPsolGetObj(sols[right-1], set, prob), obj) )
          --right;
    }
 
@@ -744,8 +743,7 @@ SCIP_Bool primalExistsSol(
    
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ORIGINAL
-            && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;
@@ -767,8 +765,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ORIGINAL
-            && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;
@@ -881,7 +878,7 @@ SCIP_Bool origsolOfInterest(
    int*                  insertpos           /**< pointer to store the insert position of that solution */
    )
 {
-   assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsOriginal(sol));
    
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);
@@ -1006,7 +1003,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
 
    assert(primal != NULL);
    assert(sol != NULL);
-   assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsOriginal(sol));
    assert(stored != NULL);
 
    insertpos = -1;
@@ -1047,7 +1044,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    assert(primal != NULL);
    assert(sol != NULL);
    assert(*sol != NULL);
-   assert(SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsOriginal(*sol));
    assert(stored != NULL);
 
    insertpos = -1;
@@ -1358,7 +1355,7 @@ void SCIPprimalUpdateVarObj(
 
    for( i = 0; i < primal->nexistingsols; ++i )
    {
-      if( SCIPsolGetOrigin(primal->existingsols[i]) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(primal->existingsols[i]) )
          SCIPsolUpdateVarObj(primal->existingsols[i], var, oldobj, newobj);
    }
 }
@@ -1428,7 +1425,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
 
    assert(origprob != NULL);
    assert(transprob != NULL);
-   assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsOriginal(sol));
    assert(solvalssize == 0 || solvals != NULL);
    assert(solvalssize == 0 || solvalset != NULL);
 
