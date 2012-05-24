@@ -18,57 +18,57 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This file reader parses the \f$opb\f$ format and is also used by the \f$wbo\f$ reader for the \f$wbo\f$ format. For a
+ * This file reader parses the @a opb format and is also used by the @a wbo reader for the @a wbo format. For a
  * detailed description of this format see
  *
  * - http://www.cril.univ-artois.fr/PB07/solver_req.html
  * - http://www.cril.univ-artois.fr/PB10/format.pdf
  *
  * The syntax of the input file format can be described by a simple Backus-Naur
- *  form. <formula> is the start symbol of this grammar.
+ *  form. \<formula\> is the start symbol of this grammar.
  *
- *  <formula>::= <sequence_of_comments> 
- *               [<objective>] | [<softheader>]
- *               <sequence_of_comments_or_constraints>
+ *  \<formula\>::= \<sequence_of_comments\> 
+ *               [\<objective\>] | [\<softheader\>]
+ *               \<sequence_of_comments_or_constraints\>
  *
- *  <sequence_of_comments>::= <comment> [<sequence_of_comments>]
- *  <comment>::= "*" <any_sequence_of_characters_other_than_EOL> <EOL>
- *  <sequence_of_comments_or_constraints>::=<comment_or_constraint> [<sequence_of_comments_or_constraints>]
- *  <comment_or_constraint>::=<comment>|<constraint> 
+ *  \<sequence_of_comments\>::= \<comment\> [\<sequence_of_comments\>]
+ *  \<comment\>::= "*" \<any_sequence_of_characters_other_than_EOL\> \<EOL\>
+ *  \<sequence_of_comments_or_constraints\>::=\<comment_or_constraint\> [\<sequence_of_comments_or_constraints\>]
+ *  \<comment_or_constraint\>::=\<comment\>|\<constraint\> 
  *
- *  <objective>::= "min:" <zeroOrMoreSpace> <sum>  ";"
- *  <constraint>::= <sum> <relational_operator> <zeroOrMoreSpace> <integer> <zeroOrMoreSpace> ";"
+ *  \<objective\>::= "min:" \<zeroOrMoreSpace\> \<sum\>  ";"
+ *  \<constraint\>::= \<sum\> \<relational_operator\> \<zeroOrMoreSpace\> \<integer\> \<zeroOrMoreSpace\> ";"
  *  
- *  <sum>::= <weightedterm> | <weightedterm> <sum>
- *  <weightedterm>::= <integer> <oneOrMoreSpace> <term> <oneOrMoreSpace>
+ *  \<sum\>::= \<weightedterm\> | \<weightedterm\> \<sum\>
+ *  \<weightedterm\>::= \<integer\> \<oneOrMoreSpace\> \<term\> \<oneOrMoreSpace\>
  *  
- *  <integer>::= <unsigned_integer> | "+" <unsigned_integer> | "-" <unsigned_integer>
- *  <unsigned_integer>::= <digit> | <digit><unsigned_integer>
+ *  \<integer\>::= \<unsigned_integer\> | "+" \<unsigned_integer\> | "-" \<unsigned_integer\>
+ *  \<unsigned_integer\>::= \<digit\> | \<digit\>\<unsigned_integer\>
  *  
- *  <relational_operator>::= ">=" | "="
+ *  \<relational_operator\>::= "\>=" | "="
  *  
- *  <variablename>::= "x" <unsigned_integer>
+ *  \<variablename\>::= "x" \<unsigned_integer\>
  *  
- *  <oneOrMoreSpace>::= " " [<oneOrMoreSpace>]
- *  <zeroOrMoreSpace>::= [" " <zeroOrMoreSpace>]
+ *  \<oneOrMoreSpace\>::= " " [\<oneOrMoreSpace\>]
+ *  \<zeroOrMoreSpace\>::= [" " \<zeroOrMoreSpace\>]
  *  
- *  For linear pseudo-Boolean instances, <term> is defined as
+ *  For linear pseudo-Boolean instances, \<term\> is defined as
  *  
- *  <term>::=<variablename>
+ *  \<term\>::=\<variablename\>
  *  
- *  For non-linear instances, <term> is defined as
+ *  For non-linear instances, \<term\> is defined as
  *  
- *  <term>::= <oneOrMoreLiterals>
- *  <oneOrMoreLiterals>::= <literal> | <literal> <oneOrMoreSpace> <oneOrMoreLiterals>
- *  <literal>::= <variablename> | "~"<variablename>
+ *  \<term\>::= \<oneOrMoreLiterals\>
+ *  \<oneOrMoreLiterals\>::= \<literal\> | \<literal\> \<oneOrMoreSpace\> \<oneOrMoreLiterals\>
+ *  \<literal\>::= \<variablename\> | "~"\<variablename\>
  *  
  * For wbo-files are the following additional/changed things possible.
  *  
- *  <softheader>::= "soft:" [<unsigned integer>] ";"
+ *  \<softheader\>::= "soft:" [\<unsigned integer\>] ";"
  *  
- *  <comment_or_constraint>::=<comment>|<constraint>|<softconstraint> 
+ *  \<comment_or_constraint\>::=\<comment\>|\<constraint\>|\<softconstraint\> 
  *
- *  <softconstraint>::= "[" <zeroOrMoreSpace> <unsigned integer> <zeroOrMoreSpace> "]" <constraint>
+ *  \<softconstraint\>::= "[" \<zeroOrMoreSpace\> \<unsigned integer\> \<zeroOrMoreSpace\> "]" \<constraint\>
  *  
  */
 

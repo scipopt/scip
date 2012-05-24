@@ -48,11 +48,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-   {
-      assert(heur1 == heur2 || heur1->delaypos == -1);
-      assert(heur1 == heur2 || heur2->delaypos == -1);
       return heur2->priority - heur1->priority; /* prefer higher priorities */
-   }
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
@@ -63,6 +59,13 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return -1;
    else
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
+}
+
+
+/** comparison method for sorting heuristics w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
+{
+   return strcmp(SCIPheurGetName((SCIP_HEUR*)elem1), SCIPheurGetName((SCIP_HEUR*)elem2));
 }
 
 /** method to call, when the priority of a heuristic was changed */

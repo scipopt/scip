@@ -257,6 +257,14 @@ SCIP_RETCODE SCIPsetGetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the fixing status of an existing parameter */
+extern
+SCIP_RETCODE SCIPsetChgParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPsetSetParam(
@@ -326,7 +334,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Real parameter */
@@ -335,7 +343,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value                /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Char parameter */
@@ -522,6 +530,12 @@ void SCIPsetSortPricers(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts pricers by name */
+extern
+void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts constraint handler in constraint handler list */
 extern
 SCIP_RETCODE SCIPsetIncludeConshdlr(
@@ -556,6 +570,12 @@ void SCIPsetSortConflicthdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts conflict handlers by name */
+extern
+void SCIPsetSortConflicthdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts presolver in presolver list */
 extern
 SCIP_RETCODE SCIPsetIncludePresol(
@@ -573,6 +593,12 @@ SCIP_PRESOL* SCIPsetFindPresol(
 /** sorts presolvers by priorities */
 extern
 void SCIPsetSortPresols(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts presolvers by name */
+extern
+void SCIPsetSortPresolsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -596,6 +622,12 @@ void SCIPsetSortRelaxs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts relaxators by name */
+extern
+void SCIPsetSortRelaxsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts separator in separator list */
 extern
 SCIP_RETCODE SCIPsetIncludeSepa(
@@ -613,6 +645,12 @@ SCIP_SEPA* SCIPsetFindSepa(
 /** sorts separators by priorities */
 extern
 void SCIPsetSortSepas(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts separators by name */
+extern
+void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -642,6 +680,12 @@ void SCIPsetSortPropsPresol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts propagators w.r.t. names */
+extern
+void SCIPsetSortPropsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -659,6 +703,12 @@ SCIP_HEUR* SCIPsetFindHeur(
 /** sorts heuristics by priorities */
 extern
 void SCIPsetSortHeurs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by name */
+extern
+void SCIPsetSortHeursName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -714,6 +764,12 @@ SCIP_BRANCHRULE* SCIPsetFindBranchrule(
 /** sorts branching rules by priorities */
 extern
 void SCIPsetSortBranchrules(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts branching rules by name */
+extern
+void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -816,9 +872,9 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
-					      *   problem was already declared unbounded, it is already stored */
+                                              *   problem was already declared unbounded, it is already stored */
    SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
-					      *   problem was already declared infeasible, it is already stored */
+                                              *   problem was already declared infeasible, it is already stored */
    );
 
 /** calls initsol methods of all plugins */
@@ -836,6 +892,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
+   );
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPsetGetMemExternEstim(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */

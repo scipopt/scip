@@ -202,41 +202,39 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
    );
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 extern
 SCIP_Real SCIPconflictGetVarLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise the global upper
+ *  bound
  */
 extern
 SCIP_Real SCIPconflictGetVarUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 extern
 SCIP_Real SCIPconflictGetVarRelaxedLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+ *  the global upper bound
  */
 extern
 SCIP_Real SCIPconflictGetVarRelaxedUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    );
 

@@ -1917,6 +1917,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nupgdconss = 0;
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
+   (*conshdlr)->npresolcalls = 0;
    (*conshdlr)->delayupdatecount = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
@@ -2082,6 +2083,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nupgdconss = 0;
       conshdlr->nchgcoefs = 0;
       conshdlr->nchgsides = 0;
+      conshdlr->npresolcalls = 0;
       conshdlr->ageresetavg = AGERESETAVG_INIT;
       conshdlr->sepalpwasdelayed = FALSE;
       conshdlr->sepasolwasdelayed = FALSE;
@@ -3390,6 +3392,10 @@ SCIP_RETCODE SCIPconshdlrPresolve(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* increase the number of calls, if the presolving method tried to find reductions */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+            ++(conshdlr->npresolcalls);
       }
       else
       {
@@ -3903,6 +3909,16 @@ int SCIPconshdlrGetNChgSides(
    assert(conshdlr != NULL);
 
    return conshdlr->nchgsides;
+}
+
+/** gets number of times the presolving method of the constraint handler was called and tried to find reductions */
+int SCIPconshdlrGetNPresolCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->npresolcalls;
 }
 
 /** gets separation priority of constraint handler */

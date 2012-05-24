@@ -259,14 +259,14 @@ SCIP_RETCODE SCIPeventhdlrExec(
 
    SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
 
-#if TIMEEVENTEXEC
+#ifdef TIMEEVENTEXEC
    /* start timing */
    SCIPclockStart(eventhdlr->eventtime, set);
 #endif
 
    SCIP_CALL( eventhdlr->eventexec(set->scip, eventhdlr, event, eventdata) );
 
-#if TIMEEVENTEXEC
+#ifdef TIMEEVENTEXEC
    /* stop timing */
    SCIPclockStop(eventhdlr->eventtime, set);
 #endif

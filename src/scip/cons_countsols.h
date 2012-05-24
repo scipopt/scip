@@ -80,14 +80,14 @@ SCIP_Bool SCIPisCountValid(
  */
 extern
 SCIP_Longint SCIPgetNCountedSols(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    );
 
 /** returns number of counted solutions as string */
 extern
 void SCIPgetNCountedSolsstr(
-   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    char**                buffer,             /**< buffer to store the number for counted solutions */
    int                   buffersize,         /**< buffer size */
    int*                  requiredsize        /**< pointer to store the required size */

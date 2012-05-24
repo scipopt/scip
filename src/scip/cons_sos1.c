@@ -90,7 +90,7 @@ struct SCIP_ConsData
 {
    int                   nvars;              /**< number of variables in the constraint */
    int                   maxvars;            /**< maximal number of variables (= size of storage) */
-   int                   nfixednonzeros;      /**< number of variables fixed to be nonzero */
+   int                   nfixednonzeros;     /**< number of variables fixed to be nonzero */
    SCIP_VAR**            vars;               /**< variables in constraint */
    SCIP_ROW*             row;                /**< row corresponding to upper and lower bound inequalities, or NULL if not yet created */
    SCIP_Real*            weights;            /**< weights determining the order (ascending), or NULL if not used */

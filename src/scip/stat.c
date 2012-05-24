@@ -172,6 +172,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->nodeactivationtime);
+   SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
 
    SCIPhistoryReset(stat->glbhistory);

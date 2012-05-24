@@ -461,8 +461,8 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                /* scan the implications of x */
                zindex = SCIPvarGetIndex(yimplvars[yk]);
 
-               for(; xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex; ++xk ) 
-               {}
+               while ( xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex )
+                  ++xk;
 
                if( xk >= xnbinimpls )
                   break;
@@ -470,8 +470,8 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                /* scan the implications of y */
                zindex = SCIPvarGetIndex(ximplvars[xk]);
 
-               for(; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex; ++yk )
-               {}
+               while ( yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex )
+                  ++yk;
 
                if( yk >= ynbinimpls )
                   break;

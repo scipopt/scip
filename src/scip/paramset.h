@@ -195,6 +195,13 @@ SCIP_RETCODE SCIPparamsetGetString(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** changes the fixing status of an existing parameter */
+SCIP_RETCODE SCIPparamsetFix(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPparamsetSet(

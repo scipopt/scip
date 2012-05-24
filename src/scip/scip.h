@@ -745,6 +745,20 @@ SCIP_RETCODE SCIPgetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** fixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
+/** unfixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPunfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPsetParam(
@@ -923,7 +937,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  */
 extern 
 SCIP_RETCODE SCIPsetPresolving(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -936,7 +950,7 @@ SCIP_RETCODE SCIPsetPresolving(
  */
 extern 
 SCIP_RETCODE SCIPsetSeparating(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -1884,13 +1898,13 @@ SCIP_RETCODE SCIPfreeProb(
 /** permutes parts of the problem data structure */
 extern
 SCIP_RETCODE SCIPpermuteProb(
-   SCIP*                 scip,              /**< SCIP data structure */
-   unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
-   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
-   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< seed value for random generator */
+   SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
    );
 
 /** gets user problem data */
@@ -2851,11 +2865,9 @@ extern
 SCIP_RETCODE SCIPgetActiveVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
@@ -4292,15 +4304,17 @@ SCIP_RETCODE SCIPisConflictVarUsed(
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
    );
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 extern
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *  upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarUb(
@@ -4308,8 +4322,8 @@ SCIP_Real SCIPgetConflictVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedLb(
@@ -4317,8 +4331,8 @@ SCIP_Real SCIPgetConflictVarRelaxedLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
+ *  global upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedUb(
@@ -5537,49 +5551,39 @@ SCIP_RETCODE SCIPprintRow(
 /**@name NLP Methods */
 /**@{ */
 
-/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
- * and that are still nonlinear after fixing all discrete variables in the CIP.
+/** returns whether the NLP relaxation has been enabled
  * 
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ * To check whether an NLP is existing, use SCIPisNLPConstructed().
  * 
- */ 
+ * @see SCIPenableNLP
+ */
 extern
-void SCIPmarkContinuousNonlinearitiesPresent(
+SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** marks that there are constraints that are representable by nonlinear constraints
+/** marks that there are constraints that are representable by nonlinear rows
+ *
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
- * 
+ *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
- */ 
-extern
-void SCIPmarkNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
- * @see SCIPmarkContinuousNonlinearitiesPresent
  */
 extern
-SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present
- * @see SCIPmarkNonlinearitiesPresent
- */
-extern
-SCIP_Bool SCIPhasNonlinearitiesPresent(
+void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns, whether an NLP has been constructed */
 extern
 SCIP_Bool SCIPisNLPConstructed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the NLP has a continuous variable in a nonlinear term
+ */
+extern
+SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -6415,6 +6419,13 @@ SCIP_RETCODE SCIPchgVarUbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** adds a row to the LP in current dive */
+extern
+SCIP_RETCODE SCIPaddRowDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
    );
 
 /** gets variable's objective value in current dive */
@@ -7260,8 +7271,8 @@ SCIP_RETCODE SCIPretransformSol(
 /** reads a given solution file, problem has to be transformed in advance */
 extern
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */
@@ -8969,6 +8980,12 @@ BMS_BLKMEM* SCIPblkmem(
 /** returns the total number of bytes used in block memory */
 extern
 SCIP_Longint SCIPgetMemUsed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

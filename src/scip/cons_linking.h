@@ -18,6 +18,17 @@
  * @brief  constraint handler for linking binary variables to an integer variable
  * @author Stefan Heinz
  * @author Jens Schulz
+ *
+ * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
+ * a linking constraint has the form:
+ *
+ * intvar = sum_{i=1}^n {(offset+i) * binvars[i]}
+ *
+ * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
+ *
+ * This constraint can be created only with the integer variable. In this case the binary variables are only created on
+ * demand. That is, whenever someone asks for the binary variables. Therefore, such constraints can be used to get a
+ * "binary representation" of the domain of the integer variable which will be dynamically created.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -2390,7 +2390,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 /** computes the field width such that the output file is nicely arranged */
 static
 unsigned int computeFieldWidth(
-   unsigned int             width              /**< required width */
+   unsigned int          width               /**< required width */
    )
 {
    width = MAX(8, width);

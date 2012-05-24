@@ -73,6 +73,30 @@ extern "C" {
 
 #endif
 
+#ifdef SCIP_STATISTIC
+
+/** executes command only if SCIP_STATISTIC flag is set */
+#define SCIPstatistic(x)                        x
+
+/** prints a statistic message if SCIP_STATISTIC flag is set */
+#define SCIPstatisticMessage                printf("[%s:%d] statistic: ", __FILE__, __LINE__); printf
+
+/** executes printf command only if SCIP_STATISTIC flag is set */
+#define SCIPstatisticPrintf                 printf
+
+#else
+
+/** executes command only if SCIP_STATISTIC flag is set */
+#define SCIPstatistic(x)                        /**/
+
+/** prints a statistic message if SCIP_STATISTIC flag is set */
+#define SCIPstatisticMessage                while( FALSE ) printf
+
+/** executes printf command only if SCIP_STATISTIC flag is set */
+#define SCIPstatisticPrintf                 while( FALSE ) printf
+
+#endif
+
 
 /** Creates a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
@@ -94,7 +118,7 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
 /** captures message handler */
 extern
 void SCIPmessagehdlrCapture(
-   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler, or NULL */
    );
 
 /** releases message handler */

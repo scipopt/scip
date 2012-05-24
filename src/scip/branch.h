@@ -79,14 +79,14 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
 extern
 SCIP_RETCODE SCIPbranchcandGetExternCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_VAR***           externcands,         /**< pointer to store the array of external branching candidates, or NULL */
-   SCIP_Real**           externcandssol,      /**< pointer to store the array of external candidate solution values, or NULL */
-   SCIP_Real**           externcandsscore,    /**< pointer to store the array of external candidate scores, or NULL */
-   int*                  nexterncands,        /**< pointer to store the number of external branching candidates, or NULL */
-   int*                  nprioexterncands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  nprioexternbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
-   int*                  nprioexternints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls     /**< pointer to store the number of implicit integer candidates with maximal priority, 
+   SCIP_VAR***           externcands,        /**< pointer to store the array of external branching candidates, or NULL */
+   SCIP_Real**           externcandssol,     /**< pointer to store the array of external candidate solution values, or NULL */
+   SCIP_Real**           externcandsscore,   /**< pointer to store the array of external candidate scores, or NULL */
+   int*                  nexterncands,       /**< pointer to store the number of external branching candidates, or NULL */
+   int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
                                               *   or NULL */
    );
 

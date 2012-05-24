@@ -729,7 +729,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
             continue;
          }
 
-      } while( FALSE );
+      }
+      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -4630,12 +4631,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 /** tightens bounds on a variable to given interval */
 static
 SCIP_RETCODE propagateBoundsTightenVar(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_VAR*             var,               /**< variable which bounds to tighten */
-   SCIP_INTERVAL         bounds,            /**< new bounds */
-   SCIP_CONS*            cons,              /**< constraint that is propagated */
-   SCIP_RESULT*          result,            /**< pointer where to update the result of the propagation call */
-   int*                  nchgbds            /**< buffer where to add the the number of changed bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to tighten */
+   SCIP_INTERVAL         bounds,             /**< new bounds */
+   SCIP_CONS*            cons,               /**< constraint that is propagated */
+   SCIP_RESULT*          result,             /**< pointer where to update the result of the propagation call */
+   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
    )
 {
    SCIP_Bool infeas;
@@ -4956,8 +4957,8 @@ SCIP_RETCODE propagateBounds(
          *result = propresult;
          success = TRUE;
       }
-
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -5610,10 +5611,12 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA*     consdata;
    int                c;
    SCIP_Bool          changed;
    SCIP_Bool          upgraded;
+#ifndef NDEBUG
+   SCIP_CONSDATA*     consdata;
+#endif
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
@@ -5635,25 +5638,22 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
-
       /* make sure variable fixations have been resolved */
       SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
       assert(!upgraded);
 
+#ifndef NDEBUG
+      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      assert(consdata != NULL);
+
       assert(consdata->f != NULL);
       assert(SCIPexprtreeGetNVars(consdata->f) == 2);
       assert(consdata->z == NULL || SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
+#endif
 
       /* tell SCIP that we have something nonlinear */
-      if( SCIPconsIsEnabled(conss[c]) )
-      {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-            SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
-            SCIPmarkContinuousNonlinearitiesPresent(scip);
-      }
+      if( SCIPconsIsAdded(conss[c]) )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;

@@ -135,11 +135,11 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 /** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 extern
 SCIP_RETCODE SCIPincludeQuadconsUpgrade(
-   SCIP*                   scip,               /**< SCIP data structure */
-   SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),    /**< method to call for upgrading quadratic constraint */
-   int                     priority,           /**< priority of upgrading method */
-   SCIP_Bool               active,             /**< should the upgrading method be active by default? */
-   const char*             conshdlrname        /**< name of the constraint handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),  /**< method to call for upgrading quadratic constraint */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method be active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    );
 
 /** Creates and captures a quadratic constraint.
@@ -252,8 +252,8 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
    );
 
 /** Adds a linear coefficient for a quadratic variable.
- * variable need to have been added as quadratic variable before
- * @see SCIPaddQuadVarQuadratic
+ *
+ * Variable will be added with square coefficient 0.0 if not existing yet.
  */
 extern
 SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
@@ -264,8 +264,8 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
    );
 
 /** Adds a square coefficient for a quadratic variable.
- * variable need to have been added as quadratic variable before
- * @see SCIPaddQuadVarQuadratic
+ *
+ * Variable will be added with linear coefficient 0.0 if not existing yet.
  */
 extern
 SCIP_RETCODE SCIPaddSquareCoefQuadratic(
@@ -276,8 +276,9 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    );
 
 /** Adds a bilinear term to a quadratic constraint.
- * The variables of the bilinear term must have been added before.
- * The variables need to be different.
+ *
+ * Variables will be added with linear and square coefficient 0.0 if not existing yet.
+ * If variables are equal, only the square coefficient of the variable is updated.
  */
 extern
 SCIP_RETCODE SCIPaddBilinTermQuadratic(
@@ -340,8 +341,16 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Ensures that quadratic variable terms are sorted. */
+extern
+SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** Finds the position of a quadratic variable term for a given variable.
- * Note that if the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ *
+ * @note If the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
  */
 extern
 SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
@@ -416,6 +425,16 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
    SCIP_Real*            violation           /**< buffer to store violation of constraint */
    );
+
+/** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
+ *
+ * That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
+ */
+extern
+SCIP_Bool SCIPisLinearLocalQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+);
 
 /** Adds the constraint to an NLPI problem. */
 extern

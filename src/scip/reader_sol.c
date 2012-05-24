@@ -43,8 +43,8 @@
 /** reads a given SCIP solution file, problem has to be transformed in advance */
 static
 SCIP_RETCODE readSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           fname              /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname               /**< name of the input file */
    )
 {
    SCIP_SOL* sol;
@@ -195,8 +195,8 @@ SCIP_RETCODE readSol(
 /** reads a given xml solution file */
 static
 SCIP_RETCODE readXMLSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    )
 {
    SCIP_Bool unknownvariablemessage;

@@ -37,7 +37,7 @@ SCIP_RETCODE SCIPcreateMessagehdlrDefault(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
    const char*           filename,           /**< name of log file, or NULL (stdout) */
-   SCIP_Bool             quiet                /**< should screen messages be suppressed? */
+   SCIP_Bool             quiet               /**< should screen messages be suppressed? */
    );
 
 #ifdef __cplusplus

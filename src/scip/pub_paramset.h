@@ -57,10 +57,23 @@ SCIP_PARAMDATA* SCIPparamGetData(
    SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns locally defined parameter specific data */
+/** returns whether parameter is advanced */
 extern
 SCIP_Bool SCIPparamIsAdvanced(
    SCIP_PARAM*           param               /**< parameter */
+   );
+
+/** returns whether parameter is fixed */
+extern
+SCIP_Bool SCIPparamIsFixed(
+   SCIP_PARAM*           param               /**< parameter */
+   );
+
+/** sets fixing status of given parameter */
+extern
+void SCIPparamSetFixed(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
    );
 
 /** returns value of SCIP_Bool parameter */
@@ -176,7 +189,6 @@ extern
 SCIP_Bool SCIPparamIsDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
-
 
 #ifdef __cplusplus
 }

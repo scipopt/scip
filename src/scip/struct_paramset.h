@@ -109,7 +109,8 @@ struct SCIP_Param
    char*                 desc;               /**< description of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
-   SCIP_Bool             isadvanced;         /**< is this parameter an advanced parameter? */
+   unsigned int          isadvanced:1;       /**< is this parameter an advanced parameter? */
+   unsigned int          isfixed:1;          /**< is this parameter fixed? */
    SCIP_PARAMTYPE        paramtype;          /**< type of this parameter */
 };
 

@@ -350,6 +350,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
    return ((SCIP_CONFLICTHDLR*)elem2)->priority - ((SCIP_CONFLICTHDLR*)elem1)->priority;
 }
 
+/** comparison method for sorting conflict handler w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName)
+{
+   return strcmp(SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem1), SCIPconflicthdlrGetName((SCIP_CONFLICTHDLR*)elem2));
+}
+
 /** method to call, when the priority of a conflict handler was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
@@ -1173,7 +1179,7 @@ SCIP_Bool conflictsetIsRedundant(
 /** prints a conflict set to the screen */
 static
 void conflictsetPrint(
-   SCIP_CONFLICTSET*          conflictset              /**< conflict set */
+   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
    )
 {
    int i;
@@ -2406,62 +2412,60 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
    return SCIP_OKAY;
 }
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 SCIP_Real SCIPconflictGetVarLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    if( var->conflictlbcount == conflict->count )
       return var->conflictlb;
 
-   return SCIPsetInfinity(set);
+   return SCIPvarGetLbGlobal(var);;
 }
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise the global upper
+ *  bound
  */
 SCIP_Real SCIPconflictGetVarUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    if( var->conflictubcount == conflict->count )
       return var->conflictub;
 
-   return -SCIPsetInfinity(set);
+   return SCIPvarGetUbGlobal(var);
 }
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 SCIP_Real SCIPconflictGetVarRelaxedLb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    if( var->conflictlbcount == conflict->count )
       return var->conflictrelaxedlb;
 
-   return SCIPsetInfinity(set);
+   return SCIPvarGetLbGlobal(var);
 }
 
 /** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+ *  the global upper bound
  */
 SCIP_Real SCIPconflictGetVarRelaxedUb(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    if( var->conflictubcount == conflict->count )
       return var->conflictrelaxedub;
 
-   return -SCIPsetInfinity(set);
+   return SCIPvarGetUbGlobal(var);
 }
 
 /** removes and returns next conflict analysis candidate from the candidate queue */

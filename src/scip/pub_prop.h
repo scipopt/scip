@@ -39,7 +39,11 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
 
 /** compares two propagators w. r. to their presolving priority */
 extern
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol);
+
+/** comparison method for sorting propagators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName);
 
 /** gets user data of propagator */
 extern
@@ -88,6 +92,13 @@ int SCIPpropGetFreq(
 extern
 SCIP_Real SCIPpropGetSetupTime(
    SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** sets frequency of propagator */
+extern
+void SCIPpropSetFreq(
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   freq                /**< new frequency of propagator */
    );
 
 /** gets time in seconds used in this propagator */
@@ -219,6 +230,12 @@ int SCIPpropGetNChgCoefs(
 /** gets number of constraint sides changed during presolving of propagator */
 extern
 int SCIPpropGetNChgSides(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+extern
+int SCIPpropGetNPresolCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 

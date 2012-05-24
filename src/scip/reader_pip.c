@@ -607,8 +607,8 @@ SCIP_Bool isValue(
 /** returns whether the current token is an equation sense */
 static
 SCIP_Bool isSense(
-   PIPINPUT*              pipinput,           /**< PIP reading data */
-   PIPSENSE*              sense               /**< pointer to store the equation sense, or NULL */
+   PIPINPUT*             pipinput,           /**< PIP reading data */
+   PIPSENSE*             sense               /**< pointer to store the equation sense, or NULL */
    )
 {
    assert(pipinput != NULL);

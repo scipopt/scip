@@ -455,7 +455,7 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
 
 /** captures message handler */
 void SCIPmessagehdlrCapture(
-   SCIP_MESSAGEHDLR*    messagehdlr          /**< message handler, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler, or NULL */
    )
 {
    if( messagehdlr != NULL )

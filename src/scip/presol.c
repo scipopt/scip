@@ -47,6 +47,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPpresolComp)
    return ((SCIP_PRESOL*)elem2)->priority - ((SCIP_PRESOL*)elem1)->priority;
 }
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName)
+{
+   return strcmp(SCIPpresolGetName((SCIP_PRESOL*)elem1), SCIPpresolGetName((SCIP_PRESOL*)elem2));
+}
+
 /** method to call, when the priority of a presolver was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdPresolPriority)
@@ -210,6 +216,7 @@ SCIP_RETCODE SCIPpresolInit(
       presol->nupgdconss = 0;
       presol->nchgcoefs = 0;
       presol->nchgsides = 0;
+      presol->ncalls = 0;
       presol->wasdelayed = FALSE;
    }
    
@@ -466,6 +473,10 @@ SCIP_RETCODE SCIPpresolExec(
          SCIPerrorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of calls, if the presolver tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(presol->ncalls);
    }
    else
    {
@@ -694,3 +705,12 @@ int SCIPpresolGetNChgSides(
    return presol->nchgsides;
 }
 
+/** gets number of times the presolver was called and tried to find reductions */
+int SCIPpresolGetNCalls(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->ncalls;
+}

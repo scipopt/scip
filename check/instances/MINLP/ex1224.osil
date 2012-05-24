@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org"   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd" >
+  <instanceHeader>
+    <description>ex1224
+    </description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="11">
+      <var name="x1" ub=".997"/>
+      <var name="x2" ub=".9985"/>
+      <var name="x3" ub=".9988"/>
+      <var name="b4" type="B" ub="1"/>
+      <var name="b5" type="B" ub="1"/>
+      <var name="b6" type="B" ub="1"/>
+      <var name="b7" type="B" ub="1"/>
+      <var name="b8" type="B" ub="1"/>
+      <var name="b9" type="B" ub="1"/>
+      <var name="b10" type="B" ub="1"/>
+      <var name="b11" type="B" ub="1"/>
+    </variables>
+    <objectives numberOfObjectives="1">
+      <obj maxOrMin="min" name="defObj_objvar" numberOfObjCoef="0">
+      </obj>
+    </objectives>
+    <constraints numberOfConstraints="7">
+      <con name="e2" lb="0" ub="0"/>
+      <con name="e3" lb="0" ub="0"/>
+      <con name="e4" ub="0"/>
+      <con name="e5" ub="-1"/>
+      <con name="e6" ub="-1"/>
+      <con name="e7" ub="-1"/>
+      <con name="e8" ub="10"/>
+    </constraints>
+    <linearConstraintCoefficients numberOfValues="24">
+      <start>
+	<el mult="4">0</el>
+	<el mult="8" incr="3">3</el>
+      </start>
+      <rowIdx>
+	<el mult="3" incr="3">0</el>
+	<el mult="3" incr="3">0</el>
+	<el mult="3" incr="3">0</el>
+	<el>1</el>
+	<el>4</el>
+	<el>6</el>
+	<el>1</el>
+	<el>4</el>
+	<el>6</el>
+	<el>1</el>
+	<el>4</el>
+	<el>6</el>
+	<el>2</el>
+	<el mult="2" incr="1">5</el>
+	<el>2</el>
+	<el mult="2" incr="1">5</el>
+      </rowIdx>
+      <value>
+	<el>-2.30258509299405</el>
+	<el>-1</el>
+	<el>3</el>
+	<el>-1.6094379124341</el>
+	<el>-1</el>
+	<el>1</el>
+	<el>-1.89711998488588</el>
+	<el>-1</el>
+	<el>2</el>
+	<el>-2.99573227355399</el>
+	<el>-1</el>
+	<el>3</el>
+	<el>-1.6094379124341</el>
+	<el>-1</el>
+	<el>2</el>
+	<el>-1.89711998488588</el>
+	<el>-1</el>
+	<el>1</el>
+	<el>-3.91202300542815</el>
+	<el>-1</el>
+	<el>3</el>
+	<el>-2.81341071676004</el>
+	<el>-1</el>
+	<el>2</el>
+      </value>
+    </linearConstraintCoefficients>
+    <nonlinearExpressions  numberOfNonlinearExpressions="4" >
+      <nl  idx="-1">
+	<negate>
+	  <times>
+	    <times>
+	      <variable  idx="0"  coef="1"/>
+	      <variable  idx="1"  coef="1"/>
+	    </times>
+	    <variable  idx="2"  coef="1"/>
+	  </times>
+	</negate>
+      </nl>
+      <nl  idx="0">
+	<negate>
+	  <ln>
+	    <minus>
+	      <number  value="1" type="real"/>
+	      <variable  idx="0"  coef="1"/>
+	    </minus>
+	  </ln>
+	</negate>
+      </nl>
+      <nl  idx="1">
+	<negate>
+	  <ln>
+	    <minus>
+	      <number  value="1" type="real"/>
+	      <variable  idx="1"  coef="1"/>
+	    </minus>
+	  </ln>
+	</negate>
+      </nl>
+      <nl  idx="2">
+	<negate>
+	  <ln>
+	    <minus>
+	      <number  value="1" type="real"/>
+	      <variable  idx="2"  coef="1"/>
+	    </minus>
+	  </ln>
+	</negate>
+      </nl>
+    </nonlinearExpressions>
+  </instanceData>
+</osil>

@@ -248,8 +248,8 @@ struct SCIP_ConshdlrData
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
-   SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
 };
 
 /** linear constraint update method */
@@ -4182,7 +4182,7 @@ SCIP_RETCODE applyFixings(
 	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
 	    assert(activevar != NULL);
-	    SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant);
+	    SCIP_CALL( SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant) );
 	    assert(activevar != NULL);
 
 	    if( !SCIPisZero(scip, activescalar) )
@@ -4759,8 +4759,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
-            || SCIPisLbBetter(scip, newlb, lb, ub) )
+         if( !SCIPisInfinity(scip, -newlb) &&
+            ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
             SCIP_Bool activityunreliable;
             activityunreliable = SCIPisUpdateUnreliable(scip, minresactivity, consdata->lastminactivity);
@@ -4810,8 +4810,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
-            || SCIPisUbBetter(scip, newub, lb, ub) )
+         if(  !SCIPisInfinity(scip, newub) &&
+            ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
             /* check maxresactivities for reliability */
             if( SCIPisUpdateUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
@@ -6590,7 +6590,7 @@ SCIP_Bool checkEqualObjective(
 }
 
 /** check if the linear equality constraint is equal to a subset of the objective function; if so we can remove the
- *  objective coefficient and add an objective offset
+ *  objective coefficients and add an objective offset
  */
 static
 SCIP_RETCODE checkPartialObjective(
@@ -7072,8 +7072,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->lhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip, minval, maxval));
-            if( (SCIPisInfinity(scip, -lb) || SCIPisFeasGE(scip, minval, lb)) &&
-               (SCIPisInfinity(scip, ub) || SCIPisFeasLE(scip, maxval, ub)) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -7132,8 +7132,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->rhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip,minval,maxval));
-            if( (SCIPisInfinity(scip, -lb) || SCIPisFeasGE(scip, minval, lb)) &&
-               (SCIPisInfinity(scip, ub) || SCIPisFeasLE(scip, maxval, ub)) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -9962,8 +9962,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
-         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          * correctly 
+         /* an extra blank line should be printed separately since the buffer message handler only handles up to one
+          * line correctly
           */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }

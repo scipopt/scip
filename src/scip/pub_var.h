@@ -295,6 +295,15 @@ SCIP_Bool SCIPvarsHaveCommonClique(
    SCIP_Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
    );
 
+/** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
+ *  e.g. obj(x) = 1 this method returns for ~x the value -1
+ */
+extern
+SCIP_RETCODE SCIPvarGetAggregatedObj(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
+   );
+
 
 #ifndef NDEBUG
 

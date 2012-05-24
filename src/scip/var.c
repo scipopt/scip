@@ -2963,11 +2963,6 @@ SCIP_RETCODE SCIPvarAddLocks(
 	 return SCIP_INVALIDDATA;
       }
    }
-
-   assert(lockvar->nlocksdown >= 0);
-   assert(lockvar->nlocksup >= 0);
-
-   return SCIP_OKAY;
 }
 
 /** gets number of locks for rounding down */
@@ -3581,9 +3576,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize2 = 1;
    ntmpvars2 = 0;
 
-   /* use memory array allocation because it's possible to reallocate for these arrays a too big size later on, which we don't want to 
-    * keep in scip
-    */
+   /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpscalars2, tmpvarssize2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
@@ -3592,7 +3585,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpscalars, scalars, ntmpvars) );
 
    /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
-    * first, first get all corresponding variables with status loose, column, multaggr or fixed 
+    * first, first get all corresponding variables with status loose, column, multaggr or fixed
     */
    for( v = ntmpvars - 1; v >= 0; --v )
    {
@@ -3606,12 +3599,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
        */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
       assert( var != NULL );
-      
+
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
-      
+
       tmpvars[v] = var;
       tmpscalars[v] = scalar;
    }
@@ -3633,7 +3626,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    /* sort all variables again to combine equal variables later on */
    if( noldtmpvars > ntmpvars )
       SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
-   
+
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
    {
@@ -3646,7 +3639,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       if( scalar == 0 )
          continue;
-      
+
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
@@ -3711,7 +3704,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
 
             activeconstant += scalar * multconstant;
-           
+
             if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
             {
                assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
@@ -3739,7 +3732,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                tmpscalars2[v] = tmpscalars2[ntmpvars2];
             }
          }
-         
+
          for( v = 0; v < ntmpvars2; ++v )
          {
             tmpvars[ntmpvars] = tmpvars2[v];
@@ -5287,7 +5280,7 @@ void SCIPvarSetProbindex(
  */
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
-   const char*          name                /**< new name of variable */
+   const char*           name                /**< new name of variable */
    )
 {
    assert(var != NULL);
@@ -5472,8 +5465,12 @@ SCIP_RETCODE SCIPvarChgObj(
          oldobj = var->obj;
          var->obj = newobj;
 
-         /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+         /* update the number of variables with non-zero objective coefficient;
+          * we only want to do the update, if the variable is added to the problem;
+          * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
+          */
+         if( SCIPvarIsActive(var) )
+            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
 
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
@@ -5538,8 +5535,12 @@ SCIP_RETCODE SCIPvarAddObj(
          oldobj = var->obj;
          var->obj += addobj;
 
-         /* update the number of variables with non-zero objective coefficient */
-         SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+         /* update the number of variables with non-zero objective coefficient;
+          * we only want to do the update, if the variable is added to the problem;
+          * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
+          */
+         if( SCIPvarIsActive(var) )
+            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
 
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
@@ -11576,7 +11577,10 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    return SCIP_OKAY;
 }
 
-/** returns the solution value of the problem variable in the relaxation solution */
+/** returns the solution value of the problem variable in the relaxation solution
+ *
+ *  @todo Inline this function - similar to SCIPvarGetLPSol_rec.
+ */
 SCIP_Real SCIPvarGetRelaxSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -11597,7 +11601,7 @@ SCIP_Real SCIPvarGetRelaxSol(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-         return var->relaxsol;
+      return var->relaxsol;
 
    case SCIP_VARSTATUS_FIXED:
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));  /*lint !e777*/
@@ -14642,7 +14646,86 @@ SCIP_Real SCIPvarGetObj(
 
    return var->obj;
 }
-   
+
+
+/** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
+ *  e.g. obj(x) = 1 this method returns for ~x the value -1
+ */
+SCIP_RETCODE SCIPvarGetAggregatedObj(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
+   )
+{
+   SCIP_VAR* probvar = var;
+   SCIP_Real mult = 1.0;
+
+   assert(probvar != NULL);
+   assert(aggrobj != NULL);
+
+   while( probvar != NULL )
+   {
+      switch( SCIPvarGetStatus(probvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+	 (*aggrobj) = mult * SCIPvarGetObj(probvar);
+	 return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+	 assert(SCIPvarGetObj(probvar) == 0.0);
+	 (*aggrobj) = 0.0;
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( probvar->data.multaggr.nvars == 1 )
+         {
+            assert( probvar->data.multaggr.vars != NULL );
+            assert( probvar->data.multaggr.scalars != NULL );
+            assert( probvar->data.multaggr.vars[0] != NULL );
+            mult *= probvar->data.multaggr.scalars[0];
+            probvar = probvar->data.multaggr.vars[0];
+            break;
+         }
+	 else
+	 {
+	    SCIP_Real tmpobj;
+	    int v;
+
+	    (*aggrobj) = 0.0;
+
+	    for( v = probvar->data.multaggr.nvars - 1; v >= 0; --v )
+	    {
+	       SCIP_CALL( SCIPvarGetAggregatedObj(probvar->data.multaggr.vars[v], &tmpobj) );
+	       (*aggrobj) += probvar->data.multaggr.scalars[v] * tmpobj;
+	    }
+	    return SCIP_OKAY;
+	 }
+
+      case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
+         assert(probvar->data.aggregate.var != NULL);
+         mult *= probvar->data.aggregate.scalar;
+         probvar = probvar->data.aggregate.var;
+         break;
+
+      case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
+         assert(probvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(probvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(probvar->negatedvar->negatedvar == probvar);
+         mult *= -1.0;
+         probvar = probvar->negatedvar;
+         break;
+
+      default:
+	 SCIPABORT();
+	 return SCIP_INVALIDDATA; /*lint !e527*/
+      }
+   }
+
+   return SCIP_INVALIDDATA;
+}
+
 /** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_Real SCIPvarGetLbOriginal(
    SCIP_VAR*             var                 /**< original problem variable */
@@ -15410,7 +15493,7 @@ SCIP_Real SCIPbdchginfoGetRelaxedBound(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
    )
 {
-   return bdchginfo->boundtype == SCIP_BOUNDTYPE_LOWER ? bdchginfo->var->conflictrelaxedlb : bdchginfo->var->conflictrelaxedub;
+   return ((SCIP_BOUNDTYPE)(bdchginfo->boundtype) == SCIP_BOUNDTYPE_LOWER ? bdchginfo->var->conflictrelaxedlb : bdchginfo->var->conflictrelaxedub);
 }
 
 

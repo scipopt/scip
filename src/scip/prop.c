@@ -46,9 +46,15 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
 }
 
 /** compares two propagators w. r. to their priority */
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp)
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol)
 {  /*lint --e{715}*/
    return ((SCIP_PROP*)elem2)->presolpriority - ((SCIP_PROP*)elem1)->presolpriority;
+}
+
+/** comparison method for sorting propagators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName)
+{
+   return strcmp(SCIPpropGetName((SCIP_PROP*)elem1), SCIPpropGetName((SCIP_PROP*)elem2));
 }
 
 /** method to call, when the priority of a propagator was changed */
@@ -281,6 +287,7 @@ SCIP_RETCODE SCIPpropInit(
       prop->nupgdconss = 0;
       prop->nchgcoefs = 0;
       prop->nchgsides = 0;
+      prop->npresolcalls = 0;
       prop->wasdelayed = FALSE;
       prop->presolwasdelayed = FALSE;
    }
@@ -589,6 +596,10 @@ SCIP_RETCODE SCIPpropPresol(
          SCIPerrorMessage("propagator <%s> returned invalid result <%d>\n", prop->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of presolving calls, if the propagator tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(prop->npresolcalls);
    }
    else
    {
@@ -848,6 +859,18 @@ SCIP_Real SCIPpropGetSetupTime(
    return SCIPclockGetTime(prop->setuptime);
 }
 
+/** sets frequency of propagator */
+void SCIPpropSetFreq(
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   freq                /**< new frequency of propagator */
+   )
+{
+   assert(prop != NULL);
+   assert(freq >= -1);
+
+   prop->freq = freq;
+}
+
 /** gets time in seconds used in this propagator for propagation */
 SCIP_Real SCIPpropGetTime(
    SCIP_PROP*            prop                /**< propagator */
@@ -1068,6 +1091,16 @@ int SCIPpropGetNChgSides(
    return prop->nchgsides;
 }
 
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+int SCIPpropGetNPresolCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->npresolcalls;
+}
+
 /** returns the timing mask of the propagator */
 SCIP_PROPTIMING SCIPpropGetTimingmask(
    SCIP_PROP*            prop                /**< propagator */
@@ -1087,4 +1120,3 @@ SCIP_Bool SCIPpropDoesPresolve(
 
    return (prop->proppresol != NULL);
 }
-

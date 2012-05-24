@@ -36,22 +36,22 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   QSprob prob;     /**< LP struct pointer */
-   int solstat;     /**< solution status of last optimization call */
-   int previt;      /**< previous number of simplex iterations performed */
-   int rowspace;    /**< current size of internal row-related arrays */
-   char* isen;      /**< array of length rowspace */
-   double* irhs;    /**< array of rhs rowspace */
-   double* irng;    /**< array of range rowspace */
-   int* ircnt;      /**< array of count rowspace */
-   int* irbeg;      /**< array of beginning index rowspace */
-   int colspace;    /**< current size of internal column-related arrays */
-   int* iccnt;      /**< array of length colspace */
-   char* iccha;     /**< array of type colspace */
-   int tbsz;        /**< current size of tableau-related arrays */
-   double* itab;    /**< array of length tbsz */
-   char* ibas;      /**< array of length tbsz */
-   int pricing;     /**< SCIP pricing option */
+   QSprob                prob;               /**< LP struct pointer */
+   int                   solstat;            /**< solution status of last optimization call */
+   int                   previt;             /**< previous number of simplex iterations performed */
+   int                   rowspace;           /**< current size of internal row-related arrays */
+   char*                 isen;               /**< array of length rowspace */
+   double*               irhs;               /**< array of rhs rowspace */
+   double*               irng;               /**< array of range rowspace */
+   int*                  ircnt;              /**< array of count rowspace */
+   int*                  irbeg;              /**< array of beginning index rowspace */
+   int                   colspace;           /**< current size of internal column-related arrays */
+   int*                  iccnt;              /**< array of length colspace */
+   char*                 iccha;              /**< array of type colspace */
+   int                   tbsz;               /**< current size of tableau-related arrays */
+   double*               itab;               /**< array of length tbsz */
+   char*                 ibas;               /**< array of length tbsz */
+   int                   pricing;            /**< SCIP pricing option */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -139,9 +139,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -155,9 +155,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -2433,8 +2433,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2766,9 +2768,12 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715} */
-   register int i;
-   int rval = 0, ncols, nrows;
-   char* icstat=0, *irstat=0;
+   char* icstat = 0;
+   char* irstat = 0;
+   int i;
+   int ncols;
+   int nrows;
+   int rval = 0;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2803,9 +2808,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->iccnt, lpi->ircnt);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < ncols; ++i )
-      lpi->iccnt[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      /* get bounds from qsopt */
+      rval = QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub);
+      if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
+            lpi->iccnt[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->iccnt[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->iccnt[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
@@ -2865,7 +2886,7 @@ SCIP_RETCODE SCIPlpiClearState(
    assert(lpi != NULL);
 
    /**@todo implement SCIPlpiClearState() for QSopt */
-   SCIPwarningMessage(lpi->messagehdlr, "QSopt interface does not implement SCIPlpiClearState()\n");
+   SCIPerrorMessage("QSopt interface does not implement SCIPlpiClearState()\n");
 
    return SCIP_OKAY;
 }
@@ -2897,8 +2918,8 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information from a file */
 SCIP_RETCODE SCIPlpiReadState(
-   SCIP_LPI*             lpi,               /**< LP interface structure */
-   const char*           fname              /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    int rval = 0;
@@ -2920,8 +2941,8 @@ SCIP_RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
-   SCIP_LPI*             lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    QSbas bas = 0;

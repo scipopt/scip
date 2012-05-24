@@ -49,7 +49,7 @@ struct SCIP_HeurData
    int                   successfactor;      /**< number of calls per found solution that are considered as standard success, 
                                               * a higher factor causes the heuristic to be called more often 
                                               */
-   SCIP_Bool             oncepernode;         /**< should the heuristic only be called once per node? */
+   SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
 };
 
 

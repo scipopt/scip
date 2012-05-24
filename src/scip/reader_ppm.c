@@ -334,7 +334,8 @@ void printRow(
    }
 
    /* fill in white points since these variables indices do not exits in this constraint */
-   for( ; i < ntotalvars; ++i ){
+   for( ; i < ntotalvars; ++i )
+   {
       if(readerdata->rgb_ascii)
          appendLine(scip, file, readerdata, linebuffer, &linecnt, white);
       else

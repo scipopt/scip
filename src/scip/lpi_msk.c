@@ -165,7 +165,7 @@ static SCIP_RETCODE scip_checkdata(
    int gotbasicsol;
    MSKboundkeye* tbkc;
    MSKboundkeye* tbkx;
-   MSKstakeye*tskc; 
+   MSKstakeye *tskc;
    MSKstakeye* tskx;
    double* tblc;
    double* tbuc;
@@ -1698,7 +1698,7 @@ MSKrescodee filterTRMrescode(
       *termcode = res;
       if (res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM)
       {
-         SCIPmessagePrintWarning(messages, "Return code %d in [%d]\n", res, optimizecount);
+         SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
 
 #if ASSERT_ON_WARNING
          assert(0);
@@ -1809,13 +1809,13 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
 
-      MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+      MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
    }
 
 #if FORCE_MOSEK_SUMMARY
@@ -1868,7 +1868,7 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-      SCIPmessagePrintWarning("lpi->messagehdlr, Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
       
       if (lpi->termcode == MSK_RES_OK)
          lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
@@ -2133,8 +2133,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
-   SCIP_LPI*             lpi,                 /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    assert(MosekEnv != NULL); 
@@ -2180,7 +2180,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    }
 #endif
 
-   MOSEK_CALL( filterTRMrescode(&lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+   MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
@@ -3032,8 +3032,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3739,7 +3741,9 @@ SCIP_RETCODE SCIPlpiGetState(
    return SCIP_OKAY;
 }
 
-/** loads LP state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3748,6 +3752,7 @@ SCIP_RETCODE SCIPlpiSetState(
 {  /*lint --e{715}*/
    int nrows;
    int ncols;
+   int i;
 
    assert(MosekEnv != NULL); 
    assert(lpi != NULL); 
@@ -3771,7 +3776,28 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_CALL( getbase(lpi, ncols, nrows) );
 
    lpistateUnpack(lpistate, lpi->skx, lpi->skc);
-   
+
+   /* extend the basis to the current LP beyond the previously existing columns */
+   for (i = lpistate->ncols; i < ncols; ++i)
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      MOSEK_CALL( MSK_getboundslice(lpi->task, MSK_ACC_VAR, i, i, NULL, &lb, &ub) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         if ( SCIPlpiIsInfinity(lpi, REALABS(ub)) )
+            lpi->skx[i] = MSK_SK_SUPBAS;  /* variable is free (super basic) */
+         else
+            lpi->skx[i] = MSK_SK_UPR;     /* use finite upper bound */
+      }
+      else
+         lpi->skx[i] = MSK_SK_LOW;        /* use finite lower bound */
+   }
+   for (i = lpistate->nrows; i < nrows; ++i)
+      lpi->skc[i] = MSK_SK_BAS;
+
+   /* load basis information into MOSEK */
    SCIP_CALL( setbase(lpi) );
 
    SCIPdebugMessage("Store from state into task iter : %d with solsta : %d\n", lpistate->num, lpistate->solsta);

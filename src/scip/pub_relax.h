@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp);
 
+/** comparison method for sorting relaxators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPrelaxCompName);
+
 /** gets user data of relaxator */
 extern
 SCIP_RELAXDATA* SCIPrelaxGetData(

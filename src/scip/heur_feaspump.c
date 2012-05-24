@@ -98,11 +98,11 @@ struct SCIP_HeurData
 /* copies SCIP to probing SCIP and creates variable hashmap */
 static
 SCIP_RETCODE setupProbingSCIP(
-   SCIP*                 scip,                /**< SCIP data structure  */
-   SCIP**                probingscip,         /**< sub-SCIP data structure  */
-   SCIP_HASHMAP**        varmapfw,            /**< mapping of SCIP variables to sub-SCIP variables */
-   SCIP_Bool             copycuts,            /**< should all active cuts from cutpool of scip copied to constraints in subscip */
-   SCIP_Bool*            success              /**< was copying successful? */
+   SCIP*                 scip,               /**< SCIP data structure  */
+   SCIP**                probingscip,        /**< sub-SCIP data structure  */
+   SCIP_HASHMAP**        varmapfw,           /**< mapping of SCIP variables to sub-SCIP variables */
+   SCIP_Bool             copycuts,           /**< should all active cuts from cutpool of scip copied to constraints in subscip */
+   SCIP_Bool*            success             /**< was copying successful? */
    )
 {
    /* initializing the subproblem */
@@ -1068,9 +1068,16 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
+      {
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit > 0.0 && memorylimit > 0.0 )
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );

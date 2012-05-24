@@ -2408,6 +2408,32 @@ SCIP_RETCODE SCIPgetStringParam(
    return SCIP_OKAY;
 }
 
+/** fixes the value of an existing parameter */
+SCIP_RETCODE SCIPfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, name, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** unfixes the value of an existing parameter */
+SCIP_RETCODE SCIPunfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPunfixParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetChgParamFixed(scip->set, name, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing parameter */
 SCIP_RETCODE SCIPsetParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2827,7 +2853,7 @@ SCIP_RETCODE SCIPincludeReader(
 {
    SCIP_READER* reader;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether reader is already present */
    if( SCIPfindReader(scip, name) != NULL )
@@ -2903,7 +2929,7 @@ SCIP_RETCODE SCIPincludePricer(
 {
    SCIP_PRICER* pricer;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether pricer is already present */
    if( SCIPfindPricer(scip, name) != NULL )
@@ -3063,7 +3089,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
 {
    SCIP_CONSHDLR* conshdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether constraint handler is already present */
    if( SCIPfindConshdlr(scip, name) != NULL )
@@ -3137,7 +3163,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
 {
    SCIP_CONFLICTHDLR* conflicthdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether conflict handler is already present */
    if( SCIPfindConflicthdlr(scip, name) != NULL )
@@ -3224,7 +3250,7 @@ SCIP_RETCODE SCIPincludePresol(
 {
    SCIP_PRESOL* presol;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether presolver is already present */
    if( SCIPfindPresol(scip, name) != NULL )
@@ -3309,7 +3335,7 @@ SCIP_RETCODE SCIPincludeRelax(
 {
    SCIP_RELAX* relax;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether relaxation handler is already present */
    if( SCIPfindRelax(scip, name) != NULL )
@@ -3400,7 +3426,7 @@ SCIP_RETCODE SCIPincludeSepa(
 {
    SCIP_SEPA* sepa;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether separator is already present */
    if( SCIPfindSepa(scip, name) != NULL )
@@ -3495,7 +3521,7 @@ SCIP_RETCODE SCIPincludeProp(
 {
    SCIP_PROP* prop;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether propagator is already present */
    if( SCIPfindProp(scip, name) != NULL )
@@ -3602,7 +3628,7 @@ SCIP_RETCODE SCIPincludeHeur(
 {
    SCIP_HEUR* heur;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether heuristic is already present */
    if( SCIPfindHeur(scip, name) != NULL )
@@ -3686,7 +3712,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
 {
    SCIP_EVENTHDLR* eventhdlr;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether event handler is already present */
    if( SCIPfindEventhdlr(scip, name) != NULL )
@@ -3757,7 +3783,7 @@ SCIP_RETCODE SCIPincludeNodesel(
 {
    SCIP_NODESEL* nodesel;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether node selector is already present */
    if( SCIPfindNodesel(scip, name) != NULL )
@@ -3870,7 +3896,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 {
    SCIP_BRANCHRULE* branchrule;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether branching rule is already present */
    if( SCIPfindBranchrule(scip, name) != NULL )
@@ -3988,7 +4014,7 @@ SCIP_RETCODE SCIPincludeDisp(
 {
    SCIP_DISP* disp;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether display column is already present */
    if( SCIPfindDisp(scip, name) != NULL )
@@ -4079,7 +4105,7 @@ SCIP_RETCODE SCIPincludeNlpi(
    assert(scip != NULL);
    assert(nlpi != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether NLPI is already present */
    if( SCIPfindNlpi(scip, SCIPnlpiGetName(nlpi)) != NULL )
@@ -4162,7 +4188,7 @@ SCIP_RETCODE SCIPincludeExternalCodeInformation(
    assert(scip != NULL);
    assert(name != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPincludeExternalCodeInformation", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludeExternalCodeInformation", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsetIncludeExternalCode(scip->set, name, description) );
 
@@ -4731,13 +4757,13 @@ SCIP_RETCODE SCIPfreeProb(
 
 /** permutes parts of the problem data structure */
 SCIP_RETCODE SCIPpermuteProb(
-   SCIP*                 scip,              /**< SCIP data structure */
-   unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
-   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
-   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< seed value for random generator */
+   SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
    )
 {
    SCIP_VAR** vars;
@@ -5535,7 +5561,7 @@ int SCIPgetNContVars(
 /** gets number of active problem variables with a non-zero objective coefficient
  *
  *  @note In case of the original problem the number of variables is counted. In case of the transformed problem the
- *        number of variables is just return since it is stored internally
+ *        number of variables is just returned since it is stored internally
  */
 int SCIPgetNObjVars(
    SCIP*                 scip                /**< SCIP data structure */
@@ -5555,8 +5581,10 @@ int SCIPgetNObjVars(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
+#if 0 /* this is much too expensive */
       /* check that the internal count is correct */
       assert(scip->transprob->nobjvars == SCIPprobGetNObjVars(scip->transprob, scip->set));
+#endif
       return scip->transprob->nobjvars;
 
    default:
@@ -6715,6 +6743,11 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
+   if( scip->set->misc_estimexternmem )
+   {
+      scip->set->mem_externestim = SCIPgetMemUsed(scip);
+      SCIPdebugMessage("external memory usage estimated to %"SCIP_LONGINT_FORMAT" byte\n", scip->set->mem_externestim);
+   }
    return SCIP_OKAY;
 }
 
@@ -7435,9 +7468,8 @@ SCIP_RETCODE initSolve(
    /* switch stage to INITSOLVE */
    scip->set->stage = SCIP_STAGE_INITSOLVE;
 
-   /* initialize NLP if there are nonlinearities and there is someone who can make use of it and the user did not switch it off */
-   assert(!scip->set->continnonlinpresent || scip->set->nonlinearitypresent); /* if there is continuous nonlinearity, then there should be nonlinearity in general */
-   if( scip->set->nonlinearitypresent && !scip->set->nlp_disable )
+   /* initialize NLP if there are nonlinearities */
+   if( scip->set->nlpenabled && !scip->set->nlp_disable )
    {
       SCIPdebugMessage("constructing empty NLP\n");
 
@@ -7560,8 +7592,7 @@ SCIP_RETCODE freeSolve(
    {
       SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
    }
-   scip->set->continnonlinpresent = FALSE;
-   scip->set->nonlinearitypresent = FALSE;
+   scip->set->nlpenabled = FALSE;
    
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
@@ -7903,7 +7934,7 @@ SCIP_RETCODE SCIPsolve(
    SCIP_Bool statsprinted = FALSE;
    SCIP_Bool restart;
 
-   SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* if the stage is already SCIP_STAGE_SOLVED do nothing */
    if( scip->set->stage == SCIP_STAGE_SOLVED )
@@ -12515,7 +12546,7 @@ SCIP_RETCODE tightenBounds(
       /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old
        * bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds
        */
-      if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
@@ -12523,7 +12554,7 @@ SCIP_RETCODE tightenBounds(
 
          assert(tightened);
       }
-      if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
@@ -13688,7 +13719,9 @@ SCIP_RETCODE SCIPisConflictVarUsed(
    return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
 }
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -13696,11 +13729,11 @@ SCIP_Real SCIPgetConflictVarLb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarLb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarLb(scip->conflict, var);
 }
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *  upper bound
  */
 SCIP_Real SCIPgetConflictVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13709,11 +13742,11 @@ SCIP_Real SCIPgetConflictVarUb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarUb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarUb(scip->conflict, var);
 }
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 SCIP_Real SCIPgetConflictVarRelaxedLb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13722,11 +13755,11 @@ SCIP_Real SCIPgetConflictVarRelaxedLb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarRelaxedLb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarRelaxedLb(scip->conflict, var);
 }
 
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
+ *  global upper bound
  */
 SCIP_Real SCIPgetConflictVarRelaxedUb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13735,7 +13768,7 @@ SCIP_Real SCIPgetConflictVarRelaxedUb(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictGetVarRelaxedUb(scip->conflict, scip->set, var);
+   return SCIPconflictGetVarRelaxedUb(scip->conflict, var);
 }
 
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
@@ -15931,61 +15964,37 @@ SCIP_RETCODE SCIPprintRow(
  * NLP methods
  */
 
-/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
- * and that are still nonlinear after fixing all discrete variables in the CIP.
- * 
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- */ 
-void SCIPmarkContinuousNonlinearitiesPresent(
+/** returns whether the NLP relaxation has been enabled
+ *
+ * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ * To check whether an NLP is existing, use SCIPisNLPConstructed().
+ *
+ * @see SCIPenableNLP
+ */
+extern
+SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   scip->set->continnonlinpresent = TRUE;
-   scip->set->nonlinearitypresent = TRUE;
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPEnabled", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return scip->set->nlpenabled;
 }
 
-/** marks that there are constraints that are representable by nonlinear constraints
+/** marks that there are constraints that are representable by nonlinear rows
+ *
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
- * 
+ *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
- */ 
-void SCIPmarkNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPmarkNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   scip->set->nonlinearitypresent = TRUE;
-}
-
-/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
- * @see SCIPmarkContinuousNonlinearitiesPresent
  */
-SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
+extern
+void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasContinuousNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   return scip->set->continnonlinpresent;
-}
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPenableNLP", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-/** returns whether constraints representable as nonlinear rows are present
- * @see SCIPmarkNonlinearitiesPresent
- */
-SCIP_Bool SCIPhasNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNonlinearitiesPresent", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-   
-   return scip->set->nonlinearitypresent;
+   scip->set->nlpenabled = TRUE;
 }
 
 /** returns, whether an NLP has been constructed */
@@ -15996,6 +16005,27 @@ SCIP_Bool SCIPisNLPConstructed(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisNLPConstructed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return (scip->nlp != NULL);
+}
+
+/** returns whether the NLP has a continuous variable in a nonlinear term
+ */
+SCIP_Bool SCIPhasNLPContinuousNonlinearity(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp != NULL )
+   {
+      return SCIPnlpHasContinuousNonlinearity(scip->nlp);
+   }
+   else
+   {
+      SCIPerrorMessage("NLP has not been not constructed.\n");
+      SCIPABORT();
+   }
+
+   return FALSE;
 }
 
 /** gets current NLP variables along with the current number of NLP variables */
@@ -16554,7 +16584,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
 /** writes current NLP to a file */
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename             /**< file name */
+   const char*           filename            /**< file name */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -17815,8 +17845,8 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    isroot = FALSE;
    if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       isroot = TRUE;
-   SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, 
-         scip->eventqueue, scip->eventfilter, scip->lp, isroot) );
+   SCIP_CALL( SCIPsepastoreRemoveInefficaciousCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat,
+         scip->eventqueue, scip->eventfilter, scip->lp, isroot, SCIP_EFFICIACYCHOICE_LP) );
 
    return SCIP_OKAY;
 }
@@ -18035,6 +18065,36 @@ SCIP_RETCODE SCIPchgVarUbDive(
    }
 
    SCIP_CALL( SCIPvarChgUbDive(var, scip->set, scip->lp, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a row to the LP in current dive */
+SCIP_RETCODE SCIPaddRowDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   )
+{
+   SCIP_NODE* node;
+   int depth;
+
+   assert(scip != NULL);
+   assert(row != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddRowDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* get depth of current node */
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   assert(node != NULL);
+   depth = SCIPnodeGetDepth(node);
+
+   SCIP_CALL( SCIPlpAddRow(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, row, depth) );
 
    return SCIP_OKAY;
 }
@@ -18506,6 +18566,7 @@ SCIP_RETCODE solveProbingLP(
          SCIP_Bool result;
 
          mustsepa = FALSE;
+         lowerbound = -SCIPinfinity(scip);
          SCIP_CALL( SCIPpriceLoop(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,
                scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
@@ -20157,8 +20218,8 @@ SCIP_RETCODE SCIPretransformSol(
 
 /** reads a given solution file, problem has to be transformed in advance */
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -22036,7 +22097,10 @@ void printPresolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  Calls  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
+
+   /* sort presolvers w.r.t. their name */
+   SCIPsetSortPresolsName(scip->set);
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -22044,9 +22108,10 @@ void printPresolverStatistics(
       SCIP_PRESOL* presol;
       presol = scip->set->presols[i];
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpresolGetName(presol));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetSetupTime(presol),
+         SCIPpresolGetNCalls(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
          SCIPpresolGetNChgVarTypes(presol),
@@ -22058,12 +22123,14 @@ void printPresolverStatistics(
          SCIPpresolGetNChgCoefs(presol));
    }
 
-   /* presolver statistics */
+   /* sort propagators w.r.t. their name */
+   SCIPsetSortPropsName(scip->set);
+
    for( i = 0; i < scip->set->nprops; ++i )
    {
       SCIP_PROP* prop;
       prop = scip->set->props[i];
-      if( SCIPpropDoesPresolve(prop) 
+      if( SCIPpropDoesPresolve(prop)
 #if 0
          && ( SCIPpropGetNFixedVars(prop) > 0
             || SCIPpropGetNAggrVars(prop) > 0
@@ -22074,14 +22141,15 @@ void printPresolverStatistics(
             || SCIPpropGetNAddConss(prop) > 0
             || SCIPpropGetNChgSides(prop) > 0
             || SCIPpropGetNChgCoefs(prop) > 0
-            || SCIPpropGetNUpgdConss(prop) > 0) 
+            || SCIPpropGetNUpgdConss(prop) > 0)
 #endif
          )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPpropGetPresolTime(prop),
 	    SCIPpropGetSetupTime(prop),
+            SCIPpropGetNPresolCalls(prop),
             SCIPpropGetNFixedVars(prop),
             SCIPpropGetNAggrVars(prop),
             SCIPpropGetNChgVarTypes(prop),
@@ -22116,9 +22184,10 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNUpgdConss(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetSetupTime(conshdlr),
+            SCIPconshdlrGetNPresolCalls(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
             SCIPconshdlrGetNChgVarTypes(conshdlr),
@@ -22132,7 +22201,7 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          - %10d          -          - %10d          -          -          -          -          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          -      - %10d          -          - %10d          -          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
@@ -22241,6 +22310,9 @@ void printPropagatorStatistics(
    assert(scip->set != NULL);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagators        : #Propagate   #ResProp    Cutoffs    DomReds\n");
+
+   /* sort propagaters w.r.t. their name */
+   SCIPsetSortPropsName(scip->set);
 
    for( i = 0; i < scip->set->nprops; ++i )
    {
@@ -22377,7 +22449,11 @@ void printSeparatorStatistics(
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
+   /* sort separators w.r.t. their name */
+   SCIPsetSortSepasName(scip->set);
+
    for( i = 0; i < scip->set->nsepas; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
@@ -22387,6 +22463,7 @@ void printSeparatorStatistics(
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
          SCIPsepaGetNCutsFound(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
+   }
 }
 
 static
@@ -22406,13 +22483,18 @@ void printPricerStatistics(
       SCIPpricestoreGetNProbPricings(scip->pricestore),
       SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
+   /* sort pricers w.r.t. their name */
+   SCIPsetSortPricersName(scip->set);
+
    for( i = 0; i < scip->set->nactivepricers; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10d %10d\n",
          SCIPpricerGetName(scip->set->pricers[i]),
          SCIPpricerGetTime(scip->set->pricers[i]),
          SCIPpricerGetSetupTime(scip->set->pricers[i]),
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
+   }
 }
 
 static
@@ -22426,20 +22508,26 @@ void printBranchruleStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
+
+   /* sort branching rules  w.r.t. their name */
+   SCIPsetSortBranchrulesName(scip->set);
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetSetupTime(scip->set->branchrules[i]),
-         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNExternCalls(scip->set->branchrules[i])
-         ,
+         SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNExternCalls(scip->set->branchrules[i]),
+         SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
+   }
 }
 
 static
@@ -22462,15 +22550,18 @@ void printHeuristicStatistics(
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
-   SCIPsetSortHeurs(scip->set);
+   /* sort heuristics w.r.t. their names */
+   SCIPsetSortHeursName(scip->set);
 
    for( i = 0; i < scip->set->nheurs; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetSetupTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]));
+   }
 }
 
 static
@@ -22569,7 +22660,6 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f\n", (SCIP_Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
-   
 }
 
 static
@@ -22607,11 +22697,16 @@ void printRelaxatorStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls\n");
 
+   /* sort relaxators w.r.t. their name */
+   SCIPsetSortRelaxsName(scip->set);
+
    for( i = 0; i < scip->set->nrelaxs; ++i )
+   {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT"\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
+   }
 }
 
 static
@@ -23515,6 +23610,16 @@ SCIP_Longint SCIPgetMemUsed(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPmemGetUsed(scip->mem);
+}
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+SCIP_Longint SCIPgetMemExternEstim(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetMemExternEstim", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetGetMemExternEstim(scip->set);
 }
 
 /** calculate memory size for dynamically allocated arrays */

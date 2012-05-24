@@ -44,6 +44,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp)
    return ((SCIP_RELAX*)elem2)->priority - ((SCIP_RELAX*)elem1)->priority;
 }
 
+/** comparison method for sorting relaxators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPrelaxCompName)
+{
+   return strcmp(SCIPrelaxGetName((SCIP_RELAX*)elem1), SCIPrelaxGetName((SCIP_RELAX*)elem2));
+}
+
 /** method to call, when the priority of a relaxator was changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdRelaxPriority)
