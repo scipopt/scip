@@ -139,7 +139,7 @@
       - 1000*(conflictset)->validdepth)
 
 
-#define SCIP_CONFGRAPH
+/*#define SCIP_CONFGRAPH*/
 
 
 #ifdef SCIP_CONFGRAPH
