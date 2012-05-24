@@ -5798,7 +5798,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL) )
    {
@@ -6700,13 +6700,16 @@ SCIP_RETCODE SCIPtransformProb(
    
    if( nfeassols > 0 )
    {
-      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%d feasible solutions given by solution candidate storage\n", nfeassols);                    
-   } 
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
+         nfeassols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+   }
    else if( ncandsols > 0 )
    {
-      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "all solutions given by solution candidate storage are infeasible\n");                    
-   } 
-      
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "all solutions given by solution candidate storage are infeasible\n\n");
+   }
+
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -7226,8 +7229,8 @@ SCIP_RETCODE presolveRound(
             assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
             
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "feasible solution found by %s heuristic, objective value %13.6e\n",
-               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+               "feasible solution found by %s heuristic, objective value %.6e\n",
+               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
          }
       }
    }
@@ -7313,8 +7316,9 @@ SCIP_RETCODE presolve(
          assert(sol != NULL);           
          assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);  /*lint !e777*/
          
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
-            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "feasible solution found by %s heuristic, objective value %.6e\n",
+            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
       }
    }
 
@@ -7564,14 +7568,14 @@ SCIP_RETCODE initSolve(
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
    }
 
-   /* switch stage to SOLVING */
-   scip->set->stage = SCIP_STAGE_SOLVING;
-
    /* try to transform original solutions to the transformed problem space */
    if( scip->set->misc_transorigsols )
    {
       SCIP_CALL( transformSols(scip) );
    }
+
+   /* switch stage to SOLVING */
+   scip->set->stage = SCIP_STAGE_SOLVING;
 
    /* inform the transformed problem that the branch and bound process starts now */
    SCIP_CALL( SCIPprobInitSolve(scip->transprob, scip->set) );
