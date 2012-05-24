@@ -25,7 +25,6 @@
 =opt= ex1266                         16.3
 =opt= meanvarx           14.3692321148754
 =opt= tltr                  48.0666666667
-=opt= util               999.578750235364
 =opt= semicon1                        1.1
 =opt= meanvarxsc                 14.36918
 =opt= factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B 3
@@ -39,4 +38,5 @@
 =opt= j301_2                           47
 =opt= gastrans                   89.08584
 =opt= ex1224                 -0.943470548
-=opt= m3	                     37.8
+=opt= m3                             37.8
+=opt= circle                   4.57424778
