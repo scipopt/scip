@@ -655,7 +655,7 @@ SCIP_RETCODE splitProblem(
    int*                  components,         /**< array with component number for every variable */
    int                   ncomponents,        /**< number of components */
    int*                  firstvaridxpercons, /**< array with index of first variable in vars array for each constraint */
-   int*                  nsolvedprobs,       /**< number of solved subproblems */
+   int*                  nsolvedprobs,       /**< pointer to store the number of solved subproblems */
    int*                  ndeletedvars,       /**< pointer to store the number of deleted variables */
    int*                  ndeletedconss,      /**< pointer to store the number of deleted constraints */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
@@ -761,7 +761,8 @@ SCIP_RETCODE splitProblem(
          SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
          assert(!infeasible);
          assert(fixed);
-         (*ndeletedvars)++;
+         ++(*ndeletedvars);
+         ++(*nsolvedprobs);
 
          /* update statistics */
          updateStatisticsSingleVar(presoldata);
