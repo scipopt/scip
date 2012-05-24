@@ -205,6 +205,8 @@ parameters:
 - new parameter <reading/cnfreader/useobj> to state whether an artificial objective, depending on the number of clauses
   a variable appears in, should be used, by default set to FALSE, old default behavior of reader corresponds to TRUE
 - new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
+- new parameter <misc/transorigsols> by default set to TRUE, that switches whether SCIP tries to transfer original
+  solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -239,6 +241,8 @@ features:
   statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
 - new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
   SCIPgmlWriteNode() wo write to a given GML file
+- automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
+  adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
