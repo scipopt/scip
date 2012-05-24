@@ -87,9 +87,6 @@ struct ConstraintMatrix
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
    int                   nnonzs;             /**< sparsity counter */
-#ifndef NDEBUG
-   SCIP_CONS**           conss;              /**< constraints pointer */
-#endif
    SCIP_Real*            minactivity;        /**< min activity per row */
    SCIP_Real*            maxactivity;        /**< max activity per row */
    int*                  minactivityneginf;  /**< min activity negative infinity counter */
@@ -536,9 +533,6 @@ SCIP_RETCODE initMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatcnt, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nconss) );
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->conss, nconss) );
-#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->minactivity, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->maxactivity, nconss) );
@@ -573,10 +567,6 @@ SCIP_RETCODE initMatrix(
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                   SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) );
-
-#ifndef NDEBUG
-            matrix->conss[matrix->nrows - 1] = cons;
-#endif
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -609,10 +599,6 @@ SCIP_RETCODE initMatrix(
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsSetppc(scip, cons), NULL,
                   SCIPgetNVarsSetppc(scip, cons), lhs, rhs) );
-
-#ifndef NDEBUG
-            matrix->conss[matrix->nrows - 1] = cons;
-#endif
          }
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
@@ -624,10 +610,6 @@ SCIP_RETCODE initMatrix(
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
                NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip)) );
-
-#ifndef NDEBUG
-            matrix->conss[matrix->nrows - 1] = cons;
-#endif
          }
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
@@ -662,10 +644,6 @@ SCIP_RETCODE initMatrix(
                SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
                      SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
                      (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons)) );
-
-#ifndef NDEBUG
-               matrix->conss[matrix->nrows - 1] = cons;
-#endif
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -694,10 +672,6 @@ SCIP_RETCODE initMatrix(
 
                SCIP_CALL( addConstraint(scip, matrix, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
                      SCIPgetRhsVarbound(scip, cons)) );
-
-#ifndef NDEBUG
-               matrix->conss[matrix->nrows - 1] = cons;
-#endif
             }
 
             SCIPfreeBufferArray(scip, &consvals);
@@ -775,9 +749,7 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->colmatbeg));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatval));
-#ifndef NDEBUG
-      SCIPfreeBufferArray(scip, &((*matrix)->conss));
-#endif
+
       (*matrix)->nrows = 0;
       (*matrix)->ncols = 0;
       (*matrix)->nnonzs = 0;
