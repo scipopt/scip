@@ -3508,10 +3508,158 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 }
 
 
+#define HASHTABLESIZE_FACTOR 5
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreAnd NULL
+#ifdef GMLGATEPRINTING
+static
+SCIP_DECL_CONSEXITPRE(consExitpreAnd)
+{  /*lint --e{715}*/
+   SCIP_HASHMAP* hashmap;
+   FILE* gmlfile;
+   char fname[SCIP_MAXSTRLEN];
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** activeconsvars;
+   SCIP_VAR* activevar;
+   int* varnodeids;
+   SCIP_VAR** vars;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int ncontvars;
+   int v;
+   int c;
+   unsigned int resid;
+   unsigned int varid;
+   unsigned int id = 1;
 
+   /* no and-constraints available */
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   nvars = SCIPgetNVars(scip);
+
+   /* no variables left anymore */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnodeids, nvars) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, &ncontvars) );
+
+   /* open gml file */
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "and-gates%p.gml", scip);
+   gmlfile = fopen(fname, "w");
+
+   if( gmlfile == NULL )
+   {
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
+      SCIPABORT();
+   }
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
+
+   /* write starting of gml file */
+   SCIPgmlOpen(gmlfile, TRUE);
+
+   /* walk over all and-constraints */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      cons = conss[c];
+
+      /* only handle active constraints */
+      if( !SCIPconsIsActive(cons) )
+	 continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* only handle constraints which have operands */
+      if( consdata->nvars == 0 )
+	 continue;
+
+      assert(consdata->vars != NULL);
+      assert(consdata->resvar != NULL);
+
+      /* get active variable of resultant */
+      activevar = SCIPvarGetProbvar(consdata->resvar);
+
+      /* check if we already found this variables */
+      resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      if( resid == 0 )
+      {
+	 resid = id;
+	 ++id;
+	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+
+	 /* write new gml node for new resultant */
+	 SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+      }
+
+      /* copy operands to get problem variables for */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activeconsvars, consdata->vars, consdata->nvars) );
+
+      /* get problem variables of operands */
+      SCIPvarsGetProbvar(activeconsvars, consdata->nvars);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+	 /* check if we already found this variables */
+	 varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+	 if( varid == 0 )
+	 {
+	    varid = id;
+	    ++id;
+	    SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+
+	    /* write new gml node for new operand */
+	    SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
+	 }
+	 /* write gml arc between resultant and operand */
+	 SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
+      }
+
+      /* free temporary memory for active constraint variables */
+      SCIPfreeBufferArray(scip, &activeconsvars);
+   }
+
+   /* write all remaining variables as nodes */
+#if 0
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      activevar = SCIPvarGetProbvar(vars[v]);
+
+      varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      if( varid == 0 )
+      {
+	 varid = id;
+	 ++id;
+	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+
+	 /* write new gml node for new operand */
+	 SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+      }
+   }
+#endif
+
+   /* free the variable mapping hash map */
+   SCIPhashmapFree(&hashmap);
+
+   SCIPgmlClose(gmlfile);
+
+   fclose(gmlfile);
+
+   SCIPfreeBufferArray(scip, &varnodeids);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitpreAnd NULL
+#endif
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolAnd NULL
