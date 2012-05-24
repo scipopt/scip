@@ -5420,7 +5420,7 @@ int SCIPbstComp(
    assert(node2 != NULL);
    assert(tree->comparer != NULL);
 
-   return (*tree->comparer)(node1, node2);
+   return (*tree->comparer)(node1->key, node2->key);
 }
 
 /** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
