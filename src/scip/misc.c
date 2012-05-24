@@ -5114,20 +5114,27 @@ void bstnodeFreeLeaf(
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
+#if 0
    /* remove reference from parent node */
    if( (*node)->parent != NULL )
    {
+      assert(*node != NULL);
+
       assert((*node)->parent->left == *node || ((*node)->parent->right == *node));
 
       if( (*node)->parent->left == *node )
+      {
          (*node)->parent->left = NULL;
+      }
       else
       {
          assert((*node)->parent->right == *node);
          (*node)->parent->right = NULL;
       }
    }
+#endif
 
+   assert(*node != NULL);
    BMSfreeBlockMemory(tree->blkmem, node);
    assert(*node == NULL);
 }
