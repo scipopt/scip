@@ -40,6 +40,63 @@
 extern "C" {
 #endif
 
+/*
+ * GML graphical printing methods
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
+ */
+
+/**@defgroup GMLgraph GML graphical printing
+ *
+ * @{
+ */
+
+/** writes a node section to the given graph file */
+extern
+void SCIPgmlWriteNode(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
+   );
+
+/** writes an edge section to the given graph file */
+extern
+void SCIPgmlWriteEdge(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   );
+
+/** writes an arc section to the given graph file */
+extern
+void SCIPgmlWriteArc(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   );
+
+/** writes the starting line to a GML graph file, does not open a file */
+extern
+void SCIPgmlOpen(
+   FILE*                 file,               /**< file to write to */
+   SCIP_Bool             directed            /**< is the graph directed */
+   );
+
+/** writes the ending lines to a GML graph file, does not close a file */
+extern
+void SCIPgmlClose(
+   FILE*                 file                /**< file to close */
+   );
+
+/**@} */
+
+
 /** @defgroup DataStructures Data Structures
  *
  *  Below you find a list of available data structures

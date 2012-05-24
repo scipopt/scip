@@ -236,6 +236,8 @@ features:
   difficult instances (no guarantees)
 - new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
   statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
+- new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
+  SCIPgmlWriteNode() wo write to a given GML file
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

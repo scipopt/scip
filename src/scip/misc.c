@@ -37,6 +37,182 @@
 #include "scip/struct_misc.h"
 
 
+/*
+ * GML graphical printing methods
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
+ */
+
+#define GMLNODEWIDTH 120.0
+#define GMLNODEHEIGTH 30.0
+#define GMLFONTSIZE 13
+#define GMLNODETYPE "rectangle"
+#define GMLNODEFILLCOLOR "#ff0000"
+#define GMLEDGECOLOR "black"
+#define GMLNODEBORDERCOLOR "#000000"
+
+
+/** writes a node section to the given graph file */
+void SCIPgmlWriteNode(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
+   )
+{
+   assert(file != NULL);
+   assert(label != NULL);
+
+   fprintf(file, "  node\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    id      %u\n", id);
+   fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      w       %g\n", GMLNODEWIDTH);
+   fprintf(file, "      h       %g\n", GMLNODEHEIGTH);
+
+   if( nodetype != NULL )
+      fprintf(file, "      type    \"%s\"\n", nodetype);
+   else
+      fprintf(file, "      type    \"%s\"\n", GMLNODETYPE);
+
+   if( fillcolor != NULL )
+      fprintf(file, "      fill    \"%s\"\n", fillcolor);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLNODEFILLCOLOR);
+
+   if( bordercolor != NULL )
+      fprintf(file, "      outline \"%s\"\n", bordercolor);
+   else
+      fprintf(file, "      outline \"%s\"\n", GMLNODEBORDERCOLOR);
+
+   fprintf(file, "    ]\n");
+   fprintf(file, "    LabelGraphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      text      \"%s\"\n", label);
+   fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+   fprintf(file, "      fontName  \"Dialog\"\n");
+   fprintf(file, "      anchor    \"c\"\n");
+   fprintf(file, "    ]\n");
+   fprintf(file, "  ]\n");
+}
+
+/** writes an edge section to the given graph file */
+void SCIPgmlWriteEdge(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   /* fprintf(file, "      arrow     \"both\"\n"); */
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes an arc section to the given graph file */
+void SCIPgmlWriteArc(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   fprintf(file, "      targetArrow     \"standard\"\n");
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes the starting line to a GML graph file, does not open a file */
+void SCIPgmlOpen(
+   FILE*                 file,               /**< file to write to */
+   SCIP_Bool             directed            /**< is the graph directed */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "graph\n");
+   fprintf(file, "[\n");
+   fprintf(file, "  hierarchic      1\n");
+
+   if( directed )
+      fprintf(file, "  directed        1\n");
+}
+
+/** writes the ending lines to a GML graph file, does not close a file */
+void SCIPgmlClose(
+   FILE*                 file                /**< file to close */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "]\n");
+}
+
 
 /*
  * Priority Queue
@@ -5953,7 +6129,7 @@ SCIP_Longint SCIPcalcBinomCoef(
    /* simple case m == 2 */
    if( m == 2 )
    {
-      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 )
+      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
 	 return (n*(n-1)/2); /*lint !e647*/
       else
 	 return -1;

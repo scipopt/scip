@@ -139,6 +139,7 @@
       - 1000*(conflictset)->validdepth)
 
 
+#define SCIP_CONFGRAPH
 
 
 #ifdef SCIP_CONFGRAPH
@@ -164,26 +165,7 @@ void confgraphWriteNode(
 {
    assert(confgraphfile != NULL);
 
-   fprintf(confgraphfile, "  node\n");
-   fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    id      %d\n", (int)(size_t)idptr);
-   fprintf(confgraphfile, "    label   \"%s\"\n", label);
-   fprintf(confgraphfile, "    graphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      w       120.0\n");
-   fprintf(confgraphfile, "      h       30.0\n");
-   fprintf(confgraphfile, "      type    \"%s\"\n", nodetype);
-   fprintf(confgraphfile, "      fill    \"%s\"\n", fillcolor);
-   fprintf(confgraphfile, "      outline \"%s\"\n", bordercolor);
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "    LabelGraphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      text      \"%s\"\n", label);
-   fprintf(confgraphfile, "      fontSize  13\n");
-   fprintf(confgraphfile, "      fontName  \"Dialog\"\n");
-   fprintf(confgraphfile, "      anchor    \"c\"\n");
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "  ]\n");
+   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
 }
 
 /** writes an edge section to the conflict graph file */
@@ -196,17 +178,11 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
-
-   fprintf(confgraphfile, "  edge\n");
-   fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    source  %d\n", (int)(size_t)source);
-   fprintf(confgraphfile, "    target  %d\n", (int)(size_t)target);
-   fprintf(confgraphfile, "    graphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      fill    \"%s\"\n", color);
-   fprintf(confgraphfile, "      targetArrow     \"standard\"\n");
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "  ]\n");
+#if 1
+   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#else
+   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#endif
 }
 
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
@@ -220,20 +196,19 @@ void confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
-   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%d.gml", conflict->count);
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
    printf("storing conflict graph in file <%s>\n", fname);
+
    confgraphfile = fopen(fname, "w");
+
    if( confgraphfile == NULL )
    {
-      SCIPerrorMessage("cannot open conflict graph file <%s>\n", fname);
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
    }
 
-   fprintf(confgraphfile, "graph\n");
-   fprintf(confgraphfile, "[\n");
-   fprintf(confgraphfile, "  hierarchic      1\n");
-   fprintf(confgraphfile, "  directed        1\n");
- 
+   SCIPgmlOpen(confgraphfile, TRUE);
+
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
@@ -247,9 +222,10 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
-      fprintf(confgraphfile, "]\n");
-      
+      SCIPgmlClose(confgraphfile);
+
       fclose(confgraphfile);
+
       confgraphfile = NULL;
       confgraphnconflictsets = 0;
    }
@@ -2423,7 +2399,7 @@ SCIP_Real SCIPconflictGetVarLb(
    if( var->conflictlbcount == conflict->count )
       return var->conflictlb;
 
-   return SCIPvarGetLbGlobal(var);;
+   return SCIPvarGetLbGlobal(var);
 }
 
 /** returns the conflict upper bound if the variable is present in the current conflict set; otherwise the global upper
