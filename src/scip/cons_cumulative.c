@@ -8453,10 +8453,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* create opening of the GML format */
-   fprintf(file, "graph\n");
-   fprintf(file, "[\n");
-   fprintf(file, "  hierarchic      1\n");
-   fprintf(file, "  directed        1\n");
+   SCIPgmlOpen(file,  TRUE);
 
    for( v = 0; v < nvars; ++v )
    {
@@ -8474,26 +8471,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
       else
          (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#ff0000");
 
-      fprintf(file, "  node\n");
-      fprintf(file, "  [\n");
-      fprintf(file, "    id      %d\n", (int)(size_t)var);
-      fprintf(file, "    label   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "    graphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      w       120.0\n");
-      fprintf(file, "      h       30.0\n");
-      fprintf(file, "      type    \"%s\"\n", "rectangle");
-      fprintf(file, "      fill    \"%s\"\n", color);
-      fprintf(file, "      outline \"%s\"\n", "#000000");
-      fprintf(file, "    ]\n");
-      fprintf(file, "    LabelGraphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      text   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "      fontSize  13\n");
-      fprintf(file, "      fontName  \"Dialog\"\n");
-      fprintf(file, "      anchor    \"c\"\n");
-      fprintf(file, "    ]\n");
-      fprintf(file, "  ]\n");
+      SCIPgmlWriteNode(file, (unsigned int)(size_t)var, SCIPvarGetName(var), "rectangle", color, NULL);
    }
 
    for( v = 0; v < nvars; ++v )
@@ -8512,16 +8490,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
       {
          if( SCIPhashtableExists(vars, (void*)vbdvars[b]) )
          {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    target  %d\n", (int)(size_t)var);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
+            SCIPgmlWriteArc(file, (unsigned int)(size_t)vbdvars[b], (unsigned int)(size_t)var, NULL, NULL);
          }
       }
 
@@ -8533,23 +8502,14 @@ SCIP_RETCODE SCIPconsdataVisualize(
       {
          if( SCIPhashtableExists(vars, vbdvars[b]) )
          {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)var);
-            fprintf(file, "    target  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
+            SCIPgmlWriteArc(file, (unsigned int)(size_t)var, (unsigned int)(size_t)vbdvars[b], NULL, NULL);
          }
       }
 #endif
    }
 
    /* create closing of the GML format */
-   fprintf(file, "]\n");
+   SCIPgmlClose(file);
 
    /* close file */
    fclose(file);
