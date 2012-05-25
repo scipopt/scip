@@ -39,9 +39,6 @@
  *
  * TODOS:
  * - normalize demands and capacities of each cumulative constraint
- * - find dual reductions (take locks of variables)
- * - cumulative constraint shall consider time-intervals: [a,b]
- *   and only check those points in time that are included
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -104,8 +101,8 @@
 #define DEFAULT_SEPAOLD                 TRUE /**< shall old sepa algo be applied? */
 
 /* propagation */
-#define DEFAULT_USECORETIMES            TRUE /**< should core-times be propagated? */
-#define DEFAULT_USECHECKEDGEFINDING     TRUE /**< should edge finding checking be used? */
+#define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
+#define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -184,8 +181,8 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             usebinvars;         /**< should the binary variables be used? */
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
-   SCIP_Bool             usecoretimes;       /**< should core-times be propagated? */
-   SCIP_Bool             usecheckedgefinding;/**< should edge finding checking be performed */
+   SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
+   SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -4093,7 +4090,7 @@ SCIP_RETCODE propagateCumulativeCondition(
       return SCIP_OKAY;
 
    /* propagate the job cores until nothing else can be detected */
-   if( conshdlrdata->usecoretimes )
+   if( conshdlrdata->coretimes )
    {
       SCIP_CALL( propagateCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
             nchgbds, initialized, explanation, cutoff) );
@@ -4102,7 +4099,7 @@ SCIP_RETCODE propagateCumulativeCondition(
          return SCIP_OKAY;
    }
 
-   if( conshdlrdata->usecheckedgefinding )
+   if( conshdlrdata->overload )
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
@@ -8064,20 +8061,21 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/coretimes", "should core-times be propagated (time tabling)?",
+         &conshdlrdata->coretimes, FALSE, DEFAULT_CORETIMES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/overload", "should edge finding be used to detect an overload?",
+         &conshdlrdata->overload, FALSE, DEFAULT_OVERLOAD, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
          &conshdlrdata->usebinvars, FALSE, DEFAULT_USEBINVARS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usecoretimes", "should coretimes be propagated?",
-         &conshdlrdata->usecoretimes, FALSE, DEFAULT_USECORETIMES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/localcuts", "should cuts be added only locally?",
          &conshdlrdata->localcuts, FALSE, DEFAULT_LOCALCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usecovercuts", "should covering cuts be added every node?",
          &conshdlrdata->usecovercuts, FALSE, DEFAULT_USECOVERCUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usecheckedgefinding", "should edge finding checking be used?",
-         &conshdlrdata->usecheckedgefinding, FALSE, DEFAULT_USECHECKEDGEFINDING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/cutsasconss",
          "should the cumulative constraint create cuts as knapsack constraints?",
