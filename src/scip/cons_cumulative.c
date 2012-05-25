@@ -2163,7 +2163,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
    SCIP_VAR*             infervar,           /**< inference variable */
    int                   inferdemand,        /**< demand of the inference variable */
    int                   inferpeak,          /**< time point which causes the propagation */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
    SCIP_VAR* var;
@@ -2224,6 +2225,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
       {
          capacity -= demands[j];
          reported[j] = TRUE;
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
       }
    }
 
@@ -2288,6 +2292,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
          SCIP_CALL( relaxVarUb(scip, var, aggrpeak, bdchgidx) );
 
          capacity -= demands[j];
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
       }
    }
 
@@ -2311,6 +2318,7 @@ SCIP_RETCODE respropCumulativeCondition(
    INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
@@ -2375,7 +2383,7 @@ SCIP_RETCODE respropCumulativeCondition(
       }
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, bdchgidx) );
+            infervar, inferdemand, inferpeak, bdchgidx, explanation) );
 
       (*result) = SCIP_SUCCESS;
 
@@ -2997,7 +3005,8 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    int                   inferduration,      /**< duration of the start time variable */
    int                   inferdemand,        /**< demand of the start time variable */
    int                   inferpeak,          /**< profile preak which causes the infeasibilty */
-   SCIP_Bool*            initialized         /**< pointer to store if the conflict analysis was initialized */
+   SCIP_Bool*            initialized,        /**< pointer to store if the conflict analysis was initialized */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
    SCIPdebugMessage("detected infeasibility due to adding a core to the core resource profile\n");
@@ -3012,14 +3021,13 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, NULL) );
+            infervar, inferdemand, inferpeak, NULL, explanation) );
 
       /* add both bound of the inference variable since these biuld the core which we could not inserted */
       SCIP_CALL( relaxVarLb(scip, infervar, inferpeak - inferduration + 1, NULL) );
       SCIP_CALL( relaxVarUb(scip, infervar, inferpeak, NULL) );
 
       *initialized = TRUE;
-
    }
 
    return SCIP_OKAY;
@@ -3043,6 +3051,7 @@ SCIP_RETCODE coretimesUpdateLb(
    int                   pos,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            infeasible          /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3127,9 +3136,12 @@ SCIP_RETCODE coretimesUpdateLb(
 
          /* use conflict analysis to analysis the core insertion which was infeasible */
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-               var, duration, demand, newlb-1, initialized) );
+               var, duration, demand, newlb-1, initialized, explanation) );
 
          *infeasible = TRUE;
+
+         if( explanation != NULL )
+            explanation[pos] = TRUE;
 
          break;
       }
@@ -3178,6 +3190,7 @@ SCIP_RETCODE coretimesUpdateUb(
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   pos,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            infeasible          /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3313,6 +3326,7 @@ SCIP_RETCODE propagateCoretimes(
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3406,9 +3420,13 @@ SCIP_RETCODE propagateCoretimes(
 
             /* use conflict analysis to analysis the core insertion which was infeasible */
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-                  var, duration, demand, SCIPprofileGetTime(profile, pos), initialized) );
+                  var, duration, demand, SCIPprofileGetTime(profile, pos), initialized, explanation) );
 
             *cutoff = TRUE;
+
+            if( explanation != NULL )
+               explanation[pos] = TRUE;
+
             break;
          }
 
@@ -3459,13 +3477,13 @@ SCIP_RETCODE propagateCoretimes(
 
          /* first try to updates the earliest start time */
          SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, cons,
-               profile, j, nchgbds, initialized, cutoff) );
+               profile, j, nchgbds, initialized, explanation, cutoff) );
 
          if( *cutoff )
             break;
 
          SCIP_CALL( coretimesUpdateUb(scip, nvars, vars, durations, demands, capacity, cons,
-               profile, j, nchgbds, cutoff) );
+               profile, j, nchgbds, explanation, cutoff) );
 
          if( *cutoff )
             break;
@@ -3492,9 +3510,13 @@ SCIP_RETCODE propagateCoretimes(
             {
                /* use conflict analysis to analysis the core insertion which was infeasible */
                SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-                     var, duration, demand, SCIPprofileGetTime(profile, pos), initialized) );
+                     var, duration, demand, SCIPprofileGetTime(profile, pos), initialized, explanation) );
 
                *cutoff = TRUE;
+
+               if( explanation != NULL )
+                  explanation[pos] = TRUE;
+
                break;
             }
 
@@ -3698,6 +3720,7 @@ SCIP_RETCODE checkOverload(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -4029,6 +4052,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -4049,7 +4073,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    if( conshdlrdata->usecoretimes )
    {
       SCIP_CALL( propagateCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, cutoff) );
+            nchgbds, initialized, explanation, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
@@ -4059,7 +4083,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, initialized, cutoff) );
+            cons, initialized, explanation, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
@@ -4101,7 +4125,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
          consdata->hmin, consdata->hmax, cons,
-         nchgbds, &redundant, &initialized, cutoff) );
+         nchgbds, &redundant, &initialized, NULL, cutoff) );
 
    if( redundant )
    {
@@ -7674,7 +7698,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8363,6 +8387,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated */
    int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
    )
 {
@@ -8392,7 +8417,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          nvars, vars, durations, demands, capacity,  hmin, hmax, cons,
-         nchgbds, &redundant, initialized, cutoff) );
+         nchgbds, &redundant, initialized, explanation, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -8409,11 +8434,12 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, explanation, result) );
 
    return SCIP_OKAY;
 }
