@@ -1270,8 +1270,6 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
-   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
-   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
