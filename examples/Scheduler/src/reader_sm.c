@@ -549,7 +549,7 @@ SCIP_DECL_READERCOPY(readerCopySm)
 }
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeSch NULL
+#define readerFreeSm NULL
 
 
 /** problem reading method of reader */
@@ -615,7 +615,7 @@ SCIP_DECL_READERREAD(readerReadSm)
 
 
 /** problem writing method of reader */
-#define readerWriteSch NULL
+#define readerWriteSm NULL
 
 
 /*
@@ -628,13 +628,17 @@ SCIP_RETCODE SCIPincludeReaderSm(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create sch reader data */
    readerdata = NULL;
 
    /* include sch reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopySm, readerFreeSch, readerReadSm, readerWriteSch, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySm) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSm) );
 
    /* add reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

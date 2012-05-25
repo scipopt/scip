@@ -702,17 +702,19 @@ SCIP_RETCODE SCIPincludeHeurInit(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create init primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
+   heur = NULL;
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyInit,
-         heurFreeInit, heurInitInit, heurExitInit,
-         heurInitsolInit, heurExitsolInit, heurExecInit,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecInit, heurdata) );
+   assert(heur != NULL);
+
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyInit) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeInit) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

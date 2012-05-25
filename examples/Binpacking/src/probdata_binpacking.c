@@ -362,8 +362,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* create event handler if it does not exist yet */
    if( SCIPfindEventhdlr(scip, EVENTHDLR_NAME) == NULL )
    {
-      SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecAddedVar, NULL) );
+      SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecAddedVar, NULL) );
    }
 
    /* create problem in SCIP */

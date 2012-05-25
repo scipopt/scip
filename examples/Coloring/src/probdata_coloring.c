@@ -663,10 +663,8 @@ SCIP_RETCODE SCIPcreateProbColoring(
    probdata->nstablesets = 0;
 
    /* include variable deleted event handler into SCIP */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, eventFreeProbdatavardeleted, eventInitProbdatavardeleted, eventExitProbdatavardeleted,
-         eventInitsolProbdatavardeleted, eventExitsolProbdatavardeleted, eventDeleteProbdatavardeleted, eventExecProbdatavardeleted,
-         NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecProbdatavardeleted, NULL) );
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 

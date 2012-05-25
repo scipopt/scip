@@ -8037,8 +8037,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecCumulative, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCumulative, NULL) );
 
    /* create cumulative constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );

@@ -428,14 +428,18 @@ SCIP_RETCODE SCIPincludeReaderCsol(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create csol reader data */
    readerdata = NULL;
    
    /* include csol reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCsol,
-         readerFreeCsol, readerReadCsol, readerWriteCsol, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
+         readerdata) );
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCsol) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCsol) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCsol) );
 
    return SCIP_OKAY;
 }

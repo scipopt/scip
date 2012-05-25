@@ -718,6 +718,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrData;
+   SCIP_CONSHDLR* conshdlr;
 
    SCIPdebugMessage("Including graph storage constraint handler.\n");
 
@@ -726,25 +727,26 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    conshdlrData->nstack = 0;
    conshdlrData->maxstacksize = 25;
 
+   conshdlr = NULL;
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyStoreGraph, consFreeStoreGraph, consInitStoreGraph, consExitStoreGraph,
-         consInitpreStoreGraph, consExitpreStoreGraph, consInitsolStoreGraph, consExitsolStoreGraph,
-         consDeleteStoreGraph, consTransStoreGraph, consInitlpStoreGraph,
-         consSepalpStoreGraph, consSepasolStoreGraph, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph,
-         consPropStoreGraph, consPresolStoreGraph, consRespropStoreGraph, consLockStoreGraph,
-         consActiveStoreGraph, consDeactiveStoreGraph,
-         consEnableStoreGraph, consDisableStoreGraph, consDelVarsStoreGraph,
-         consPrintStoreGraph, consCopyStoreGraph, consParseStoreGraph,
-         consGetVarsStoreGraph, consGetNVarsStoreGraph, conshdlrData) );
+         CONSHDLR_PROP_TIMING, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph, consLockStoreGraph,
+         conshdlrData) );
+   assert(conshdlr != NULL);
+
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveStoreGraph) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStoreGraph, CONSHDLR_PROPFREQ) );
 
    return SCIP_OKAY;
 }
-
 
 /** creates and captures a storeGraph constraint, uses knowledge of the B&B-father*/
 SCIP_RETCODE COLORcreateConsStoreGraph(
