@@ -71,7 +71,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    SCIP_SOL* zerosol;                   /* solution where all variables are set to zero */
    SCIP_SOL* locksol;                   /* solution where all variables are set to the bound with the fewer locks */
 
-   SCIP_Real infinity;
+   SCIP_Real large;
 
    int nvars;
    int nbinvars;
@@ -94,8 +94,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &locksol, heur) );
 
-   infinity = SCIPinfinity(scip);
-   infinity = MIN(100000.0, infinity);
+   /* determine large value to set variables to */
+   large = SCIPinfinity(scip);
+   large = MIN(0.1 / SCIPfeastol(scip), large);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
@@ -114,15 +115,15 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
 
-      /* set infinite bounds to sufficient large value */
+      /* set bounds to sufficient large value */
       if( SCIPisInfinity(scip, -lb) )
-         lb = MIN(-infinity, ub);
+         lb = MIN(-large, ub);
       if( SCIPisInfinity(scip, ub) )
       {
          SCIP_Real tmp;
 
          tmp = SCIPvarGetLbLocal(vars[i]);
-         ub = MAX(tmp, infinity);
+         ub = MAX(tmp, large);
       }
 
       SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], lb) );
