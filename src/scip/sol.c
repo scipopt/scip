@@ -1752,6 +1752,7 @@ SCIP_RETCODE SCIPsolPrintRay(
  */
 
 #undef SCIPsolGetOrigin
+#undef SCIPsolIsOriginal
 #undef SCIPsolGetOrigObj
 #undef SCIPsolGetTime
 #undef SCIPsolGetNodenum
