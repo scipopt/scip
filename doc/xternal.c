@@ -4642,7 +4642,7 @@
  * used. This can be a general events, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
  * way.
  *
- * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an even and
+ * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an event and
  * SCIPdropEvent() to release this event later.
  *
  * \code
