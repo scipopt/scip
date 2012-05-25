@@ -8915,6 +8915,9 @@ SCIP_RETCODE exitPresolve(
    SCIP_VAR** vars;
    int nvars;
    int v;
+#ifndef NDEBUG
+   int nusedbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -8960,9 +8963,17 @@ SCIP_RETCODE exitPresolve(
    *unbounded = isunbounded;
    *infeasible = isinfeasible;
 
+   /* exitPresolve() might be called during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
+    */
+#ifndef NDEBUG
+   nusedbuffers = SCIPbufferGetNUsed(scip->set->buffer);
+#endif
+
    /* inform plugins that the presolving is finished, and perform final modifications */
    SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, unbounded, infeasible) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -8986,7 +8997,7 @@ SCIP_RETCODE exitPresolve(
 
    /* exit presolving */
    SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
    
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
