@@ -1301,6 +1301,13 @@ SCIP_RETCODE checkSolution(
  * Callback methods of constraint handler
  */
 
+/** creates the handler for countsols constraints and includes it in SCIP */
+static
+SCIP_RETCODE includeConshdlrCountsols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             dialogs             /**< sould count dialogs be added */
+   );
+
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
@@ -1309,8 +1316,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* call inclusion method of branchrule */
-   SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
+   /* call inclusion method of constraint handler and do not add counting dialogs */
+   SCIP_CALL( includeConshdlrCountsols(scip, FALSE) );
 
    *valid = TRUE;
 
@@ -2511,8 +2518,10 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
  */
 
 /** creates the handler for countsols constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrCountsols(
-   SCIP*                 scip                /**< SCIP data structure */
+static
+SCIP_RETCODE includeConshdlrCountsols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             dialogs             /**< sould count dialogs be added */
    )
 {
    /* create countsol constraint handler data */
@@ -2566,7 +2575,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
 
    /* create the interactive shell dialogs for the counting process  */
-   SCIP_CALL( createCountDialog(scip) );
+   if( dialogs )
+   {
+      SCIP_CALL( createCountDialog(scip) );
+   }
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_SOLS_NAME, DISP_SOLS_DESC, DISP_SOLS_HEADER, SCIP_DISPSTATUS_OFF,
@@ -2581,6 +2593,16 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %d.%d.%d", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR, __GNU_MP_VERSION_PATCHLEVEL);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** creates the handler for countsols constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrCountsols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( includeConshdlrCountsols(scip, TRUE) );
 
    return SCIP_OKAY;
 }
