@@ -226,13 +226,17 @@ SCIP_RETCODE SCIPincludeReaderFix(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create fix reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include fix reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyFix, readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyFix) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadFix) );
 
    return SCIP_OKAY;
 }

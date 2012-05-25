@@ -838,17 +838,23 @@ SCIP_RETCODE SCIPincludeHeurDins(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create DINS primal heuristic data */
+   /* create Dins primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyDins,
-         heurFreeDins, heurInitDins, heurExitDins,
-         heurInitsolDins, heurExitsolDins, heurExecDins,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDins, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDins) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDins) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolDins) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDins) );
 
    /* add DINS primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",

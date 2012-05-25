@@ -217,7 +217,7 @@ SCIP_RETCODE addObjCutoff(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid */
-   SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip),
          FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -255,6 +255,8 @@ int getIterationsLeft(
    SCIP_Longint          itlimit             /**< LP iteration limit (-1: no limit) */
    )
 {
+   SCIP_Longint itsleft;
+
    assert(scip != NULL);
    assert(nolditerations >= 0);
    assert(itlimit == -1 || itlimit >= 0);
@@ -266,9 +268,12 @@ int getIterationsLeft(
    }
    else
    {
-      SCIPdebugMessage("iterations left: %d\n",
-         (int) MIN(MAX(itlimit - ( SCIPgetNLPIterations(scip) - nolditerations ), 0), INT_MAX));
-      return (int) MIN(MAX(itlimit - ( SCIPgetNLPIterations(scip) - nolditerations ), 0), INT_MAX);
+      itsleft = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
+      itsleft = MAX(itsleft, 0);
+      itsleft = MIN(itsleft, INT_MAX);
+
+      SCIPdebugMessage("iterations left: %d\n", (int) itsleft);
+      return (int) itsleft;
    }
 }
 
@@ -1008,7 +1013,10 @@ SCIP_RETCODE applyObbt(
    /**@todo maybe endDive, startDive, addObjCutoff to restore old LP basis information here */
 
    if( itlimit > 0 )
-      itlimit = MAX(itlimit - ( SCIPgetNLPIterations(scip) - nolditerations ), 0);
+   {
+      itlimit = itlimit - ( SCIPgetNLPIterations(scip) - nolditerations );
+      itlimit = MAX(itlimit, 0);
+   }
 
    /* try to find new bounds and store them in the bound data structure */
    SCIP_CALL( findNewBounds(scip, propdata, itlimit) );
@@ -1046,15 +1054,21 @@ unsigned int getScore(
    assert(maxnlcount >= nlcount);
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
-   score = nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0;
+   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 );
    switch( SCIPvarGetType(bound->var) )
    {
    case SCIP_VARTYPE_INTEGER:
       score += 1;
+      break;
    case SCIP_VARTYPE_IMPLINT:
       score += 2;
+      break;
    case SCIP_VARTYPE_CONTINUOUS:
       score += 3;
+      break;
+   case SCIP_VARTYPE_BINARY:
+      score += 4;
+      break;
    default:
       break;
    }
@@ -1227,8 +1241,11 @@ SCIP_RETCODE initBounds(
    {
       if( varIsInteresting(scip, vars[i], nlcount[i]) )
       {
+         BOUND** bdaddress;
+
          /* create lower bound */
-         SCIP_CALL( SCIPallocMemory(scip, &(propdata->bounds[bdidx])) );
+         bdaddress = &(propdata->bounds[bdidx]);
+         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_LOWER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;
@@ -1238,7 +1255,8 @@ SCIP_RETCODE initBounds(
          bdidx++;
 
          /* create upper bound */
-         SCIP_CALL( SCIPallocMemory(scip, &(propdata->bounds[bdidx])) );
+         bdaddress = &(propdata->bounds[bdidx]);
+         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_UPPER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;

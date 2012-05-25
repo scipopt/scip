@@ -312,7 +312,8 @@ void transformVariable(
    colpos = SCIPcolGetLPPos(col);
 
    assert(0 <= colpos && colpos < matrix->ncols);
-   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE);
+   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE
+      || matrix->transformstatus[colpos] == TRANSFORMSTATUS_FREE);
 
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
@@ -697,7 +698,6 @@ void checkViolations(
    assert(violatedrows != NULL);
    assert(violatedrowpos != NULL);
    assert(nviolatedrows != NULL);
-   assert(nredundantrows != NULL);
 
    /* get RHS, LHS and number of the problem rows */
    rhs = matrix->rhs;
@@ -706,7 +706,8 @@ void checkViolations(
 
    SCIPdebugMessage("Entering violation check for %d rows! \n", nrows);
    *nviolatedrows = 0;
-   *nredundantrows = 0;
+   if( nredundantrows != NULL )
+      *nredundantrows = 0;
 
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
@@ -724,7 +725,7 @@ void checkViolations(
       assert((violatedrowpos[i] == -1 && SCIPisFeasGE(scip, rhs[i], 0.0) && SCIPisFeasGE(scip, -lhs[i], 0.0))
          || (violatedrowpos[i] >= 0 &&(SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0))));
 
-      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) )
+      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) && nredundantrows != NULL)
          ++(*nredundantrows);
    }
 }
@@ -1041,6 +1042,34 @@ void updateTransformation(
 
       if( !SCIPisInfinity(scip, -lb) )
          matrix->upperbounds[varindex] = ub - lb;
+   }
+
+   if( status == TRANSFORMSTATUS_FREE )
+   {
+      /* in case of a free transform status, if one of the bounds has become finite, we want
+       * to transform this variable to a variable with a lowerbound or a negated transform status */
+      if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
+      {
+         SCIP_COL** lpcols;
+         SCIP_VAR* var;
+
+         lpcols = SCIPgetLPCols(scip);
+
+         assert(lpcols != NULL);
+         var = SCIPcolGetVar(lpcols[varindex]);
+
+         assert(SCIPvarIsIntegral(var));
+         transformVariable(scip, var, matrix);
+
+         /* violations have to be rechecked for all rows
+          * todo : change this and only update violations of rows in which this variable
+          *        appears
+          */
+         checkViolations(scip, matrix, violatedrows, violatedrowpos, nviolatedrows, NULL);
+
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
+         assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+      }
    }
 
    /* if the bound, by which the variable was shifted, has changed, deltashift is larger than zero, which requires
@@ -1816,18 +1845,23 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create shiftandpropagate primal heuristic data */
+   /* create Shiftandpropagate primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->randseed = DEFAULT_RANDSEED;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyShiftandpropagate,
-         heurFreeShiftandpropagate, heurInitShiftandpropagate, heurExitShiftandpropagate,
-         heurInitsolShiftandpropagate, heurExitsolShiftandpropagate, heurExecShiftandpropagate,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShiftandpropagate) );
 
    /* add shiftandpropagate primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nproprounds", "The number of propagation rounds used for each propagation",

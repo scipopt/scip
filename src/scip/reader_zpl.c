@@ -1424,14 +1424,19 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 #ifdef WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
    char extcodename[SCIP_MAXSTRLEN];
 
    /* create zpl reader data */
    readerdata = NULL;
-
+   reader = NULL;
    /* include zpl reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyZpl, readerFreeZpl, readerReadZpl, readerWriteZpl, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
+         readerdata) );
+   assert(reader != NULL);
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyZpl) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadZpl) );
 
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

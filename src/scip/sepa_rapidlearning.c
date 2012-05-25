@@ -670,17 +670,22 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create rapidlearning separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyRapidlearning, sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
-         sepaInitsolRapidlearning, sepaExitsolRapidlearning,
          sepaExeclpRapidlearning, sepaExecsolRapidlearning,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyRapidlearning) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeRapidlearning) );
 
    /* add rapidlearning separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyconflicts",

@@ -1037,19 +1037,26 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 /** creates the octane primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
    SCIP_HEURDATA* heurdata;
-   /* create octane primal heuristic data */
+   SCIP_HEUR* heur;
+
+   /* create Octane primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyOctane,
-         heurFreeOctane, heurInitOctane, heurExitOctane,
-         heurInitsolOctane, heurExitsolOctane, heurExecOctane,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOctane, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOctane) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOctane) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitOctane) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitOctane) );
 
    /* add octane primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

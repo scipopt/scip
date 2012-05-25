@@ -262,7 +262,7 @@
 =best= var_con5    278.1449
 =opt= waste        598.9192
 =best= water3      907.0165
-=best= water4      910.8822
+=best= water4      907.017
 =best= waterful2  1012.6093
 =best= waters      913.7757
 =best= watersbp    913.7757
@@ -1139,7 +1139,7 @@
 =opt= 10bar4              5647.06129
 =opt= 25bar                387.072605
 =opt= 72bar                 75.9048516
-=best= 90bar               105.478654
+=opt= 90bar                 97.537389
 
 =opt= RSyn0805H           1296.1207
 =opt= RSyn0805M           1296.1207

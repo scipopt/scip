@@ -3379,10 +3379,8 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
-   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
@@ -3390,8 +3388,11 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* reset propagator data structure */
    propdataReset(scip, propdata);
 
-   /* get event handler for bound change events */
-   propdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   propdata->eventhdlr = NULL;
+   /* include event handler for gloabl bound change events and variable added event (in case of pricing) */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecPseudoobj, NULL) );
+
    if( propdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for pseudo objective propagator not found\n");
@@ -3399,10 +3400,17 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    }
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyPseudoobj, propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, propInitprePseudoobj, propExitprePseudoobj,
-         propInitsolPseudoobj, propExitsolPseudoobj, propPresolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecPseudoobj, propRespropPseudoobj,
          propdata) );
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyPseudoobj) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreePseudoobj) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolPseudoobj) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolPseudoobj) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolPseudoobj) );
 
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

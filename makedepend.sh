@@ -36,10 +36,10 @@ do
         then
             make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=false nlpidepend
 
-            if [ -e lib/ipopt.*.opt ]
+            if ls lib/ipopt.*.opt > /dev/null 2>&1;
             then
                 make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true IPOPTOPT=opt nlpidepend
-            elif [ -e lib/ipopt.*.dbg ]
+            elif ls lib/ipopt.*.dbg > /dev/null 2>&1;
             then
                 make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true IPOPTOPT=dbg nlpidepend
             fi

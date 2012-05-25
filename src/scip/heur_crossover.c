@@ -1052,17 +1052,23 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Crossover primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyCrossover,
-         heurFreeCrossover, heurInitCrossover, heurExitCrossover,
-         heurInitsolCrossover, heurExitsolCrossover, heurExecCrossover,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCrossover, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCrossover) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCrossover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitCrossover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitCrossover) );
 
    /* add crossover primal heuristic parameters */
 

@@ -4470,7 +4470,7 @@
  * We now explain how users can add their own event handlers. We give the explanation for creating your own
  * source file for each additional event handler. Of course, you can collect different event handlers in one source file
  * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
- * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
+ * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the existing
  * types of events.
  *
  * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
@@ -4642,7 +4642,7 @@
  * used. This can be a general events, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
  * way.
  *
- * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an even and
+ * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an event and
  * SCIPdropEvent() to release this event later.
  *
  * \code

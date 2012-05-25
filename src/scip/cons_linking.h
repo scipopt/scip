@@ -87,6 +87,25 @@ SCIP_RETCODE SCIPcreateConsLinking(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a linking constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinking(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinking() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR**            binvars,            /**< binary variables, or NULL */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   offset              /**< offset of the binary variable representation */
+   );
+
 
 /** checks if for the given integer variable a linking constraint exists */
 extern

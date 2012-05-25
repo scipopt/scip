@@ -283,17 +283,21 @@ SCIP_RETCODE SCIPincludeHeurFixandinfer(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create fixandinfer primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+    /* create Fixandinfer primal heuristic data */
+    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyFixandinfer,
-         heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer,
-         heurInitsolFixandinfer, heurExitsolFixandinfer, heurExecFixandinfer,
-         heurdata) );
+    /* include primal heuristic */
+    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFixandinfer, heurdata) );
+
+    assert(heur != NULL);
+
+    /* set non-NULL pointers to callback methods */
+    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFixandinfer) );
+    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFixandinfer) );
 
    /* fixandinfer heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

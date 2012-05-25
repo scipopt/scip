@@ -452,14 +452,19 @@ SCIP_RETCODE SCIPincludeReaderSol(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create sol reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include sol reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopySol, readerFreeSol, readerReadSol, readerWriteSol, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySol) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSol) );
 
    return SCIP_OKAY;
 }

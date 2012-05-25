@@ -583,12 +583,22 @@ BEGIN {
          probtype = "   --";
       else if( lincons < cons )
       {
-	 if( cons == lincons+quadcons )  
-	    probtype = "MIQCP";
-	 else if( cons == lincons+quadcons+nonlincons )  
-	    probtype = "MINLP";
-	 else
-	    probtype = "  CIP";
+         if( cons == lincons+quadcons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  QCP";
+            else
+               probtype = "MIQCP";
+         }
+         else if( cons == lincons+quadcons+nonlincons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  NLP";
+            else
+               probtype = "MINLP";
+         }
+         else
+            probtype = "  CIP";
       }
       else if( binvars == 0 && intvars == 0 )
          probtype = "   LP";

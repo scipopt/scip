@@ -6355,28 +6355,47 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create absolute power constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyAbspower,
-         consFreeAbspower, consInitAbspower, consExitAbspower,
-         consInitpreAbspower, consExitpreAbspower, consInitsolAbspower, consExitsolAbspower,
-         consDeleteAbspower, consTransAbspower, consInitlpAbspower,
-         consSepalpAbspower, consSepasolAbspower, consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower,
-         consPropAbspower, consPresolAbspower, consRespropAbspower, consLockAbspower,
-         consActiveAbspower, consDeactiveAbspower,
-         consEnableAbspower, consDisableAbspower, consDelvarsAbspower,
-         consPrintAbspower, consCopyAbspower, consParseAbspower,
-         consGetVarsAbspower, consGetNVarsAbspower,
+         consEnfolpAbspower, consEnfopsAbspower, consCheckAbspower, consLockAbspower,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveAbspower) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAbspower, consCopyAbspower) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAbspower) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableAbspower) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAbspower) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAbspower) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAbspower) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAbspower) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAbspower) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAbspower) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAbspower) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAbspower, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropAbspower) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAbspower, consSepasolAbspower, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAbspower) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdAbspower, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
@@ -6427,12 +6446,12 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
+         processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+         processNewSolutionEvent, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6530,6 +6549,35 @@ SCIP_RETCODE SCIPcreateConsAbspower(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsAbspower(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsAbspower() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name, x, z, exponent, xoffset, zcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

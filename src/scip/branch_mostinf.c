@@ -382,13 +382,18 @@ SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_BRANCHRULE* branchrule;
+
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyMostinf,
-         branchFreeMostinf, branchInitMostinf, branchExitMostinf, branchInitsolMostinf, branchExitsolMostinf, 
-         branchExeclpMostinf, branchExecextMostinf, branchExecpsMostinf,
-         NULL) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, NULL) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyMostinf) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpMostinf) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextMostinf) );
 
    return SCIP_OKAY;
 }

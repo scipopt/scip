@@ -40,7 +40,7 @@
  * -#  Put all the given bound changes to a priority queue, which is ordered,
  *     such that the bound change that was applied last due to branching or deduction
  *     is at the top of the queue. The variables in the queue are always active
- *     problem variables. Because binary variables are prefered over general integer 
+ *     problem variables. Because binary variables are preferred over general integer
  *     variables, integer variables are put on the priority queue prior to the binary 
  *     variables. Create an empty conflict set.
  * -#  Remove the top bound change b from the priority queue.
@@ -57,12 +57,12 @@
  *            level as b, and were deduced earlier than b.
  *     -#  Otherwise, the bound change b was a branching decision or a deduction with
  *         missing inference reason, or the inference constraint's validity is more local
- *         than the one of the conflict detecing constraint.
+ *         than the one of the conflict detecting constraint.
  *          - If a the bound changed corresponds to a binary variable, add it or its 
  *            negation to the conflict set, depending on which of them is currently fixed to
  *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
  *            altogether at the same time).
- *          - Otherwise put the bound change iinto the conflict set.
+ *          - Otherwise put the bound change into the conflict set.
  *         Note that if the bound change was a branching, all deduced bound changes
  *         remaining in the priority queue have smaller inference depth level than b,
  *         since deductions are always applied after the branching decisions. However,
@@ -139,6 +139,7 @@
       - 1000*(conflictset)->validdepth)
 
 
+/*#define SCIP_CONFGRAPH*/
 
 
 #ifdef SCIP_CONFGRAPH
@@ -164,26 +165,7 @@ void confgraphWriteNode(
 {
    assert(confgraphfile != NULL);
 
-   fprintf(confgraphfile, "  node\n");
-   fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    id      %d\n", (int)(size_t)idptr);
-   fprintf(confgraphfile, "    label   \"%s\"\n", label);
-   fprintf(confgraphfile, "    graphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      w       120.0\n");
-   fprintf(confgraphfile, "      h       30.0\n");
-   fprintf(confgraphfile, "      type    \"%s\"\n", nodetype);
-   fprintf(confgraphfile, "      fill    \"%s\"\n", fillcolor);
-   fprintf(confgraphfile, "      outline \"%s\"\n", bordercolor);
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "    LabelGraphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      text      \"%s\"\n", label);
-   fprintf(confgraphfile, "      fontSize  13\n");
-   fprintf(confgraphfile, "      fontName  \"Dialog\"\n");
-   fprintf(confgraphfile, "      anchor    \"c\"\n");
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "  ]\n");
+   SCIPgmlWriteNode(confgraphfile, (unsigned int)(size_t)idptr, label, nodetype, fillcolor, bordercolor);
 }
 
 /** writes an edge section to the conflict graph file */
@@ -196,17 +178,11 @@ void confgraphWriteEdge(
 {
    assert(confgraphfile != NULL);
 
-
-   fprintf(confgraphfile, "  edge\n");
-   fprintf(confgraphfile, "  [\n");
-   fprintf(confgraphfile, "    source  %d\n", (int)(size_t)source);
-   fprintf(confgraphfile, "    target  %d\n", (int)(size_t)target);
-   fprintf(confgraphfile, "    graphics\n");
-   fprintf(confgraphfile, "    [\n");
-   fprintf(confgraphfile, "      fill    \"%s\"\n", color);
-   fprintf(confgraphfile, "      targetArrow     \"standard\"\n");
-   fprintf(confgraphfile, "    ]\n");
-   fprintf(confgraphfile, "  ]\n");
+#if 1
+   SCIPgmlWriteArc(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#else
+   SCIPgmlWriteEdge(confgraphfile, (unsigned int)(size_t)source, (unsigned int)(size_t)target, NULL, color);
+#endif
 }
 
 /** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
@@ -220,20 +196,19 @@ void confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
-   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%d.gml", conflict->count);
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.gml", conflict, conflict->count);
    printf("storing conflict graph in file <%s>\n", fname);
+
    confgraphfile = fopen(fname, "w");
+
    if( confgraphfile == NULL )
    {
-      SCIPerrorMessage("cannot open conflict graph file <%s>\n", fname);
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
       SCIPABORT();
    }
 
-   fprintf(confgraphfile, "graph\n");
-   fprintf(confgraphfile, "[\n");
-   fprintf(confgraphfile, "  hierarchic      1\n");
-   fprintf(confgraphfile, "  directed        1\n");
- 
+   SCIPgmlOpen(confgraphfile, TRUE);
+
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
    confgraphcurrentbdchginfo = NULL;
@@ -247,9 +222,10 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
-      fprintf(confgraphfile, "]\n");
-      
+      SCIPgmlClose(confgraphfile);
+
       fclose(confgraphfile);
+
       confgraphfile = NULL;
       confgraphnconflictsets = 0;
    }
@@ -649,6 +625,72 @@ void SCIPconflicthdlrSetData(
    assert(conflicthdlr != NULL);
 
    conflicthdlr->conflicthdlrdata = conflicthdlrdata;
+}
+
+/** set copy method of conflict handler */
+void SCIPconflicthdlrSetCopy(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of the conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictcopy = conflictcopy;
+}
+
+/** set destructor of conflict handler */
+void SCIPconflicthdlrSetFree(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictfree = conflictfree;
+}
+
+/** set initialization method of conflict handler */
+void SCIPconflicthdlrSetInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialization method conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictinit = conflictinit;
+}
+
+/** set deinitialization method of conflict handler */
+void SCIPconflicthdlrSetExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialization method conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictexit = conflictexit;
+}
+
+/** set solving process initialization method of conflict handler */
+void SCIPconflicthdlrSetInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictinitsol = conflictinitsol;
+}
+
+/** set solving process deinitialization method of conflict handler */
+void SCIPconflicthdlrSetExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflictexitsol = conflictexitsol;
 }
 
 /** gets name of conflict handler */
@@ -2423,7 +2465,7 @@ SCIP_Real SCIPconflictGetVarLb(
    if( var->conflictlbcount == conflict->count )
       return var->conflictlb;
 
-   return SCIPvarGetLbGlobal(var);;
+   return SCIPvarGetLbGlobal(var);
 }
 
 /** returns the conflict upper bound if the variable is present in the current conflict set; otherwise the global upper

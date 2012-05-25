@@ -543,16 +543,22 @@ SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create bounds reader data */
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    initEventhdlrdata(eventhdlrdata);
 
+   eventhdlr = NULL;
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyBoundwriting, eventFreeBoundwriting, eventInitBoundwriting, eventExitBoundwriting,
-         eventInitsolBoundwriting, eventExitsolBoundwriting, eventDeleteBoundwriting, eventExecBoundwriting,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecBoundwriting, eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyBoundwriting) );
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeBoundwriting) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitBoundwriting) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitBoundwriting) );
 
    /* add boundwriting parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,

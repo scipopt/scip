@@ -2250,8 +2250,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
          propExitsolGenvbounds, propPresolGenvbounds, propExecGenvbounds, propRespropGenvbounds, propdata) );
 
    /* include event handler */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         eventExecGenvbounds, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );
 
    return SCIP_OKAY;
 }

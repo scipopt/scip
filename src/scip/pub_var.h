@@ -357,6 +357,27 @@ void SCIPvarSetDeltransData(
    SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
    );
 
+/** sets method to copy this variable into sub-SCIPs */
+extern
+void SCIPvarSetCopyData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARCOPY     ((*varcopy))        /**< copy method of the variable */
+   );
+
+/** sets the initial flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetInitial(
+   SCIP_VAR*            var,
+   SCIP_Bool            initial
+   );
+
+/** sets the removable flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetRemovable(
+   SCIP_VAR*            var,
+   SCIP_Bool            removable
+   );
+
 /** gets status of variable */
 extern
 SCIP_VARSTATUS SCIPvarGetStatus(

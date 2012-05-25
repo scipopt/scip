@@ -722,7 +722,7 @@ public:
       assert(m_sense == sense());
 
       SPxEquiliSC* scaler = NULL;
-      SPxMainSM* simplifier = NULL;
+      SPxSimplifier* simplifier = NULL;
       SPxLP origlp;
       SPxSimplifier::Result result = SPxSimplifier::OKAY;
 

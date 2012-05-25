@@ -3508,10 +3508,158 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 }
 
 
+#define HASHTABLESIZE_FACTOR 5
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreAnd NULL
+#ifdef GMLGATEPRINTING
+static
+SCIP_DECL_CONSEXITPRE(consExitpreAnd)
+{  /*lint --e{715}*/
+   SCIP_HASHMAP* hashmap;
+   FILE* gmlfile;
+   char fname[SCIP_MAXSTRLEN];
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** activeconsvars;
+   SCIP_VAR* activevar;
+   int* varnodeids;
+   SCIP_VAR** vars;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int ncontvars;
+   int v;
+   int c;
+   unsigned int resid;
+   unsigned int varid;
+   unsigned int id = 1;
 
+   /* no and-constraints available */
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   nvars = SCIPgetNVars(scip);
+
+   /* no variables left anymore */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnodeids, nvars) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, &ncontvars) );
+
+   /* open gml file */
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "and-gates%p.gml", scip);
+   gmlfile = fopen(fname, "w");
+
+   if( gmlfile == NULL )
+   {
+      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
+      SCIPABORT();
+   }
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
+
+   /* write starting of gml file */
+   SCIPgmlOpen(gmlfile, TRUE);
+
+   /* walk over all and-constraints */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      cons = conss[c];
+
+      /* only handle active constraints */
+      if( !SCIPconsIsActive(cons) )
+	 continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* only handle constraints which have operands */
+      if( consdata->nvars == 0 )
+	 continue;
+
+      assert(consdata->vars != NULL);
+      assert(consdata->resvar != NULL);
+
+      /* get active variable of resultant */
+      activevar = SCIPvarGetProbvar(consdata->resvar);
+
+      /* check if we already found this variables */
+      resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      if( resid == 0 )
+      {
+	 resid = id;
+	 ++id;
+	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+
+	 /* write new gml node for new resultant */
+	 SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+      }
+
+      /* copy operands to get problem variables for */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activeconsvars, consdata->vars, consdata->nvars) );
+
+      /* get problem variables of operands */
+      SCIPvarsGetProbvar(activeconsvars, consdata->nvars);
+
+      for( v = consdata->nvars - 1; v >= 0; --v )
+      {
+	 /* check if we already found this variables */
+	 varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+	 if( varid == 0 )
+	 {
+	    varid = id;
+	    ++id;
+	    SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+
+	    /* write new gml node for new operand */
+	    SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
+	 }
+	 /* write gml arc between resultant and operand */
+	 SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
+      }
+
+      /* free temporary memory for active constraint variables */
+      SCIPfreeBufferArray(scip, &activeconsvars);
+   }
+
+   /* write all remaining variables as nodes */
+#if 0
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      activevar = SCIPvarGetProbvar(vars[v]);
+
+      varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      if( varid == 0 )
+      {
+	 varid = id;
+	 ++id;
+	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+
+	 /* write new gml node for new operand */
+	 SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+      }
+   }
+#endif
+
+   /* free the variable mapping hash map */
+   SCIPhashmapFree(&hashmap);
+
+   SCIPgmlClose(gmlfile);
+
+   fclose(gmlfile);
+
+   SCIPfreeBufferArray(scip, &varnodeids);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitpreAnd NULL
+#endif
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolAnd NULL
@@ -4257,32 +4405,40 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecAnd,
-         NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecAnd, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
-
-   /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyAnd,
-         consFreeAnd, consInitAnd, consExitAnd,
-         consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
-         consDeleteAnd, consTransAnd, consInitlpAnd,
-         consSepalpAnd, consSepasolAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd,
-         consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
-         consActiveAnd, consDeactiveAnd,
-         consEnableAnd, consDisableAnd,
-         consDelvarsAnd, consPrintAnd, consCopyAnd, consParseAnd,
-         consGetVarsAnd, consGetNVarsAnd, conshdlrdata) );
+         consEnfolpAnd, consEnfopsAnd, consCheckAnd, consLockAnd,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsAnd) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAnd) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAnd) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAnd) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAnd) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAnd, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropAnd) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
 
    /* add and constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -4379,6 +4535,32 @@ SCIP_RETCODE SCIPcreateConsAnd(
 
    return SCIP_OKAY;
 }
+
+/** creates and captures an and constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsAnd(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsAnd() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicAnd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars                /**< array with operator variables of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsAnd(scip, cons, name, resvar, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 
 /** gets number of variables in and constraint */
 int SCIPgetNVarsAnd(

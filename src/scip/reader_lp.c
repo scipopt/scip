@@ -3158,15 +3158,18 @@ SCIP_RETCODE SCIPincludeReaderLp(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create lp reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyLp,
-         readerFreeLp, readerReadLp, readerWriteLp, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadLp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteLp) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

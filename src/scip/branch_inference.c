@@ -304,17 +304,22 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create inference branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyInference,
-         branchFreeInference, branchInitInference, branchExitInference, branchInitsolInference, branchExitsolInference, 
-         branchExeclpInference, branchExecextInference, branchExecpsInference,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyInference) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeInference) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpInference) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsInference) );
 
    /* inference branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

@@ -175,16 +175,20 @@ SCIP_RETCODE SCIPincludeRelaxXyz(
    )
 {
    SCIP_RELAXDATA* relaxdata;
+   SCIP_RELAX* relax;
 
    /* create xyz relaxator data */
    relaxdata = NULL;
    /* TODO: (optional) create relaxator specific data here */
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, 
-         relaxCopyXyz,
-         relaxFreeXyz, relaxInitXyz, relaxExitXyz, relaxInitsolXyz, relaxExitsolXyz, relaxExecXyz,
-         relaxdata) );
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
+         relaxExecXyz, relaxdata) );
+
+   assert(relax != NULL);
+
+   /* set non-fundamental callbacks via setter functions */
+   /* todo (optional) set relaxator callbacks with SCIPsetRelaxCALLBACKTYPE() here */
 
    /* add xyz relaxator parameters */
    /* TODO: (optional) add relaxator specific parameters with SCIPaddTypeParam() here */

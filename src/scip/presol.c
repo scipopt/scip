@@ -511,6 +511,72 @@ void SCIPpresolSetData(
    presol->presoldata = presoldata;
 }
 
+/** sets copy method of presolver */
+void SCIPpresolSetCopy(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolcopy = presolcopy;
+}
+
+/** sets destructor method of presolver */
+void SCIPpresolSetFree(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))     /**< destructor of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolfree = presolfree;
+}
+
+/** sets initialization method of presolver */
+void SCIPpresolSetInit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT ((*presolinit))     /**< initialize presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolinit = presolinit;
+}
+
+/** sets deinitialization method of presolver */
+void SCIPpresolSetExit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT ((*presolexit))     /**< deinitialize presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolexit = presolexit;
+}
+
+/** sets solving process initialization method of presolver */
+void SCIPpresolSetInitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolinitpre = presolinitpre;
+}
+
+/** sets solving process deinitialization method of presolver */
+void SCIPpresolSetExitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->presolexitpre = presolexitpre;
+}
+
 /** gets name of presolver */
 const char* SCIPpresolGetName(
    SCIP_PRESOL*          presol              /**< presolver */

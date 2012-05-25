@@ -184,17 +184,19 @@ SCIP_RETCODE SCIPincludeNodeselXyz(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* create xyz node selector data */
    nodeseldata = NULL;
    /* TODO: (optional) create node selector specific data here */
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyXyz,
-         nodeselFreeXyz, nodeselInitXyz, nodeselExitXyz, 
-         nodeselInitsolXyz, nodeselExitsolXyz, nodeselSelectXyz, nodeselCompXyz,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectEstimate, nodeselCompEstimate, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   /* TODO: (optional) set node selector specific callbacks with SCIPsetNodeselCALLBACK() here */
 
    /* add xyz node selector parameters */
    /* TODO: (optional) add node selector specific parameters with SCIPaddTypeParam() here */

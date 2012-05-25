@@ -479,14 +479,21 @@ SCIP_RETCODE SCIPincludeReaderPpm(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create ppm reader data */
    SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
    initReaderdata(readerdata);
 
-   /* include ppm reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPpm, readerFreePpm, readerReadPpm, readerWritePpm, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyPpm) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreePpm) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWritePpm) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

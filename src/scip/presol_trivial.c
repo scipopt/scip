@@ -215,16 +215,19 @@ SCIP_RETCODE SCIPincludePresolTrivial(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create trivial presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyTrivial,
-         presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
-         presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecTrivial,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyTrivial) );
 
    return SCIP_OKAY;
 }

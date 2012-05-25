@@ -39,9 +39,6 @@
  *
  * TODOS:
  * - normalize demands and capacities of each cumulative constraint
- * - find dual reductions (take locks of variables)
- * - cumulative constraint shall consider time-intervals: [a,b]
- *   and only check those points in time that are included
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,20 +46,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_var.h"
-
 #include "scip/cons_cumulative.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_knapsack.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_setppc.h"
-
-#include "scip/pub_misc.h"
-#include "scip/scip.h"
-#include "scip/type_result.h"
-#include "scip/prop_vbounds.h"
-#include "scip/struct_tree.h"
+#include "scip/scipdefplugins.h"
 
 /**@name Constraint handler properties
  *
@@ -104,8 +91,8 @@
 #define DEFAULT_SEPAOLD                 TRUE /**< shall old sepa algo be applied? */
 
 /* propagation */
-#define DEFAULT_USECORETIMES            TRUE /**< should core-times be propagated? */
-#define DEFAULT_USECHECKEDGEFINDING     TRUE /**< should edge finding checking be used? */
+#define DEFAULT_CORETIMES               TRUE /**< should core-times be propagated (time tabling)? */
+#define DEFAULT_OVERLOAD                TRUE /**< should edge finding be used to detect an overload? */
 
 /* presolving */
 #define DEFAULT_DUALPRESOLVE            TRUE /**< should dual presolving be applied? */
@@ -184,8 +171,8 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             usebinvars;         /**< should the binary variables be used? */
    SCIP_Bool             cutsasconss;        /**< should the cumulative constraint create cuts as knapsack constraints? */
-   SCIP_Bool             usecoretimes;       /**< should core-times be propagated? */
-   SCIP_Bool             usecheckedgefinding;/**< should edge finding checking be performed */
+   SCIP_Bool             coretimes;          /**< should core-times be propagated (time tabling)? */
+   SCIP_Bool             overload;           /**< should edge finding be used to detect an overload? */
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
@@ -199,12 +186,14 @@ struct SCIP_ConshdlrData
 
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
+#ifdef SCIP_STATISTIC
    int                   nirrelevantjobs;
    int                   nalwaysruns;
    int                   ndualfixs;
    int                   nremovedlocks;
    int                   ndecomps;
    int                   nallconsdualfixs;
+#endif
 };
 
 /**@name Inference Information Methods
@@ -1221,12 +1210,14 @@ SCIP_RETCODE conshdlrdataCreate(
       return SCIP_PLUGINNOTFOUND;
    }
 
+#ifdef SCIP_STATISTIC
    (*conshdlrdata)->nirrelevantjobs = 0;
    (*conshdlrdata)->nalwaysruns = 0;
    (*conshdlrdata)->ndualfixs = 0;
    (*conshdlrdata)->nremovedlocks = 0;
    (*conshdlrdata)->ndecomps = 0;
    (*conshdlrdata)->nallconsdualfixs = 0;
+#endif
 
    return SCIP_OKAY;
 }
@@ -2159,7 +2150,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
    SCIP_VAR*             infervar,           /**< inference variable */
    int                   inferdemand,        /**< demand of the inference variable */
    int                   inferpeak,          /**< time point which causes the propagation */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
    SCIP_VAR* var;
@@ -2220,6 +2212,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
       {
          capacity -= demands[j];
          reported[j] = TRUE;
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
       }
    }
 
@@ -2284,6 +2279,9 @@ SCIP_RETCODE resolvePropagationCoretimes(
          SCIP_CALL( relaxVarUb(scip, var, aggrpeak, bdchgidx) );
 
          capacity -= demands[j];
+
+         if( explanation != NULL )
+            explanation[j] = TRUE;
       }
    }
 
@@ -2307,6 +2305,7 @@ SCIP_RETCODE respropCumulativeCondition(
    INFERINFO             inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
@@ -2371,7 +2370,7 @@ SCIP_RETCODE respropCumulativeCondition(
       }
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, bdchgidx) );
+            infervar, inferdemand, inferpeak, bdchgidx, explanation) );
 
       (*result) = SCIP_SUCCESS;
 
@@ -2993,7 +2992,8 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    int                   inferduration,      /**< duration of the start time variable */
    int                   inferdemand,        /**< demand of the start time variable */
    int                   inferpeak,          /**< profile preak which causes the infeasibilty */
-   SCIP_Bool*            initialized         /**< pointer to store if the conflict analysis was initialized */
+   SCIP_Bool*            initialized,        /**< pointer to store if the conflict analysis was initialized */
+   SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
    SCIPdebugMessage("detected infeasibility due to adding a core to the core resource profile\n");
@@ -3008,14 +3008,13 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
       SCIPdebugMessage("add lower and upper bounds of variable <%s>\n", SCIPvarGetName(infervar));
 
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity,
-            infervar, inferdemand, inferpeak, NULL) );
+            infervar, inferdemand, inferpeak, NULL, explanation) );
 
       /* add both bound of the inference variable since these biuld the core which we could not inserted */
       SCIP_CALL( relaxVarLb(scip, infervar, inferpeak - inferduration + 1, NULL) );
       SCIP_CALL( relaxVarUb(scip, infervar, inferpeak, NULL) );
 
       *initialized = TRUE;
-
    }
 
    return SCIP_OKAY;
@@ -3039,6 +3038,7 @@ SCIP_RETCODE coretimesUpdateLb(
    int                   pos,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            infeasible          /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3123,9 +3123,12 @@ SCIP_RETCODE coretimesUpdateLb(
 
          /* use conflict analysis to analysis the core insertion which was infeasible */
          SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-               var, duration, demand, newlb-1, initialized) );
+               var, duration, demand, newlb-1, initialized, explanation) );
 
          *infeasible = TRUE;
+
+         if( explanation != NULL )
+            explanation[pos] = TRUE;
 
          break;
       }
@@ -3174,6 +3177,7 @@ SCIP_RETCODE coretimesUpdateUb(
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   pos,                /**< position of the variable to propagate */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            infeasible          /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3309,6 +3313,7 @@ SCIP_RETCODE propagateCoretimes(
    SCIP_CONS*            cons,               /**< constraint which is propagated (needed to SCIPinferVar**Cons()) */
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3402,9 +3407,13 @@ SCIP_RETCODE propagateCoretimes(
 
             /* use conflict analysis to analysis the core insertion which was infeasible */
             SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-                  var, duration, demand, SCIPprofileGetTime(profile, pos), initialized) );
+                  var, duration, demand, SCIPprofileGetTime(profile, pos), initialized, explanation) );
 
             *cutoff = TRUE;
+
+            if( explanation != NULL )
+               explanation[pos] = TRUE;
+
             break;
          }
 
@@ -3455,13 +3464,13 @@ SCIP_RETCODE propagateCoretimes(
 
          /* first try to updates the earliest start time */
          SCIP_CALL( coretimesUpdateLb(scip, nvars, vars, durations, demands, capacity, cons,
-               profile, j, nchgbds, initialized, cutoff) );
+               profile, j, nchgbds, initialized, explanation, cutoff) );
 
          if( *cutoff )
             break;
 
          SCIP_CALL( coretimesUpdateUb(scip, nvars, vars, durations, demands, capacity, cons,
-               profile, j, nchgbds, cutoff) );
+               profile, j, nchgbds, explanation, cutoff) );
 
          if( *cutoff )
             break;
@@ -3488,9 +3497,13 @@ SCIP_RETCODE propagateCoretimes(
             {
                /* use conflict analysis to analysis the core insertion which was infeasible */
                SCIP_CALL( analyseInfeasibelCoreInsertion(scip, nvars, vars, durations, demands, capacity,
-                     var, duration, demand, SCIPprofileGetTime(profile, pos), initialized) );
+                     var, duration, demand, SCIPprofileGetTime(profile, pos), initialized, explanation) );
 
                *cutoff = TRUE;
+
+               if( explanation != NULL )
+                  explanation[pos] = TRUE;
+
                break;
             }
 
@@ -3560,6 +3573,7 @@ SCIP_RETCODE updateEnvelop(
          nodedatas[*nnodedatas] = nodedata;
          (*nnodedatas)++;
       }
+      assert(nodedata != NULL);
 
       /* collect node data from left node */
       left = SCIPbstnodeGetLeftchild(node);
@@ -3588,17 +3602,18 @@ SCIP_RETCODE updateEnvelop(
 static
 SCIP_DECL_BSTINSERT(thetatreeInsert)
 {
-   (*inserted) = FALSE;
+   (*inserted) = TRUE;
 
    /* if the tree is empty the node will be the root node */
    if( SCIPbstIsEmpty(tree) )
    {
       SCIPbstSetRoot(tree, node);
-      (*inserted) = TRUE;
    }
    else
    {
       SCIP_BSTNODE* leaf;
+      SCIP_BSTNODE* newnode;
+      SCIP_BSTNODE* parent;
 
       leaf = SCIPbstGetRoot(tree);
       assert(leaf != NULL);
@@ -3611,54 +3626,49 @@ SCIP_DECL_BSTINSERT(thetatreeInsert)
          else
             leaf = SCIPbstnodeGetRightchild(leaf);
       }
+      assert(leaf != NULL);
+      assert(leaf != node);
 
-      /* check if the node was already inserted */
-      if( node != leaf )
+      /* create a new node */
+      SCIP_CALL( SCIPbstnodeCreate(tree, &newnode, NULL, NULL) );
+      assert(newnode != NULL);
+
+      parent = SCIPbstnodeGetParent(leaf);
+
+      if( parent != NULL )
       {
-         SCIP_BSTNODE* newnode;
-         SCIP_BSTNODE* parent;
+         SCIPbstnodeSetParent(newnode, parent);
 
-         /* create a new node as parent of the given ones */
-         SCIP_CALL( SCIPbstnodeCreate(tree, &newnode, NULL, NULL) );
-         assert(newnode != NULL);
-
-         parent = SCIPbstnodeGetParent(leaf);
-
-         if( parent != NULL )
+         /* check if the node is the left child */
+         if( SCIPbstnodeGetLeftchild(parent) == leaf )
          {
-            SCIPbstnodeSetParent(newnode, parent);
-
-            /* check if the node is the left child */
-            if( SCIPbstnodeGetLeftchild(parent) == node )
-            {
-               SCIPbstnodeSetLeftchild(parent, newnode);
-            }
-            else
-            {
-               SCIPbstnodeSetRightchild(parent, newnode);
-            }
-         }
-
-         if( SCIPbstComp(tree, node, leaf) < 0 )
-         {
-            /* node is on the left */
-            SCIPbstnodeSetLeftchild(newnode, node);
-            SCIPbstnodeSetRightchild(newnode, leaf);
-            SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(node));
+            SCIPbstnodeSetLeftchild(parent, newnode);
          }
          else
          {
-            /* leaf is on the left */
-            SCIPbstnodeSetLeftchild(newnode, leaf);
-            SCIPbstnodeSetRightchild(newnode, node);
-            SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(leaf));
+            SCIPbstnodeSetRightchild(parent, newnode);
          }
-
-         SCIPbstnodeSetParent(leaf, newnode);
-         SCIPbstnodeSetParent(node, newnode);
-
-         (*inserted) = TRUE;
       }
+      else
+         SCIPbstSetRoot(tree, newnode);
+
+      if( SCIPbstComp(tree, node, leaf) <= 0 )
+      {
+         /* node is on the left */
+         SCIPbstnodeSetLeftchild(newnode, node);
+         SCIPbstnodeSetRightchild(newnode, leaf);
+         SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(node));
+      }
+      else
+      {
+         /* leaf is on the left */
+         SCIPbstnodeSetLeftchild(newnode, leaf);
+         SCIPbstnodeSetRightchild(newnode, node);
+         SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(leaf));
+      }
+
+      SCIPbstnodeSetParent(leaf, newnode);
+      SCIPbstnodeSetParent(node, newnode);
    }
 
    return SCIP_OKAY;
@@ -3682,8 +3692,11 @@ SCIP_DECL_SORTPTRCOMP(thetatreeComp)
    return 0;
 }
 
-/** checks whether the instance is infeasible due to overload, see Vilim: CPAIOR 2009: Max Energy Filtering Algorithm
- *  for Discrete Cumulative Resources
+/** checks whether the instance is infeasible due to a overload within a certain time frame
+ *
+ *  @note The algorithm is based on the paper: Petr Vilim, "Max Energy Filtering Algorithm for Discrete Cumulative
+ *        Resources". In: Willem Jan van Hoeve and John N. Hooker (Eds.), Integration of AI and OR Techniques in
+ *        Constraint Programming for Combinatorial Optimization Problems (CPAIOR 2009), LNCS 5547, pp 294--308
  */
 static
 SCIP_RETCODE checkOverload(
@@ -3697,6 +3710,7 @@ SCIP_RETCODE checkOverload(
    int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
    SCIP_CONS*            cons,               /**< constraint which is propagated */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -3717,7 +3731,7 @@ SCIP_RETCODE checkOverload(
    assert(initialized != NULL);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("check/propgate overload of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check overload of cumulative condition of constraint <%s> (capacity %d)\n", SCIPconsGetName(cons), capacity);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
@@ -3746,31 +3760,37 @@ SCIP_RETCODE checkOverload(
 
       /* ignore jobs which do not lie completely in the effective horizon [hmin,hmax) */
       if( est < hmin || lct > hmax )
+      {
+         nodedatas[j] = NULL;
          continue;
-
-      ests[ncands] = est;
-      lcts[ncands] = lct;
-      perm[ncands] = ncands;
+      }
 
       energy = demands[j] * durations[j];
       assert(energy > 0);
 
       /* create search node data */
-      SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[ncands]) );
+      SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[j]) );
 
       /* initialize search node data */
-      nodedatas[ncands]->var = var;
+      nodedatas[j]->var = var;
 
-      /* adjust earliest start time to make it ??????????????????? */
-      nodedatas[ncands]->key = est + j / (2.0 * nvars);
+      /* adjust earliest start time to make it unique in case several jobs have the same earliest start time */
+      nodedatas[j]->key = est + j / (2.0 * nvars);
 
-      nodedatas[ncands]->envelop = capacity * est + energy;
-      nodedatas[ncands]->energy = energy;
+      /* the envelop is the energy of the job plus the total amount of energy which is available in the time period
+       * before that job can start, that is [0,est). The envelop is later used to compare the energy consumption of a
+       * particular time interval [a,b] against the time interval [0,b].
+       */
+      nodedatas[j]->envelop = capacity * est + energy;
+      nodedatas[j]->energy = energy;
 
+      ests[ncands] = est;
+      lcts[ncands] = lct;
+      perm[ncands] = j;
       ncands++;
    }
 
-   nnodedatas = ncands;
+   nnodedatas = nvars;
 
    /* sort the latest completion times */
    SCIPsortIntIntInt(lcts, ests, perm, ncands);
@@ -3778,15 +3798,19 @@ SCIP_RETCODE checkOverload(
    /* iterate over all jobs in non-decreasing order of their latest completion times */
    for( j = 0; j < ncands && !(*cutoff); ++j )
    {
+      SCIP_VAR* var;
       SCIP_BSTNODE* root;
       SCIP_BSTNODE* node;
       SCIP_ENVELOP* data;
       SCIP_Bool inserted;
+      int idx;
+
+      idx = perm[j];
 
       /* create search node */
-      SCIP_CALL( SCIPbstnodeCreate(bsttree, &node, (void*)nodedatas[perm[j]], (void*)nodedatas[perm[j]]) );
+      SCIP_CALL( SCIPbstnodeCreate(bsttree, &node, (void*)nodedatas[idx], (void*)nodedatas[idx]) );
 
-      /* insert search node */
+      /* insert new search node */
       SCIP_CALL( SCIPbstInsert(bsttree, node, &inserted) );
       assert(inserted);
 
@@ -3802,69 +3826,101 @@ SCIP_RETCODE checkOverload(
       {
          (*cutoff) = TRUE;
 
-         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING || !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
+         /* check if the conflict analysis is applicable */
+         if( SCIPisConflictAnalysisApplicable(scip) )
          {
             int reportedenergy;
             int energy;
             int est;
             int lct;
-            int idx;
             int c;
 
             /* collect the earliest and latest completion time of the last job which lead to the overload detection */
             est = ests[j];
             lct = lcts[j];
 
-            /* adjust number of candidates to once we added to the search tree */
+            /* adjust number of candidates to the once we added to the search tree */
             ncands = j+1;
 
             /* sort the start time variables which were added to search tree w.r.t. earliest start time */
-            SCIPsortDownIntIntInt(ests, ests, perm, ncands);
+            SCIPsortDownIntIntInt(ests, lcts, perm, ncands);
 
+            energy = (lct - est) * capacity;
             reportedenergy = 0;
             c = 0;
 
-            /* initialize conflict analysis */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-            /* first report all start time variables which run wi ... */
-            while( ests[c] >= est && c < ncands )
+            /* collect the energy of those jobs which run within the time frame [est,lct) of the job which led to
+             * infeasibility
+             */
+            for( c = 0; c < ncands && ests[c] >= est && reportedenergy <= energy; ++c )
             {
                assert(lcts[c] <= lct);
 
                idx = perm[c];
+               var = vars[idx];
 
                /* collect energy which is contributed by the start time variable */
                reportedenergy += demands[idx] * durations[idx];
 
-               SCIP_CALL( SCIPaddConflictUb(scip, vars[idx], NULL) );
-               SCIP_CALL( SCIPaddConflictLb(scip, vars[idx], NULL) );
-               c++;
+               SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[idx], demands[idx]);
             }
 
-            energy = (lct - est) * capacity;
-
-            for( ; c < ncands && reportedenergy < energy; ++c )
+            /* continue with remaining candidates and adjust the earliest start time */
+            for( ; c < ncands && reportedenergy <= energy; ++c )
             {
-               idx = perm[c];
+               assert(lcts[c] <= lct);
 
-               SCIP_CALL( SCIPaddConflictUb(scip, vars[idx], NULL) );
-               SCIP_CALL( SCIPaddConflictLb(scip, vars[idx], NULL) );
+               idx = perm[c];
+               var = vars[idx];
+
+               reportedenergy += demands[idx] * durations[idx];
+
+               SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[idx], demands[idx]);
 
                /* adjust energy */
-               energy = (lct - ests[c]) * capacity;
-               reportedenergy += demands[idx] * durations[idx];
+               est = ests[c];
+               assert(energy <= (lct - est) * capacity);
+               energy = (lct - est) * capacity;
+            }
+            assert(reportedenergy > energy);
+
+            /* shrink number of candidates to once we need to report */
+            ncands = c;
+
+            /* initialize conflict analysis */
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to
+             * be overloaded
+             */
+            for( c = 0; c < ncands; ++c )
+            {
+               idx = perm[c];
+               var = vars[idx];
+               assert(var != NULL);
+
+               SCIP_CALL( relaxVarLb(scip, var, est, NULL) );
+               SCIP_CALL( relaxVarUb(scip, var, lct - durations[idx], NULL) );
+
+               if( explanation != NULL )
+                  explanation[idx] = TRUE;
             }
 
             (*initialized) = TRUE;
          }
+         else
+            assert((SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)));
       }
    }
 
    /* free the search nodes data */
-   for( j = 0 ; j < nnodedatas; ++j )
+   for( j = nnodedatas - 1; j >= 0; --j )
    {
-      SCIPfreeBuffer(scip, &nodedatas[j]);
+      SCIPfreeBufferNull(scip, &nodedatas[j]);
    }
 
    /* free theta tree */
@@ -4006,6 +4062,7 @@ SCIP_RETCODE propagateCumulativeCondition(
    int*                  nchgbds,            /**< pointer to store the number of bound changes */
    SCIP_Bool*            redundant,          /**< pointer to store if the constraint is redundant */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
@@ -4023,20 +4080,20 @@ SCIP_RETCODE propagateCumulativeCondition(
       return SCIP_OKAY;
 
    /* propagate the job cores until nothing else can be detected */
-   if( conshdlrdata->usecoretimes )
+   if( conshdlrdata->coretimes )
    {
       SCIP_CALL( propagateCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, cutoff) );
+            nchgbds, initialized, explanation, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
    }
 
-   if( conshdlrdata->usecheckedgefinding )
+   if( conshdlrdata->overload )
    {
       /* check for overload, which may result in a cutoff */
       SCIP_CALL( checkOverload(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, initialized, cutoff) );
+            cons, initialized, explanation, cutoff) );
 
       if( *cutoff )
          return SCIP_OKAY;
@@ -4078,7 +4135,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          consdata->nvars, consdata->vars, consdata->durations, consdata->demands, consdata->capacity,
          consdata->hmin, consdata->hmax, cons,
-         nchgbds, &redundant, &initialized, cutoff) );
+         nchgbds, &redundant, &initialized, NULL, cutoff) );
 
    if( redundant )
    {
@@ -4191,7 +4248,6 @@ SCIP_RETCODE computeAlternativeBounds(
 {
    int c;
 
-
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
@@ -4206,7 +4262,7 @@ SCIP_RETCODE computeAlternativeBounds(
       assert(cons != NULL);
 
       /* ignore constraints which are already deletet and those which are not check constraints */
-      if( SCIPconsIsDeleted(cons) || SCIPconsIsChecked(cons) )
+      if( SCIPconsIsDeleted(cons) || !SCIPconsIsChecked(cons) )
          continue;
 
       consdata = SCIPconsGetData(cons);
@@ -4424,7 +4480,7 @@ SCIP_RETCODE propagateAllConss(
       alternativeubs[v] = INT_MIN;
    }
 
-   conshdlrdata->nallconsdualfixs -= *nfixedvars;
+   SCIPstatistic( conshdlrdata->nallconsdualfixs -= *nfixedvars );
 
    /* compute alternative bounds */
    SCIP_CALL( computeAlternativeBounds(scip, conss, nconss, local, alternativelbs, alternativeubs, downlocks, uplocks) );
@@ -4432,7 +4488,7 @@ SCIP_RETCODE propagateAllConss(
    /* apply fixing which result of the alternative bounds directly */
    SCIP_CALL( applyAlternativeBoundsFixing(scip, vars, nvars, alternativelbs, alternativeubs, downlocks, uplocks, nfixedvars) );
 
-   conshdlrdata->nallconsdualfixs += *nfixedvars;
+   SCIPstatistic( conshdlrdata->nallconsdualfixs += *nfixedvars );
 
    if( oldnfixedvars == *nfixedvars && branched != NULL )
    {
@@ -7232,6 +7288,11 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
    cutoff = FALSE;
    reducedom = FALSE;
    separated = FALSE;
+   (*result) = SCIP_DIDNOTRUN;
+
+   if( !conshdlrdata->localcuts && SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
    (*result) = SCIP_DIDNOTFIND;
 
    if( conshdlrdata->usebinvars )
@@ -7286,10 +7347,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("separating %d/%d cumulative constraints\n", nusefulconss, nconss);
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->localcuts && SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("separating %d/%d cumulative constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
    reducedom = FALSE;
@@ -7644,7 +7708,7 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
 
    SCIP_CALL( respropCumulativeCondition(scip, consdata->nvars, consdata->vars,
          consdata->durations, consdata->demands, consdata->capacity,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -7960,47 +8024,59 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecCumulative, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCumulative, NULL) );
 
    /* create cumulative constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyCumulative,
-         consFreeCumulative, consInitCumulative, consExitCumulative,
-         consInitpreCumulative, consExitpreCumulative, consInitsolCumulative, consExitsolCumulative,
-         consDeleteCumulative, consTransCumulative, consInitlpCumulative,
-         consSepalpCumulative, consSepasolCumulative, consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative,
-         consPropCumulative, consPresolCumulative, consRespropCumulative, consLockCumulative,
-         consActiveCumulative, consDeactiveCumulative,
-         consEnableCumulative, consDisableCumulative, consDelvarsCumulative,
-         consPrintCumulative, consCopyCumulative, consParseCumulative,
-         consGetVarsCumulative, consGetNVarsCumulative, conshdlrdata) );
+         consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative, consLockCumulative,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCumulative, consCopyCumulative) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteCumulative) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCumulative) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCumulative) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsCumulative) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsCumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreCumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCumulative) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCumulative) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCumulative) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropCumulative) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCumulative, consSepasolCumulative, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCumulative) );
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/coretimes", "should core-times be propagated (time tabling)?",
+         &conshdlrdata->coretimes, FALSE, DEFAULT_CORETIMES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/overload", "should edge finding be used to detect an overload?",
+         &conshdlrdata->overload, FALSE, DEFAULT_OVERLOAD, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
          &conshdlrdata->usebinvars, FALSE, DEFAULT_USEBINVARS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usecoretimes", "should coretimes be propagated?",
-         &conshdlrdata->usecoretimes, FALSE, DEFAULT_USECORETIMES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/localcuts", "should cuts be added only locally?",
          &conshdlrdata->localcuts, FALSE, DEFAULT_LOCALCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/usecovercuts", "should covering cuts be added every node?",
          &conshdlrdata->usecovercuts, FALSE, DEFAULT_USECOVERCUTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usecheckedgefinding", "should edge finding checking be used?",
-         &conshdlrdata->usecheckedgefinding, FALSE, DEFAULT_USECHECKEDGEFINDING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/cutsasconss",
          "should the cumulative constraint create cuts as knapsack constraints?",
@@ -8103,6 +8179,33 @@ SCIP_RETCODE SCIPcreateConsCumulative(
       /* catch bound change events of variables */
       SCIP_CALL( consdataCatchEvents(scip, consdata, conshdlrdata->eventhdlr) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a cumulative constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsCumulative(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsCumulative() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicCumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables (jobs) */
+   SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
+   int*                  durations,          /**< array containing corresponding durations */
+   int*                  demands,            /**< array containing corresponding demands */
+   int                   capacity            /**< available cumulative capacity */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -8333,6 +8436,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP_CONS*            cons,               /**< constraint which gets propagated */
    int*                  nchgbds,            /**< pointer to store the number of variable bound changes */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_Bool*            cutoff              /**< pointer to store if the cumulative condition is violated */
    )
 {
@@ -8362,7 +8466,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
 
    SCIP_CALL( propagateCumulativeCondition(scip, conshdlrdata,
          nvars, vars, durations, demands, capacity,  hmin, hmax, cons,
-         nchgbds, &redundant, initialized, cutoff) );
+         nchgbds, &redundant, initialized, explanation, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -8379,11 +8483,12 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    int                   inferinfo,          /**< the user information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_Bool*            explanation,        /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
    SCIP_CALL( respropCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
-         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
+         infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, explanation, result) );
 
    return SCIP_OKAY;
 }
@@ -8423,10 +8528,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* create opening of the GML format */
-   fprintf(file, "graph\n");
-   fprintf(file, "[\n");
-   fprintf(file, "  hierarchic      1\n");
-   fprintf(file, "  directed        1\n");
+   SCIPgmlOpen(file,  TRUE);
 
    for( v = 0; v < nvars; ++v )
    {
@@ -8444,26 +8546,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
       else
          (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#ff0000");
 
-      fprintf(file, "  node\n");
-      fprintf(file, "  [\n");
-      fprintf(file, "    id      %d\n", (int)(size_t)var);
-      fprintf(file, "    label   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "    graphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      w       120.0\n");
-      fprintf(file, "      h       30.0\n");
-      fprintf(file, "      type    \"%s\"\n", "rectangle");
-      fprintf(file, "      fill    \"%s\"\n", color);
-      fprintf(file, "      outline \"%s\"\n", "#000000");
-      fprintf(file, "    ]\n");
-      fprintf(file, "    LabelGraphics\n");
-      fprintf(file, "    [\n");
-      fprintf(file, "      text   \"%s\"\n", SCIPvarGetName(var));
-      fprintf(file, "      fontSize  13\n");
-      fprintf(file, "      fontName  \"Dialog\"\n");
-      fprintf(file, "      anchor    \"c\"\n");
-      fprintf(file, "    ]\n");
-      fprintf(file, "  ]\n");
+      SCIPgmlWriteNode(file, (unsigned int)(size_t)var, SCIPvarGetName(var), "rectangle", color, NULL);
    }
 
    for( v = 0; v < nvars; ++v )
@@ -8482,16 +8565,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
       {
          if( SCIPhashtableExists(vars, (void*)vbdvars[b]) )
          {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    target  %d\n", (int)(size_t)var);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
+            SCIPgmlWriteArc(file, (unsigned int)(size_t)vbdvars[b], (unsigned int)(size_t)var, NULL, NULL);
          }
       }
 
@@ -8503,23 +8577,14 @@ SCIP_RETCODE SCIPconsdataVisualize(
       {
          if( SCIPhashtableExists(vars, vbdvars[b]) )
          {
-            fprintf(file, "  edge\n");
-            fprintf(file, "  [\n");
-            fprintf(file, "    source  %d\n", (int)(size_t)var);
-            fprintf(file, "    target  %d\n", (int)(size_t)vbdvars[b]);
-            fprintf(file, "    graphics\n");
-            fprintf(file, "    [\n");
-            fprintf(file, "      fill    \"%s\"\n", "#000000");
-            fprintf(file, "      targetArrow     \"standard\"\n");
-            fprintf(file, "    ]\n");
-            fprintf(file, "  ]\n");
+            SCIPgmlWriteArc(file, (unsigned int)(size_t)var, (unsigned int)(size_t)vbdvars[b], NULL, NULL);
          }
       }
 #endif
    }
 
    /* create closing of the GML format */
-   fprintf(file, "]\n");
+   SCIPgmlClose(file);
 
    /* close file */
    fclose(file);

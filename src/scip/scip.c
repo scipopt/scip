@@ -2838,7 +2838,11 @@ int SCIPgetNParams(
  * SCIP user functionality methods: managing plugins
  */
 
-/** creates a reader and includes it in SCIP */
+/** creates a reader and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of reader */
@@ -2864,6 +2868,105 @@ SCIP_RETCODE SCIPincludeReader(
 
    SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a reader and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see
+ *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ */
+SCIP_RETCODE SCIPincludeReaderBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   )
+{
+   SCIP_READER* reader;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeReaderBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether reader is already present */
+   if( SCIPfindReader(scip, name) != NULL )
+   {
+      SCIPerrorMessage("reader <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, NULL, NULL, NULL, NULL, readerdata) );
+   SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
+
+   if( readerptr != NULL )
+      *readerptr = reader;
+
+   return SCIP_OKAY;
+}
+
+/**< set copy method of reader */
+SCIP_RETCODE SCIPsetReaderCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetCopy(reader, readercopy);
+
+   return SCIP_OKAY;
+}
+
+/**< set deinitialization method of reader */
+SCIP_RETCODE SCIPsetReaderFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetFree(reader, readerfree);
+
+   return SCIP_OKAY;
+}
+
+/**< set read method of reader */
+SCIP_RETCODE SCIPsetReaderRead(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderRead", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetRead(reader, readerread);
+
+   return SCIP_OKAY;
+}
+
+/**< set write method of reader */
+SCIP_RETCODE SCIPsetReaderWrite(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method of reader */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetReaderWrite", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPreaderSetWrite(reader, readerwrite);
 
    return SCIP_OKAY;
 }
@@ -2943,6 +3046,165 @@ SCIP_RETCODE SCIPincludePricer(
          pricercopy,
          pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata) );
    SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a variable pricer and includes it in SCIP with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetPricerCopy(), SCIPsetPricerFree(),
+ *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), SCIPsetPricerExitsol(),
+ *  SCIPsetPricerFarkas();
+ *
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
+SCIP_RETCODE SCIPincludePricerBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   )
+{
+   SCIP_PRICER* pricer;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePricerBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether pricer is already present */
+   if( SCIPfindPricer(scip, name) != NULL )
+   {
+      SCIPerrorMessage("pricer <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, delay,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, pricerredcost, NULL, pricerdata) );
+   SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
+
+   if( pricerptr != NULL )
+      *pricerptr = pricer;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of pricer */
+SCIP_RETCODE SCIPsetPricerCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERCOPY ((*pricercopy))     /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetCopy(pricer, pricercopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of pricer */
+SCIP_RETCODE SCIPsetPricerFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE ((*pricerfree))      /**< destructor of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetFree(pricer, pricerfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of pricer */
+SCIP_RETCODE SCIPsetPricerInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit))     /**< initialize pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetInit(pricer, pricerinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of pricer */
+SCIP_RETCODE SCIPsetPricerExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit))     /**< deinitialize pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetExit(pricer, pricerexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of pricer */
+SCIP_RETCODE SCIPsetPricerInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization method of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetInitsol(pricer, pricerinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of pricer */
+SCIP_RETCODE SCIPsetPricerExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetExitsol(pricer, pricerexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets Farkas pricing method of variable pricer for infeasible LPs */
+SCIP_RETCODE SCIPsetPricerFarkas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPricerFarkas", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(pricer != NULL);
+
+   SCIPpricerSetFarkas(pricer, pricerfarkas);
 
    return SCIP_OKAY;
 }
@@ -3036,7 +3298,11 @@ SCIP_RETCODE SCIPdeactivatePricer(
    return SCIP_OKAY;
 }
 
-/** creates a constraint handler and includes it in SCIP */
+/** creates a constraint handler and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeConshdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of constraint handler */
@@ -3082,8 +3348,6 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
-   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
-   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -3106,8 +3370,443 @@ SCIP_RETCODE SCIPincludeConshdlr(
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
-         conscopy, consparse, consgetvars, consgetnvars, conshdlrdata) );
+         conscopy, consparse, NULL, NULL, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a constraint handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetConshdlrInit(), SCIPsetConshdlrExit(),
+ *  SCIPsetConshdlrCopy(), SCIPsetConshdlrFree(), SCIPsetConshdlrInitsol(), SCIPsetConshdlrExitsol(),
+ *  SCIPsetConshdlrInitpre(), SCIPsetConshdlrExitpre(), SCIPsetConshdlrPresol(), SCIPsetConshdlrDelete(),
+ *  SCIPsetConshdlrDelvars(), SCIPsetConshdlrInitlp(), SCIPsetConshdlrActive(), SCIPsetConshdlrDeactive(),
+ *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
+ *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ */
+SCIP_RETCODE SCIPincludeConshdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeConshdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether constraint handler is already present */
+   if( SCIPfindConshdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("constraint handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, sepapriority, enfopriority, chckpriority, -1, -1, eagerfreq, maxprerounds,
+         delaysepa, delayprop, delaypresol, needscons,
+         timingmask,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL, consenfolp, consenfops, conscheck, NULL,
+         NULL, NULL, conslock, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL, conshdlrdata) );
+   SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
+
+   if( conshdlrptr != NULL )
+      *conshdlrptr = conshdlr;
+
+   return SCIP_OKAY;
+}
+
+/* sets all separation related callbacks of the constraint handler */
+SCIP_RETCODE SCIPsetConshdlrSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetSepa(conshdlr, conssepalp, conssepasol, sepafreq);
+
+   return SCIP_OKAY;
+}
+
+/* sets both the propagation callback and the propagation frequency of the constraint handler */
+SCIP_RETCODE SCIPsetConshdlrProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetProp(conshdlr, consprop, propfreq);
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of both the constraint handler and each associated constraint */
+SCIP_RETCODE SCIPsetConshdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSCOPY    ((*conscopy))       /**< constraint copying method */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetCopy(conshdlr, conshdlrcopy, conscopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetFree(conshdlr, consfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInit(conshdlr, consinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExit(conshdlr, consexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInitsol(conshdlr, consinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExitsol(conshdlr, consexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing initialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetInitpre(conshdlr, consinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing deinitialization method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(conshdlr != NULL);
+
+   SCIPconshdlrSetExitpre(conshdlr, consexitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetPresol(conshdlr, conspresol);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to free specific constraint data */
+SCIP_RETCODE SCIPsetConshdlrDelete(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDelete(conshdlr, consdelete);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
+SCIP_RETCODE SCIPsetConshdlrTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrTrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetTrans(conshdlr, constrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
+SCIP_RETCODE SCIPsetConshdlrInitlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrInitlp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetInitlp(conshdlr, consinitlp);
+
+   return SCIP_OKAY;
+}
+
+/** sets propagation conflict resolving method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrResprop", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetResprop(conshdlr, consresprop);
+
+   return SCIP_OKAY;
+}
+
+/** sets activation notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrActive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrActive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetActive(conshdlr, consactive);
+
+   return SCIP_OKAY;
+}
+
+/** sets deactivation notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDeactive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDeactive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDeactive(conshdlr, consdeactive);
+
+   return SCIP_OKAY;
+}
+
+/** sets enabling notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrEnable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrEnable", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetEnable(conshdlr, consenable);
+
+   return SCIP_OKAY;
+}
+
+/** sets disabling notification method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDisable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDisable", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDisable(conshdlr, consdisable);
+
+   return SCIP_OKAY;
+}
+
+/** sets variable deletion method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrDelvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrDelvars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetDelvars(conshdlr, consdelvars);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint display method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPrint", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetPrint(conshdlr, consprint);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint parsing method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrParse(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrParse", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetParse(conshdlr, consparse);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint variable getter method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrGetVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrGetVars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetVars(conshdlr, consgetvars);
+
+   return SCIP_OKAY;
+}
+
+/** sets constraint variable number getter method of constraint handler */
+SCIP_RETCODE SCIPsetConshdlrGetNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrGetNVars", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconshdlrSetGetNVars(conshdlr, consgetnvars);
 
    return SCIP_OKAY;
 }
@@ -3145,7 +3844,11 @@ int SCIPgetNConshdlrs(
    return scip->set->nconshdlrs;
 }
 
-/** creates a conflict handler and includes it in SCIP */
+/** creates a conflict handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeConflicthdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of conflict handler */
@@ -3177,6 +3880,139 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
          conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
          conflicthdlrdata) );
    SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
+ */
+SCIP_RETCODE SCIPincludeConflicthdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR**   conflicthdlrptr,    /**< reference to a conflict handler pointer, or NULL */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   SCIP_CONFLICTHDLR* conflicthdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether conflict handler is already present */
+   if( SCIPfindConflicthdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("conflict handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
+         NULL, NULL, NULL, NULL, NULL, NULL, conflictexec, conflicthdlrdata) );
+   SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
+
+   if( conflicthdlrptr != NULL )
+      *conflicthdlrptr = conflicthdlr;
+
+   return SCIP_OKAY;
+}
+
+/** set copy method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetCopy(conflicthdlr, conflictcopy);
+
+   return SCIP_OKAY;
+}
+
+/** set destructor of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetFree(conflicthdlr, conflictfree);
+
+   return SCIP_OKAY;
+}
+
+/** set initialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialize conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetInit(conflicthdlr, conflictinit);
+
+   return SCIP_OKAY;
+}
+
+/** set deinitialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialize conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetExit(conflicthdlr, conflictexit);
+
+   return SCIP_OKAY;
+}
+
+/** set solving process initialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetInitsol(conflicthdlr, conflictinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** set solving process deinitialization method of conflict handler */
+SCIP_RETCODE SCIPsetConflicthdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetConflicthdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflicthdlrSetExitsol(conflicthdlr, conflictexitsol);
 
    return SCIP_OKAY;
 }
@@ -3230,7 +4066,11 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    return SCIP_OKAY;
 }
 
-/** creates a presolver and includes it in SCIP */
+/** creates a presolver and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludePresolBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of presolver */
@@ -3250,7 +4090,7 @@ SCIP_RETCODE SCIPincludePresol(
 {
    SCIP_PRESOL* presol;
 
-   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincludePresolBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether presolver is already present */
    if( SCIPfindPresol(scip, name) != NULL )
@@ -3263,6 +4103,142 @@ SCIP_RETCODE SCIPincludePresol(
          presolcopy,
          presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol.
+ */
+SCIP_RETCODE SCIPincludePresolBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL**         presolptr,          /**< reference to presolver, or NULL */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   SCIP_PRESOL* presol;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether presolver is already present */
+   if( SCIPfindPresol(scip, name) != NULL )
+   {
+      SCIPerrorMessage("presolver <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpresolCreate(&presol, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority, maxrounds, delay,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, presolexec, presoldata) );
+   SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
+
+   if( presol != NULL )
+      *presolptr = presol;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of presolver */
+SCIP_RETCODE SCIPsetPresolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetCopy(presol, presolcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of presolver */
+SCIP_RETCODE SCIPsetPresolFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))      /**< destructor of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetFree(presol, presolfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of presolver */
+SCIP_RETCODE SCIPsetPresolInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetInit(presol, presolinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of presolver */
+SCIP_RETCODE SCIPsetPresolExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetExit(presol, presolexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of presolver */
+SCIP_RETCODE SCIPsetPresolInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetInitpre(presol, presolinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of presolver */
+SCIP_RETCODE SCIPsetPresolExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPresolExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(presol != NULL);
+
+   SCIPpresolSetExitpre(presol, presolexitpre);
 
    return SCIP_OKAY;
 }
@@ -3316,7 +4292,11 @@ SCIP_RETCODE SCIPsetPresolPriority(
    return SCIP_OKAY;
 }
 
-/** creates a relaxation handler and includes it in SCIP */
+/** creates a relaxation handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of relaxation handler */
@@ -3352,6 +4332,141 @@ SCIP_RETCODE SCIPincludeRelax(
 
    return SCIP_OKAY;
 }
+
+/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ */
+SCIP_RETCODE SCIPincludeRelaxBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   )
+{
+   SCIP_RELAX* relax;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeRelaxBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether relaxation handler is already present */
+   if( SCIPfindRelax(scip, name) != NULL )
+   {
+      SCIPerrorMessage("relaxation handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, freq,
+         NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
+   SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
+
+   if( relaxptr != NULL )
+      *relaxptr = relax;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetCopy(relax, relaxcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetFree(relax, relaxfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetInit(relax, relaxinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetExit(relax, relaxexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetInitsol(relax, relaxinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of relaxation handler */
+SCIP_RETCODE SCIPsetRelaxExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxation handler */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(relax != NULL);
+
+   SCIPrelaxSetExitsol(relax, relaxexitsol);
+
+   return SCIP_OKAY;
+}
+
 
 /** returns the relaxation handler of the given name, or NULL if not existing */
 SCIP_RELAX* SCIPfindRelax(
@@ -3402,7 +4517,11 @@ SCIP_RETCODE SCIPsetRelaxPriority(
    return SCIP_OKAY;
 }
 
-/** creates a separator and includes it in SCIP */
+/** creates a separator and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeSepaBasic()</code> instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of separator */
@@ -3440,6 +4559,150 @@ SCIP_RETCODE SCIPincludeSepa(
          sepacopy,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
+
+   return SCIP_OKAY;
+}
+
+/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaInit(), SCIPsetSepaFree(),
+ *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy, SCIPsetExit().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
+ */
+SCIP_RETCODE SCIPincludeSepaBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA**           sepa,               /**< reference to a separator, or NULL */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
+   )
+{
+   SCIP_SEPA* sepaptr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeSepaBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether separator is already present */
+   if( SCIPfindSepa(scip, name) != NULL )
+   {
+      SCIPerrorMessage("separator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPsepaCreate(&sepaptr, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, freq, maxbounddist, usessubscip, delay,
+         NULL, NULL, NULL, NULL, NULL, NULL, sepaexeclp, sepaexecsol, sepadata) );
+
+   assert(sepaptr != NULL);
+
+   SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepaptr) );
+
+   if( sepa != NULL)
+      *sepa = sepaptr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of separator */
+SCIP_RETCODE SCIPsetSepaCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetCopy(sepa, sepacopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of separator */
+SCIP_RETCODE SCIPsetSepaFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetFree(sepa, sepafree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of separator */
+SCIP_RETCODE SCIPsetSepaInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetInit(sepa, sepainit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of separator */
+SCIP_RETCODE SCIPsetSepaExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetExit(sepa, sepaexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of separator */
+SCIP_RETCODE SCIPsetSepaInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+    SCIPsepaSetInitsol(sepa, sepainitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of separator */
+SCIP_RETCODE SCIPsetSepaExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSepaExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(sepa != NULL);
+
+   SCIPsepaSetExitsol(sepa, sepaexitsol);
 
    return SCIP_OKAY;
 }
@@ -3493,7 +4756,11 @@ SCIP_RETCODE SCIPsetSepaPriority(
    return SCIP_OKAY;
 }
 
-/** creates a propagator and includes it in SCIP */
+/** creates a propagator and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludePropBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of propagator */
@@ -3536,6 +4803,197 @@ SCIP_RETCODE SCIPincludeProp(
          propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
          proppresol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
+ *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
+ */
+SCIP_RETCODE SCIPincludePropBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP**           propptr,            /**< reference to a propagator pointer, or NULL */
+   const char*           name,               /**< name of propagator */
+   const char*           desc,               /**< description of propagator */
+   int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling propagator */
+   SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_PROP* prop;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludePropBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether propagator is already present */
+   if( SCIPfindProp(scip, name) != NULL )
+   {
+      SCIPerrorMessage("propagator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoldelay,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, propexec, propresprop, propdata) );
+   SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
+
+   if( propptr != NULL )
+      *propptr = prop;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of propagator */
+SCIP_RETCODE SCIPsetPropCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetCopy(prop, propcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of propagator */
+SCIP_RETCODE SCIPsetPropFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetFree(prop, propfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInit(prop, propinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExit(prop, propexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInitsol(prop, propinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExitsol(prop, propexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing initialization method of propagator */
+SCIP_RETCODE SCIPsetPropInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropInitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetInitpre(prop, propinitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets preprocessing deinitialization method of propagator */
+SCIP_RETCODE SCIPsetPropExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropExitpre", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetExitpre(prop, propexitpre);
+
+   return SCIP_OKAY;
+}
+
+/** sets presolving method of propagator */
+SCIP_RETCODE SCIPsetPropPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetPresol(prop, proppresol);
 
    return SCIP_OKAY;
 }
@@ -3603,7 +5061,11 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    return SCIP_OKAY;
 }
 
-/** creates a primal heuristic and includes it in SCIP */
+/** creates a primal heuristic and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeHeurBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of primal heuristic */
@@ -3640,7 +5102,153 @@ SCIP_RETCODE SCIPincludeHeur(
    SCIP_CALL( SCIPheurCreate(&heur, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask, usessubscip, 
          heurcopy, heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
+
    SCIP_CALL( SCIPsetIncludeHeur(scip->set, heur) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurInit() in pub_heur.h, for example.
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+ */
+SCIP_RETCODE SCIPincludeHeurBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR**           heur,               /**< pointer to primal heuristic */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   )
+{
+   SCIP_HEUR* heurptr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeHeurBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether heuristic is already present */
+   if( SCIPfindHeur(scip, name) != NULL )
+   {
+      SCIPerrorMessage("heuristic <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPheurCreate(&heurptr, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask, usessubscip,
+         NULL, NULL, NULL, NULL, NULL, NULL, heurexec, heurdata) );
+
+   assert(heurptr != NULL);
+
+   SCIP_CALL( SCIPsetIncludeHeur(scip->set, heurptr) );
+
+   if( heur != NULL )
+      *heur = heurptr;
+
+   return SCIP_OKAY;
+}
+
+/* new callback/method setter methods */
+
+/** sets copy method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetCopy(heur, heurcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetFree(heur, heurfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetInit(heur, heurinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetExit(heur, heurexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetInitsol(heur, heurinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of primal heuristic */
+SCIP_RETCODE SCIPsetHeurExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetHeurExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(heur != NULL);
+
+   SCIPheurSetExitsol(heur, heurexitsol);
 
    return SCIP_OKAY;
 }
@@ -3730,6 +5338,142 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    return SCIP_OKAY;
 }
 
+/** creates an event handler and includes it in SCIP with all its non-fundamental callbacks set
+ *  to NULL; if needed, non-fundamental callbacks can be set afterwards via setter functions
+ *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
+ *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
+ */
+SCIP_RETCODE SCIPincludeEventhdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
+   const char*           name,               /**< name of event handler */
+   const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether event handler is already present */
+   if( SCIPfindEventhdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("event handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventexec,
+         eventhdlrdata) );
+   SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
+
+   if( eventhdlrptr != NULL )
+           *eventhdlrptr = eventhdlr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrCopy(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback of the event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetCopy(eventhdlr, eventcopy);
+        return SCIP_OKAY;
+}
+
+/** sets deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrFree(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTFREE   ((*eventfree))      /**< deinitialization callback of the event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetFree(eventhdlr, eventfree);
+        return SCIP_OKAY;
+}
+
+/** sets initialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrInit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialize event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetInit(eventhdlr, eventinit);
+        return SCIP_OKAY;
+}
+
+/** sets deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrExit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialize event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetExit(eventhdlr, eventexit);
+        return SCIP_OKAY;
+}
+
+/** sets solving process initialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrInitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetInitsol(eventhdlr, eventinitsol);
+        return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization callback of the event handler */
+SCIP_RETCODE SCIPsetEventhdlrExitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetExitsol(eventhdlr, eventexitsol);
+        return SCIP_OKAY;
+}
+
+/** sets callback of the event handler to free specific event data */
+SCIP_RETCODE SCIPsetEventhdlrDelete(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< free specific event data */
+   )
+{
+        assert(scip != NULL);
+        SCIP_CALL( checkStage(scip, "SCIPsetEventhdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+        SCIPeventhdlrSetDelete(eventhdlr, eventdelete);
+        return SCIP_OKAY;
+}
+
 /** returns the event handler of the given name, or NULL if not existing */
 SCIP_EVENTHDLR* SCIPfindEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3763,7 +5507,11 @@ int SCIPgetNEventhdlrs(
    return scip->set->neventhdlrs;
 }
 
-/** creates a node selector and includes it in SCIP */
+/** creates a node selector and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of node selector */
@@ -3797,6 +5545,142 @@ SCIP_RETCODE SCIPincludeNodesel(
          nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodesel) );
+
+   return SCIP_OKAY;
+}
+
+/** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ */
+SCIP_RETCODE SCIPincludeNodeselBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL**        nodesel,            /**< reference to a node selector, or NULL */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   )
+{
+   SCIP_NODESEL* nodeselptr;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeNodeselBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether node selector is already present */
+   if( SCIPfindNodesel(scip, name) != NULL )
+   {
+      SCIPerrorMessage("node selector <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPnodeselCreate(&nodeselptr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
+         NULL,
+         NULL, NULL, NULL, NULL, NULL,
+         nodeselselect, nodeselcomp, nodeseldata) );
+   SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodeselptr) );
+
+   if( nodesel != NULL )
+      *nodesel = nodeselptr;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of node selector */
+SCIP_RETCODE SCIPsetNodeselCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetCopy(nodesel, nodeselcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of node selector */
+SCIP_RETCODE SCIPsetNodeselFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetFree(nodesel, nodeselfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetInit(nodesel, nodeselinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetExit(nodesel, nodeselexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetInitsol(nodesel, nodeselinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of node selector */
+SCIP_RETCODE SCIPsetNodeselExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetNodeselExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetExitsol(nodesel, nodeselexitsol);
 
    return SCIP_OKAY;
 }
@@ -3872,7 +5756,11 @@ SCIP_NODESEL* SCIPgetNodesel(
    return SCIPsetGetNodesel(scip->set, scip->stat);
 }
 
-/** creates a branching rule and includes it in SCIP */
+/** creates a branching rule and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
+ */
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of branching rule */
@@ -3910,6 +5798,195 @@ SCIP_RETCODE SCIPincludeBranchrule(
          maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
          branchexeclp, branchexecext, branchexecps, branchruledata) );
    SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a branching rule and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
+ *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
+ *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ */
+SCIP_RETCODE SCIPincludeBranchruleBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   SCIP_BRANCHRULE* branchrule;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeBranchruleBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether branching rule is already present */
+   if( SCIPfindBranchrule(scip, name) != NULL )
+   {
+      SCIPerrorMessage("branching rule <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority, maxdepth,
+         maxbounddist, NULL, NULL, NULL, NULL, NULL, NULL,
+         NULL, NULL, NULL, branchruledata) );
+
+   SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
+
+   if( branchruleptr != NULL )
+      *branchruleptr = branchrule;
+
+   return SCIP_OKAY;
+}
+
+/** sets copy method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetCopy(branchrule, branchcopy);
+
+   return SCIP_OKAY;
+}
+
+/** sets destructor method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetFree(branchrule, branchfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetInit(branchrule, branchinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExit(branchrule, branchexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetInitsol(branchrule, branchinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of branching rule */
+SCIP_RETCODE SCIPsetBranchruleExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExitsol(branchrule, branchexitsol);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** sets branching execution method for fractional LP solutions */
+SCIP_RETCODE SCIPsetBranchruleExecLp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecLp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecLp(branchrule, branchexeclp);
+
+   return SCIP_OKAY;
+}
+
+/** sets branching execution method for external candidates  */
+SCIP_RETCODE SCIPsetBranchruleExecExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecExt", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecExt(branchrule, branchexecext);
+
+   return SCIP_OKAY;
+}
+
+/** sets branching execution method for not completely fixed pseudo solutions */
+SCIP_RETCODE SCIPsetBranchruleExecPs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetBranchruleExecPs", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(branchrule != NULL);
+
+   SCIPbranchruleSetExecPs(branchrule, branchexecps);
 
    return SCIP_OKAY;
 }
@@ -5798,9 +7875,9 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL) )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolIsOriginal(sol)) )
    {
       if( vars != NULL )
          *vars = scip->origprob->vars;
@@ -6700,13 +8777,16 @@ SCIP_RETCODE SCIPtransformProb(
    
    if( nfeassols > 0 )
    {
-      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%d feasible solutions given by solution candidate storage\n", nfeassols);                    
-   } 
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
+         nfeassols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+   }
    else if( ncandsols > 0 )
    {
-      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "all solutions given by solution candidate storage are infeasible\n");                    
-   } 
-      
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "all solutions given by solution candidate storage are infeasible\n\n");
+   }
+
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -6835,6 +8915,9 @@ SCIP_RETCODE exitPresolve(
    SCIP_VAR** vars;
    int nvars;
    int v;
+#ifndef NDEBUG
+   int nusedbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -6880,9 +8963,17 @@ SCIP_RETCODE exitPresolve(
    *unbounded = isunbounded;
    *infeasible = isinfeasible;
 
+   /* exitPresolve() might be called during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
+    */
+#ifndef NDEBUG
+   nusedbuffers = SCIPbufferGetNUsed(scip->set->buffer);
+#endif
+
    /* inform plugins that the presolving is finished, and perform final modifications */
    SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, unbounded, infeasible) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -6906,7 +8997,7 @@ SCIP_RETCODE exitPresolve(
 
    /* exit presolving */
    SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
    
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
@@ -7226,8 +9317,8 @@ SCIP_RETCODE presolveRound(
             assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID); /*lint !e777*/
             
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "feasible solution found by %s heuristic, objective value %13.6e\n",
-               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+               "feasible solution found by %s heuristic, objective value %.6e\n",
+               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
          }
       }
    }
@@ -7313,8 +9404,9 @@ SCIP_RETCODE presolve(
          assert(sol != NULL);           
          assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);  /*lint !e777*/
          
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
-            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "feasible solution found by %s heuristic, objective value %.6e\n",
+            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
       }
    }
 
@@ -7441,6 +9533,75 @@ SCIP_RETCODE presolve(
    return SCIP_OKAY;
 }
 
+/** tries to transform original solutions to the transformed problem space */
+static
+SCIP_RETCODE transformSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_SOL** sols;
+   SCIP_SOL* sol;
+   SCIP_Real* solvals;
+   SCIP_Bool* solvalset;
+   SCIP_Bool added;
+   int nsols;
+   int ntransvars;
+   int naddedsols;
+   int s;
+
+   nsols = SCIPgetNSols(scip);
+
+   /* no solution to transform */
+   if( nsols == 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("try to transfer %d original solutions into the transformed problem space\n", nsols);
+
+   ntransvars = scip->transprob->nvars;
+   naddedsols = 0;
+
+   /* It might happen, that the added transferred solution does not equal the corresponding original one, which might
+    * result in the array of solutions being changed.  Thus we temporarily copy the array and traverse it in reverse
+    * order to ensure that the regarded solution in the copied array was not already freed when new solutions were added
+    * and the worst solutions were freed.
+    */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
+
+   for( s = nsols - 1; s >= 0; --s )
+   {
+      sol = sols[s];
+
+      /* it might happen that a transferred original solution has a better objective than its original counterpart
+       * (e.g., because multi-aggregated variables get another value, but the solution is still feasible);
+       * in this case, it might happen that the solution is not an original one and we just skip this solution
+       */
+      if( !SCIPsolIsOriginal(sol) )
+         continue;
+
+      SCIP_CALL( SCIPprimalTransformSol(scip->primal, sol, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->lp, scip->eventqueue, scip->eventfilter, solvals,
+            solvalset, ntransvars, &added) );
+
+      if( added )
+         ++naddedsols;
+   }
+
+   if( naddedsols > 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "transformed %d/%d original solutions to the transformed problem space\n",
+         naddedsols, nsols);
+   }
+
+   SCIPfreeBufferArray(scip, &solvals);
+   SCIPfreeBufferArray(scip, &solvalset);
+   SCIPfreeBufferArray(scip, &sols);
+
+   return SCIP_OKAY;
+}
+
 /** initializes solution process data structures */
 static
 SCIP_RETCODE initSolve(
@@ -7493,6 +9654,12 @@ SCIP_RETCODE initSolve(
    {
       SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat,
          SCIPprobInternObjval(scip->transprob, scip->set, scip->transprob->dualbound));
+   }
+
+   /* try to transform original solutions to the transformed problem space */
+   if( scip->set->misc_transorigsols )
+   {
+      SCIP_CALL( transformSols(scip) );
    }
 
    /* switch stage to SOLVING */
@@ -7664,7 +9831,7 @@ SCIP_RETCODE freeTransform(
       sol = scip->primal->sols[s];
       assert(sol != NULL);
       
-      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(sol) )
       {
          /* retransform solution into the original problem space */
          SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );
@@ -8279,6 +10446,36 @@ SCIP_RETCODE SCIPcreateVar(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
+ *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
+ *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
+ *  if variable is of integral type, fractional bounds are automatically rounded;
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+SCIP_RETCODE SCIPcreateVarBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype             /**< type of variable */
+   )
+{
+   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, TRUE, FALSE,
+         NULL, NULL, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -19580,7 +21777,7 @@ SCIP_RETCODE SCIPsetSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
          SCIPvarGetName(var));
@@ -19608,7 +21805,7 @@ SCIP_RETCODE SCIPsetSolVals(
 
    SCIP_CALL( checkStage(scip, "SCIPsetSolVals", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       for( v = 0; v < nvars; ++v )
       {
@@ -19639,7 +21836,7 @@ SCIP_RETCODE SCIPincSolVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPincSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIPerrorMessage("cannot increase value of transformed variable <%s> in original space solution\n",
          SCIPvarGetName(var));
@@ -19660,7 +21857,7 @@ SCIP_Real SCIPgetSolVal(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   if( sol != NULL && SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIP_VAR* origvar;
       SCIP_Real scalar;
@@ -19708,7 +21905,7 @@ SCIP_RETCODE SCIPgetSolVals(
    {
       int v;
 
-      if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      if( SCIPsolIsOriginal(sol) )
       {
          SCIP_VAR* origvar;
          SCIP_Real scalar;
@@ -19758,7 +21955,7 @@ SCIP_Real SCIPgetSolOrigObj(
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
    {
       SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
@@ -19906,7 +22103,7 @@ SCIP_RETCODE SCIPprintSol(
    }
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
       objvalue = SCIPsolGetOrigObj(sol);
    else
       objvalue = SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob));
@@ -19945,7 +22142,7 @@ SCIP_RETCODE SCIPprintTransSol(
             scip->tree, scip->lp, NULL) );
    }
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("cannot print original space solution as transformed solution\n");
       return SCIP_INVALIDCALL;
@@ -20140,7 +22337,7 @@ SCIP_RETCODE SCIPprintBestTransSol(
 
    sol = SCIPgetBestSol(scip);
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("best solution is defined in original space - cannot print it as transformed solution\n");
       return SCIP_INVALIDCALL;
@@ -20165,7 +22362,7 @@ SCIP_RETCODE SCIProundSol(
 {
    SCIP_CALL( checkStage(scip, "SCIProundSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("cannot round original space solution\n");
       return SCIP_INVALIDCALL;
@@ -20243,7 +22440,7 @@ SCIP_RETCODE SCIPaddSol(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL );
+      assert( SCIPsolIsOriginal(sol) );
       SCIP_CALL( SCIPprimalAddOrigSol(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -20254,7 +22451,7 @@ SCIP_RETCODE SCIPaddSol(
       /* if the solution is added during presolving and it is not defined on original variables, 
        * presolving operations will destroy its validity, so we retransform it to the original space
        */
-      if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(sol) )
       {
          SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
@@ -20289,7 +22486,7 @@ SCIP_RETCODE SCIPaddSolFree(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL );
+      assert( SCIPsolIsOriginal(*sol) );
       SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -20300,7 +22497,7 @@ SCIP_RETCODE SCIPaddSolFree(
       /* if the solution is added during presolving and it is not defined on original variables, 
        * presolving operations will destroy its validity, so we retransform it to the original space
        */
-      if( SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+      if( !SCIPsolIsOriginal(*sol) )
       {
          SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
          SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
@@ -20355,13 +22552,13 @@ SCIP_RETCODE SCIPtrySol(
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
     */ 
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
    {
       SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
 
@@ -20404,13 +22601,13 @@ SCIP_RETCODE SCIPtrySolFree(
    /* if the solution is added during presolving and it is not defined on original variables, 
     * presolving operations will destroy its validity, so we retransform it to the original space
     */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
    {
       SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
       SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
    }
 
-   if( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(*sol) )
    {
       SCIP_Bool feasible;
 
@@ -20473,7 +22670,7 @@ SCIP_RETCODE SCIPcheckSol(
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
       SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, FALSE, checkbounds, checkintegrality, checklprows, FALSE) );

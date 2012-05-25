@@ -68,6 +68,7 @@
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
 #define SEPA_FREQ                    -1 
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP           TRUE
 #define SEPA_DELAY                FALSE
 
@@ -7486,7 +7487,8 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    )
 {
    SCIP_SEPADATA*        sepadata;
-  
+   SCIP_SEPA* sepa;
+
    /* create zerohalf separator data */
    SCIP_CALL(SCIPallocMemory(scip, &sepadata));
 
@@ -7509,13 +7511,16 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    sepadata->origrows = NULL;
   
    /* include separator */
-   SCIP_CALL(SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, 0.0 , SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyZerohalf,
-         sepaFreeZerohalf, sepaInitZerohalf, sepaExitZerohalf, 
-         sepaInitsolZerohalf, sepaExitsolZerohalf,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpZerohalf, sepaExecsolZerohalf,
-         sepadata));
+         sepadata) );
 
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyZerohalf) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeZerohalf) );
   
    /* add zerohalf separator parameters */
    SCIP_CALL(SCIPaddIntParam(scip,

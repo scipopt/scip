@@ -1652,6 +1652,107 @@ void SCIPbranchruleSetData(
    branchrule->branchruledata = branchruledata;
 }
 
+/** sets copy method of branching rule */
+void SCIPbranchruleSetCopy(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchcopy = branchcopy;
+}
+
+/** sets destructor method of branching rule */
+void SCIPbranchruleSetFree(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchfree = branchfree;
+}
+
+/** sets initialization method of branching rule */
+void SCIPbranchruleSetInit(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchinit = branchinit;
+}
+
+/** sets deinitialization method of branching rule */
+void SCIPbranchruleSetExit(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchexit = branchexit;
+}
+
+/** sets solving process initialization method of branching rule */
+void SCIPbranchruleSetInitsol(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchinitsol = branchinitsol;
+}
+
+/** sets solving process deinitialization method of branching rule */
+void SCIPbranchruleSetExitsol(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchexitsol = branchexitsol;
+}
+
+
+
+/** sets branching execution method for fractional LP solutions */
+void SCIPbranchruleSetExecLp(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchexeclp = branchexeclp;
+}
+
+/** sets branching execution method for external candidates  */
+void SCIPbranchruleSetExecExt(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchexecext = branchexecext;
+}
+
+/** sets branching execution method for not completely fixed pseudo solutions */
+void SCIPbranchruleSetExecPs(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->branchexecps = branchexecps;
+}
+
 /** gets name of branching rule */
 const char* SCIPbranchruleGetName(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */

@@ -767,18 +767,23 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create vbounds primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    heurdataReset(heurdata);
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyVbounds,
-         heurFreeVbounds, heurInitVbounds, heurExitVbounds,
-         heurInitsolVbounds, heurExitsolVbounds, heurExecVbounds,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecVbounds, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyVbounds) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeVbounds) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolVbounds) );
 
    /* add variable bounds primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",

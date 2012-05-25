@@ -37,6 +37,182 @@
 #include "scip/struct_misc.h"
 
 
+/*
+ * GML graphical printing methods
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
+ */
+
+#define GMLNODEWIDTH 120.0
+#define GMLNODEHEIGTH 30.0
+#define GMLFONTSIZE 13
+#define GMLNODETYPE "rectangle"
+#define GMLNODEFILLCOLOR "#ff0000"
+#define GMLEDGECOLOR "black"
+#define GMLNODEBORDERCOLOR "#000000"
+
+
+/** writes a node section to the given graph file */
+void SCIPgmlWriteNode(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
+   )
+{
+   assert(file != NULL);
+   assert(label != NULL);
+
+   fprintf(file, "  node\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    id      %u\n", id);
+   fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      w       %g\n", GMLNODEWIDTH);
+   fprintf(file, "      h       %g\n", GMLNODEHEIGTH);
+
+   if( nodetype != NULL )
+      fprintf(file, "      type    \"%s\"\n", nodetype);
+   else
+      fprintf(file, "      type    \"%s\"\n", GMLNODETYPE);
+
+   if( fillcolor != NULL )
+      fprintf(file, "      fill    \"%s\"\n", fillcolor);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLNODEFILLCOLOR);
+
+   if( bordercolor != NULL )
+      fprintf(file, "      outline \"%s\"\n", bordercolor);
+   else
+      fprintf(file, "      outline \"%s\"\n", GMLNODEBORDERCOLOR);
+
+   fprintf(file, "    ]\n");
+   fprintf(file, "    LabelGraphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      text      \"%s\"\n", label);
+   fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+   fprintf(file, "      fontName  \"Dialog\"\n");
+   fprintf(file, "      anchor    \"c\"\n");
+   fprintf(file, "    ]\n");
+   fprintf(file, "  ]\n");
+}
+
+/** writes an edge section to the given graph file */
+void SCIPgmlWriteEdge(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   /* fprintf(file, "      arrow     \"both\"\n"); */
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes an arc section to the given graph file */
+void SCIPgmlWriteArc(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   fprintf(file, "      targetArrow     \"standard\"\n");
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes the starting line to a GML graph file, does not open a file */
+void SCIPgmlOpen(
+   FILE*                 file,               /**< file to write to */
+   SCIP_Bool             directed            /**< is the graph directed */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "graph\n");
+   fprintf(file, "[\n");
+   fprintf(file, "  hierarchic      1\n");
+
+   if( directed )
+      fprintf(file, "  directed        1\n");
+}
+
+/** writes the ending lines to a GML graph file, does not close a file */
+void SCIPgmlClose(
+   FILE*                 file                /**< file to close */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "]\n");
+}
+
 
 /*
  * Priority Queue
@@ -4938,20 +5114,27 @@ void bstnodeFreeLeaf(
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
+#if 0
    /* remove reference from parent node */
    if( (*node)->parent != NULL )
    {
+      assert(*node != NULL);
+
       assert((*node)->parent->left == *node || ((*node)->parent->right == *node));
 
       if( (*node)->parent->left == *node )
+      {
          (*node)->parent->left = NULL;
+      }
       else
       {
          assert((*node)->parent->right == *node);
          (*node)->parent->right = NULL;
       }
    }
+#endif
 
+   assert(*node != NULL);
    BMSfreeBlockMemory(tree->blkmem, node);
    assert(*node == NULL);
 }
@@ -5155,6 +5338,69 @@ void SCIPbstFree(
    BMSfreeMemory(tree);
 }
 
+/** prints the rooted subtree of the given binary search tree node in GML format into the given file */
+static
+void bstPrintSubtree(
+   SCIP_BSTNODE*         node,               /**< binary search tree node */
+   FILE*                 file,               /**< file to write to */
+   int*                  nnodes              /**< pointer to count the number of nodes */
+   )
+{
+   SCIP_BSTNODE* left;
+   SCIP_BSTNODE* right;
+   char label[SCIP_MAXSTRLEN];
+
+   assert(node != NULL);
+
+   (*nnodes)++;
+   (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", *nnodes);
+
+   SCIPgmlWriteNode(file, (unsigned int)(size_t)node, label, "circle", NULL, NULL);
+
+   left = SCIPbstnodeGetLeftchild(node);
+   right = SCIPbstnodeGetRightchild(node);
+
+   if( left != NULL )
+   {
+      bstPrintSubtree(left, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)left, NULL, NULL);
+   }
+
+   if( right != NULL )
+   {
+      bstPrintSubtree(right, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)right, NULL, NULL);
+   }
+}
+
+/** prints the binary search tree in GML format into the given file */
+void SCIPbstPrintGml(
+   SCIP_BST*             tree,               /**< binary search tree */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   /* write GML opening */
+   SCIPgmlOpen(file, TRUE);
+
+   if( !SCIPbstIsEmpty(tree) )
+   {
+      SCIP_BSTNODE* root;
+      int nnodes;
+
+      root = SCIPbstGetRoot(tree);
+      assert(root != NULL);
+
+      nnodes = 0;
+
+      bstPrintSubtree(root, file, &nnodes);
+   }
+
+   /* write GML closing */
+   SCIPgmlClose(file);
+}
+
 /** returns whether the binary search tree is empty (has no nodes) */
 SCIP_Bool SCIPbstIsEmpty(
    SCIP_BST*             tree                /**< binary search tree */
@@ -5244,7 +5490,7 @@ int SCIPbstComp(
    assert(node2 != NULL);
    assert(tree->comparer != NULL);
 
-   return (*tree->comparer)(node1, node2);
+   return (*tree->comparer)(node1->key, node2->key);
 }
 
 /** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
@@ -5953,7 +6199,7 @@ SCIP_Longint SCIPcalcBinomCoef(
    /* simple case m == 2 */
    if( m == 2 )
    {
-      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 )
+      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
 	 return (n*(n-1)/2); /*lint !e647*/
       else
 	 return -1;

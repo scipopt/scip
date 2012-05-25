@@ -114,13 +114,17 @@ SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
    eventhdlrdata = NULL;
    
+   eventhdlr = NULL;
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyBestsol, eventFreeBestsol, eventInitBestsol, eventExitBestsol, 
-         eventInitsolBestsol, eventExitsolBestsol, eventDeleteBestsol, eventExecBestsol,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecBestsol, eventhdlrdata) );
+   assert(eventhdlr != NULL);
+
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyBestsol) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitBestsol) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitBestsol) );
    
    return SCIP_OKAY;
 }

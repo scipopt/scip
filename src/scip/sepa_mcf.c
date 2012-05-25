@@ -6896,8 +6896,9 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
-   /* create cmir separator data */
+   /* create mcf separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->mcfnetworks = NULL;
    sepadata->nmcfnetworks = -1;
@@ -6906,12 +6907,19 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    sepadata->effortlevel = MCFEFFORTLEVEL_OFF;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyMcf, sepaFreeMcf, sepaInitMcf, sepaExitMcf,
-         sepaInitsolMcf, sepaExitsolMcf,
          sepaExeclpMcf, sepaExecsolMcf,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyMcf) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeMcf) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolMcf) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolMcf) );
+
 
    /** @todo introduce parameters such as maxrounds (see other separators) */
    /* add mcf separator parameters */

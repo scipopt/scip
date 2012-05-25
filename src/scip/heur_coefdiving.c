@@ -817,18 +817,23 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create coefdiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->indconshdlr = NULL;
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyCoefdiving,
-         heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving,
-         heurInitsolCoefdiving, heurExitsolCoefdiving, heurExecCoefdiving,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCoefdiving, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCoefdiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCoefdiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitCoefdiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitCoefdiving) );
 
    /* coefdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

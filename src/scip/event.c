@@ -305,6 +305,83 @@ void SCIPeventhdlrSetData(
    eventhdlr->eventhdlrdata = eventhdlrdata;
 }
 
+/** sets copy callback for all events of this event handler */
+void SCIPeventhdlrSetCopy(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback for events */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventcopy = eventcopy;
+}
+
+/** sets destructor callback of this event handler */
+void SCIPeventhdlrSetFree(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTFREE   ((*eventfree))      /**< destructor callback of event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventfree = eventfree;
+}
+
+/** sets initialization callback of this event handler */
+void SCIPeventhdlrSetInit(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialization callback of event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventinit = eventinit;
+}
+
+/** sets deinitialization callback of this event handler */
+void SCIPeventhdlrSetExit(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialization callback of event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventexit = eventexit;
+}
+
+/** sets solving process initialization callback of this event handler */
+void SCIPeventhdlrSetInitsol(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventinitsol = eventinitsol;
+}
+
+/** sets solving process deinitialization callback of this event handler */
+void SCIPeventhdlrSetExitsol(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventexitsol = eventexitsol;
+}
+
+/** sets callback to free specific event data */
+void SCIPeventhdlrSetDelete(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< callback to free specific event data */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   eventhdlr->eventdelete = eventdelete;
+}
+
 /** is event handler initialized? */
 SCIP_Bool SCIPeventhdlrIsInitialized(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */

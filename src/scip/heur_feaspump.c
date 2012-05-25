@@ -1216,17 +1216,25 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create feaspump primal heuristic data */
+   /* create Feaspump primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyFeaspump,
-         heurFreeFeaspump, heurInitFeaspump, heurExitFeaspump,
-         heurInitsolFeaspump, heurExitsolFeaspump, heurExecFeaspump,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFeaspump, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFeaspump) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitFeaspump) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitFeaspump) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolFeaspump) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolFeaspump) );
 
    /* add feaspump primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

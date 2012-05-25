@@ -1234,15 +1234,29 @@ SCIP_RETCODE SCIPincludePropProbing(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    initPropdata(propdata);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyProbing,
-         propFreeProbing, propInitProbing, propExitProbing, propInitpreProbing, propExitpreProbing, propInitsolProbing, propExitsolProbing, propPresolProbing, propExecProbing, propRespropProbing, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecProbing, propRespropProbing,
+         propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyProbing) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeProbing) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitProbing) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitProbing) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolProbing) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolProbing) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
+   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing) );
 
    /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

@@ -559,6 +559,74 @@ void SCIPsepaSetData(
    sepa->sepadata = sepadata;
 }
 
+/* new callback/method setter methods */
+
+/** sets copy method of separator */
+void SCIPsepaSetCopy(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepacopy = sepacopy;
+}
+
+/** sets destructor method of separator */
+void SCIPsepaSetFree(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepafree = sepafree;
+}
+
+/** sets initialization method of separator */
+void SCIPsepaSetInit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepainit = sepainit;
+}
+
+/** sets deinitialization method of separator */
+void SCIPsepaSetExit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepaexit = sepaexit;
+}
+
+/** sets solving process initialization method of separator */
+void SCIPsepaSetInitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepainitsol = sepainitsol;
+}
+
+/** sets solving process deinitialization method of separator */
+void SCIPsepaSetExitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->sepaexitsol = sepaexitsol;
+}
+
 /** gets name of separator */
 const char* SCIPsepaGetName(
    SCIP_SEPA*            sepa                /**< separator */

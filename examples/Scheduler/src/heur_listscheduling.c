@@ -835,6 +835,7 @@ SCIP_RETCODE SCIPincludeHeurListScheduling(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create list scheduling primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -843,13 +844,15 @@ SCIP_RETCODE SCIPincludeHeurListScheduling(
    heurdata->njobs = 0;
    heurdata->initialized = FALSE;
 
+   heur = NULL;
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY,
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY,
          HEUR_FREQ, HEUR_FREQOFS, HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyListScheduling,
-         heurFreeListScheduling, heurInitListScheduling, heurExitListScheduling,
-         heurInitsolListScheduling, heurExitsolListScheduling, heurExecListScheduling,
-         heurdata) );
+         heurExecListScheduling, heurdata) );
+   assert(heur != NULL);
+
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeListScheduling) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitListScheduling) );
 
    return SCIP_OKAY;
 }

@@ -4004,6 +4004,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create oddcycle separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -4011,10 +4012,18 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    sepadata->lastnode = -1;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyOddcycle, sepaFreeOddcycle, sepaInitOddcycle, sepaExitOddcycle, sepaInitsolOddcycle,
-         sepaExitsolOddcycle, sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
+         sepaExeclpOddcycle, sepaExecsolOddcycle,
+         sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyOddcycle) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeOddcycle) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitOddcycle) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolOddcycle) );
 
    /* add oddcycle separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/usegls",
