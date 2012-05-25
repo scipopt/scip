@@ -46,20 +46,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_var.h"
-
 #include "scip/cons_cumulative.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_knapsack.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_setppc.h"
-
-#include "scip/pub_misc.h"
-#include "scip/scip.h"
-#include "scip/type_result.h"
-#include "scip/prop_vbounds.h"
-#include "scip/struct_tree.h"
+#include "scip/scipdefplugins.h"
 
 /**@name Constraint handler properties
  *
