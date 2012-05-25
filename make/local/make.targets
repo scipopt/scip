@@ -40,3 +40,17 @@ SCIPEXAMPLES	=	Binpacking Coloring Eventhdlr MIPSolver TSP
 testexamples:
 		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
 
+
+.PHONY: coverage
+coverage:
+		-ln -s ../../../../src $(OBJDIR)/lib/scip
+		-ln -s ../../../../src $(OBJDIR)/lib/tclique
+		-ln -s ../../../../src $(OBJDIR)/lib/dijkstra
+		-ln -s ../../../../src $(OBJDIR)/lib/blockmemshell
+		-ln -s ../../../../src $(OBJDIR)/lib/nlpi
+		-ln -s ../../../../src $(OBJDIR)/lib/xml
+		-mkdir -p gcov
+		lcov -d $(OBJDIR) -z
+		make  $^ test
+		lcov -d $(OBJDIR) -c >gcov/scip.capture
+		genhtml -o gcov gcov/scip.capture
