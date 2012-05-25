@@ -51,8 +51,8 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXNLPITERQUOT     0.05 /**< maximal fraction of diving NLP iterations compared to node NLP iterations */
-#define DEFAULT_MAXNLPITEROFS       200 /**< additional number of allowed NLP iterations */
+#define DEFAULT_MAXNLPITERABS       200 /**< minimial absolute number of allowed NLP iterations */
+#define DEFAULT_MAXNLPITERREL        10 /**< additional allowed number of NLP iterations relative to successfully found solutions */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -73,7 +73,7 @@
                                          */
 #define DEFAULT_NLPFASTFAIL        TRUE /**< should the NLP solver stop early if it converges slow? */
 
-#define MINNLPITER                  200 /**< minimal number of NLP iterations allowed in each NLP solving call */
+#define MINNLPITER                   10 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -81,8 +81,8 @@ struct SCIP_HeurData
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
-   SCIP_Real             maxnlpiterquot;     /**< maximal fraction of diving NLP iterations compared to node NLP iterations */
-   int                   maxnlpiterofs;      /**< additional number of allowed NLP iterations */
+   int                   maxnlpiterabs;      /**< minimial absolute number of allowed NLP iterations */
+   int                   maxnlpiterrel;      /**< additional allowed number of NLP iterations relative to successfully found solutions */
    SCIP_Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -103,7 +103,7 @@ struct SCIP_HeurData
                                               *   'p'seudocost, 'g'uided, 'd'ouble)
                                               */
 
-   SCIP_Longint          nnlpiterations;     /**< NLP iterations used in this heuristic */
+   int                   nnlpiterations;     /**< NLP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    int                   nfixedcovervars;    /**< number of variables in the cover that are already fixed */
 #ifdef SCIP_STATISTIC
@@ -1387,7 +1387,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    SCIPstatistic(
       if( strstr(SCIPgetProbName(scip), "_covering") == NULL && SCIPheurGetNCalls(heur) > 0 )
       {
-         SCIPstatisticMessage("%-30s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7"SCIP_LONGINT_FORMAT" NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
+         SCIPstatisticMessage("%-30s %5"SCIP_LONGINT_FORMAT" sols in %5"SCIP_LONGINT_FORMAT" runs, %6.1fs, %7d NLP iters in %5d NLP solves, %5.1f avg., %3d%% success %3d%% cutoff %3d%% depth %3d%% nlperror\n",
             SCIPgetProbName(scip), SCIPheurGetNSolsFound(heur), SCIPheurGetNCalls(heur), SCIPheurGetTime(heur),
             heurdata->nnlpiterations, heurdata->nnlpsolves, heurdata->nnlpiterations/MAX(1.0,(SCIP_Real)heurdata->nnlpsolves),
             (100*heurdata->nsuccess) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailcutoff) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfaildepth) / (int)SCIPheurGetNCalls(heur), (100*heurdata->nfailnlperror) / (int)SCIPheurGetNCalls(heur)
@@ -1458,8 +1458,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    SCIP_Bool solvesubmip;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
-   SCIP_Longint nnlpiterations;
-   SCIP_Longint maxnnlpiterations;
+   int avgnnlpiterations;
+   int maxnnlpiterations;
    int npseudocands;
    int nlpbranchcands;
    int ncovervars;
@@ -1531,19 +1531,21 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    if( depth < heurdata->minreldepth*maxdepth || depth > heurdata->maxreldepth*maxdepth )
       return SCIP_OKAY;
 
-   /* calculate the maximal number of NLP iterations until heuristic is aborted */
-   nnlpiterations = MINNLPITER; /* @todo what should we set here? was SCIPgetNNodeLPIterations(scip) */
+   /* calculate the maximal number of NLP iterations until heuristic is aborted
+    * maximal number is maxnlpiterabs plus a success-depending multiplier of maxnlpiterrel
+    */
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
-   maxnnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterquot * nnlpiterations);
-   maxnnlpiterations += heurdata->maxnlpiterofs;
+   maxnnlpiterations = heurdata->maxnlpiterabs;
+   maxnnlpiterations += (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel;
 
    /* don't try to dive, if we took too many NLP iterations during diving */
    if( heurdata->nnlpiterations >= maxnnlpiterations )
       return SCIP_OKAY;
 
-   /* allow at least a certain number of NLP iterations in this dive */
-   maxnnlpiterations = MAX(maxnnlpiterations, heurdata->nnlpiterations + MINNLPITER);
+   /* allow at least a bit more than the so far average number of NLP iterations per dive */
+   avgnnlpiterations = heurdata->nnlpiterations / MAX(ncalls, 1.0);
+   maxnnlpiterations = MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
    /* don't try to dive, if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );
@@ -1558,7 +1560,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* set iteration limit */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, (int) maxnnlpiterations) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations - heurdata->nnlpiterations) );
 
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
@@ -1944,7 +1946,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             /* round backtrack variable up or down */
             if( backtrackroundup )
             {
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
                   SCIPfeasCeil(scip, backtrackvarval), SCIPvarGetUbLocal(backtrackvar));
@@ -1952,7 +1954,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
             else
             {
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(backtrackvar), backtrackvarval, SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar),
                   SCIPvarGetLbLocal(backtrackvar), SCIPfeasFloor(scip, backtrackvarval));
@@ -1984,7 +1986,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             if( bestcandroundup == !backtracked )
             {
                /* round variable up */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(var), bestcandmayround,
                   bestboundval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -2003,7 +2005,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             else
             {
                /* round variable down */
-               SCIPdebugMessage("  dive %d/%d, NLP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+               SCIPdebugMessage("  dive %d/%d, NLP iter %d/%d: var <%s>, round=%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                   divedepth, maxdivedepth, heurdata->nnlpiterations, maxnnlpiterations,
                   SCIPvarGetName(var), bestcandmayround,
                   bestboundval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -2184,11 +2186,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
-            /* set iteration limit */
-            /* @todo MINNLPITER seem to be too large
-             * @todo better increase maxnnlpiterations by 10 or so for each successful solve?
-             */
-            SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX((int)(maxnnlpiterations - heurdata->nnlpiterations), MINNLPITER)) );
+            /* set iteration limit, allow at least MINNLPITER many iterations */
+            SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER)) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
@@ -2468,14 +2467,14 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          "heuristics/"HEUR_NAME"/maxreldepth",
          "maximal relative depth to start diving",
          &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxnlpiterquot",
-         "maximal fraction of diving NLP iterations compared to node NLP iterations",
-         &heurdata->maxnlpiterquot, FALSE, DEFAULT_MAXNLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxnlpiterofs",
-         "additional number of allowed NLP iterations",
-         &heurdata->maxnlpiterofs, FALSE, DEFAULT_MAXNLPITEROFS, 0, INT_MAX, NULL, NULL) );
+         "heuristics/"HEUR_NAME"/maxnlpiterabs",
+         "minimial absolute number of allowed NLP iterations",
+         &heurdata->maxnlpiterabs, FALSE, DEFAULT_MAXNLPITERABS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/"HEUR_NAME"/maxnlpiterrel",
+         "additional allowed number of NLP iterations relative to successfully found solutions",
+         &heurdata->maxnlpiterrel, FALSE, DEFAULT_MAXNLPITERREL, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/maxdiveubquot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
