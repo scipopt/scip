@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_components.c
+ * @ingroup PRESOLVERS
  * @brief  solve independent components in advance
  * @author Dieter Weninger
  * @author Gerald Gamrath
@@ -849,7 +850,7 @@ SCIP_RETCODE presolComponents(
    if( !SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
-   /* cehck for a reached timelimit */
+   /* check for a reached timelimit */
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
