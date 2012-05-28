@@ -209,6 +209,8 @@ SCIP_RETCODE heurdataFree(
       SCIPdigraphFree(&heurdata->precedencegraph);
    }
 
+   heurdata->initialized = FALSE;
+
    return SCIP_OKAY;
 }
 
