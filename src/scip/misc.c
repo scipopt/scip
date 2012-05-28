@@ -5168,6 +5168,21 @@ void SCIPbstnodeFree(
    assert(*node == NULL);
 }
 
+/* some simple variable functions implemented as defines */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPbstnodeIsLeaf
+#undef SCIPbstnodeGetData
+#undef SCIPbstnodeGetKey
+#undef SCIPbstnodeGetParent
+#undef SCIPbstnodeGetLeftchild
+#undef SCIPbstnodeGetRightchild
+
 /** returns whether the search node is a leaf */
 SCIP_Bool SCIPbstnodeIsLeaf(
    SCIP_BSTNODE*         node                /**< search node */
@@ -5400,6 +5415,10 @@ void SCIPbstPrintGml(
    /* write GML closing */
    SCIPgmlClose(file);
 }
+
+/* some simple variable functions implemented as defines */
+#undef SCIPbstIsEmpty
+#undef SCIPbstGetRoot
 
 /** returns whether the binary search tree is empty (has no nodes) */
 SCIP_Bool SCIPbstIsEmpty(
