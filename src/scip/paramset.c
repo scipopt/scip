@@ -2842,14 +2842,6 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/probing/maxprerounds", 0, quiet) );
    }
 
-   /* explicitly change parameters of knapsack constraint handler, if the constraint handler is included */
-#ifndef NDEBUG
-   if( SCIPsetFindConshdlr(set, "knapsack") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/knapsack/disaggregation", FALSE, quiet) );
-   }
-
    /* explicitly disable components presolver, if included */
 #ifndef NDEBUG
    if( SCIPsetFindPresol(set, "components") != NULL )
@@ -3058,7 +3050,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
       sepaname = SCIPsepaGetName(sepas[i]);
 
       /* intobj separator should stay disabled */
-      if( strcmp(sepaname, "intobj") == 0 )
+      if( strcmp(sepaname, "intobj") == 0 || strcmp(sepaname, "cgmip") == 0 )
          continue;
 
       /* get frequency parameter of separator */
