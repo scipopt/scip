@@ -1741,8 +1741,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
       if( covercomputed )
       {
-         assert(ncovervars > 0);
          assert(covervars != NULL);
+         /* a cover can be empty, if the cover computation reveals that all nonlinear constraints are linear w.r.t. current variable fixations */
+         assert(ncovervars >= 0);
 
          /* create hash map */
          SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
