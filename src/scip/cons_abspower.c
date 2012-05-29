@@ -1189,6 +1189,7 @@ SCIP_RETCODE presolveDual(
             SCIP_Real xfixobjval;
 
             xfix = SCIP_INVALID;
+            xfixobjval = SCIP_INVALID;
 
             if( SCIPisLT(scip, xlb, -consdata->xoffset) )
             {
