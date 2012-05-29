@@ -1931,15 +1931,21 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
          if( backtracked && backtrackdepth > 0 )
          {
-
-            /* if the variable is already fixed, numerical troubles may have occurred or
-             * variable was fixed by propagation while backtracking => Abort diving!
+            /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
+             * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
             if( SCIPvarGetLbLocal(backtrackvar) >= SCIPvarGetUbLocal(backtrackvar) - 0.5 )
             {
                SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                   SCIPvarGetName(backtrackvar), SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar), backtrackvarval);
                cutoff = TRUE;
+               break;
+            }
+            if( SCIPisFeasLT(scip, backtrackvarval, SCIPvarGetLbLocal(backtrackvar)) || SCIPisFeasGT(scip, backtrackvarval, SCIPvarGetUbLocal(backtrackvar)) )
+            {
+               SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+                  SCIPvarGetName(backtrackvar), SCIPvarGetLbLocal(backtrackvar), SCIPvarGetUbLocal(backtrackvar), backtrackvarval);
+               assert(backtracked);
                break;
             }
 
@@ -1971,14 +1977,21 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          }
          else
          {
-            /* if the variable is already fixed, numerical troubles may have occurred or
-             * variable was fixed by propagation while backtracking => Abort diving!
+            /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
+             * occured or variable was fixed by propagation while backtracking => Abort diving!
              */
             if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
             {
                SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                   SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestboundval);
                cutoff = TRUE;
+               break;
+            }
+            if( SCIPisFeasLT(scip, bestboundval, SCIPvarGetLbLocal(var)) || SCIPisFeasGT(scip, bestboundval, SCIPvarGetUbLocal(var)) )
+            {
+               SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestboundval);
+               assert(backtracked);
                break;
             }
 

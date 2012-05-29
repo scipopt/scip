@@ -629,14 +629,21 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       backtracked = FALSE;
       do
       {
-         /* if the variable is already fixed, numerical troubles may have occured or
-          * variable was fixed by propagation while backtracking => Abort diving!
+         /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
+          * occured or variable was fixed by propagation while backtracking => Abort diving!
           */
          if( SCIPvarGetLbLocal(bestcandvar) >= SCIPvarGetUbLocal(bestcandvar) - 0.5 )
          {
             SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                SCIPvarGetName(bestcandvar), SCIPvarGetLbLocal(bestcandvar), SCIPvarGetUbLocal(bestcandvar), bestcandsol);
             cutoff = TRUE;
+            break;
+         }
+         if( SCIPisFeasLT(scip, bestcandsol, SCIPvarGetLbLocal(bestcandvar)) || SCIPisFeasGT(scip, bestcandsol, SCIPvarGetUbLocal(bestcandvar)) )
+         {
+            SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
+               SCIPvarGetName(bestcandvar), SCIPvarGetLbLocal(bestcandvar), SCIPvarGetUbLocal(bestcandvar), bestcandsol);
+            assert(backtracked);
             break;
          }
 
