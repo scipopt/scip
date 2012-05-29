@@ -27,8 +27,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode; 
-//                   *  same as in branch_relpscost.c */
+#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode;
+                   *  same as in branch_relpscost.c */
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -10263,10 +10263,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
-   exactsolve = SCIPisExactSolve(scip);
-
 #ifdef USESBGAIN
-   exactsolve = FALSE;
+   exactsolve = SCIPisExactSolve(scip);
 #else
    exactsolve = TRUE;
 #endif
@@ -15812,10 +15810,10 @@ SCIP_Real SCIPgetColFarkasCoef(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* if in the exact mode we have to prove infeasibility we switch from lp to pseudo solution. in this case 
+   /* if in the exact mode, we have to prove infeasibility and switch from lp to pseudo solution. in this case
     * SCIPtreeHasCurrentNodeLP() is false eventhough the LP has been solved and all information are avaiable
     */
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) && !scip->set->misc_exactsolve )
+   if( !SCIPisExactSolve(scip) && !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       SCIPerrorMessage("cannot get Farkas coeff, because node LP is not processed\n");
       SCIPABORT();

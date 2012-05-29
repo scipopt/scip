@@ -1545,7 +1545,7 @@ SCIP_Bool SCIPsolsAreEqual(
 
    /* solutions with different objective values cannot be the same */
    if( (set->misc_exactsolve && obj1 != obj2)
-      || (!set->misc_exactsolve && !SCIPsetIsEQ(set, sol1->obj, sol2->obj)) )
+      || (!set->misc_exactsolve && !SCIPsetIsEQ(set, obj1, obj2)) )
       return FALSE;
 
    /* if one of the solutions is defined in original space, the comparison has to be performed in the original space */

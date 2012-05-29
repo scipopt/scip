@@ -943,9 +943,10 @@ SCIP_RETCODE updateEstimate(
    SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL) );
 
    /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j});
-    * in exact mode, if lowerbound is -inf because safe verification of approximate LP solution failed, we want to use the given approximate lower bound 
+    * in exact mode, if lowerbound is -inf because safe verification of approximate LP solution failed, we want to use the
+    * given approximate lower bound
     */
-   estimate = MAX(SCIPnodeGetLowerbound(focusnode), lowerboundapprox); 
+   estimate = MAX(SCIPnodeGetLowerbound(focusnode), lowerboundapprox);
    for( i = 0; i < nlpcands; ++i )
    {
       SCIP_Real pscdown;
@@ -2039,8 +2040,18 @@ SCIP_RETCODE priceAndCutLoop(
    /* price-and-cut loop */
    npricedcolvars = prob->ncolvars;
    mustprice = TRUE;
-   /* if all the variables are already in the LP, we don't need to price */
-   mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
+   if( set->misc_exactsolve )
+   {
+      /* if all the variables are already in the LP, we don't need to price;
+       * this will be checked in SCIPpriceLoop() anyway, but calling it already here avoids an unnecessary, but expensive,
+       * call of SCIPnodeUpdateLowerboundLP()
+       */
+      /** @todo exiptodo: presolving and heuristics extension
+       *  - if domain propagation and primal heuristics are supported in exact solving mode, we have to rework this because
+       *    normally domain propagation and primal heuristics are called in the while(mustprice)-loop at least once
+       */
+      mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
+   }
    mustsepa = separate;
    delayedsepa = FALSE;
    *cutoff = FALSE;
@@ -2890,9 +2901,12 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          *solvelpagain = TRUE;
          resolved = TRUE;
-         lp->solved = FALSE; /* to force resolving the LP (needed in exact mode) */
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED; /* to be consistent with lp->solved (needed in exact mode) */ 
-         SCIPconshdlrForceEnforcement(set->conshdlrs_enfo[h]); /* to force second call of enforcement (needed in exact mode) */
+         if( set->misc_exactsolve )
+         {
+            lp->solved = FALSE; /* to force resolving the LP (needed in exact mode) */
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED; /* to be consistent with lp->solved (needed in exact mode) */
+            SCIPconshdlrForceEnforcement(set->conshdlrs_enfo[h]); /* to force second call of enforcement (needed in exact mode) */
+         }
          SCIPtreeSetFocusNodeLP(tree, TRUE); /* the node's LP must be solved */
          break;
 

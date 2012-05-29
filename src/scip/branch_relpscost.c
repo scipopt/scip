@@ -20,8 +20,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode; 
-//                   *  same as in scip.c */
+#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode;
+                   *  same as in scip.c */
 
 #include <assert.h>
 #include <string.h>
@@ -237,10 +237,8 @@ SCIP_RETCODE execRelpscost(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
-   exactsolve = SCIPisExactSolve(scip);
-
 #ifdef USESBGAIN
-   exactsolve = FALSE;
+   exactsolve = SCIPisExactSolve(scip);
 #else
    exactsolve = TRUE;
 #endif

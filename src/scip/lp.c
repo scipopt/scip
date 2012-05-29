@@ -33,7 +33,7 @@
 //#define PROVEDBNDTEST_OUT  /** uncomment to get info about testing interval arithmetic in safe dual bound computation */
 //#define UNBNDDUALSOL_OUT   /** uncomment to get detailed info about construction of unbounded dual solution */
 
-#define FAIRINEXACT        /** uncomment to ign lp solver objlimit in inexact mode; allows fair comparison to exact run */
+//#define FAIRINEXACT        /** uncomment to ign lp solver objlimit in inexact mode; allows fair comparison to exact run */
 
 #include <assert.h>
 #include <math.h>
@@ -1577,7 +1577,8 @@ SCIP_RETCODE colAddCoef(
    assert(col->nlprows <= col->len);
    assert(col->var != NULL);
    assert(row != NULL);
-   assert((!set->misc_usefprelax && !SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val != 0.0));
+   assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, val))
+      || (set->misc_exactsolve && set->misc_usefprelax && val != 0.0));
    /*assert(colSearchCoef(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    SCIP_CALL( colEnsureSize(col, blkmem, set, col->len+1) );
@@ -1739,13 +1740,14 @@ SCIP_RETCODE colChgCoefPos(
    /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
 
-   if( (!set->misc_usefprelax && SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val == 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && SCIPsetIsZero(set, val))
+      || (set->misc_exactsolve && set->misc_usefprelax && val == 0.0) )
    {
       /* delete existing coefficient */
       SCIP_CALL( colDelCoefPos(col, set, lp, pos) );
    }
-   else if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, col->vals[pos], val)) 
-      || (set->misc_usefprelax && col->vals[pos] != val) )
+   else if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, col->vals[pos], val))
+      || (set->misc_exactsolve && set->misc_usefprelax && col->vals[pos] != val) )
    {
       /* change existing coefficient */
       col->vals[pos] = val;
@@ -1780,7 +1782,8 @@ void rowAddNorms(
    assert(col != NULL);
 
    absval = REALABS(val);
-   assert((!set->misc_usefprelax && !SCIPsetIsZero(set, absval)) || (set->misc_usefprelax && absval != 0.0));
+   assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, absval))
+      || (set->misc_exactsolve && set->misc_usefprelax && absval != 0.0));
 
    /* update min/maxidx */
    row->minidx = MIN(row->minidx, col->index);
@@ -1835,7 +1838,8 @@ void rowDelNorms(
    assert(col != NULL);
 
    absval = REALABS(val);
-   assert((!set->misc_usefprelax && !SCIPsetIsZero(set, absval)) || (set->misc_usefprelax && absval != 0.0));
+   assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, absval))
+      || (set->misc_exactsolve && set->misc_usefprelax && absval != 0.0));
    assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
    assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
 
@@ -1886,7 +1890,8 @@ SCIP_RETCODE rowAddCoef(
    assert(col != NULL);
    assert(col->var != NULL);
    assert(col->var_probindex == SCIPvarGetProbindex(col->var));
-   assert((!set->misc_usefprelax && !SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val != 0.0));
+   assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, val))
+      || (set->misc_exactsolve && set->misc_usefprelax && val != 0.0));
    /*assert(rowSearchCoef(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    if( row->nlocks > 0 )
@@ -2086,13 +2091,14 @@ SCIP_RETCODE rowChgCoefPos(
       return SCIP_INVALIDDATA;
    }
 
-   if( (!set->misc_usefprelax && SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val == 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && SCIPsetIsZero(set, val))
+      || (set->misc_exactsolve && set->misc_usefprelax && val == 0.0) )
    {
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, row->vals[pos], val)) 
-      || (set->misc_usefprelax && row->vals[pos] != val) )
+   else if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, row->vals[pos], val))
+      || (set->misc_exactsolve && set->misc_usefprelax && row->vals[pos] != val) )
    {
       SCIP_Real oldval;
       
@@ -2189,8 +2195,8 @@ SCIP_RETCODE colLink(
       /* unlinked rows can only be in the non-LP/unlinked rows part of the rows array */
       for( i = col->nlprows; i < col->len; ++i )
       {
-         assert((!set->misc_usefprelax && !SCIPsetIsZero(set, col->vals[i])) 
-            || (set->misc_usefprelax && col->vals[i] != 0.0));
+         assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, col->vals[i]))
+            || (set->misc_exactsolve && set->misc_usefprelax && col->vals[i] != 0.0));
          if( col->linkpos[i] == -1 )
          {
             /* this call might swap the current row with the first non-LP/not linked row, but this is of no harm */
@@ -2272,8 +2278,8 @@ SCIP_RETCODE rowLink(
       /* unlinked columns can only be in the non-LP/unlinked columns part of the cols array */
       for( i = row->nlpcols; i < row->len; ++i )
       {
-         assert((!set->misc_usefprelax && !SCIPsetIsZero(set, row->vals[i])) 
-            || (set->misc_usefprelax && row->vals[i] != 0.0));
+         assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, row->vals[i]))
+            || (set->misc_exactsolve && set->misc_usefprelax && row->vals[i] != 0.0));
          if( row->linkpos[i] == -1 )
          {
             /* this call might swap the current column with the first non-LP/not linked column, but this is of no harm */
@@ -2935,7 +2941,8 @@ SCIP_RETCODE SCIPcolCreate(
       for( i = 0; i < len; ++i )
       {
          assert(rows[i] != NULL);
-         assert((!set->misc_usefprelax && !SCIPsetIsZero(set, vals[i])) || (set->misc_usefprelax && vals[i] != 0.0));
+         assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[i]))
+            || (set->misc_exactsolve && set->misc_usefprelax && vals[i] != 0.0));
          (*col)->linkpos[i] = -1;
       }
    }
@@ -3202,7 +3209,8 @@ SCIP_RETCODE SCIPcolIncCoef(
    assert(!lp->diving);
    assert(row != NULL);
 
-   if( (!set->misc_usefprelax && SCIPsetIsZero(set, incval)) || (set->misc_usefprelax && incval == 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && SCIPsetIsZero(set, incval))
+      || (set->misc_exactsolve && set->misc_usefprelax && incval == 0.0) )
       return SCIP_OKAY;
 
    /* search the position of the row in the column's row vector */
@@ -3254,8 +3262,8 @@ SCIP_RETCODE SCIPcolChgObj(
    
    SCIPdebugMessage("changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
 
-   if( col->lpipos >= 0 && ((!set->misc_usefprelax && !SCIPsetIsEQ(set, col->obj, newobj)) 
-         || (set->misc_usefprelax && col->obj != newobj)) ) 
+   if( col->lpipos >= 0 && ((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, col->obj, newobj))
+         || (set->misc_exactsolve && set->misc_usefprelax && col->obj != newobj)) )
    {
       /* insert column in the chgcols list (if not already there) */
       if( !col->objchanged && !col->lbchanged && !col->ubchanged )
@@ -3317,8 +3325,8 @@ SCIP_RETCODE SCIPcolChgLb(
    
    SCIPdebugMessage("changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
-   if( col->lpipos >= 0 && ((!set->misc_usefprelax && !SCIPsetIsEQ(set, col->lb, newlb)) 
-         || (set->misc_usefprelax && col->lb != newlb)) )
+   if( col->lpipos >= 0 && ((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, col->lb, newlb))
+         || (set->misc_exactsolve && set->misc_usefprelax && col->lb != newlb)) )
    {
       /* insert column in the chgcols list (if not already there) */
       SCIP_CALL( insertColChgcols(col, set, lp) );
@@ -3350,8 +3358,8 @@ SCIP_RETCODE SCIPcolChgUb(
    
    SCIPdebugMessage("changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
-   if( col->lpipos >= 0 && ((!set->misc_usefprelax && !SCIPsetIsEQ(set, col->ub, newub)) 
-         || (set->misc_usefprelax && col->ub != newub)) )
+   if( col->lpipos >= 0 && ((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, col->ub, newub))
+         || (set->misc_exactsolve && set->misc_usefprelax && col->ub != newub)) )
    {
       /* insert column in the chgcols list (if not already there) */
       SCIP_CALL( insertColChgcols(col, set, lp) );
@@ -4549,8 +4557,8 @@ void rowCalcNorms(
    for( i = 0; i < row->nlpcols; ++i )
    {
       assert(row->cols[i] != NULL);
-      assert((!set->misc_usefprelax && !SCIPsetIsZero(set, row->vals[i])) 
-         || (set->misc_usefprelax && row->vals[i] != 0.0));
+      assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, row->vals[i]))
+         || (set->misc_exactsolve && set->misc_usefprelax && row->vals[i] != 0.0));
       assert(row->cols[i]->lppos >= 0);
       assert(row->linkpos[i] >= 0);
       assert(row->cols[i]->index == row->cols_index[i]);
@@ -4565,8 +4573,8 @@ void rowCalcNorms(
    for( i = row->nlpcols; i < row->len; ++i )
    {
       assert(row->cols[i] != NULL);
-      assert((!set->misc_usefprelax && !SCIPsetIsZero(set, row->vals[i])) 
-         || (set->misc_usefprelax && row->vals[i] != 0.0));
+      assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, row->vals[i]))
+         || (set->misc_exactsolve && set->misc_usefprelax && row->vals[i] != 0.0));
       assert(row->cols[i]->lppos == -1 || row->linkpos[i] == -1);
       assert(row->cols[i]->index == row->cols_index[i]);
 
@@ -4676,7 +4684,8 @@ SCIP_RETCODE rowScale(
    {
       col = row->cols[c];
       val = row->vals[c];
-      assert((!set->misc_usefprelax && !SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val != 0.0));
+      assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, val))
+         || (set->misc_exactsolve && set->misc_usefprelax && val != 0.0));
 
       /* get local or global bounds for column, depending on the local or global feasibility of the row */
       if( row->local )
@@ -4835,7 +4844,8 @@ SCIP_RETCODE SCIProwCreate(
       for( i = 0; i < len; ++i )
       {
          assert(cols[i] != NULL);
-         assert((!set->misc_usefprelax && !SCIPsetIsZero(set, vals[i])) || (set->misc_usefprelax && vals[i] != 0.0));
+         assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[i]))
+            || (set->misc_exactsolve && set->misc_usefprelax && vals[i] != 0.0));
 
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
@@ -5201,7 +5211,8 @@ SCIP_RETCODE SCIProwIncCoef(
    assert(!lp->diving || row->lppos == -1);
    assert(col != NULL);
 
-   if( (!set->misc_usefprelax && SCIPsetIsZero(set, incval)) || (set->misc_usefprelax && incval == 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && SCIPsetIsZero(set, incval))
+      || (set->misc_exactsolve && set->misc_usefprelax && incval == 0.0) )
       return SCIP_OKAY;
 
    /* search the position of the column in the row's col vector */
@@ -5255,8 +5266,8 @@ SCIP_RETCODE SCIProwChgConstant(
    assert(lp != NULL);
    assert(!lp->diving || row->lppos == -1);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, row->constant, constant)) 
-      || (set->misc_usefprelax && row->constant != constant) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, row->constant, constant))
+      || (set->misc_exactsolve && set->misc_usefprelax && row->constant != constant) )
    {
       SCIP_Real oldconstant;
       
@@ -5311,7 +5322,8 @@ SCIP_RETCODE SCIProwAddConstant(
    assert(lp != NULL);
    assert(!lp->diving || row->lppos == -1);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsZero(set, addval)) || (set->misc_usefprelax && addval != 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, addval))
+      || (set->misc_exactsolve && set->misc_usefprelax && addval != 0.0) )
    {
       SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, row->constant + addval) );
    }
@@ -5333,7 +5345,8 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(lp != NULL);
    assert(!lp->diving || row->lppos == -1);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, row->lhs, lhs)) || (set->misc_usefprelax && row->lhs != lhs) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, row->lhs, lhs))
+      || (set->misc_exactsolve && set->misc_usefprelax && row->lhs != lhs) )
    {
       SCIP_Real oldlhs;
       
@@ -5363,7 +5376,8 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(lp != NULL);
    assert(!lp->diving || row->lppos == -1);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, row->rhs, rhs)) || (set->misc_usefprelax && row->rhs != rhs) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, row->rhs, rhs))
+      || (set->misc_exactsolve && set->misc_usefprelax && row->rhs != rhs) )
    {
       SCIP_Real oldrhs;
       
@@ -5456,7 +5470,8 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       assert(SCIPvarGetCol(col->var) == col);
 #endif
       val = row->vals[c];
-      assert((!set->misc_usefprelax && !SCIPsetIsZero(set, val)) || (set->misc_usefprelax && val != 0.0));
+      assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, val))
+         || (set->misc_exactsolve && set->misc_usefprelax && val != 0.0));
 
       if( val < mindelta || val > maxdelta )
       {
@@ -5728,12 +5743,14 @@ void rowMerge(
       
       t = 0;
       row->integral = TRUE;
-      assert((!set->misc_usefprelax && !SCIPsetIsZero(set, vals[0])) || (set->misc_usefprelax && vals[0] != 0.0));
+      assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[0]))
+         || (set->misc_exactsolve && set->misc_usefprelax && vals[0] != 0.0));
       assert(row->linkpos[0] == -1);
 
       for( s = 1; s < row->len; ++s )
       {
-         assert((!set->misc_usefprelax && !SCIPsetIsZero(set, vals[s])) || (set->misc_usefprelax && vals[s] != 0.0));
+         assert((!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[s]))
+            || (set->misc_exactsolve && set->misc_usefprelax && vals[s] != 0.0));
          assert(row->linkpos[s] == -1);
 
          if( cols[s] == cols[t] )
@@ -5746,7 +5763,8 @@ void rowMerge(
          else
          {
             /* go to the next entry, overwriting current entry if coefficient is zero */
-            if( (!set->misc_usefprelax && !SCIPsetIsZero(set, vals[t])) || (set->misc_usefprelax && vals[t] != 0.0) )
+            if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[t]))
+               || (set->misc_exactsolve && set->misc_usefprelax && vals[t] != 0.0) )
             {
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
                t++;
@@ -5756,7 +5774,8 @@ void rowMerge(
             vals[t] = vals[s];
          }
       }
-      if( (!set->misc_usefprelax && !SCIPsetIsZero(set, vals[t])) || (set->misc_usefprelax && vals[t] != 0.0) )
+      if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, vals[t]))
+         || (set->misc_exactsolve && set->misc_usefprelax && vals[t] != 0.0) )
       {
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
          t++;
@@ -7703,7 +7722,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->storedsolvals = NULL;
 
-   /*  if we want to solve the problem exactly and work with an FP approximation we cannot generated proved lower bounds 
+   /*  if we want to solve the problem exactly and work with an FP approximation we cannot generated proved lower bounds
     *  via LP plus loose objval nor via the pseudo objval; therefore they are ignored
     */
    if( set->misc_exactsolve && !set->misc_usefprelax )
@@ -7962,7 +7981,8 @@ SCIP_RETCODE SCIPlpAddRow(
       SCIPdebugPrintf("  %g <=", row->lhs);
       for( i = 0; i < row->len; ++i )
          SCIPdebugPrintf(" %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
-      if( (!set->misc_usefprelax && !SCIPsetIsZero(set, row->constant)) || (set->misc_usefprelax && row->constant != 0.0) )
+      if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, row->constant))
+         || (set->misc_exactsolve && set->misc_usefprelax && row->constant != 0.0) )
          SCIPdebugPrintf(" %+g", row->constant);
       SCIPdebugPrintf(" <= %g\n", row->rhs);
    }

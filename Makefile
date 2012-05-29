@@ -1137,7 +1137,6 @@ depend:		scipdepend lpidepend lpiexdepend nlpidepend maindepend
 -include	$(OBJSCIPLIBDEP)
 -include 	$(LPILIBDEP)
 -include 	$(LPIEXLIBDEP)
--include	$(LPILIBDEP)
 -include	$(NLPILIBDEP)
 
 $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS) $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(NLPILIBOBJFILES) $(MAINOBJFILES)

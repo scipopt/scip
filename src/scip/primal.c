@@ -243,14 +243,14 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_Real delta;
 
       if( !set->misc_exactsolve )
-      { 
-            delta = SCIPsetCutoffbounddelta(set);
+      {
+         delta = SCIPsetCutoffbounddelta(set);
 
          cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
          cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
                                                       * and very large upperbound value */
       }
-      else 
+      else
       {
 #ifdef WITH_EXACTSOLVE
          mpq_t safecutoffbound;
@@ -259,8 +259,8 @@ SCIP_RETCODE primalSetUpperbound(
          assert(set->misc_exactsolve);
          mpq_init(safecutoffbound);
          mpq_init(change);
-         
-            delta = SCIPsetCutoffbounddelta(set);
+
+         delta = SCIPsetCutoffbounddelta(set);
          assert(delta > 0);
 
          mpq_set_d(safecutoffbound, ceil(upperbound));
@@ -273,7 +273,7 @@ SCIP_RETCODE primalSetUpperbound(
          {
             mpq_t tmp;
             mpq_t tmpcutoffbound;
-            
+
             mpq_init(tmp);
             mpq_init(tmpcutoffbound);
 
@@ -281,7 +281,7 @@ SCIP_RETCODE primalSetUpperbound(
             mpq_set_d(tmpcutoffbound, cutoffbound);
             assert(mpqIsIntegral(tmp));
             assert(mpq_cmp(tmp, tmpcutoffbound) < 0);
-            
+
             mpq_clear(tmpcutoffbound);
             mpq_clear(tmp);
          }

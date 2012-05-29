@@ -1507,9 +1507,7 @@ SCIP_Real adjustedUb(
       if( SCIPsetIsInfinity(set, ub) )
          return SCIPsetInfinity(set);
       else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-         return SCIPsetFeasFloor(set, ub);
-      else if( SCIPsetIsZero(set, ub) )
-         return 0.0;
+         return floor(ub);
       else
          return ub;
    }
@@ -1518,7 +1516,9 @@ SCIP_Real adjustedUb(
       if( SCIPsetIsInfinity(set, ub) )
          return SCIPsetInfinity(set);
       else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-         return floor(ub);
+         return SCIPsetFeasFloor(set, ub);
+      else if( SCIPsetIsZero(set, ub) )
+         return 0.0;
       else
          return ub;
    }
@@ -5509,8 +5509,8 @@ SCIP_RETCODE SCIPvarChgObj(
 
    SCIPdebugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsEQ(set, var->obj, newobj)) 
-      || (set->misc_usefprelax && var->obj != newobj) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsEQ(set, var->obj, newobj))
+      || (set->misc_exactsolve && set->misc_usefprelax && var->obj != newobj) )
    {
       switch( SCIPvarGetStatus(var) )
       {
@@ -5573,8 +5573,8 @@ SCIP_RETCODE SCIPvarAddObj(
 
    SCIPdebugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
-   if( (!set->misc_usefprelax && !SCIPsetIsZero(set, addobj)) 
-      || (set->misc_usefprelax && addobj != 0.0) )
+   if( (!(set->misc_exactsolve && set->misc_usefprelax) && !SCIPsetIsZero(set, addobj))
+      || (set->misc_exactsolve && set->misc_usefprelax && addobj != 0.0) )
    {
       SCIP_Real oldobj;
       int i;
