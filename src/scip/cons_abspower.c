@@ -1079,7 +1079,7 @@ SCIP_RETCODE presolveFindDuplicates(
  *
  * @todo generalize to inequalities
  * @todo generalize to support discrete variables
- * @todo generalize to arbitrary exponents
+ * @todo generalize to arbitrary exponents also if z is in objective
  */
 static
 SCIP_RETCODE presolveDual(
@@ -1122,10 +1122,6 @@ SCIP_RETCODE presolveDual(
    if( SCIPvarGetType(consdata->z) <= SCIP_VARTYPE_INTEGER )
       return SCIP_OKAY;
 
-   /* skip dual presolve for exponents != 2 for now */
-   if( consdata->exponent != 2.0 )
-      return SCIP_OKAY;
-
    /* we assume that domain propagation has been run and fixed variables were removed */
    assert(consdata->isxpropagated);
    assert(consdata->iszpropagated);
@@ -1143,14 +1139,14 @@ SCIP_RETCODE presolveDual(
    {
       /* x and z are only locked by cons, so we can fix them to an optimal solution of
        * min  xobj * x + zobj * z
-       * s.t. lhs <= sign(x+offset)*abs(x+offset) + zcoef * z <= rhs
+       * s.t. lhs <= sign(x+offset)*abs(x+offset)^exponent + zcoef * z <= rhs
        *      xlb <= x <= xub
        *      zlb <= z <= zub
        */
       if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       {
          /* much simpler case where we can substitute z:
-          * min xobj * x + zobj/zcoef * (rhs - sign(x+offset)*abs(x+offset))
+          * min xobj * x + zobj/zcoef * (rhs - sign(x+offset)*abs(x+offset)^exponent)
           * s.t. xlb <= x <= xub
           *
           * Since domain propagation had been applied, we can assume that for any valid value for x,
@@ -1179,7 +1175,7 @@ SCIP_RETCODE presolveDual(
                xfix = SCIPvarGetBestBoundGlobal(consdata->x);
             }
          }
-         else
+         else if( consdata->exponent == 2.0 )
          {
             /* consider cases x <= -offset and x >= -offset separately */
             SCIP_Real a;
@@ -1291,6 +1287,11 @@ SCIP_RETCODE presolveDual(
             assert(SCIPisInfinity(scip, -xlb) || SCIPisLE(scip, xlb, xfix));
             assert(SCIPisInfinity(scip,  xub) || SCIPisGE(scip, xub, xfix));
          }
+         else
+         {
+            /* skip dual presolve for exponents != 2 and z in objective for now */
+            return SCIP_OKAY;
+         }
 
          /* compute fixing value for z */
          if( SCIPisInfinity(scip, xfix) )
@@ -1321,11 +1322,18 @@ SCIP_RETCODE presolveDual(
          }
          else
          {
+            SCIP_Real zlb;
+            SCIP_Real zub;
+
+            zlb = SCIPvarGetLbGlobal(consdata->z);
+            zub = SCIPvarGetUbGlobal(consdata->z);
             zfix = consdata->rhs - SIGN(xfix + consdata->xoffset) * consdata->pow(ABS(xfix + consdata->xoffset), consdata->exponent);
             zfix /= consdata->zcoef;
 
-            assert(SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->z), zfix) );
-            assert(SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->z), zfix) );
+            /* project zfix into box, it should be at least very close */
+            assert(SCIPisFeasLE(scip, zlb, zfix));
+            assert(SCIPisFeasGE(scip, zub, zfix));
+            zfix = MAX(zlb, MIN(zub, zfix));
          }
 
          /* fix variables according to x=xfix */
@@ -2384,7 +2392,6 @@ SCIP_RETCODE propagateCons(
    SCIP_Bool             canaddcons,         /**< are we allowed to add a linear constraint when enforcing bounds for a multiaggregated variable? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
-   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  naddconss           /**< pointer to count number of added constraints */
    )
 {
@@ -2403,7 +2410,6 @@ SCIP_RETCODE propagateCons(
    assert(conshdlr != NULL);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
-   assert(ndelconss != NULL);
    assert(naddconss != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -2843,7 +2849,6 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
 
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      ++*ndelconss;
 
       return SCIP_OKAY;
    }
@@ -2867,7 +2872,6 @@ SCIP_RETCODE propagateCons(
          *cutoff = TRUE;
 
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      ++*ndelconss;
 
       return SCIP_OKAY;
    }
@@ -2891,7 +2895,6 @@ SCIP_RETCODE propagateCons(
          *cutoff = TRUE;
 
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
-      ++*ndelconss;
 
       return SCIP_OKAY;
    }
@@ -5698,7 +5701,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
    {
       SCIP_Bool cutoff;
       int       nchgbds;
-      int       ndelconss;
       int       naddconss;
 
       assert(conss[c] != NULL);  /*lint !e613*/
@@ -5710,9 +5712,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpAbspower)
          continue;
 
       nchgbds = 0;
-      ndelconss = 0;
       naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );  /*lint !e613*/
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &naddconss) );  /*lint !e613*/
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5818,7 +5819,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
    {
       SCIP_Bool cutoff;
       int       nchgbds;
-      int       ndelconss;
       int       naddconss;
 
       assert(conss[c] != NULL);  /*lint !e613*/
@@ -5830,9 +5830,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
          continue;
 
       nchgbds = 0;
-      ndelconss = 0;
       naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &ndelconss, &naddconss) );  /*lint !e613*/
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &cutoff, &nchgbds, &naddconss) );  /*lint !e613*/
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5887,7 +5886,6 @@ SCIP_DECL_CONSPROP(consPropAbspower)
 {  /*lint --e{715}*/
    int         c;
    int         nchgbds;
-   int         ndelconss;
    int         naddconss;
    SCIP_Bool   cutoff = FALSE;
 
@@ -5904,9 +5902,8 @@ SCIP_DECL_CONSPROP(consPropAbspower)
 
       /* propagate constraint, but do not allow to add a constraint for tightening a multiaggregated variable (not allowed in CONSPROP) */
       nchgbds = 0;
-      ndelconss = 0;
       naddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], FALSE, &cutoff, &nchgbds, &ndelconss, &naddconss) );
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], FALSE, &cutoff, &nchgbds, &naddconss) );
       assert(naddconss == 0);
 
       if( cutoff )
@@ -5939,7 +5936,6 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
    SCIP_Bool      success;
    SCIP_Bool      infeas;
    int            localnchgbds;
-   int            localndelconss;
    int            localnaddconss;
    int            c;
 
@@ -6042,21 +6038,25 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
 
       /* run domain propagation, also checks for redundancy */
       localnchgbds = 0;
-      localndelconss = 0;
       localnaddconss = 0;
-      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &infeas, &localnchgbds, &localndelconss, &localnaddconss) );  /*lint !e613*/
+      SCIP_CALL( propagateCons(scip, conshdlr, conss[c], TRUE, &infeas, &localnchgbds, &localnaddconss) );  /*lint !e613*/
       if( infeas )
       {
          SCIPdebugMessage("propagation on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-      if( localnchgbds > 0 || localndelconss > 0 || localnaddconss > 0 )
+      if( localnchgbds > 0 || localnaddconss > 0 )
       {
          *nchgbds   += localnchgbds;
-         *ndelconss += localndelconss;
          *naddconss += localnaddconss;
          *result = SCIP_SUCCESS;
+      }
+      if( SCIPconsIsDeleted(conss[c]) )
+      {
+         ++*ndelconss;
+         *result = SCIP_SUCCESS;
+         continue;
       }
 
       if( conshdlrdata->dualpresolve )
