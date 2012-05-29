@@ -980,7 +980,7 @@ SCIP_RETCODE chooseDoubleVar(
          else
             boundval = SCIPfeasFloor(scip, midval);
 
-         assert(roundup == SCIPisFeasGT(scip, nlpsol,boundval));
+         assert(roundup == SCIPisGT(scip, nlpsol, boundval));
       }
 
       /* penalize too small fractions */
