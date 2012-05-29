@@ -965,12 +965,12 @@ SCIP_RETCODE processWatchedVars(
             boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bounds[watchedvar1], SCIPgetDepth(scip));
          if( boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          assert(!infbdchg);
