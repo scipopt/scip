@@ -96,7 +96,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    /* determine large value to set variables to */
    large = SCIPinfinity(scip);
-   large = MIN(0.1 / SCIPfeastol(scip), large);
+   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+      large = 0.1 / SCIPfeastol(scip);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
