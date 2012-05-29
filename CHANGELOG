@@ -137,7 +137,7 @@ performance improvements:
 - heur_undercover treats indicator constraints as nonlinear and fixes the binary variable for linearization
 - speed up in linear constraint handler replacing aggregated variables
 - speed up in SCIPboolarrayExtend() in misc.c replacing a for loop with BMSmoveMemoryArray() call
-- speed up mps reader asking paramters only ones
+- speed up mps reader asking parameters only once
 - speed up in var.c changing some recursive calls into iterative calls and reducing the number of VARFIX event that are
   thrown for fixation, aggregation or multi-aggregations
 - changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
@@ -212,6 +212,8 @@ parameters:
 - new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
 - new parameter <misc/transorigsols> by default set to TRUE, that switches whether SCIP tries to transfer original
   solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
+- new parameters lp/{rootiterlim,iterlim} to set a limit on the LP iterations spend in the initial root LP and each
+  LP resolve, respectively
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -1652,7 +1654,7 @@ interface:
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
 - new method SCIPbsortInd()
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...() Note that the order
-  of the paramters has been changed to simplify the template code in sorttpl.c!
+  of the parameters has been changed to simplify the template code in sorttpl.c!
 - expand sorttpl.c by some parameters
 - added some downwards-sorting methods
 - changed some names for sorting methods
