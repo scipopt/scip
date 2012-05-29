@@ -112,6 +112,7 @@ interface
   initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
 - new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
 - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
+- new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
