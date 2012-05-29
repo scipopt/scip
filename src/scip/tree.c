@@ -6509,8 +6509,8 @@ void SCIPnodeGetParentBranchings(
    )
 {
    SCIP_BOUNDCHG* boundchgs;
-   int nboundchgs;  
-   int i; 
+   int nboundchgs;
+   int i;
 
    assert(node != NULL);
    assert(branchvars != NULL);
@@ -6518,27 +6518,36 @@ void SCIPnodeGetParentBranchings(
    assert(boundtypes != NULL);
    assert(nbranchvars != NULL);
    assert(branchvarssize >= 0);
-  
+
    (*nbranchvars) = 0;
+
    if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
+
    nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
    boundchgs = node->domchg->domchgbound.boundchgs;
-   
+
    assert(boundchgs != NULL);
    assert(nboundchgs >= 0);
 
+   /* count the number of branching decisions; branching decisions have to be in the beginning of the bound change
+    * array
+    */
    for( i = 0; i < nboundchgs; i++)
    {
       if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
          break;
-      (*nbranchvars)++; 
-   }   
+
+      (*nbranchvars)++;
+   }
+
 #ifndef NDEBUG
+   /* check that the remaining bound change are no branching decisions */
    for( ; i < nboundchgs; i++)
       assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING); /*lint !e641*/
 #endif
 
+   /* if the arrays have enough space store the branching decisions */
    if( branchvarssize >= *nbranchvars )
    {
       for( i = 0; i < *nbranchvars; i++)
@@ -6546,8 +6555,8 @@ void SCIPnodeGetParentBranchings(
          assert( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
          branchvars[i] = boundchgs[i].var;
          boundtypes[i] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-         branchbounds[i] = boundchgs[i].newbound;       
-      }   
+         branchbounds[i] = boundchgs[i].newbound;
+      }
    }
 }
 
@@ -6588,8 +6597,59 @@ void SCIPnodeGetAncestorBranchings(
    }
 }
 
-/*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
- *  sorted by the nodes, starting from the current node going up to the root */
+/** outputs the path into given file stream in GML format */
+SCIP_RETCODE SCIPnodePrintAncestorBranchings(
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< file to output the path */
+   )
+{
+   int nbranchings;
+
+   nbranchings = 0;
+
+   /* print opening in GML format */
+   SCIPgmlOpen(file, TRUE);
+
+   while( SCIPnodeGetDepth(node) != 0 )
+   {
+      SCIP_BOUNDCHG* boundchgs;
+      char label[SCIP_MAXSTRLEN];
+      int nboundchgs;
+      int i;
+
+      nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+      boundchgs = node->domchg->domchgbound.boundchgs;
+
+      for( i = 0; i < nboundchgs; i++)
+      {
+         if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ) /*lint !e641*/
+            break;
+
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s %s %g", SCIPvarGetName(boundchgs[i].var),
+            (SCIP_BOUNDTYPE) boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
+
+         SCIPgmlWriteNode(file, (unsigned int)nbranchings, label, "circle", NULL, NULL);
+
+         if( nbranchings > 0 )
+         {
+            SCIPgmlWriteArc(file, (unsigned int)(size_t)nbranchings, (unsigned int)(size_t)(nbranchings-1), NULL, NULL);
+         }
+
+         nbranchings++;
+      }
+
+      node = node->parent;
+   }
+
+   /* print closing in GML format */
+   SCIPgmlClose(file);
+
+   return SCIP_OKAY;
+}
+
+/*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node
+ *  sorted by the nodes, starting from the current node going up to the root
+ */
 void SCIPnodeGetAncestorBranchingPath(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
