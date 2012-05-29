@@ -1311,8 +1311,7 @@ SCIP_DECL_HEURCOPY(heurCopyNlpdiving)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   /* @todo disabled copying for easier development/debugging */
-   /*   SCIP_CALL( SCIPincludeHeurNlpdiving(scip) ); */
+   SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
 
    return SCIP_OKAY;
 }
