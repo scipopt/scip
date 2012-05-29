@@ -103,6 +103,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
+   SCIP_CALL( SCIPincludeHeurHailmary(scip) );
    SCIP_CALL( SCIPincludeHeurIntdiving(scip) );
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );

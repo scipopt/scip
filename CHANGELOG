@@ -157,6 +157,8 @@ plugins:
 - added new presolver components, that searches for independent components in the problem structure and solves
   these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
 - added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
+- added hailmary heuristic that solve a copy of the problem without an objective function and with quite strict limits
+  on the number of nodes and LP iterations
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
