@@ -700,6 +700,14 @@ void SCIPdigraphPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** prints the given directed graph structure in GML format into the given file */
+extern
+void SCIPdigraphPrintGml(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   FILE*                 file                /**< file to write to */
+   );
+
+
 /** output of the given directed graph via the given message handler */
 extern
 void SCIPdigraphPrintComponents(
