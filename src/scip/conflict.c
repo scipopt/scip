@@ -2739,6 +2739,13 @@ SCIP_RETCODE conflictAddConflictset(
 
          SCIP_CALL( conflictsetAddBound(conflictset, blkmem, set, bdchginfo, relaxedbd) );
       }
+      else
+      {
+         SCIPdebugMessage("-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+            SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
+      }
    }
 
    /* calculate the depth, at which the conflictset should be inserted */
