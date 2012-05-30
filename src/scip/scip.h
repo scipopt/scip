@@ -1203,14 +1203,6 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
    );
 
-/** sets Farkas pricing method of variable pricer for infeasible LPs */
-extern
-SCIP_RETCODE SCIPsetPricerFarkas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
-   );
-
 /** returns the variable pricer of the given name, or NULL if not existing */
 extern
 SCIP_PRICER* SCIPfindPricer(
@@ -2073,9 +2065,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
-   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -2150,7 +2139,10 @@ extern
 SCIP_RETCODE SCIPsetPropPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    );
 
 /** returns the propagator of the given name, or NULL if not existing */

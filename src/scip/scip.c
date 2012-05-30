@@ -3168,6 +3168,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
                                               *   default problem variable pricing in the same round)
                                               */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    )
 {
@@ -3185,7 +3186,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
    SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, delay,
          NULL,
-         NULL, NULL, NULL, NULL, NULL, pricerredcost, NULL, pricerdata) );
+         NULL, NULL, NULL, NULL, NULL, pricerredcost, pricerfarkas, pricerdata) );
    SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
 
    if( pricerptr != NULL )
@@ -3286,22 +3287,6 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    assert(pricer != NULL);
 
    SCIPpricerSetExitsol(pricer, pricerexitsol);
-
-   return SCIP_OKAY;
-}
-
-/** sets Farkas pricing method of variable pricer for infeasible LPs */
-SCIP_RETCODE SCIPsetPricerFarkas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPricerFarkas", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   assert(pricer != NULL);
-
-   SCIPpricerSetFarkas(pricer, pricerfarkas);
 
    return SCIP_OKAY;
 }
@@ -4920,9 +4905,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
-   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -4940,7 +4922,7 @@ SCIP_RETCODE SCIPincludePropBasic(
    }
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoldelay,
+         name, desc, priority, freq, delay, timingmask, 0, -1, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
@@ -5083,14 +5065,17 @@ SCIP_RETCODE SCIPsetPropExitpre(
 SCIP_RETCODE SCIPsetPropPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(prop != NULL);
 
-   SCIPpropSetPresol(prop, proppresol);
+   SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoldelay);
 
    return SCIP_OKAY;
 }

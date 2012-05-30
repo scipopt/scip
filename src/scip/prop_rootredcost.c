@@ -295,7 +295,7 @@ SCIP_RETCODE SCIPincludePropRootredcost(
    /* include propagator */
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecRootredcost, propRespropRootredcost,
+         propExecRootredcost, propRespropRootredcost,
          propdata) );
 
    assert(prop != NULL);

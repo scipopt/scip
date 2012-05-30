@@ -3401,7 +3401,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecPseudoobj, propRespropPseudoobj,
+         propExecPseudoobj, propRespropPseudoobj,
          propdata) );
    assert(prop != NULL);
 
@@ -3410,7 +3410,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreePseudoobj) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolPseudoobj) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolPseudoobj) );
-   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolPseudoobj) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolPseudoobj, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

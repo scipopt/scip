@@ -541,17 +541,6 @@ void SCIPpricerSetExitsol(
    pricer->pricerexitsol = pricerexitsol;
 }
 
-/** sets Farkas pricing method of variable pricer for infeasible LPs */
-void SCIPpricerSetFarkas(
-   SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
-   )
-{
-   assert(pricer != NULL);
-
-   pricer->pricerfarkas = pricerfarkas;
-}
-
 /** gets name of variable pricer */
 const char* SCIPpricerGetName(
    SCIP_PRICER*          pricer              /**< variable pricer */
