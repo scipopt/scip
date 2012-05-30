@@ -1038,7 +1038,7 @@ SCIP_RETCODE consPrintConsSol(
             else if( consdata->vals[v] == -1.0 )
                SCIPinfoMessage(scip, file, " -");
             else
-               SCIPinfoMessage(scip, file, " %+.15", consdata->vals[v]);
+               SCIPinfoMessage(scip, file, " %+.9g", consdata->vals[v]);
          }
          else if( consdata->nvars > 0 )
             SCIPinfoMessage(scip, file, " +");
@@ -1046,7 +1046,7 @@ SCIP_RETCODE consPrintConsSol(
          /* print variable name */
          SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], TRUE) );
 
-         SCIPinfoMessage(scip, file, " (%+.17e)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
+         SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
       }
    }
 
