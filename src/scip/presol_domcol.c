@@ -1542,7 +1542,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   /* do no dominated column presolving in case of probing an nonlinear processing
+   /* do no dominated column presolving in case of probing and nonlinear processing
     * @todo SCIPisNLPEnabled() always returns FALSE during presolve, since the necessary flag is set after presolve (in exitpre, currently)
     */
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
