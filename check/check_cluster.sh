@@ -162,18 +162,6 @@ do
     MYHOURS=0
     MYDAYS=0
 
-    if test "$QUEUE" = "opt" -a $TIMELIMIT -gt 3600
-    then
-	echo "Warning: On opt queue the maximum soft time limit is 3600s."
-	exit
-    fi
-
-    if test "$QUEUE" = "opt" -a $HARDTIMELIMIT -gt 3900 -a $TIMELIMIT -le 3600
-    then
-	HARDTIMELIMIT=3900
-	echo "Warning: Changed hard time limit to 3900s, because on opt queue the maximum is 3900s."
-    fi
-
     #calculate seconds, minutes, hours and days
     MYSECONDS=`expr $HARDTIMELIMIT % 60`
     TMP=`expr $HARDTIMELIMIT / 60`
@@ -280,6 +268,16 @@ do
       export BASENAME=$FILENAME
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
+
+      if test $QUEUE = "low"
+      then
+	  QUEUE="mip-low,gas-low"
+      fi
+
+      if test $QUEUE = "opt"
+      then
+	  QUEUE="mip-low,gas-low,traffic-low"
+      fi
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"

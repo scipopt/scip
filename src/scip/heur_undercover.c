@@ -739,20 +739,20 @@ SCIP_RETCODE createCoveringProblem(
          }
 
          /* if constraints with inactive variables are present, we have to find the corresponding active variable */
-	 andres = SCIPgetResultantAnd(scip, andcons);
-	 assert(andres != NULL);
+         andres = SCIPgetResultantAnd(scip, andcons);
+         assert(andres != NULL);
          probindex = SCIPvarGetProbindex(andres);
          negated = FALSE;
 
-	 /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
-	 if( termIsConstant(scip, andres, 1.0, globalbounds) )
-	 {
-	    /* free memory for covering constraint */
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+         /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
+         if( termIsConstant(scip, andres, 1.0, globalbounds) )
+         {
+            /* free memory for covering constraint */
+            SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+            SCIPfreeBufferArray(coveringscip, &coveringconsvars);
 
-	    continue;
-	 }
+            continue;
+         }
 
          if( probindex == -1 )
          {
@@ -761,7 +761,7 @@ SCIP_RETCODE createCoveringProblem(
             /* get binary representative of variable */
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, SCIPgetResultantAnd(scip, andcons), &repvar, &negated) );
             assert(repvar != NULL);
-	    assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
+            assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
 
             if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
             {
@@ -785,14 +785,14 @@ SCIP_RETCODE createCoveringProblem(
                negated = FALSE;
             }
          }
-	 else if( SCIPvarGetLbGlobal(andres) > 0.5 || SCIPvarGetUbGlobal(andres) < 0.5 )
-	 {
-	    /* free memory for covering constraint */
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+         else if( SCIPvarGetLbGlobal(andres) > 0.5 || SCIPvarGetUbGlobal(andres) < 0.5 )
+         {
+            /* free memory for covering constraint */
+            SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+            SCIPfreeBufferArray(coveringscip, &coveringconsvars);
 
-	    continue;
-	 }
+            continue;
+         }
          assert(probindex >= 0);
          assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
@@ -3506,15 +3506,18 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
             timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, objlimit, success) );
 
-      assert(*coversize >= 0);
-      assert(*coversize <= nvars);
-
-      /* return original variables in the cover */
-      for( i = *coversize-1; i >= 0; i-- )
+      if( *success )
       {
-         assert(coverinds[i] >= 0);
-         assert(coverinds[i] < nvars);
-         cover[i] = vars[coverinds[i]];
+         assert(*coversize >= 0);
+         assert(*coversize <= nvars);
+
+         /* return original variables in the cover */
+         for( i = *coversize-1; i >= 0; i-- )
+         {
+            assert(coverinds[i] >= 0);
+            assert(coverinds[i] < nvars);
+            cover[i] = vars[coverinds[i]];
+         }
       }
    }
    else

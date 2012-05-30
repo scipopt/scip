@@ -36,6 +36,11 @@
 #include "scip/type_misc.h"
 #include "scip/type_message.h"
 
+/* in optimized mode some of the function are handled via defines, for that the structs are needed */
+#ifdef NDEBUG
+#include "scip/struct_misc.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -695,6 +700,14 @@ void SCIPdigraphPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** prints the given directed graph structure in GML format into the given file */
+extern
+void SCIPdigraphPrintGml(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   FILE*                 file                /**< file to write to */
+   );
+
+
 /** output of the given directed graph via the given message handler */
 extern
 void SCIPdigraphPrintComponents(
@@ -733,6 +746,8 @@ void SCIPbstnodeFree(
    SCIP_BSTNODE**        node                /**< search node to be freed */
    );
 
+#ifndef NDEBUG
+
 /** returns whether the search node is a leaf */
 extern
 SCIP_Bool SCIPbstnodeIsLeaf(
@@ -768,6 +783,17 @@ extern
 SCIP_BSTNODE* SCIPbstnodeGetRightchild(
    SCIP_BSTNODE*         node                /**< search node */
    );
+
+#else
+
+#define SCIPbstnodeIsLeaf(node)               (node->left == NULL && node->right == NULL)
+#define SCIPbstnodeGetData(node)              (node->dataptr)
+#define SCIPbstnodeGetKey(node)               (node->key)
+#define SCIPbstnodeGetParent(node)            (node->parent)
+#define SCIPbstnodeGetLeftchild(node)         (node->left)
+#define SCIPbstnodeGetRightchild(node)        (node->right)
+
+#endif
 
 /** sets the give node data
  *
@@ -845,6 +871,8 @@ void SCIPbstPrintGml(
    FILE*                 file                /**< file to write to */
    );
 
+#ifndef NDEBUG
+
 /** returns whether the binary search tree is empty (has no nodes) */
 extern
 SCIP_Bool SCIPbstIsEmpty(
@@ -856,6 +884,14 @@ extern
 SCIP_BSTNODE* SCIPbstGetRoot(
    SCIP_BST*             tree                /**< tree to be evaluated */
    );
+
+#else
+
+
+#define SCIPbstIsEmpty(tree) (tree->root == NULL)
+#define SCIPbstGetRoot(tree) (tree->root)
+
+#endif
 
 /** sets root node
  *

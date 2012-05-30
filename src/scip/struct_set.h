@@ -213,6 +213,8 @@ struct SCIP_Set
 
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
+   SCIP_Longint          lp_iterlim;         /**< iteration limit for each single LP solve; -1: no limit */
+   SCIP_Longint          lp_rootiterlim;     /**< iteration limit for initial root LP solve; -1: no limit */
    int                   lp_solvedepth;      /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    char                  lp_initalgorithm;   /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                               *   barrier with 'c'rossover) */

@@ -183,7 +183,6 @@ class SPxSCIP : public SPxSolver
    bool                  m_fromscratch;      /**< use old basis indicator */
    bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
-   Real                  m_feastol;          /**< feasibility tolerance of SCIP */
    Real                  m_objLoLimit;       /**< lower objective limit */
    Real                  m_objUpLimit;       /**< upper objective limit */
    Status                m_stat;             /**< solving status */
@@ -217,7 +216,6 @@ public:
         m_fromscratch(false),
         m_scaling(true),
         m_presolving(true),
-        m_feastol(1e-06),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
         m_stat(NO_PROBLEM),
@@ -263,6 +261,26 @@ public:
       (void) CPXcloseCPLEX(&m_cpxenv);
 #endif
    }
+
+   /* the following methods are provided for comptability with earlier SoPlex versions */
+#if (SOPLEX_VERSION < 160 || SOPLEX_SUBVERSION < 5)
+   Real feastol()
+   {
+      return delta();
+   }
+
+   Real opttol()
+   {
+      return delta();
+   }
+
+   void setFeastol(
+      const Real d
+      )
+   {
+      return setDelta(d);
+   }
+#endif
 
    /** set iteration limit (-1 = unbounded) */
    void setIterationLimit(
@@ -342,16 +360,6 @@ public:
    void setPresolving(bool p)
    {
       m_presolving = p;
-   }
-
-   Real getFeastol() const
-   {
-      return m_feastol;
-   }
-
-   void setFeastol(Real f)
-   {
-      m_feastol = f;
    }
 
    bool getLpInfo() const
@@ -613,8 +621,8 @@ public:
          CPX_CALL( CPXreadcopybase(m_cpxenv, m_cpxlp, "spxcheck.bas") );
 
          /* set tolerances */
-         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, delta()) );
-         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, delta()) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPOPT, MAX(opttol(), 1e-9)) );
+         CPX_CALL( CPXsetdblparam(m_cpxenv, CPX_PARAM_EPRHS, MAX(feastol(), 1e-9)) );
 
          /* solve LP */
          CPX_CALL( CPXlpopt(m_cpxenv, m_cpxlp) );
@@ -646,8 +654,8 @@ public:
             switch( cpxstat )
             {
             case CPX_STAT_OPTIMAL:
-               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*delta()))
-                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*delta())) )
+               if( (getSense() == SPxSolver::MINIMIZE && LTrel(cpxobj, getObjUpLimit(), 2*opttol()))
+                  || (getSense() == SPxSolver::MAXIMIZE && GTrel(cpxobj, getObjLoLimit(), 2*opttol())) )
                {
                   SCIPerrorMessage("In %s: SoPlex returned status=%d (%s) while CPLEX claims obj=%.10f %s %.10f=obj.limit (%s) (checknum=%d)\n",
                      m_probname, m_stat, spxStatusString(m_stat), cpxobj, getSense() == SPxSolver::MINIMIZE ? "<" : ">",
@@ -691,14 +699,14 @@ public:
          /* check for same objective values */
          else if( m_stat == SPxSolver::OPTIMAL )
          {
-            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*delta()))
-               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*delta())) )
+            if( (getSense() == SPxSolver::MINIMIZE && LTrel(value(), cpxobj, 2*opttol()))
+               || (getSense() == SPxSolver::MAXIMIZE && GTrel(value(), cpxobj, 2*opttol())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good (checknum=%d)\n", value(),
-                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj, m_checknum);
+               /* SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f too good (checknum=%d)\n", value(),
+                  m_probname, getSense() == SPxSolver::MINIMIZE ? "<" : ">", cpxobj, m_checknum); */
             }
-            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*delta()))
-               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*delta())) )
+            else if( (getSense() == SPxSolver::MINIMIZE && GTrel(value(), cpxobj, 2*opttol()))
+               || (getSense() == SPxSolver::MAXIMIZE && LTrel(value(), cpxobj, 2*opttol())) )
             {
                SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", value(),
                   m_probname, getSense() == SPxSolver::MINIMIZE ? ">" : "<", cpxobj, m_checknum);
@@ -777,7 +785,11 @@ public:
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? 3 : 0);
          SCIPdebugMessage("simplifying LP\n");
+#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+         result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
+#else
          result = simplifier->simplify(*this, epsilon(), delta());
+#endif
          SCIPdebugMessage("simplifier ended with status %u (0: OKAY, 1: INFEASIBLE, 2: DUAL_INFEASIBLE, 3: UNBOUNDED, 4: VANISHED)\n", result);
 
          /* unsimplification is not designed for these cases, thus reload original/scaled lp */
@@ -2706,7 +2718,7 @@ SCIP_RETCODE lpiStrongbranch(
    lpi->spx->setType( lpi->spx->rep() == SPxSolver::ROW ? SPxSolver::ENTER : SPxSolver::LEAVE);
 
    /* down branch */
-   newub = EPSCEIL(psol-1.0, lpi->spx->getFeastol());
+   newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
    if( newub >= oldlb - 0.5 )
    {
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
@@ -2780,7 +2792,7 @@ SCIP_RETCODE lpiStrongbranch(
    /* up branch */
    if( !error )
    {
-      newlb = EPSFLOOR(psol+1.0, lpi->spx->getFeastol());
+      newlb = EPSFLOOR(psol+1.0, lpi->spx->feastol());
       if( newlb <= oldub + 0.5 )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
@@ -4326,8 +4338,13 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      *dval = lpi->spx->delta();
+      *dval = lpi->spx->feastol();
       break;
+#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+   case SCIP_LPPAR_DUALFEASTOL:
+      *dval = lpi->spx->opttol();
+      break;
+#endif
    case SCIP_LPPAR_LOBJLIM:
       *dval = lpi->spx->getObjLoLimit();
       break;
@@ -4343,7 +4360,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
-   
+
    return SCIP_OKAY;
 }
 
@@ -4362,9 +4379,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      lpi->spx->setDelta(dval);
       lpi->spx->setFeastol(dval);
       break;
+#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+   case SCIP_LPPAR_DUALFEASTOL:
+      lpi->spx->setOpttol(dval);
+      break;
+#endif
    case SCIP_LPPAR_LOBJLIM:
       lpi->spx->setObjLoLimit(dval);
       break;

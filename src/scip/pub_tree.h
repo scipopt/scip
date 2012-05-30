@@ -69,8 +69,16 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-/**  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
- *  sorted by the nodes, starting from the current node going up to the root */
+/** outputs the path into given file stream in GML format */
+extern
+SCIP_RETCODE SCIPnodePrintAncestorBranchings(
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< file to output the path */
+   );
+
+/** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node
+ *  sorted by the nodes, starting from the current node going up to the root
+ */
 extern
 void SCIPnodeGetAncestorBranchingPath(
    SCIP_NODE*            node,               /**< node data */

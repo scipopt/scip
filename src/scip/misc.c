@@ -5000,26 +5000,71 @@ void SCIPdigraphPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int i;
-   int j;
+   int n;
 
-   for( i = 0; i < digraph->nnodes; ++i )
+   for( n = 0; n < digraph->nnodes; ++n )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", i);
+      int* successors;
+      int nsuccessors;
+      int m;
 
-      for( j = 0; j < digraph->nsuccessors[i] ; ++j )
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", n);
+
+      for( m = 0; m < nsuccessors ; ++m )
       {
-         if( j == 0 )
+         if( m == 0 )
          {
-            SCIPmessageFPrintInfo(messagehdlr, file, "%d", digraph->successors[i][j]);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", successors[m]);
          }
          else
          {
-            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", digraph->successors[i][j]);
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", successors[m]);
          }
       }
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
+}
+
+/** prints the given directed graph structure in GML format into the given file */
+void SCIPdigraphPrintGml(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   int n;
+
+   /* write GML format opening */
+   SCIPgmlOpen(file, TRUE);
+
+   /* write all nodes of the graph */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      char label[SCIP_MAXSTRLEN];
+
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", n);
+      SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", NULL, NULL);
+   }
+
+   /* write all edges */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      int* successors;
+      int nsuccessors;
+      int m;
+
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      for( m = 0; m < nsuccessors; ++m )
+      {
+         SCIPgmlWriteArc(file, (unsigned int)n, (unsigned int)successors[m], NULL, NULL);
+      }
+   }
+   /* write GML format closing */
+   SCIPgmlClose(file);
 }
 
 /** output of the given directed graph via the given message handler */
@@ -5167,6 +5212,21 @@ void SCIPbstnodeFree(
    bstnodeFreeLeaf(tree, node);
    assert(*node == NULL);
 }
+
+/* some simple variable functions implemented as defines */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPbstnodeIsLeaf
+#undef SCIPbstnodeGetData
+#undef SCIPbstnodeGetKey
+#undef SCIPbstnodeGetParent
+#undef SCIPbstnodeGetLeftchild
+#undef SCIPbstnodeGetRightchild
 
 /** returns whether the search node is a leaf */
 SCIP_Bool SCIPbstnodeIsLeaf(
@@ -5400,6 +5460,10 @@ void SCIPbstPrintGml(
    /* write GML closing */
    SCIPgmlClose(file);
 }
+
+/* some simple variable functions implemented as defines */
+#undef SCIPbstIsEmpty
+#undef SCIPbstGetRoot
 
 /** returns whether the binary search tree is empty (has no nodes) */
 SCIP_Bool SCIPbstIsEmpty(
