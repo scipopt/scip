@@ -621,6 +621,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
+			scip/cons_superindicator.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \

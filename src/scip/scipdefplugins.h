@@ -62,6 +62,7 @@
 #include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/cons_superindicator.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"

@@ -89,6 +89,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSOC(scip) ); /* SOC needs to be after quadratic due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
