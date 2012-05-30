@@ -22,7 +22,7 @@
  * That is, the CIP is copied, all discrete variables are fixed, presolving is applied,
  * and if the resulting CIP has a nonlinear relaxation, then it is tried to solve this relaxation
  * by an NLP solver.
- * The heuristic only runs if continuous nonlinearities are present (@ref SCIPhasContinuousNonlinearitiesPresent()).
+ * The heuristic only runs if continuous nonlinearities are present (@ref SCIPhasNLPContinuousNonlinearity()).
  *
  * Fixing values for discrete values are either taken from a solution of the LP relaxation which
  * satisfies all integrality constraints, or are provided by SCIPupdateStartpointHeurSubNlp().

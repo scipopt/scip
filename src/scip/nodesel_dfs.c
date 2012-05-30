@@ -146,16 +146,18 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    /* create dfs node selector data */
    nodeseldata = NULL;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselCopyDfs,
-         nodeselFreeDfs, nodeselInitDfs, nodeselExitDfs, 
-         nodeselInitsolDfs, nodeselExitsolDfs, nodeselSelectDfs, nodeselCompDfs,
-         nodeseldata) );
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+          nodeselSelectDfs, nodeselCompDfs, nodeseldata) );
+
+   assert(nodesel != NULL);
+
+   SCIPnodeselSetCopy(nodesel, nodeselCopyDfs);
 
    return SCIP_OKAY;
 }

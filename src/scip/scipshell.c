@@ -34,8 +34,8 @@
 
 static
 SCIP_RETCODE readParams(
-   SCIP*                      scip,               /**< SCIP data structure */
-   const char*                filename            /**< parameter file name */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< parameter file name */
    )
 {
    if( SCIPfileExists(filename) )
@@ -51,8 +51,8 @@ SCIP_RETCODE readParams(
 
 static
 SCIP_RETCODE fromCommandLine(
-   SCIP*                      scip,               /**< SCIP data structure */
-   const char*                filename            /**< input file name */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< input file name */
    )
 {
    /********************
@@ -113,10 +113,10 @@ SCIP_RETCODE fromCommandLine(
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 SCIP_RETCODE SCIPprocessShellArguments(
-   SCIP*                      scip,               /**< SCIP data structure */
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {  /*lint --e{850}*/
    char* probname = NULL;
@@ -329,9 +329,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
  *  and frees the SCIP instance
  */
 SCIP_RETCODE SCIPrunShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {
    SCIP* scip = NULL;

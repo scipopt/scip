@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates nd captures a or constraint
+/** creates and captures a or constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -83,6 +83,21 @@ SCIP_RETCODE SCIPcreateConsOr(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures an or constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicOr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars                /**< array with operator variables of constraint */
    );
 
 /** gets number of variables in or constraint */

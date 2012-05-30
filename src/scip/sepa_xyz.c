@@ -197,17 +197,22 @@ SCIP_RETCODE SCIPincludeSepaXyz(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create xyz separator data */
    sepadata = NULL;
    /* TODO: (optional) create separator specific data here */
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyXyz, sepaFreeXyz, sepaInitXyz, sepaExitXyz, 
-         sepaInitsolXyz, sepaExitsolXyz, sepaExeclpXyz, sepaExecsolXyz,
+         sepaExeclpXyz, sepaExecsolXyz,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   /* TODO: (optional) set separator specific callbacks with SCIPsetSepaCallback() here
 
    /* add xyz separator parameters */
    /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */

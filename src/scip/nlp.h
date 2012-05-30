@@ -174,10 +174,10 @@ SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
 /** adds variable to quadvars array of row */
 extern
 SCIP_RETCODE SCIPnlrowAddQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,               /**< block memory */
-   SCIP_SET*             set,                  /**< global SCIP settings */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< variable to search for */
    );
 
 /** ensures, that quadratic elements array of nonlinear row can store at least num entries */
@@ -681,6 +681,15 @@ extern
 SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    SCIP_NLP*             nlp,                /**< current NLP data */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
+   );
+
+/** indicates whether there exists a row that contains a continuous variable in a nonlinear term
+ *
+ * @note The method may have to touch every row and nonlinear term to compute its result.
+ */
+extern
+SCIP_Bool SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
 /** gives dual solution values associated with lower bounds of NLP variables */

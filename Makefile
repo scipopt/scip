@@ -61,7 +61,7 @@ SOFTLINKS	=
 
 INSTALLDIR	=	
 
-#will this be compiled for parascip, necessary for dbg-builds to make it threadsafe
+#will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
 SHARED		=	false
@@ -71,7 +71,7 @@ ZLIB		=	true
 GMP		=	auto
 ZIMPL		=	true
 IPOPT		=	false
-EXPRINT		=	none
+EXPRINT		=	cppad
 LPSCHECK	=	false
 LPSOPT		=	opt
 LPSEXOPT	=	opt
@@ -451,7 +451,7 @@ ALLSRC		+= 	$(SRCDIR)/scip/lpiex_none.c $(SRCDIR)/scip/lpiex_qsoex.c $(SRCDIR)/s
 
 NLPILIBCOBJ	= nlpi/nlpi.o \
 		  nlpi/nlpioracle.o \
-		  nlpi/expr.o \
+		  nlpi/expr.o
 
 NLPILIBCXXOBJ	= nlpi/intervalarith.o
 
@@ -566,9 +566,6 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR) $(CPPAD_FLAGS)
-SOFTLINKS	+=	$(LIBDIR)/cppad
-LPIINSTMSG	+=	" -> \"cppad\" is a directory containing the CppAD header files, i.e., \"cppad/cppad.hpp\" should exist.\n"
 endif
 
 ifeq ($(READLINE),true)
@@ -595,8 +592,8 @@ SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
-			scip/branch_mostinf.o \
 			scip/branch_leastinf.o \
+			scip/branch_mostinf.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
@@ -669,14 +666,16 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/nodesel_hybridestim.o \
 			scip/nodesel_restartdfs.o \
 			scip/presol_boundshift.o \
+			scip/presol_components.o \
 			scip/presol_convertinttobin.o \
+			scip/presol_domcol.o\
 			scip/presol_dualfix.o \
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_trivial.o \
-			scip/presol_components.o \
-			scip/presol_domcol.o\
+			scip/prop_genvbounds.o \
+			scip/prop_obbt.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
@@ -699,9 +698,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
-			scip/sepa_cgmip.o \
 			scip/sepa_cmir.o \
 			scip/sepa_flowcover.o \
 			scip/sepa_gomory.o \
@@ -843,7 +842,7 @@ LDFLAGS		+=	$(LINKRPATH)$(SCIPDIR)/$(LIBDIR)
 endif
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(EXPRINT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 
@@ -940,11 +939,6 @@ testblis:
 		cd check; \
 		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
-.PHONY: testgams
-testgams:
-		cd check; \
-		$(SHELL) ./check_gams.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(SCRDIR)" "$(CONVERTSCIP)";
-
 .PHONY: tags
 tags:
 		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
@@ -960,6 +954,15 @@ githash::	# do not remove the double-colon
 
 # include install/uninstall targets
 -include make/make.install
+
+# the testgams target need to come after make/local/make.targets has been included (if any), because the latter may assign a value to CLIENTTMPDIR
+.PHONY: testgams
+testgams:
+ifeq ($(CLIENTTMPDIR),)
+		CLIENTTMPDIR=/tmp
+endif
+		cd check; \
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy $(CLIENTTMPDIR) 1 true;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
@@ -1067,6 +1070,7 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
+		| sed '\''s|$(LIBDIR)/cpxinc/cpxconst.h||g'\'' \
 		| sed '\''s|$(LIBDIR)/spxinc[^ ]*||g'\'' \
 		>$(LPILIBDEP)'
 endif
@@ -1084,7 +1088,6 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		| sed '\''s|$(LIBDIR)/ipopt[^ ]*||g'\'' \
-		| sed '\''s|$(LIBDIR)/cppad[^ ]*||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 

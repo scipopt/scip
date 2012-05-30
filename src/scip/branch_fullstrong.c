@@ -401,19 +401,23 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create fullstrong branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
 
-   /* include fullstrong branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyFullstrong,
-         branchFreeFullstrong, branchInitFullstrong, branchExitFullstrong, 
-         branchInitsolFullstrong, branchExitsolFullstrong, 
-         branchExeclpFullstrong, branchExecextFullstrong, branchExecpsFullstrong,
-         branchruledata) );
+   /* include branching rule */
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyFullstrong) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeFullstrong) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitFullstrong) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpFullstrong) );
 
    /* fullstrong branching rule parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,

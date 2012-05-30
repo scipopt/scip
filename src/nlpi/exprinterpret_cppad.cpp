@@ -30,17 +30,11 @@
 #include <vector>
 using std::vector;
 
-/* CppAD is not thread-safe by itself, but uses some static datastructures
- * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
- * This allocator requires to know the number of threads and a thread number for each thread.
- * Conveniently, SCIPs message handler has currently still the same issue, so we can use its routines here.
+/* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivaties of power operators
+ * via CppAD's user-atomic function feature
+ * our customized implementation should give better results (tighter intervals) for the interval data type
  */
-#ifndef NPARASCIP
-#include "scip/message.h"
-
-/** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
-#define CPPAD_MAX_NUM_THREADS 48
-#endif
+/* #define NO_CPPAD_USER_ATOMIC */
 
 /** sign of a value (-1 or +1)
  * 
@@ -56,40 +50,95 @@ using std::vector;
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;
 
+/** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
+#ifndef CPPAD_MAX_NUM_THREADS
+#define CPPAD_MAX_NUM_THREADS 48
+#endif
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
 #include <cppad/cppad.hpp>
-#ifndef CPPAD_PACKAGE_STRING
-#include <cppad/config.h>
-#define CPPAD_PACKAGE_STRING PACKAGE_STRING
-#endif
 #include <cppad/error_handler.hpp>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
+/* CppAD is not thread-safe by itself, but uses some static datastructures
+ * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
+ * This allocator requires to know the number of threads and a thread number for each thread.
+ * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
+ */
 #ifndef NPARASCIP
+#include <pthread.h>
+
+/** mutex for locking in pthread case */
+static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
+
+/** key for accessing thread specific information */
+static pthread_key_t thread_specific_key;
+
+/** currently registered number of threads */
+static size_t ncurthreads = 0;
 
 /** CppAD callback function that indicates whether we are running in parallel mode */
-static bool in_parallel(void)
+static
+bool in_parallel(void)
 {
-   return SCIPmessagehdlrGetNThreads() > 0;
+   return ncurthreads > 1;
 }
 
-/** CppAD callback function that returns the number of the current thread */
+/** CppAD callback function that returns the number of the current thread
+ * assigns a new number to the thread if new
+ */
+static
 size_t thread_num(void)
 {
-   return SCIPmessagehdlrGetThreadNum();
+   size_t threadnum;
+   void* specific;
+
+   specific = pthread_getspecific(thread_specific_key);
+
+   /* if no data for this thread yet, then assign a new thread number to the current thread
+    * we store the thread number incremented by one, to distinguish the absence of data (=0) from existing data
+    */
+   if( specific == NULL )
+   {
+      pthread_mutex_lock(&cppadmutex);
+
+      SCIPdebugMessage("Assigning thread number %lu to thread %p.\n", ncurthreads, (void*)pthread_self());
+
+      pthread_setspecific(thread_specific_key, (void*)(ncurthreads + 1));
+
+      threadnum = ncurthreads;
+
+      ++ncurthreads;
+
+      pthread_mutex_unlock(&cppadmutex);
+
+      assert(pthread_getspecific(thread_specific_key) != NULL);
+      assert((size_t)pthread_getspecific(thread_specific_key) == threadnum + 1);
+   }
+   else
+   {
+      threadnum = (size_t)(specific) - 1;
+   }
+
+   assert(threadnum < ncurthreads);
+
+   return threadnum;
 }
 
 /** sets up CppAD's datastructures for running in multithreading mode
  * it must be called once before multithreading is started
  */
-static char init_parallel(void)
+static
+char init_parallel(void)
 {
+   pthread_key_create(&thread_specific_key, NULL);
+
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
    CppAD::parallel_ad<SCIPInterval>();
@@ -103,34 +152,6 @@ static char init_parallel(void)
 static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
-
-/* CppAD 20120101 brings its own implementation of a sign operator, so don't implement again */
-#ifndef CPPAD_SIGN_OP_INCLUDED
-/* Brad recomends using the discrete function feature of CppAD for sign, since it avoids the need for retaping
- * It can be used since it's derivative is almost everywhere 0.0 */
-
-/* sign as function for double */
-double sign(const double &x)
-{
-   return SIGN(x);
-}
-/* discrete CppAD function sign(double) for use in eval */
-CPPAD_DISCRETE_FUNCTION(double, sign)
-
-/* sign as function for SCIPInterval
- * this time outside of the CppAD namespace
- */
-SCIPInterval sign(const SCIPInterval& x)
-{
-   SCIPInterval resultant;
-
-   SCIPintervalSign(&resultant, x);
-
-   return resultant;
-}
-/* discrete CppAD function sign(SCIPInterval) for use in eval */
-CPPAD_DISCRETE_FUNCTION(SCIPInterval, sign)
-#endif
 
 /** defintion of CondExpOp for SCIPInterval (required by CppAD) */
 inline
@@ -317,7 +338,9 @@ public:
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
 };
 
-#ifdef CPPAD_USER_ATOMIC
+
+#ifndef NO_CPPAD_USER_ATOMIC
+
 /** forward sweep of positive integer power
  * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
  * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
@@ -571,15 +594,25 @@ CPPAD_USER_ATOMIC(
    rev_jac_sparse_posintpower,
    rev_hes_sparse_posintpower
    )
+
 #else
+
+/** power function with natural exponents */
 template<class Type>
-void posintpower(size_t exp, vector<Type>& in, vector<Type>& out)
+void posintpower(
+   size_t                exp,                /**< exponent */
+   vector<Type>&         in,                 /**< vector which first argument is base */
+   vector<Type>&         out                 /**< vecter where to store result in first argument */
+)
 {
    out[0] = pow(in[0], (int)exp);
 }
+
 #endif
 
-#ifdef CPPAD_USER_ATOMIC
+
+#ifndef NO_CPPAD_USER_ATOMIC
+
 /** forward sweep of signpower
  * Given the taylor coefficients for x, we have to compute the taylor coefficients for f(x),
  * that is, given tx = (x, x', x'', ...), we compute the coefficients ty = (y, y', y'', ...)
@@ -1009,6 +1042,7 @@ void evalSignPower(
 }
 
 #else
+
 /** template for evaluation for signpower operator
  * only implemented for real numbers, thus gives error by default
  */
@@ -1045,6 +1079,7 @@ void evalSignPower(
    else
       resultant = -pow(-arg, exponent);
 }
+
 #endif
 
 /** template for evaluation for minimum operator
@@ -1501,7 +1536,7 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
    case SCIP_EXPR_MIN:
    case SCIP_EXPR_MAX:
    case SCIP_EXPR_ABS:
-#ifndef CPPAD_USER_ATOMIC
+#ifdef NO_CPPAD_USER_ATOMIC
    case SCIP_EXPR_SIGNPOWER:
 #endif
       return true;

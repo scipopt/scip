@@ -50,6 +50,12 @@ SCIP_SOLORIGIN SCIPsolGetOrigin(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether the given solution is defined on original variables */
+extern
+SCIP_Bool SCIPsolIsOriginal(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets objective value of primal CIP solution which lives in the original problem space */
 extern
 SCIP_Real SCIPsolGetOrigObj(
@@ -107,6 +113,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
+#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL)
 #define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum

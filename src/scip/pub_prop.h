@@ -39,7 +39,11 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
 
 /** compares two propagators w. r. to their presolving priority */
 extern
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol);
+
+/** comparison method for sorting propagators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName);
 
 /** gets user data of propagator */
 extern
@@ -52,6 +56,69 @@ extern
 void SCIPpropSetData(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PROPDATA*        propdata            /**< new propagator user data */
+   );
+
+/** sets copy method of propagator */
+extern
+void SCIPpropSetCopy(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of propagator */
+extern
+void SCIPpropSetFree(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   );
+
+/** sets initialization method of propagator */
+extern
+void SCIPpropSetInit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   );
+
+/** sets deinitialization method of propagator */
+extern
+void SCIPpropSetExit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   );
+
+/** sets solving process initialization method of propagator */
+extern
+void SCIPpropSetInitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   );
+
+/** sets solving process deinitialization method of propagator */
+extern
+void SCIPpropSetExitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   );
+
+/** sets preprocessing initialization method of propagator */
+extern
+void SCIPpropSetInitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   );
+
+/** sets preprocessing deinitialization method of propagator */
+extern
+void SCIPpropSetExitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   );
+
+/** sets presolving method of propagator */
+extern
+void SCIPpropSetPresol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol))     /**< presolving method */
    );
 
 /** gets name of propagator */
@@ -88,6 +155,13 @@ int SCIPpropGetFreq(
 extern
 SCIP_Real SCIPpropGetSetupTime(
    SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** sets frequency of propagator */
+extern
+void SCIPpropSetFreq(
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   freq                /**< new frequency of propagator */
    );
 
 /** gets time in seconds used in this propagator */
@@ -219,6 +293,12 @@ int SCIPpropGetNChgCoefs(
 /** gets number of constraint sides changed during presolving of propagator */
 extern
 int SCIPpropGetNChgSides(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+extern
+int SCIPpropGetNPresolCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 

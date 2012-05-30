@@ -674,27 +674,30 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create disjunction constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyDisjunction,
-         consFreeDisjunction, consInitDisjunction, consExitDisjunction,
-         consInitpreDisjunction, consExitpreDisjunction, consInitsolDisjunction, consExitsolDisjunction,
-         consDeleteDisjunction, consTransDisjunction, consInitlpDisjunction,
-         consSepalpDisjunction, consSepasolDisjunction, consEnfolpDisjunction, consEnfopsDisjunction,
-         consCheckDisjunction, consPropDisjunction, consPresolDisjunction, consRespropDisjunction, consLockDisjunction,
-         consActiveDisjunction, consDeactiveDisjunction,
-         consEnableDisjunction, consDisableDisjunction, consDelvarsDisjunction,
-         consPrintDisjunction, consCopyDisjunction, consParseDisjunction,
-         consGetVarsDisjunction, consGetNVarsDisjunction,
+         consEnfolpDisjunction, consEnfopsDisjunction, consCheckDisjunction, consLockDisjunction,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyDisjunction, consCopyDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
+
 
    return SCIP_OKAY;
 }
@@ -745,6 +748,31 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
 
    return SCIP_OKAY;
 }
+
+/** creates and captures a cumulative constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsDisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsDisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicDisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nconss,             /**< number of initial constraints in disjunction */
+   SCIP_CONS**           conss               /**< initial constraint in disjunction */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss,
+         TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 
 /** adds constraint to the disjunction of constraints */
 SCIP_RETCODE SCIPaddConsElemDisjunction(

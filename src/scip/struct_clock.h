@@ -40,7 +40,7 @@ extern "C" {
 /** CPU clock counter */
 struct SCIP_CPUClock
 {
-   clock_t          user;               /**< clock ticks for user CPU time */
+   clock_t               user;               /**< clock ticks for user CPU time */
 };
 
 /** wall clock counter */

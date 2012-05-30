@@ -813,7 +813,7 @@ SCIP_RETCODE checkIIS(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_HASHMAP* varhash;           /**< hash map from variable to column index in auxiliary LP */
+   SCIP_HASHMAP* varhash;   /** hash map from variable to column index in auxiliary LP */
    SCIP_LPI* lp;
    int nvars;
    int c;
@@ -5651,21 +5651,26 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    )
 {
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+   SCIP_CONFLICTHDLR* conflicthdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data (used in conflicthdlrdata) */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   conshdlrdata->eventhdlrbound = NULL;
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicatorBound, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrbound),
+         EVENTHDLR_BOUND_NAME, EVENTHDLR_BOUND_DESC, eventExecIndicatorBound, NULL) );
+   assert(conshdlrdata->eventhdlrbound != NULL);
 
+   conshdlrdata->eventhdlrrestart = NULL;
    /* create event handler for restart events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicatorRestart, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlrrestart), EVENTHDLR_RESTART_NAME, EVENTHDLR_RESTART_DESC,
+         eventExecIndicatorRestart, NULL) );
+   assert(conshdlrdata->eventhdlrrestart != NULL);
 
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlrbound = SCIPfindEventhdlr(scip, EVENTHDLR_BOUND_NAME);
    if ( conshdlrdata->eventhdlrbound == NULL )
    {
       SCIPerrorMessage("event handler for indicator constraints not found.\n");
@@ -5673,7 +5678,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    }
 
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlrrestart = SCIPfindEventhdlr(scip, EVENTHDLR_RESTART_NAME);
    if ( conshdlrdata->eventhdlrrestart == NULL )
    {
       SCIPerrorMessage("event handler for restarting indicator constraints not found.\n");
@@ -5716,29 +5720,49 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyIndicator, consFreeIndicator, consInitIndicator, consExitIndicator,
-         consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
-         consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,
-         consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
-         consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
-         consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consDelvarsIndicator, consPrintIndicator, consCopyIndicator, consParseIndicator,
-         consGetVarsIndicator, consGetNVarsIndicator, conshdlrdata) );
+         consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator, consLockIndicator,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIndicator, consCopyIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreIndicator) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpIndicator) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseIndicator) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintIndicator) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropIndicator, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropIndicator) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpIndicator, consSepasolIndicator, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransIndicator) );
 
    /* create conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
    conflicthdlrdata->conshdlrdata = conshdlrdata;
-   conflicthdlrdata->conshdlr = SCIPfindConshdlr(scip, "indicator");
+   conflicthdlrdata->conshdlr = conshdlr;
    assert( conflicthdlrdata->conshdlr != NULL );
 
    /* create conflict handler for indicator constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, conflictFreeIndicator, NULL, NULL, NULL, NULL, conflictExecIndicator, conflicthdlrdata) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecIndicator, conflicthdlrdata) );
+
+   SCIP_CALL( SCIPsetConflicthdlrFree(scip, conflicthdlr, conflictFreeIndicator) );
 
    /* add indicator constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -6034,6 +6058,32 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    return SCIP_OKAY;
 }
 
+/** creates and captures an indicator constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsIndicator() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   int                   nvars,              /**< number of variables in the inequality */
+   SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
+   SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
+   SCIP_Real             rhs                 /**< rhs of the inequality */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsIndicator(scip, cons, name, binvar, nvars, vars, vals, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
  *
@@ -6172,6 +6222,39 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an indicator constraint with given linear constraint and slack variable
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @see SCIPcreateConsIndicatorLinCons() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_CONS*            lincons,            /**< linear constraint */
+   SCIP_VAR*             slackvar            /**< slack variable */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, name, binvar, lincons, slackvar,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

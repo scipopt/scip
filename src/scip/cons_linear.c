@@ -252,8 +252,8 @@ struct SCIP_ConshdlrData
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
-   SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
 };
 
 /** linear constraint update method */
@@ -4217,7 +4217,7 @@ SCIP_RETCODE applyFixings(
 	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
 	    assert(activevar != NULL);
-	    SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant);
+	    SCIP_CALL( SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant) );
 	    assert(activevar != NULL);
 
 	    if( !SCIPisZero(scip, activescalar) )
@@ -4794,8 +4794,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
-            || SCIPisLbBetter(scip, newlb, lb, ub) )
+         if( !SCIPisInfinity(scip, -newlb) &&
+            ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
             SCIP_Bool activityunreliable;
             activityunreliable = SCIPisUpdateUnreliable(scip, minresactivity, consdata->lastminactivity);
@@ -4845,8 +4845,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
-            || SCIPisUbBetter(scip, newub, lb, ub) )
+         if(  !SCIPisInfinity(scip, newub) &&
+            ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
             /* check maxresactivities for reliability */
             if( SCIPisUpdateUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
@@ -6687,7 +6687,7 @@ SCIP_Bool checkEqualObjective(
 }
 
 /** check if the linear equality constraint is equal to a subset of the objective function; if so we can remove the
- *  objective coefficient and add an objective offset
+ *  objective coefficients and add an objective offset
  */
 static
 SCIP_RETCODE checkPartialObjective(
@@ -7169,8 +7169,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->lhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip, minval, maxval));
-            if( (SCIPisInfinity(scip, -lb) || SCIPisFeasGE(scip, minval, lb)) &&
-               (SCIPisInfinity(scip, ub) || SCIPisFeasLE(scip, maxval, ub)) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -7229,8 +7229,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->rhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip,minval,maxval));
-            if( (SCIPisInfinity(scip, -lb) || SCIPisFeasGE(scip, minval, lb)) &&
-               (SCIPisInfinity(scip, ub) || SCIPisFeasLE(scip, maxval, ub)) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -10059,8 +10059,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
-         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          * correctly 
+         /* an extra blank line should be printed separately since the buffer message handler only handles up to one
+          * line correctly
           */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
@@ -11540,36 +11540,53 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONFLICTHDLR* conflicthdlr;
 
    assert(scip != NULL);
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecLinear, NULL) );
 
    /* create conflict handler for linear constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecLinear, NULL) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecLinear, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* include constraint handler in SCIP */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyLinear,
-         consFreeLinear, consInitLinear, consExitLinear,
-         consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
-         consDeleteLinear, consTransLinear, consInitlpLinear,
-         consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear,
-         consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
-         consActiveLinear, consDeactiveLinear,
-         consEnableLinear, consDisableLinear, consDelvarsLinear,
-         consPrintLinear, consCopyLinear, consParseLinear,
-         consGetVarsLinear, consGetNVarsLinear, conshdlrdata) );
+         consEnfolpLinear, consEnfopsLinear, consCheckLinear, consLockLinear,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinear) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitLinear) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinear) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinear) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinear) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinear) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinear, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinear) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
@@ -11764,6 +11781,33 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a linear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinear() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of nonzeros in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, vals, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

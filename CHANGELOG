@@ -100,6 +100,18 @@ interface
 - data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
+- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
+- new methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
+  the fixing status of a parameter can be requested by SCIPparamIsFixed();
+  in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
+- added new method SCIPvarGetAggregatedObj() which computes for a (not active) variable the corresponding objective
+  value
+- renamed parameter SCRDIR of "make testgams" to CLIENTTMPDIR and changed its default to "/tmp"
+- renamed SCIPmarkNonlinearitiesPresent() to SCIPenableNLP(), removed SCIPmarkContinuousNonlinearitiesPresent(),
+  renamed SCIPhasContinuousNonlinearitiesPresent() to SCIPhasNLPContinuousNonlinearity() and allow call only during
+  initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
+- new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
+- SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -133,10 +145,15 @@ plugins:
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
 - added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
-- added new presolver gateextraction, which tries to find and-gates/constraints with two operands which are linearized
+- added new presolver gateextraction, which tries to find and-gates/constraints which are linearized
   e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
-  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1))
+  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1));
+  gate-extractor is also able to detect logicor constraints and set-packing/-partitioning constraints with the same
+  variables, to upgrade these both constraints to a set-partitioning constraint
 - added reader for MI(NL)Ps in OSiL (Optimization Services Instance Language) format
+- added new presolver components, that searches for independent components in the problem structure and solves
+  these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
+- added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
@@ -150,6 +167,11 @@ fixed bugs:
   solution could also have been added
 - fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
   contributions separately, count their occurences in a constraint, and provide a relaxed activity value
+- fixed bug in mutation heuristic with unnecessary aborts due to a wrong memory limit
+- fixed bug in Cplex LPI: after running simplex, solisbasic flag was always true, which might be wrong if Cplex hit a
+  time limit
+- fixed bug in SCIP probing mode with cleared LPI state but solved LP
+- fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -167,7 +189,7 @@ parameters:
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter numerics/recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
-- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter
   separating/cgmip/nodelimit.
 - new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
   only extract set-partitioning and no and-constraints
@@ -175,6 +197,17 @@ parameters:
 - new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
 - new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
   SCIP_STATUS_TOTALNODELIMIT is added
+- new parameter propagating/probing/maxdepth to set the maximal depth until the probing propagation is executed
+- new parameter <presolving/gateextraction/searchequations> by default is set to TRUE, that parameter allows you to
+  search for logicor constraints and set-packing/-partitioning constraints with same variables
+- new parameter <presolving/gateextraction/sorting> by default is set to 1, that parameter determines if you want to try
+  to extract big-gates(-1) or small-gates(1) at first by ordering bigger/smaller logicor constraint up front, or use
+  them as they are (0)
+- new parameter <reading/cnfreader/useobj> to state whether an artificial objective, depending on the number of clauses
+  a variable appears in, should be used, by default set to FALSE, old default behavior of reader corresponds to TRUE
+- new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
+- new parameter <misc/transorigsols> by default set to TRUE, that switches whether SCIP tries to transfer original
+  solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -189,6 +222,32 @@ features:
 - added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 - added counter and clock for SCIPcopy() calls
+- better handling of memory limits, in particular for large problems
+- estimate memory consumption for sub-SCIP and do not copy them if close to memory limit
+- number of presolving calls of plugins is counted and displayed in the statistics,
+  can be accessed via SCIPpresolGetNCalls() and SCIP<prop/conshdlr>getNPresolCalls()
+- new methods SCIPhashGetKeyStandard() which returns the element itself as the key, SCIPhashKeyEqPtr(),
+  SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
+- correct initialization of steepest edge weights with SoPlex 1.6.0.4
+- CNF reader now creates feasibility instances per default, usage of an objective has to be set by a parameter
+- make test now also checks instances in wbo, cnf, osil, and fzn format
+- parametes can now be fixed, which means that their value cannot be changed unless they are unfixed, first;
+  the fixing status of a parameter is copied to sub-SCIPs, which allows to ensure that certain parameters
+  are also not changed when, e.g., heuristics change emphasis settings or also specific parameters
+- added dual presolving for and-constraints
+- the statistics shows for a branching rule the number of calls for LP, extern, and pseudo candidates
+- new NLPI parameter SCIP_NLPPAR_FASTFAIL to enable convergence checks in NLP solver to stop early on seemingly
+  difficult instances (no guarantees)
+- new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
+  statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
+- new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
+  SCIPgmlWriteNode() wo write to a given GML file
+- automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
+  adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
+
+Makefile
+- CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
+  the default for EXPRINT has changed from none to cppad
 
 SCIP version 2.1.2
 ==================

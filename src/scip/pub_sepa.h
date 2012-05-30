@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPsepaComp);
 
+/** comparison method for sorting separators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPsepaCompName);
+
 /** gets user data of separator */
 extern
 SCIP_SEPADATA* SCIPsepaGetData(
@@ -48,6 +52,50 @@ extern
 void SCIPsepaSetData(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata            /**< new separator user data */
+   );
+
+/* new callback/method setter methods */
+
+/** sets copy method of separator */
+extern
+void SCIPsepaSetCopy(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of separator */
+extern
+void SCIPsepaSetFree(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   );
+
+/** sets initialization method of separator */
+extern
+void SCIPsepaSetInit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   );
+
+/** sets deinitialization method of separator */
+extern
+void SCIPsepaSetExit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   );
+
+/** sets solving process initialization method of separator */
+extern
+void SCIPsepaSetInitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   );
+
+/** sets solving process deinitialization method of separator */
+extern
+void SCIPsepaSetExitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
 /** gets name of separator */
@@ -87,7 +135,7 @@ SCIP_Real SCIPsepaGetMaxbounddist(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/**< does the separator use a secondary SCIP instance? */
+/** does the separator use a secondary SCIP instance? */
 extern
 SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */

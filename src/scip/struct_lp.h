@@ -303,6 +303,8 @@ struct SCIP_Lp
    int                   nloosevars;         /**< number of loose variables in LP */
    int                   glbpseudoobjvalinf; /**< number of variables with infinite best bound in global pseudo solution */
    int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
+   int                   ndivingrows;        /**< number of rows when entering diving mode */
+   int                   divinglpiitlim;     /**< LPI iteration limit when entering diving mode */
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
@@ -320,8 +322,8 @@ struct SCIP_Lp
    SCIP_Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
-   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
-   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             hasprovedbound;     /**< was finite safe dual bound computed for current LP? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */

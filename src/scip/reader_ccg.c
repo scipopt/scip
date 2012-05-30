@@ -372,9 +372,16 @@ SCIP_RETCODE SCIPincludeReaderCcg(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include ccg reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCcg, readerFreeCcg, readerReadCcg, readerWriteCcg, NULL) );
+   SCIP_READER* reader;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+
+   assert(reader != NULL);
+
+   /* set non-fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCcg) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCcg) );
 
    return SCIP_OKAY;
 }

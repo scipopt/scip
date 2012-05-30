@@ -38,6 +38,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
+/** comparison method for sorting conflict handler w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName);
+
 /** gets user data of conflict handler */
 extern
 SCIP_CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
@@ -49,6 +53,48 @@ extern
 void SCIPconflicthdlrSetData(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
+   );
+
+/** set copy method of conflict handler */
+extern
+void SCIPconflicthdlrSetCopy(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of the conflict handler */
+   );
+
+/** set destructor of conflict handler */
+extern
+void SCIPconflicthdlrSetFree(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   );
+
+/** set initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialization method conflict handler */
+   );
+
+/** set deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialization method conflict handler */
+   );
+
+/** set solving process initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   );
+
+/** set solving process deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
    );
 
 /** gets name of conflict handler */

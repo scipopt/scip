@@ -278,14 +278,17 @@ SCIP_RETCODE SCIPincludeReaderCol(
    )
 {
   SCIP_READERDATA* readerdata;
+  SCIP_READER* reader;
 
   /* create col reader data */
   readerdata = NULL;
 
   /* include col reader */
-  SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-        readerCopyCol,
-        readerFreeCol, readerReadCol, NULL, readerdata) );
+  SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
+        readerdata) );
+
+  SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCol) );
+  SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCol) );
 
 
   return SCIP_OKAY;

@@ -595,18 +595,23 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyStrongcg, sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
-         sepaInitsolStrongcg, sepaExitsolStrongcg, 
          sepaExeclpStrongcg, sepaExecsolStrongcg,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyStrongcg) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeStrongcg) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

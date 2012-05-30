@@ -46,9 +46,15 @@ SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
 }
 
 /** compares two propagators w. r. to their priority */
-SCIP_DECL_SORTPTRCOMP(SCIPpropPresolComp)
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol)
 {  /*lint --e{715}*/
    return ((SCIP_PROP*)elem2)->presolpriority - ((SCIP_PROP*)elem1)->presolpriority;
+}
+
+/** comparison method for sorting propagators w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPpropCompName)
+{
+   return strcmp(SCIPpropGetName((SCIP_PROP*)elem1), SCIPpropGetName((SCIP_PROP*)elem2));
 }
 
 /** method to call, when the priority of a propagator was changed */
@@ -281,6 +287,7 @@ SCIP_RETCODE SCIPpropInit(
       prop->nupgdconss = 0;
       prop->nchgcoefs = 0;
       prop->nchgsides = 0;
+      prop->npresolcalls = 0;
       prop->wasdelayed = FALSE;
       prop->presolwasdelayed = FALSE;
    }
@@ -423,7 +430,7 @@ SCIP_RETCODE SCIPpropExitpre(
    return SCIP_OKAY;
 }
 
-/** informs propagator that the branch and bound process is being started */
+/** informs propagator that the prop and bound process is being started */
 SCIP_RETCODE SCIPpropInitsol(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -447,7 +454,7 @@ SCIP_RETCODE SCIPpropInitsol(
    return SCIP_OKAY;
 }
 
-/** informs propagator that the branch and bound process data is being freed */
+/** informs propagator that the prop and bound process data is being freed */
 SCIP_RETCODE SCIPpropExitsol(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -589,6 +596,10 @@ SCIP_RETCODE SCIPpropPresol(
          SCIPerrorMessage("propagator <%s> returned invalid result <%d>\n", prop->name, *result);
          return SCIP_INVALIDRESULT;
       }
+
+      /* increase the number of presolving calls, if the propagator tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         ++(prop->npresolcalls);
    }
    else
    {
@@ -760,6 +771,107 @@ void SCIPpropSetData(
    prop->propdata = propdata;
 }
 
+/** sets copy method of propagator */
+void SCIPpropSetCopy(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propcopy = propcopy;
+}
+
+/** sets destructor method of propagator */
+void SCIPpropSetFree(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propfree = propfree;
+}
+
+/** sets initialization method of propagator */
+void SCIPpropSetInit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propinit = propinit;
+}
+
+/** sets deinitialization method of propagator */
+void SCIPpropSetExit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propexit = propexit;
+}
+
+/** sets solving process initialization method of propagator */
+void SCIPpropSetInitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propinitsol = propinitsol;
+}
+
+/** sets solving process deinitialization method of propagator */
+void SCIPpropSetExitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propexitsol = propexitsol;
+}
+
+/** sets preprocessing initialization method of propagator */
+void SCIPpropSetInitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propinitpre = propinitpre;
+}
+
+
+
+/** sets preprocessing deinitialization method of propagator */
+void SCIPpropSetExitpre(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propexitpre = propexitpre;
+}
+
+/** sets presolving method of propagator */
+void SCIPpropSetPresol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL  ((*proppresol))     /**< presolving method */
+   )
+{
+   assert(prop != NULL);
+
+   prop->proppresol = proppresol;
+}
+
 /** gets name of propagator */
 const char* SCIPpropGetName(
    SCIP_PROP*            prop                /**< propagator */
@@ -846,6 +958,18 @@ SCIP_Real SCIPpropGetSetupTime(
    assert(prop != NULL);
 
    return SCIPclockGetTime(prop->setuptime);
+}
+
+/** sets frequency of propagator */
+void SCIPpropSetFreq(
+   SCIP_PROP*            prop,               /**< propagator */
+   int                   freq                /**< new frequency of propagator */
+   )
+{
+   assert(prop != NULL);
+   assert(freq >= -1);
+
+   prop->freq = freq;
 }
 
 /** gets time in seconds used in this propagator for propagation */
@@ -1068,6 +1192,16 @@ int SCIPpropGetNChgSides(
    return prop->nchgsides;
 }
 
+/** gets number of times the propagator was called in presolving and tried to find reductions */
+int SCIPpropGetNPresolCalls(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->npresolcalls;
+}
+
 /** returns the timing mask of the propagator */
 SCIP_PROPTIMING SCIPpropGetTimingmask(
    SCIP_PROP*            prop                /**< propagator */
@@ -1087,4 +1221,3 @@ SCIP_Bool SCIPpropDoesPresolve(
 
    return (prop->proppresol != NULL);
 }
-

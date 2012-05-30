@@ -355,6 +355,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create closecuts separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -363,10 +364,17 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    sepadata->nunsuccessful = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyClosecuts, sepaFreeClosecuts, sepaInitClosecuts, sepaExitClosecuts,
-         sepaInitsolClosecuts, sepaExitsolClosecuts, sepaExeclpClosecuts, sepaExecsolClosecuts,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaExeclpClosecuts, sepaExecsolClosecuts,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyClosecuts) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeClosecuts) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolClosecuts) );
 
    /* add closecuts separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

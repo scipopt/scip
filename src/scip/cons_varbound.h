@@ -86,6 +86,23 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
+ *  with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             var,                /**< variable x that has variable bound */
+   SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
+   SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
+   SCIP_Real             lhs,                /**< left hand side of variable bound inequality */
+   SCIP_Real             rhs                 /**< right hand side of variable bound inequality */
+   );
+
 /** gets left hand side of variable bound constraint lhs <= x + c*y <= rhs */
 extern
 SCIP_Real SCIPgetLhsVarbound(

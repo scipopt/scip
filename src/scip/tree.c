@@ -1264,7 +1264,8 @@ SCIP_RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, primal, tree, conflict, SCIPnodeGetDepth(node), 0, SCIP_PROPTIMING_ALWAYS, cutoff) );
+   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, conflict,
+         SCIPnodeGetDepth(node), 0, SCIP_PROPTIMING_ALWAYS, cutoff) );
    assert(!node->reprop || *cutoff);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
@@ -1571,6 +1572,54 @@ SCIP_RETCODE treeAddPendingBdchg(
    tree->pendingbdchgs[tree->npendingbdchgs].inferinfo = inferinfo;
    tree->pendingbdchgs[tree->npendingbdchgs].probingchange = probingchange;
    tree->npendingbdchgs++;
+
+   /* check global pending boundchanges against debug solution */
+   if( node->depth == 0 )
+   {
+#ifndef NDEBUG
+      SCIP_Real bound = newbound;
+
+      /* get bound adjusted for integrality(, this should already be done) */
+      SCIPvarAdjustBd(var, set, boundtype, &bound);
+
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+	 /* check that the bound is feasible */
+	 if( bound > SCIPvarGetUbGlobal(var) )
+	 {
+	    /* due to numerics we only want to be feasible in feasibility tolerance */
+	    assert(SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)));
+	    bound = SCIPvarGetUbGlobal(var);
+	 }
+      }
+      else
+      {
+	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+	 /* check that the bound is feasible */
+	 if( bound < SCIPvarGetLbGlobal(var) )
+	 {
+	    /* due to numerics we only want to be feasible in feasibility tolerance */
+	    assert(SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)));
+	    bound = SCIPvarGetLbGlobal(var);
+	 }
+      }
+      /* check that the given bound was already adjusted for integrality */
+      assert(SCIPsetIsEQ(set, newbound, bound));
+#endif
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+	 /* check bound on debugging solution */
+	 SCIP_CALL( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+      }
+      else
+      {
+	 assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+	 /* check bound on debugging solution */
+	 SCIP_CALL( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -6034,8 +6083,18 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIP_Bool lperror;
 
          /* reset the LP state before probing started */
-         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
-         SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+         if( tree->probinglpistate == NULL )
+         {
+            SCIP_CALL( SCIPlpiClearState(lp->lpi) );
+            lp->primalfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
+            lp->dualfeasible = (lp->nlpicols == 0 && lp->nlpirows == 0);
+            lp->solisbasic = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, tree->probinglpistate) );
+            SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
+         }
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */
@@ -6507,13 +6566,14 @@ SCIP_NODE* SCIPnodeGetParent(
 
 /** returns the set of variable branchings that were performed in the parent node to create this node */
 void SCIPnodeGetParentBranchings(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branching in the parent node set */
-   int*                  nbranchvars,         /**< number of variables on which branching has been performed in the parent node 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize       /**< available slots in arrays */
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
+   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
    )
 {
    SCIP_BOUNDCHG* boundchgs;
@@ -6561,13 +6621,14 @@ void SCIPnodeGetParentBranchings(
 
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
 void SCIPnodeGetAncestorBranchings(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
-   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize       /**< available slots in arrays */
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
    )
 {
    assert(node != NULL);
@@ -6598,18 +6659,19 @@ void SCIPnodeGetAncestorBranchings(
 /*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
  *  sorted by the nodes, starting from the current node going up to the root */
 void SCIPnodeGetAncestorBranchingPath(
-   SCIP_NODE*            node,                /**< node data */
-   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
-   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
-   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
-   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
-                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize,      /**< available slots in arrays */   
-   int*                  nodeswitches,        /**< marks, where in the arrays the branching decisions of the next node on the path start 
-                                               * branchings performed at the parent of node always start at position 0. For single variable branching,
-                                               * nodeswitches[i] = i holds */
-   int*                  nnodes,              /**< number of nodes in the nodeswitch array */
-   int                   nodeswitchsize       /**< available slots in node switch array */                                                                    
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize,     /**< available slots in arrays */
+   int*                  nodeswitches,       /**< marks, where in the arrays the branching decisions of the next node on the path
+                                              *   start branchings performed at the parent of node always start at position 0.
+                                              *   For single variable branching, nodeswitches[i] = i holds */
+   int*                  nnodes,             /**< number of nodes in the nodeswitch array */
+   int                   nodeswitchsize      /**< available slots in node switch array */
    )
 {
    assert(node != NULL);
@@ -6646,8 +6708,8 @@ void SCIPnodeGetAncestorBranchingPath(
 
 /** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
 SCIP_Bool SCIPnodesSharePath(
-   SCIP_NODE*            node1,                /**< node data */
-   SCIP_NODE*            node2                 /**< node data */
+   SCIP_NODE*            node1,              /**< node data */
+   SCIP_NODE*            node2               /**< node data */
    )
 {
    assert(node1 != NULL);
@@ -6670,8 +6732,8 @@ SCIP_Bool SCIPnodesSharePath(
 
 /** finds the common ancestor node of two given nodes */
 SCIP_NODE* SCIPnodesGetCommonAncestor(
-   SCIP_NODE*            node1,                /**< node data */
-   SCIP_NODE*            node2                 /**< node data */
+   SCIP_NODE*            node1,              /**< node data */
+   SCIP_NODE*            node2               /**< node data */
    )
 {
    assert(node1 != NULL);

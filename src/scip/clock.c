@@ -41,7 +41,7 @@
 /** converts CPU clock ticks into seconds */
 static
 SCIP_Real cputime2sec(
-   clock_t          cputime             /**< clock ticks for CPU time */
+   clock_t               cputime             /**< clock ticks for CPU time */
    )
 {
    clock_t clocks_per_second;

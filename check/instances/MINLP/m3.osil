@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org"   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd" >
+  <instanceHeader>
+    <description>m3
+    </description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="26">
+      <var name="b1" type="B" ub="1"/>
+      <var name="b2" type="B" ub="1"/>
+      <var name="b3" type="B" ub="1"/>
+      <var name="b4" type="B" ub="1"/>
+      <var name="b5" type="B" ub="1"/>
+      <var name="b6" type="B" ub="1"/>
+      <var name="x8" lb="-INF"/>
+      <var name="x9" lb="-INF"/>
+      <var name="x10" lb="-INF"/>
+      <var name="x11" lb="-INF"/>
+      <var name="x12" lb="-INF"/>
+      <var name="x13" lb="-INF"/>
+      <var name="x14" lb="2" ub="5.4772"/>
+      <var name="x15" lb="3" ub="6.7081"/>
+      <var name="x16" lb="3.8" ub="7.5498"/>
+      <var name="x17" lb="10" ub="10"/>
+      <var name="x18" lb="1.8258" ub="5"/>
+      <var name="x19" lb="2.2361" ub="5"/>
+      <var name="x20" lb="2.5166" ub="5"/>
+      <var name="x21" lb="5" ub="5"/>
+      <var name="x22" lb="-INF"/>
+      <var name="x23" lb="-INF"/>
+      <var name="x24" lb="-INF"/>
+      <var name="x25" lb="-INF"/>
+      <var name="x26" lb="-INF"/>
+      <var name="x27" lb="-INF"/>
+    </variables>
+    <objectives numberOfObjectives="1">
+      <obj maxOrMin="min" name="defObj_objvar" numberOfObjCoef="4">
+	<coef idx="8">6</coef>
+	<coef idx="9">6</coef>
+	<coef idx="10">6</coef>
+	<coef idx="11">6</coef>
+      </obj>
+    </objectives>
+    <constraints numberOfConstraints="43">
+      <con name="e2" ub="0"/>
+      <con name="e3" ub="0"/>
+      <con name="e4" ub="0"/>
+      <con name="e5" ub="0"/>
+      <con name="e6" ub="0"/>
+      <con name="e7" ub="0"/>
+      <con name="e8" ub="0"/>
+      <con name="e9" ub="0"/>
+      <con name="e10" ub="0"/>
+      <con name="e11" ub="0"/>
+      <con name="e12" ub="0"/>
+      <con name="e13" ub="0"/>
+      <con name="e14" ub="0"/>
+      <con name="e15" ub="0"/>
+      <con name="e16" ub="0"/>
+      <con name="e17" ub="0"/>
+      <con name="e18" ub="0"/>
+      <con name="e19" ub="0"/>
+      <con name="e20" ub="10"/>
+      <con name="e21" ub="5"/>
+      <con name="e22" ub="10"/>
+      <con name="e23" ub="0"/>
+      <con name="e24" ub="0"/>
+      <con name="e25" ub="0"/>
+      <con name="e26" ub="0"/>
+      <con name="e27" ub="0"/>
+      <con name="e28" ub="10"/>
+      <con name="e29" ub="5"/>
+      <con name="e30" ub="10"/>
+      <con name="e31" ub="0"/>
+      <con name="e32" ub="0"/>
+      <con name="e33" ub="0"/>
+      <con name="e34" ub="0"/>
+      <con name="e35" ub="0"/>
+      <con name="e36" ub="10"/>
+      <con name="e37" ub="5"/>
+      <con name="e38" ub="10"/>
+      <con name="e39" ub="0"/>
+      <con name="e40" ub="0"/>
+      <con name="e41" ub="0"/>
+      <con name="e42" ub="0"/>
+      <con name="e43" ub="0"/>
+      <con name="e44" ub="0"/>
+    </constraints>
+    <linearConstraintCoefficients numberOfValues="146">
+      <start>
+	<el mult="7" incr="4">0</el>
+	<el mult="6" incr="2">26</el>
+	<el mult="3" incr="7">43</el>
+	<el mult="4" incr="7">60</el>
+	<el mult="3" incr="11">84</el>
+	<el mult="4" incr="10">116</el>
+      </start>
+      <rowIdx>
+	<el mult="4" incr="1">17</el>
+	<el mult="4" incr="1">17</el>
+	<el mult="4" incr="1">25</el>
+	<el mult="4" incr="1">25</el>
+	<el mult="4" incr="1">33</el>
+	<el mult="4" incr="1">33</el>
+	<el mult="4" incr="1">13</el>
+	<el mult="4" incr="1">21</el>
+	<el mult="4" incr="1">29</el>
+	<el mult="2" incr="1">1</el>
+	<el mult="2" incr="1">17</el>
+	<el mult="2" incr="1">25</el>
+	<el>38</el>
+	<el mult="2" incr="1">5</el>
+	<el mult="2" incr="1">17</el>
+	<el mult="2" incr="1">33</el>
+	<el>40</el>
+	<el mult="2" incr="1">9</el>
+	<el mult="2" incr="1">25</el>
+	<el mult="2" incr="1">33</el>
+	<el>42</el>
+	<el mult="3" incr="4">1</el>
+	<el mult="2" incr="1">3</el>
+	<el mult="2" incr="1">19</el>
+	<el mult="2" incr="1">27</el>
+	<el>37</el>
+	<el mult="2" incr="1">7</el>
+	<el mult="2" incr="1">19</el>
+	<el mult="2" incr="1">35</el>
+	<el>39</el>
+	<el mult="2" incr="1">11</el>
+	<el mult="2" incr="1">27</el>
+	<el mult="2" incr="1">35</el>
+	<el>41</el>
+	<el mult="3" incr="4">3</el>
+	<el mult="3" incr="1">0</el>
+	<el mult="2" incr="1">13</el>
+	<el mult="2" incr="1">17</el>
+	<el mult="2" incr="1">21</el>
+	<el mult="2" incr="1">25</el>
+	<el>0</el>
+	<el mult="2" incr="1">5</el>
+	<el mult="2" incr="1">13</el>
+	<el mult="2" incr="1">17</el>
+	<el mult="2" incr="1">29</el>
+	<el mult="2" incr="1">33</el>
+	<el mult="2" incr="1">9</el>
+	<el mult="2" incr="1">21</el>
+	<el mult="2" incr="1">25</el>
+	<el mult="2" incr="1">29</el>
+	<el mult="2" incr="1">33</el>
+	<el mult="2" incr="1">3</el>
+	<el mult="2" incr="1">15</el>
+	<el mult="2" incr="1">19</el>
+	<el mult="2" incr="1">23</el>
+	<el mult="2" incr="1">27</el>
+	<el mult="2" incr="1">7</el>
+	<el mult="2" incr="1">15</el>
+	<el mult="2" incr="1">19</el>
+	<el mult="2" incr="1">31</el>
+	<el mult="2" incr="1">35</el>
+	<el mult="2" incr="1">11</el>
+	<el mult="2" incr="1">23</el>
+	<el mult="2" incr="1">27</el>
+	<el mult="2" incr="1">31</el>
+	<el mult="2" incr="1">35</el>
+      </rowIdx>
+      <value>
+	<el mult="2">-10</el>
+	<el mult="2">5</el>
+	<el>-10</el>
+	<el>10</el>
+	<el>-5</el>
+	<el>5</el>
+	<el mult="2">-10</el>
+	<el mult="2">5</el>
+	<el>-10</el>
+	<el>10</el>
+	<el>-5</el>
+	<el>5</el>
+	<el mult="2">-10</el>
+	<el mult="2">5</el>
+	<el>-10</el>
+	<el>10</el>
+	<el>-5</el>
+	<el>5</el>
+	<el mult="12">-1</el>
+	<el mult="6">.5</el>
+	<el>-1</el>
+	<el mult="6">.5</el>
+	<el>-1</el>
+	<el mult="6">.5</el>
+	<el mult="4">-1</el>
+	<el mult="6">.5</el>
+	<el>-1</el>
+	<el mult="6">.5</el>
+	<el>-1</el>
+	<el mult="6">.5</el>
+	<el mult="4">-1</el>
+	<el mult="2">1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el>1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el>-1</el>
+	<el>1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el mult="2">-1</el>
+	<el mult="2">1</el>
+	<el>-1</el>
+      </value>
+    </linearConstraintCoefficients>
+    <nonlinearExpressions  numberOfNonlinearExpressions="6" >
+      <nl  idx="37">
+	<divide>
+	  <number  value="10" type="real"/>
+	  <variable  idx="12"  coef="1"/>
+	</divide>
+      </nl>
+      <nl  idx="38">
+	<divide>
+	  <number  value="10" type="real"/>
+	  <variable  idx="16"  coef="1"/>
+	</divide>
+      </nl>
+      <nl  idx="39">
+	<divide>
+	  <number  value="15" type="real"/>
+	  <variable  idx="13"  coef="1"/>
+	</divide>
+      </nl>
+      <nl  idx="40">
+	<divide>
+	  <number  value="15" type="real"/>
+	  <variable  idx="17"  coef="1"/>
+	</divide>
+      </nl>
+      <nl  idx="41">
+	<divide>
+	  <number  value="19" type="real"/>
+	  <variable  idx="14"  coef="1"/>
+	</divide>
+      </nl>
+      <nl  idx="42">
+	<divide>
+	  <number  value="19" type="real"/>
+	  <variable  idx="18"  coef="1"/>
+	</divide>
+      </nl>
+    </nonlinearExpressions>
+  </instanceData>
+</osil>

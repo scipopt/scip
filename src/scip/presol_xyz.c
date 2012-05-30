@@ -178,17 +178,20 @@ SCIP_RETCODE SCIPincludePresolXyz(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create xyz presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyXyz,
-         presolFreeXyz, presolInitXyz, presolExitXyz, 
-         presolInitpreXyz, presolExitpreXyz, presolExecXyz,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecXyz,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   /* TODO: (optional) set presolver specific callbacks with SCIPsetPresolCALLBACK() here */
 
    /* add xyz presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */

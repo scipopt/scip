@@ -3590,26 +3590,36 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create variable bound constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyVarbound,
-         consFreeVarbound, consInitVarbound, consExitVarbound,
-         consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
-         consDeleteVarbound, consTransVarbound, consInitlpVarbound,
-         consSepalpVarbound, consSepasolVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound,
-         consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
-         consActiveVarbound, consDeactiveVarbound,
-         consEnableVarbound, consDisableVarbound, consDelvarsVarbound,
-         consPrintVarbound, consCopyVarbound, consParseVarbound,
-         consGetVarsVarbound, consGetNVarsVarbound, conshdlrdata) );
+         consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, consLockVarbound,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyVarbound, consCopyVarbound) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteVarbound) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolVarbound) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsVarbound) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpVarbound) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseVarbound) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintVarbound) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropVarbound, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropVarbound) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpVarbound, consSepasolVarbound, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
@@ -3619,10 +3629,8 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecVarbound,
-         eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecVarbound, eventhdlrdata) );
 
    /* add varbound constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3688,6 +3696,28 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
+ *  with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             var,                /**< variable x that has variable bound */
+   SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
+   SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
+   SCIP_Real             lhs,                /**< left hand side of variable bound inequality */
+   SCIP_Real             rhs                 /**< right hand side of variable bound inequality */
+   )
+{
+   SCIP_CALL( SCIPcreateConsVarbound(scip, cons, name, var, vbdvar,vbdcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

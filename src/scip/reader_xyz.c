@@ -130,14 +130,22 @@ SCIP_RETCODE SCIPincludeReaderXyz(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create xyz reader data */
    readerdata = NULL;
    /* TODO: (optional) create reader specific data here */
    
-   /* include xyz reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyXyz, readerFreeXyz, readerReadXyz, readerWriteXyz, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   assert(reader != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyXyz) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeXyz) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadXyz) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteXyz) );
 
    /* add xyz reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */

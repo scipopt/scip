@@ -635,17 +635,22 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create pscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    
-   /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyPscost,
-         branchFreePscost, branchInitPscost, branchExitPscost, branchInitsolPscost, branchExitsolPscost, 
-         branchExeclpPscost, branchExecextPscost, branchExecpsPscost,
-         branchruledata) );
+   /* include allfullstrong branching rule */
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/strategy",
          "strategy for utilizing pseudo-costs of external branching candidates (multiply as in pseudo costs 'u'pdate rule, or by 'd'omain reduction, or by domain reduction of 's'ibling, or by 'v'ariable score)",

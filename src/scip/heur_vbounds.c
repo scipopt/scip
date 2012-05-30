@@ -51,12 +51,6 @@
                                          *   constraints of the subscip
                                          */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -260,12 +254,9 @@ SCIP_RETCODE initializeCandsLists(
    heurdata->usednodes = 0;
    heurdata->initialized = TRUE;
 
-   STATISTIC(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "lbvars %.3g\%, ubvars %.3g\%, impvars %.3g\% (%s)\n",
-         (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
-         ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
-      )
+   SCIPstatisticMessage("lbvars %.3g, ubvars %.3g, impvars %.3g (%s)\n",
+      (nlbvars * 100.0) / nallvars, (nubvars * 100.0) / nallvars,
+      ((nlbimpvars + nubimpvars) * 100.0) / nallvars, SCIPgetProbName(scip));
 
    return SCIP_OKAY;
 }
@@ -501,9 +492,16 @@ SCIP_RETCODE applyVbounds(
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
+      {
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit <= 0.0 || memorylimit <= 0.0 )
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* free subproblem */
          SCIPfreeBufferArray(scip, &subvars);
@@ -769,18 +767,23 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create vbounds primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    heurdataReset(heurdata);
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyVbounds,
-         heurFreeVbounds, heurInitVbounds, heurExitVbounds,
-         heurInitsolVbounds, heurExitsolVbounds, heurExecVbounds,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecVbounds, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyVbounds) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeVbounds) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolVbounds) );
 
    /* add variable bounds primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",

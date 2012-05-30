@@ -156,42 +156,41 @@ struct SCIP_ConsData
 struct SCIP_QuadConsUpgrade
 {
    SCIP_DECL_QUADCONSUPGD((*quadconsupgd));  /**< method to call for upgrading quadratic constraint */
-   int                     priority;         /**< priority of upgrading method */
-   SCIP_Bool               active;           /**< is upgrading enabled */
+   int                   priority;           /**< priority of upgrading method */
+   SCIP_Bool             active;             /**< is upgrading enabled */
 };
 typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
-   int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
-   SCIP_Bool             binreforminitial;          /**< whether to make constraints added due to replacing products with binary variables initial */
-   SCIP_Real             mincutefficacysepa;        /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;     /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-   SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
-   SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
-   SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Bool             linearizeheursol;          /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
-   SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
-   SCIP_Bool             checkfactorable;           /**< whether functions should be checked to be factorable */
-   SCIP_Bool             linfeasshift;              /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             disaggregate;              /**< whether to disaggregate quadratic constraints */
-   int                   maxproprounds;             /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
-   int                   maxproproundspresolve;     /**< limit on number of propagation rounds for a single constraint within one presolving round */
-   SCIP_Bool             sepanlp;                   /**< where linearization of the NLP relaxation solution added? */
+   int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
+   int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
+   SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
+   SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
+   SCIP_Bool             doscaling;          /**< should constraints be scaled in the feasibility check ? */
+   SCIP_Real             defaultbound;       /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
+   SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
+   SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
+   SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
+   SCIP_Bool             checkfactorable;    /**< whether functions should be checked to be factorable */
+   SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
+   SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
+   int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
+   int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
+   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
 
-   SCIP_HEUR*            subnlpheur;                /**< a pointer to the subnlp heuristic, if available */
-   SCIP_HEUR*            trysolheur;                /**< a pointer to the trysol heuristic, if available */
-   SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
-   int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if caught */
-   SCIP_Real             sepanlpmincont;            /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
-   SCIP_NODE*            lastenfolpnode;            /**< the node for which enforcement was called the last time (and some constraint was violated) */
-   int                   nenfolprounds;             /**< counter on number of enforcement rounds for the current node */
-
-   SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
-   int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
-   int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
+   SCIP_HEUR*            subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
+   SCIP_HEUR*            trysolheur;         /**< a pointer to the trysol heuristic, if available */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< our handler for variable bound change events */
+   int                   newsoleventfilterpos; /**< filter position of new solution event handler, if caught */
+   SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
+   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
+   SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
+   int                   quadconsupgradessize; /**< size of quadconsupgrade array */
+   int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
 };
 
 
@@ -6650,9 +6649,9 @@ SCIP_RETCODE generateCut(
             SCIPdebugMessage("skip cut\n");
             success = FALSE;
          }
-
          break;
-      } while( TRUE );  /*lint !e506 */
+      }
+      while( TRUE );  /*lint !e506 */
 
       if( !SCIPisInfinity(scip, -lhs) )
       {
@@ -8651,7 +8650,8 @@ SCIP_RETCODE propagateBounds(
          }
       }
 
-   } while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -9181,8 +9181,10 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
-   int                i;
    int                c;
+#ifndef NDEBUG
+   int                i;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -9219,17 +9221,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #endif
 
       /* tell SCIP that we have something nonlinear */
-      if( SCIPconsIsEnabled(conss[c]) && consdata->nquadvars > 0 )
-      {
-         SCIPmarkNonlinearitiesPresent(scip);
-         if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
-            for( i = 0; i < consdata->nquadvars; ++i )
-               if( SCIPvarGetType(consdata->quadvarterms[i].var) >= SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIPmarkContinuousNonlinearitiesPresent(scip);
-                  break;
-               }
-      }
+      if( SCIPconsIsAdded(conss[c]) && consdata->nquadvars > 0 )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;
@@ -10237,7 +10230,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                havechange = TRUE;
             }
 
-         } while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
+         }
+         while( !consdata->ispropagated && roundnr < conshdlrdata->maxproproundspresolve );
 
          if( redundant )
             continue;
@@ -11063,27 +11057,41 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create quadratic constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyQuadratic,
-         consFreeQuadratic, consInitQuadratic, consExitQuadratic,
-         consInitpreQuadratic, consExitpreQuadratic, consInitsolQuadratic, consExitsolQuadratic,
-         consDeleteQuadratic, consTransQuadratic, consInitlpQuadratic,
-         consSepalpQuadratic, consSepasolQuadratic, consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic,
-         consPropQuadratic, consPresolQuadratic, consRespropQuadratic, consLockQuadratic,
-         consActiveQuadratic, consDeactiveQuadratic,
-         consEnableQuadratic, consDisableQuadratic, consDelvarsQuadratic,
-         consPrintQuadratic, consCopyQuadratic, consParseQuadratic,
-         consGetVarsQuadratic, consGetNVarsQuadratic, conshdlrdata) );
+         consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic, consLockQuadratic,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintQuadratic) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropQuadratic, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpQuadratic, consSepasolQuadratic, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransQuadratic) );
 
    /* add quadratic constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/replacebinaryprod",
@@ -11150,12 +11158,13 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+   conshdlrdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
+         processVarEvent, NULL) );
+   assert(conshdlrdata->eventhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+         processNewSolutionEvent, NULL) );
 
    /* include the quadratic constraint upgrade in the nonlinear constraint handler */
    SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdQuadratic, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
@@ -11417,6 +11426,39 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    return SCIP_OKAY;
 }
 
+/** creates and captures a quadratic constraint with all its
+ *  flags set to their default values.
+ *
+ *  The constraint should be given in the form
+ *  \f[
+ *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
+ *  \f]
+ *  where \f$x_i = y_j = z_k\f$ is possible.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms (n) */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */
+   int                   nquadterms,         /**< number of quadratic terms (m) */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms (y_j) */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms (z_j) */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms (a_j) */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation (ell) */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
+   )
+{
+   SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, nlinvars, linvars, lincoefs,
+         nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** Creates and captures a quadratic constraint.
  * 
  * The constraint should be given in the form
@@ -11486,6 +11528,39 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 
    return SCIP_OKAY;
 }
+
+/** creates and captures a quadratic constraint in its most basic version, i.e.,
+ *  all constraint flags are set to their default values.
+ *
+ * The constraint should be given in the form
+ * \f[
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \f]
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicQuadratic2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms (n) */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */
+   int                   nquadvarterms,      /**< number of quadratic terms (m) */
+   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
+   int                   nbilinterms,        /**< number of bilinear terms (p) */
+   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
+   SCIP_Real             lhs,                /**< constraint left hand side (ell) */
+   SCIP_Real             rhs                 /**< constraint right hand side (u) */
+   )
+{
+   SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name, nlinvars, linvars, lincoefs,
+         nquadvarterms, quadvarterms, nbilinterms, bilinterms, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 
 /** Adds a constant to the constraint function, that is, subtracts a constant from both sides */
 void SCIPaddConstantQuadratic(
@@ -11955,6 +12030,55 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    *violation = MAX(consdata->lhsviol, consdata->rhsviol);
 
    return SCIP_OKAY;
+}
+
+/** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
+ *
+ * That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
+ */
+SCIP_Bool SCIPisLinearLocalQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check all square terms */
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      if( consdata->quadvarterms[i].sqrcoef == 0.0 )
+         continue;
+
+      var1 = consdata->quadvarterms[i].var;
+      assert(var1 != NULL);
+
+      if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetUbLocal(var1)) )
+         return FALSE;
+   }
+
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      var1 = consdata->bilinterms[i].var1;
+      var2 = consdata->bilinterms[i].var2;
+
+      assert(var1 != NULL);
+      assert(var2 != NULL);
+
+      if( !SCIPisRelEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetUbLocal(var1)) &&
+         ! SCIPisRelEQ(scip, SCIPvarGetLbLocal(var2), SCIPvarGetUbLocal(var2)) )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** Adds the constraint to an NLPI problem. */

@@ -211,19 +211,20 @@ SCIP_RETCODE SCIPincludeBranchruleXyz(
 )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create xyz branching rule data */
    branchruledata = NULL;
    /* TODO: (optional) create branching rule specific data here */
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
-         BRANCHRULE_MAXBOUNDDIST,
-         branchCopyXyz,
-         branchFreeXyz, branchInitXyz, branchExitXyz,
-         branchInitsolXyz, branchExitsolXyz,
-         branchExeclpXyz, branchExecextXyz, branchExecpsXyz,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   /* TODO: (optional) set branching rule specific callbacks with SCIPsetBranchruleCALLBACK() here */
 
    /* add xyz branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */

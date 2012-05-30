@@ -40,7 +40,8 @@ $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_blis.sh $NAME/check/evalcheck_blis.sh $NAME/check/check_blis.awk \
 $NAME/check/check_cbc.sh $NAME/check/evalcheck_cbc.sh $NAME/check/check_cbc.awk \
 $NAME/check/check_cplex.sh $NAME/check/evalcheck_cplex.sh $NAME/check/check_cplex.awk \
-$NAME/check/check_gams.sh $NAME/check/evalcheck_gams.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
+$NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
+$NAME/check/evalcheck_gamscluster.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
 $NAME/check/check_glpk.sh $NAME/check/evalcheck_glpk.sh $NAME/check/check_glpk.awk \
 $NAME/check/check_gurobi.sh $NAME/check/evalcheck_gurobi.sh $NAME/check/check_gurobi.awk \
 $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mosek.awk \
@@ -62,6 +63,7 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshel
 $NAME/src/rectlu/*.c $NAME/src/rectlu/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
+$NAME/src/cppad/* $NAME/src/cppad/local/* \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
@@ -100,11 +102,16 @@ $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
 $NAME/check/instances/Indicator/*.lp \
+$NAME/check/instances/MIP/*.fzn \
 $NAME/check/instances/MIP/*.mps \
+$NAME/check/instances/MIP/*.osil \
 $NAME/check/instances/MIQCP/*.lp \
 $NAME/check/instances/MIQCP/*.mps \
+$NAME/check/instances/MIQCP/*.osil \
 $NAME/check/instances/MIQCP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
+$NAME/check/instances/PseudoBoolean/*.wbo \
+$NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps

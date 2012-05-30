@@ -332,7 +332,7 @@ void conshdlrdataExit(
       conshdlrdata->hashtablesize = 0;
    }
 
-   if( conshdlrdata->allnonlinterms == NULL )
+   if( conshdlrdata->allnonlinterms != NULL )
    {
       SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), conshdlrdata->sallnonlinterms );
 
@@ -3431,26 +3431,30 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create pseudoboolean constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyPseudoboolean,
-         consFreePseudoboolean, consInitPseudoboolean, consExitPseudoboolean,
-         consInitprePseudoboolean, consExitprePseudoboolean, consInitsolPseudoboolean, consExitsolPseudoboolean,
-         consDeletePseudoboolean, consTransPseudoboolean, consInitlpPseudoboolean,
-         consSepalpPseudoboolean, consSepasolPseudoboolean, consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean,
-         consPropPseudoboolean, consPresolPseudoboolean, consRespropPseudoboolean, consLockPseudoboolean,
-         consActivePseudoboolean, consDeactivePseudoboolean,
-         consEnablePseudoboolean, consDisablePseudoboolean, consDelvarsPseudoboolean,
-         consPrintPseudoboolean, consCopyPseudoboolean, consParsePseudoboolean,
-         consGetVarsPseudoboolean, consGetNVarsPseudoboolean, conshdlrdata) );
+         consEnfolpPseudoboolean, consEnfopsPseudoboolean, consCheckPseudoboolean, consLockPseudoboolean,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyPseudoboolean, consCopyPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeletePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitprePseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3567,6 +3571,39 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
    
+   return SCIP_OKAY;
+}
+
+/** creates and captures a pseudoboolean constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR**            linvars,            /**< variables of the linear part, or NULL */
+   int                   nlinvars,           /**< number of variables of the linear part */
+   SCIP_Real*            linvals,            /**< coefficients of linear part, or NULL */
+   SCIP_VAR***           terms,              /**< nonlinear terms of variables, or NULL */
+   int                   nterms,             /**< number of terms of variables of nonlinear term */
+   int*                  ntermvars,          /**< number of variables in nonlinear terms, or NULL */
+   SCIP_Real*            termvals,           /**< coefficients of nonlinear parts, or NULL */
+   SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
+   SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
+   SCIP_Bool             issoftcons,         /**< is this a soft constraint */
+   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+                                              *   if this variable is not NULL this constraint (without this integer
+                                              *   variable) describes the objective function */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals,
+         terms, nterms, ntermvars, termvals, indvar, weight, issoftcons, intvar, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    return SCIP_OKAY;
 }
 

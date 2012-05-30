@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName);
+
 /** gets user data of presolver */
 extern
 SCIP_PRESOLDATA* SCIPpresolGetData(
@@ -48,6 +52,48 @@ extern
 void SCIPpresolSetData(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_PRESOLDATA*      presoldata          /**< new presolver user data */
+   );
+
+/** sets copy method of presolver */
+extern
+void SCIPpresolSetCopy(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of presolver */
+extern
+void SCIPpresolSetFree(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))     /**< destructor of presolver */
+   );
+
+/** sets initialization method of presolver */
+extern
+void SCIPpresolSetInit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT ((*presolinit))     /**< initialize presolver */
+   );
+
+/** sets deinitialization method of presolver */
+extern
+void SCIPpresolSetExit(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT ((*presolexit))     /**< deinitialize presolver */
+   );
+
+/** sets solving process initialization method of presolver */
+extern
+void SCIPpresolSetInitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   );
+
+/** sets solving process deinitialization method of presolver */
+extern
+void SCIPpresolSetExitpre(
+   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
    );
 
 /** gets name of presolver */
@@ -155,6 +201,12 @@ int SCIPpresolGetNChgCoefs(
 /** gets number of constraint sides changed in presolver */
 extern
 int SCIPpresolGetNChgSides(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of times the presolver was called and tried to find reductions */
+extern
+int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 

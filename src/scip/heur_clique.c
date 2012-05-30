@@ -833,9 +833,16 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
+      {
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit <= 0.0 || memorylimit <= 0.0 )
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* free subproblem */
          SCIPfreeBufferArray(scip, &subvars);
@@ -1030,17 +1037,22 @@ SCIP_RETCODE SCIPincludeHeurClique(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create clique primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyClique,
-         heurFreeClique, heurInitClique, heurExitClique,
-         heurInitsolClique, heurExitsolClique, heurExecClique,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecClique, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyClique) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeClique) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitClique) );
 
    /* add clique primal heuristic parameters */
 

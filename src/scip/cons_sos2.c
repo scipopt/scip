@@ -102,7 +102,7 @@ struct SCIP_ConsData
 {
    int                   nvars;              /**< number of variables in the constraint */
    int                   maxvars;            /**< maximal number of variables (= size of storage) */
-   int                   nfixednonzeros;      /**< number of variables fixed to be nonzero */
+   int                   nfixednonzeros;     /**< number of variables fixed to be nonzero */
    SCIP_VAR**            vars;               /**< variables in constraint */
    SCIP_ROW*             row;                /**< row corresponding to upper and lower bound inequalities, or NULL if not yet created */
    SCIP_Real*            weights;            /**< weights determining the order (ascending), or NULL if not used */
@@ -2165,16 +2165,15 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-
-   /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecSOS2, NULL) );
+   SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
-   /* get event handler for bound change events */
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   conshdlrdata->eventhdlr = NULL;
+   /* create event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr), EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecSOS2, NULL) );
    if ( conshdlrdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for SOS2 constraints not found.\n");
@@ -2182,19 +2181,32 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    }
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySOS2, consFreeSOS2, consInitSOS2, consExitSOS2,
-         consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
-         consDeleteSOS2, consTransSOS2, consInitlpSOS2,
-         consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
-         consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
-         consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
-         consDelvarsSOS2, consPrintSOS2, consCopySOS2, consParseSOS2,
-         consGetVarsSOS2, consGetNVarsSOS2, conshdlrdata) );
+         consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2, consLockSOS2,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS2, consCopySOS2) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS2) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOS2) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOS2) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS2) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS2) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS2) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOS2) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOS2, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS2) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
 
    return SCIP_OKAY;
 }
@@ -2280,6 +2292,28 @@ SCIP_RETCODE SCIPcreateConsSOS2(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a SOS2 constraint with all constraint flags set to their default values.
+ *
+ *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
+ *  to wrong results as the variable array will not be resorted
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSOS2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSOS2( scip, cons, name, nvars, vars, weights,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

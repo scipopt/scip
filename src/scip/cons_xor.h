@@ -86,6 +86,21 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs
+ *  with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_Bool             rhs,                /**< right hand side of the constraint */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars                /**< array with operator variables of constraint */
+   );
+
 /** gets number of variables in xor constraint */
 extern
 int SCIPgetNVarsXor(

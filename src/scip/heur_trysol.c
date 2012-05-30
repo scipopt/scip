@@ -52,9 +52,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL*      trysol;             /**< storing solution passed to heuristic which has to tried (NULL if none) */
-   SCIP_SOL*      addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
-   SCIP_Bool      rec;                /**< whether we are within our own call */
+   SCIP_SOL*             trysol;             /**< storing solution passed to heuristic which has to tried (NULL if none) */
+   SCIP_SOL*             addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
+   SCIP_Bool             rec;                /**< whether we are within our own call */
 };
 
 
@@ -218,6 +218,7 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -226,11 +227,16 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
    heurdata->rec = FALSE;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyTrySol,heurFreeTrySol, heurInitTrySol, heurExitTrySol,
-         heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrySol, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrySol) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTrySol) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitTrySol) );
 
    return SCIP_OKAY;
 }

@@ -734,7 +734,7 @@
  *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, and other formats (see \ref FILEREADERS).
+ * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the SCIP standard distribution, we recommend to go to the <a
  * href="http://zibopt.zib.de/download.shtml">ZIBopt download section</a>, download the latest release (version 2.1 as
@@ -3743,7 +3743,7 @@
  * subproblem's relaxation.
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding
- * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() to
+ * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
  * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
@@ -4470,7 +4470,7 @@
  * We now explain how users can add their own event handlers. We give the explanation for creating your own
  * source file for each additional event handler. Of course, you can collect different event handlers in one source file
  * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
- * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
+ * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the existing
  * types of events.
  *
  * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
@@ -4642,7 +4642,7 @@
  * used. This can be a general events, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
  * way.
  *
- * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an even and
+ * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an event and
  * SCIPdropEvent() to release this event later.
  *
  * \code
@@ -5596,7 +5596,7 @@
  *  Additional advanced options specific to this target are:
  *    GAMS to specify the GAMS executable (default: gams),
  *    GAP to specify a gap limit (default: 0.0),
- *    SCRDIR to specify a directory where GAMS should put its scratch files (default: gams decides),
+ *    CLIENTTMPDIR to specify a directory where GAMS should put its scratch files (default: /tmp),
  *    CONVERTSCIP to specify a SCIP which can be used to convert non-gams files into gams format (default: bin/scip, if existing; set to "no" to disable conversion).
  *  The following options are NOT supported (and ignored): MEM, DISPFREQ, FEASTOL, LOCK.
  *
@@ -6228,6 +6228,7 @@
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
+ * <tr><td>\ref reader_osil.h "OSiL format"</td> <td>for mixed-integer nonlinear programs</td></tr>
  * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>
  * <tr><td>\ref reader_sol.h "SOL format"</td> <td>for solutions; XML-format (read-only) or raw SCIP format</td></tr>
  * <tr><td>\ref reader_wbo.h "WBO format"</td> <td>for weighted pseudo-Boolean optimization instances</td></tr>

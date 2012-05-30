@@ -64,6 +64,7 @@ ZLIB		=	true
 GMP             =       auto
 ZIMPL		=	true
 IPOPT		=	false
+EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt

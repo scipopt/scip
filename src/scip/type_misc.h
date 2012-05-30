@@ -30,21 +30,65 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_PQueue SCIP_PQUEUE;           /**< priority queue */
-typedef struct SCIP_HashTable SCIP_HASHTABLE;     /**< hash table */
-typedef struct SCIP_HashTableList SCIP_HASHTABLELIST; /**< element list to store single elements of a hash table */
-typedef struct SCIP_HashMap SCIP_HASHMAP;         /**< hash map to map pointers to pointers */
-typedef struct SCIP_HashMapList SCIP_HASHMAPLIST; /**< element list to store single mappings of a hash map */
-typedef struct SCIP_RealArray SCIP_REALARRAY;     /**< dynamic array for storing SCIP_Real values */
-typedef struct SCIP_IntArray SCIP_INTARRAY;       /**< dynamic array for storing int values */
-typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing SCIP_Bool values */
-typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
-typedef struct SCIP_MpqArray SCIP_MPQARRAY;       /**< dynamic array for storing mpq_t values */
-typedef struct SCIP_Stairmap SCIP_STAIRMAP;       /**< stair map */
-typedef struct SCIP_Digraph SCIP_DIGRAPH;         /**< adjacency list to store and handle graphs */
-typedef struct SCIP_BstNode SCIP_BSTNODE;         /**< search node of binary search tree */
-typedef struct SCIP_Bst SCIP_BST;                 /**< binary search tree */
+/** Priority queue data structure
+ *
+ *  - \ref PriorityQueue "List of all available methods"
+ */
+typedef struct SCIP_PQueue SCIP_PQUEUE;
 
+/** Hash table data structure
+ *
+ *  - \ref HashTable "List of all available methods"
+ */
+typedef struct SCIP_HashTable SCIP_HASHTABLE;
+
+/** Hash table element list to store single elements of a hash table */
+typedef struct SCIP_HashTableList SCIP_HASHTABLELIST;
+
+/** Hash map data structure
+ *
+ *  - \ref HashMap "List of all available methods"
+ */
+typedef struct SCIP_HashMap SCIP_HASHMAP;
+
+/** Hash map  element list to store single mappings of a hash map */
+typedef struct SCIP_HashMapList SCIP_HASHMAPLIST;
+
+/** dynamic array for storing SCIP_Real values */
+typedef struct SCIP_RealArray SCIP_REALARRAY;
+
+/** dynamic array for storing int values */
+typedef struct SCIP_IntArray SCIP_INTARRAY;
+
+/** dynamic array for storing SCIP_Bool values */
+typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
+
+/** dynamic array for storing pointers */
+typedef struct SCIP_PtrArray SCIP_PTRARRAY;
+
+/** dynamic array for storing mpq_t values */
+typedef struct SCIP_MpqArray SCIP_MPQARRAY;
+
+/** Resource profile data structure
+ *
+ *  - \ref ResourceProfile "List of all available methods"
+ */
+typedef struct SCIP_Profile SCIP_PROFILE;
+
+/** Directed graph data structure (stored as adjacency list)
+ *
+ *  - \ref DirectedGraph "List of all available methods"
+ */
+typedef struct SCIP_Digraph SCIP_DIGRAPH;
+
+/** Binary search tree data structure
+ *
+ *  - \ref BinarySearchTree "List of all available methods"
+ */
+typedef struct SCIP_Bst SCIP_BST;
+
+/** search node of \ref SCIP_BST "binary search tree" */
+typedef struct SCIP_BstNode SCIP_BSTNODE;
 
 /** compares two element indices
  *  result:

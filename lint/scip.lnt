@@ -60,6 +60,10 @@
 -emacro(681,SCIPdebugMessage) // Loop is not entered
 -emacro(506,SCIPdebugPrintf) // Constant value Boolean
 -emacro(681,SCIPdebugPrintf) // Loop is not entered
+-emacro(506,SCIPstatisticMessage) // Constant value Boolean
+-emacro(681,SCIPstatisticMessage) // Loop is not entered
+-emacro(506,SCIPstatisticPrintf) // Constant value Boolean
+-emacro(681,SCIPstatisticPrintf) // Loop is not entered
 -emacro(506,SCIPdebugCheckRow) // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)       // Constant value Boolean

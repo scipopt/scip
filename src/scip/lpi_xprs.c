@@ -51,22 +51,22 @@ int XPRS_CC XPRSstrongbranch( XPRSprob prob, const int _nbnd, const int *_mbndin
 #include "scip/pub_message.h"
 
 
-/** output XPRESS error */
+/** output Xpress error */
 static
 void xprs_error(
-   XPRSprob              prob,               /**< XPRESS problem instance */
+   XPRSprob              prob,               /**< Xpress problem instance */
    int                   restat,             /**< return status */
    const char**          msg,                /**< error message on output */
-   char*                 errmsg              /**< string to store last XPRESS error */
+   char*                 errmsg              /**< string to store last Xpress error */
    )
 {
    *errmsg='\0';
    if (prob)
       XPRSgetlasterror(prob, errmsg);
    if (*errmsg)
-      *msg = "LP Error: XPRESS returned %d - %s\n";
+      *msg = "LP Error: Xpress returned %d - %s\n";
    else
-      *msg = "LP Error: XPRESS returned %d\n";
+      *msg = "LP Error: Xpress returned %d\n";
 }
 
 #define CHECK_ZEROE(p, x) {  int restat = (x);  \
@@ -90,13 +90,13 @@ void xprs_error(
 
 #define CHECK_ZEROLPIE(x) CHECK_ZEROE(lpi->xprslp, x)
 #define CHECK_ZEROLPIW(x) CHECK_ZEROW(lpi->xprslp, lpi->messagehdlr, x)
-#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, (*lpi)->messagehdlr, x)
+#define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, x)
 #define CHECK_ZERO CHECK_ZEROLPIE
 
 #define ABORT_ZERO(x) { int _restat_;                                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPerrorMessage("LP Error: XPRESS returned %d\n", _restat_);  \
+         SCIPerrorMessage("LP Error: Xpress returned %d\n", _restat_);  \
          SCIPABORT();                                                   \
       }                                                                 \
    }
@@ -295,7 +295,7 @@ SCIP_RETCODE getBase(
    SCIP_CALL( ensureCstatMem(lpi, ncols) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
-   /* get unpacked basis information from CPLEX */
+   /* get unpacked basis information from Xpress */
    CHECK_ZERO( XPRSgetbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
 
    return SCIP_OKAY;
@@ -311,7 +311,7 @@ SCIP_RETCODE setBase(
 
    SCIPdebugMessage("setBase()\n");
 
-   /* load basis information into CPLEX */
+   /* load basis information into Xpress */
    CHECK_ZERO( XPRSloadbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
 
    return SCIP_OKAY;
@@ -345,9 +345,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -361,9 +361,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -425,7 +425,7 @@ void invalidateSolution(SCIP_LPI* lpi)
    lpi->solstat = -1;
 }
 
-/** converts SCIP's objective sense into XPRESS' objective sense */
+/** converts SCIP's objective sense into Xpress' objective sense */
 static
 int xprsObjsen(SCIP_OBJSEN objsen)
 {
@@ -672,7 +672,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(xprsname, "XPRESS %d", XPVERSION);
+   sprintf(xprsname, "Xpress %d", XPVERSION);
 
    return xprsname;
 }
@@ -717,8 +717,8 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    int izero = 0;
 
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
    assert(lpi != NULL);
    assert(numlp >= 0);
 
@@ -1280,7 +1280,7 @@ SCIP_RETCODE SCIPlpiClear(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("clearing CPLEX LP\n");
+   SCIPdebugMessage("clearing Xpress LP\n");
 
    invalidateSolution(lpi);
 
@@ -1999,7 +1999,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    SCIP_RETCODE retval;
@@ -2062,7 +2062,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    SCIPdebugMessage("calling Xpress strong branching on variable %d (%d iterations)\n", col, itlim);
 
-   /* results of XPRESS are valid in any case */
+   /* results of Xpress are valid in any case */
    *downvalid = TRUE;
    *upvalid = TRUE;
 
@@ -2667,7 +2667,8 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi->solstat >= 0);
 
 #if OLDRAYCODE
-   if (lpi->solmethod != 'p') {
+   if (lpi->solmethod != 'p')
+   {
       /* We can only get a dual ray from primal. */
       SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    }
@@ -2763,7 +2764,9 @@ SCIP_Bool SCIPlpiIsStable(
 
       if( pinfeas )
          return FALSE;
-   } else if ( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS ) {
+   }
+   else if ( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+   {
       /* Presolved problem was solved to optimality but infeasibilities */
       /* were introduced by postsolve. */
       return FALSE;
@@ -3063,8 +3066,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3389,7 +3394,7 @@ SCIP_RETCODE SCIPlpiGetState(
 
    SCIPdebugMessage("storing Xpress LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
 
-   /* get unpacked basis information from CPLEX */
+   /* get unpacked basis information from Xpress */
    SCIP_CALL( getBase(lpi) );
 
    /* pack LPi state data */
@@ -3400,14 +3405,18 @@ SCIP_RETCODE SCIPlpiGetState(
    return SCIP_OKAY;
 }
 
-/** loads LPi state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
-   int nrows, ncols;
+   int nrows;
+   int ncols;
+   int i;
 
    assert(blkmem != NULL);
    assert(lpi != NULL);
@@ -3435,7 +3444,27 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* load basis information into CPLEX */
+   /* extend the basis to the current LP beyond the previously existing columns */
+   for (i = lpistate->ncols; i < ncols; ++i)
+   {
+      SCIP_Real bnd;
+      CHECK_ZERO( XPRSgetlb(lpi->xprslp, &bnd, i, i) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         CHECK_ZERO( XPRSgetub(lpi->xprslp, &bnd, i, i) );
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
+   for (i = lpistate->nrows; i < nrows; ++i)
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
+
+   /* load basis information into Xpress */
    SCIP_CALL( setBase(lpi) );
 
    return SCIP_OKAY;

@@ -80,6 +80,23 @@ SCIP_RETCODE SCIPcreateConsSOS2(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a SOS2 constraint with all constraint flags set to their default values.
+ *
+ *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
+ *  to wrong results as the variable array will not be resorted
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicSOS2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   );
+
 /** adds variable to SOS2 constraint, the position is determined by the given weight */
 extern
 SCIP_RETCODE SCIPaddVarSOS2(

@@ -74,6 +74,13 @@
 #define DEFAULT_NPSEUDOBRANCHES       2 /**< number of children created in pseudo branching (0: disable branching) */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 
+
+/* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
+
+/*
+ * Data structures
+ */
+
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
@@ -4546,34 +4553,46 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecSetppc, NULL) );
 
    /* create conflict handler for setppc constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecSetppc, NULL) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, NULL, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecSetppc, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopySetppc,
-         consFreeSetppc, consInitSetppc, consExitSetppc,
-         consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
-         consDeleteSetppc, consTransSetppc, consInitlpSetppc,
-         consSepalpSetppc, consSepasolSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc,
-         consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
-         consActiveSetppc, consDeactiveSetppc,
-         consEnableSetppc, consDisableSetppc, consDelvarsSetppc,
-         consPrintSetppc, consCopySetppc, consParseSetppc,
-         consGetVarsSetppc, consGetNVarsSetppc, conshdlrdata) );
+         consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, consLockSetppc,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySetppc, consCopySetppc) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSetppc) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsSetppc) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSetppc) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSetppc) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSetppc) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSetppc) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSetppc) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSetppc) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSetppc) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSetppc, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSetppc) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
+
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
@@ -4642,6 +4661,25 @@ SCIP_RETCODE SCIPcreateConsSetpart(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
+/** creates and captures a set partitioning constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetpart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetpart(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures a set packing constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -4681,6 +4719,27 @@ SCIP_RETCODE SCIPcreateConsSetpack(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
 }
 
+/** creates and captures a set packing constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetpack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetpack(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+
+}
+
+
 /** creates and captures a set covering constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -4718,6 +4777,26 @@ SCIP_RETCODE SCIPcreateConsSetcover(
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode);
+}
+
+/** creates and captures a set covering constraint with all constraint flags set
+ *  to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSetcover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars                /**< array with variables of constraint entries */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSetcover(scip, cons, name, nvars, vars,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+
 }
 
 /** adds coefficient in set partitioning / packing / covering constraint */

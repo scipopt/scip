@@ -324,7 +324,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* we can only work on solutions valid in the transformed space */
-   if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(bestsol) )
       return SCIP_OKAY;
 
    /* get problem variables */
@@ -647,18 +647,23 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create Oneopt primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyOneopt,
-         heurFreeOneopt, heurInitOneopt, heurExitOneopt,
-         heurInitsolOneopt, heurExitsolOneopt, heurExecOneopt,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOneopt, heurdata) );
 
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOneopt) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOneopt) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolOneopt) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolOneopt) );
    /* add oneopt primal heuristic parameters */
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",

@@ -98,11 +98,11 @@ struct SCIP_HeurData
 /* copies SCIP to probing SCIP and creates variable hashmap */
 static
 SCIP_RETCODE setupProbingSCIP(
-   SCIP*                 scip,                /**< SCIP data structure  */
-   SCIP**                probingscip,         /**< sub-SCIP data structure  */
-   SCIP_HASHMAP**        varmapfw,            /**< mapping of SCIP variables to sub-SCIP variables */
-   SCIP_Bool             copycuts,            /**< should all active cuts from cutpool of scip copied to constraints in subscip */
-   SCIP_Bool*            success              /**< was copying successful? */
+   SCIP*                 scip,               /**< SCIP data structure  */
+   SCIP**                probingscip,        /**< sub-SCIP data structure  */
+   SCIP_HASHMAP**        varmapfw,           /**< mapping of SCIP variables to sub-SCIP variables */
+   SCIP_Bool             copycuts,           /**< should all active cuts from cutpool of scip copied to constraints in subscip */
+   SCIP_Bool*            success             /**< was copying successful? */
    )
 {
    /* initializing the subproblem */
@@ -1068,9 +1068,16 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
+      {
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      if( timelimit > 0.0 && memorylimit > 0.0 )
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -1209,17 +1216,25 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create feaspump primal heuristic data */
+   /* create Feaspump primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyFeaspump,
-         heurFreeFeaspump, heurInitFeaspump, heurExitFeaspump,
-         heurInitsolFeaspump, heurExitsolFeaspump, heurExecFeaspump,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFeaspump, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFeaspump) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitFeaspump) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitFeaspump) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolFeaspump) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolFeaspump) );
 
    /* add feaspump primal heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

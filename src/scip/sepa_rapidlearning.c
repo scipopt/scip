@@ -329,9 +329,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )   
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP
+    * for rapid learning, this does not include external memory usage, because no LPs are solved
+    */
+   if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
@@ -661,17 +670,22 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create rapidlearning separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyRapidlearning, sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
-         sepaInitsolRapidlearning, sepaExitsolRapidlearning,
          sepaExeclpRapidlearning, sepaExecsolRapidlearning,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyRapidlearning) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeRapidlearning) );
 
    /* add rapidlearning separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyconflicts",

@@ -1886,7 +1886,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
       return SCIP_OKAY;
 
    /* do not setup sub-SCIP if no continuous nonlinear variables are present */
-   if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
+   if( !SCIPisNLPConstructed(scip) || !SCIPhasNLPContinuousNonlinearity(scip) )
       return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
@@ -2097,23 +2097,30 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create Nlp primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include variable event handler */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   heurdata->eventhdlr = SCIPfindEventhdlr(scip, HEUR_NAME);
+   heurdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &heurdata->eventhdlr, HEUR_NAME, "propagates a global bound change to the sub-SCIP",
+         processVarEvent, NULL) );
+   assert(heurdata->eventhdlr != NULL);
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopySubNlp,
-         heurFreeSubNlp, heurInitSubNlp, heurExitSubNlp, heurInitsolSubNlp, heurExitsolSubNlp, heurExecSubNlp,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSubNlp, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySubNlp) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSubNlp) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSubNlp) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSubNlp) );
 
    /* add Nlp primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",

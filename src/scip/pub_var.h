@@ -295,6 +295,15 @@ SCIP_Bool SCIPvarsHaveCommonClique(
    SCIP_Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
    );
 
+/** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
+ *  e.g. obj(x) = 1 this method returns for ~x the value -1
+ */
+extern
+SCIP_RETCODE SCIPvarGetAggregatedObj(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
+   );
+
 
 #ifndef NDEBUG
 
@@ -346,6 +355,27 @@ extern
 void SCIPvarSetDeltransData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
+   );
+
+/** sets method to copy this variable into sub-SCIPs */
+extern
+void SCIPvarSetCopyData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARCOPY     ((*varcopy))        /**< copy method of the variable */
+   );
+
+/** sets the initial flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetInitial(
+   SCIP_VAR*            var,
+   SCIP_Bool            initial
+   );
+
+/** sets the removable flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetRemovable(
+   SCIP_VAR*            var,
+   SCIP_Bool            removable
    );
 
 /** gets status of variable */

@@ -93,13 +93,13 @@ struct SCIP_HeurData
 /** get indicator candidate variables */
 static
 SCIP_RETCODE getIndCandVars(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_CONS**           indconss,            /**< indicator constraints */
-   int                   nindconss,           /**< number of indicator constraints */
-   SCIP_VAR**            indcands,            /**< indicator candidate variables */
-   SCIP_Real*            indcandssol,         /**< solution values of candidates */
-   SCIP_Real*            indcandfrac,         /**< fractionalities of candidates */
-   int*                  nindcands            /**< number of candidates */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           indconss,           /**< indicator constraints */
+   int                   nindconss,          /**< number of indicator constraints */
+   SCIP_VAR**            indcands,           /**< indicator candidate variables */
+   SCIP_Real*            indcandssol,        /**< solution values of candidates */
+   SCIP_Real*            indcandfrac,        /**< fractionalities of candidates */
+   int*                  nindcands           /**< number of candidates */
    )
 {
    SCIP_VAR* binvar;
@@ -139,18 +139,18 @@ SCIP_RETCODE getIndCandVars(
 /** choose best candidate variable */
 static
 SCIP_RETCODE getBestCandidate(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_VAR**            cands,               /**< candidate variables */
-   SCIP_Real*            candssol,            /**< solution values of candidates */
-   SCIP_Real*            candsfrac,           /**< fractional solution values of candidates */
-   int                   ncands,              /**< number of candidates */
-   int*                  bestcand,            /**< bestcandidate */
-   int*                  bestnviolrows,       /**< number of violated rows for best candidate */
-   SCIP_Real*            bestcandsol,         /**< solution of best candidate */
-   SCIP_Real*            bestcandfrac,        /**< fractionality of best candidate */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            cands,              /**< candidate variables */
+   SCIP_Real*            candssol,           /**< solution values of candidates */
+   SCIP_Real*            candsfrac,          /**< fractional solution values of candidates */
+   int                   ncands,             /**< number of candidates */
+   int*                  bestcand,           /**< bestcandidate */
+   int*                  bestnviolrows,      /**< number of violated rows for best candidate */
+   SCIP_Real*            bestcandsol,        /**< solution of best candidate */
+   SCIP_Real*            bestcandfrac,       /**< fractionality of best candidate */
    SCIP_Bool*            bestcandmayrounddown,/**< whether best candidate may be rounded down */
-   SCIP_Bool*            bestcandmayroundup,  /**< whether best candidate may be rounded down */
-   SCIP_Bool*            bestcandroundup      /**< whether the best candidate should be rounded up */
+   SCIP_Bool*            bestcandmayroundup, /**< whether best candidate may be rounded down */
+   SCIP_Bool*            bestcandroundup     /**< whether the best candidate should be rounded up */
    )
 {
    SCIP_Bool mayrounddown;
@@ -817,18 +817,23 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create heuristic data */
+   /* create coefdiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->indconshdlr = NULL;
 
-   /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyCoefdiving,
-         heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving,
-         heurInitsolCoefdiving, heurExitsolCoefdiving, heurExecCoefdiving,
-         heurdata) );
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCoefdiving, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCoefdiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCoefdiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitCoefdiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitCoefdiving) );
 
    /* coefdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

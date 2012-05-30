@@ -819,7 +819,7 @@ SCIP_RETCODE nlrowConstantChanged(
 /** sorts linear part of row entries such that lower variable indices precede higher ones */
 static
 void nlrowSortLinear(
-   SCIP_NLROW*           nlrow                 /**< nonlinear row to be sorted */
+   SCIP_NLROW*           nlrow               /**< nonlinear row to be sorted */
    )
 {
    assert(nlrow != NULL);
@@ -1065,8 +1065,8 @@ SCIP_RETCODE nlrowChgLinearCoefPos(
 /** sets up the variable hash for quadratic variables, if the number of variables exceeds some given threshold */
 static
 SCIP_RETCODE nlrowSetupQuadVarsHash(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   BMS_BLKMEM*           blkmem                /**< block memory */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int i;
@@ -1091,7 +1091,7 @@ SCIP_RETCODE nlrowSetupQuadVarsHash(
 /** sorts quadratic part of row entries */
 static
 void nlrowSortQuadElem(
-   SCIP_NLROW*           nlrow                 /**< nonlinear row to be sorted */
+   SCIP_NLROW*           nlrow               /**< nonlinear row to be sorted */
    )
 {
    assert(nlrow != NULL);
@@ -2535,10 +2535,10 @@ SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
 
 /** adds variable to quadvars array of row */
 SCIP_RETCODE SCIPnlrowAddQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,               /**< block memory */
-   SCIP_SET*             set,                  /**< global SCIP settings */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< variable to search for */
    )
 {
    assert(blkmem != NULL);
@@ -3282,8 +3282,8 @@ SCIP_VAR** SCIPnlrowGetQuadVars(
 
 /** gives position of variable in quadvars array of row, or -1 if not found */
 int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_VAR*             var                 /**< variable to search for */
    )
 {
    int pos;
@@ -5797,6 +5797,48 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    }
 
    return SCIP_OKAY;
+}
+
+
+/** indicates whether there exists a row that contains a continuous variable in a nonlinear term
+ *
+ * @note The method may have to touch every row and nonlinear term to compute its result.
+ */
+SCIP_Bool SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp                 /**< current NLP data */
+   )
+{
+   SCIP_NLROW* nlrow;
+   int c;
+   int i;
+
+   assert(nlp != NULL);
+
+   for( c = 0; c < nlp->nnlrows; ++c )
+   {
+      nlrow = nlp->nlrows[c];
+      assert(nlrow != NULL);
+
+      for( i = 0; i < nlrow->nquadvars; ++i )
+         if( SCIPvarGetType(nlrow->quadvars[i]) == SCIP_VARTYPE_CONTINUOUS )
+            return TRUE;
+
+      if( nlrow->exprtree != NULL )
+      {
+         SCIP_VAR** exprtreevars;
+         int nexprtreevars;
+
+         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
+         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
+         assert(exprtreevars != NULL || nexprtreevars == 0);
+
+         for( i = 0; i < nexprtreevars; ++i )
+            if( SCIPvarGetType(exprtreevars[i]) == SCIP_VARTYPE_CONTINUOUS )
+               return TRUE;
+      }
+   }
+
+   return FALSE;
 }
 
 /** gives dual solution values associated with lower bounds of NLP variables */

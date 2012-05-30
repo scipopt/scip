@@ -30,7 +30,7 @@
 
 
 #define PRESOL_NAME            "gateextraction"
-#define PRESOL_DESC            "presolver template"
+#define PRESOL_DESC            "presolver extracting gate(and)-constraints"
 #define PRESOL_PRIORITY         1000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
@@ -38,7 +38,41 @@
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
 
-#define DEFAULT_ONLYSETPART       FALSE  /**< should only set-partitioning constraints be extrated and no and-constraints */
+#define DEFAULT_ONLYSETPART       FALSE  /**< should only set-partitioning constraints be extracted and no and-constraints */
+#define DEFAULT_SEARCHEQUATIONS    TRUE  /**< should we try to extract set-partitioning constraint out of one logicor
+					  *   and one corresponding set-packing constraint
+					  */
+#define DEFAULT_SORTING               1  /**< order logicor contraints to extract big-gates before smaller ones (-1), do
+					  *   not order them (0) or order them to extract smaller gates at first (1)
+					  */
+
+
+/* This presolver tries to extract gate-constraints meaning and-constraints and set-partitioning constraints (and could
+ * be expanded to find xor-constraints too). This is done by detecting linearizations or systems of inequalities which
+ * form an and-constraint or a set-partitioning constraint. An example:
+ *
+ * we have a logicor constraint of the form:                x + y + z >= 1
+ *
+ * and we also have the following set-packing constraints: (x + y <= 1 and x + z <= 1) <=> (~x + ~y >= 1 and ~x + ~z >= 1)
+ *
+ * - these three constraints form an and-constraint:        x = ~y * ~z (x = AND(~y,~z))
+ *
+ * if an additional set-packing constraint exists:          y + z <= 1
+ *
+ * - these four constraints form a set-partitioning cons.:  x + y + z = 1
+ *
+ * some information can be found:
+ *
+ *  http://www.cs.ubc.ca/~hutter/earg/papers07/cnf-structure.pdf
+ *  http://www.cadence.com/cn/cadence/cadence_labs/Documents/niklas_SAT_2005_Effective.pdf
+ *
+ * We also do some check for logicor and set-packing/-partitioning constraint with the same variables to upgrade these
+ * both constraints into one. For example:
+ *
+ *  x + y + z >= 1 and x + y + z <= 1 form x + y + z = 1
+ *
+ */
+
 
 
 /*
@@ -49,9 +83,9 @@
 /** data object to compare constraint easier */
 struct HashData
 {
-   SCIP_CONS* cons;
-   SCIP_VAR** vars;
-   int nvars;
+   SCIP_CONS*            cons;               /**< pointer the the corresponding constraint */
+   SCIP_VAR**            vars;               /**< constraint variables used for hash comparison */
+   int                   nvars;              /**< number of variables */
 };
 typedef struct HashData HASHDATA;
 
@@ -59,23 +93,34 @@ typedef struct HashData HASHDATA;
 /** presolver data */
 struct SCIP_PresolData
 {
-   HASHDATA** setppchashdatas;
-   HASHDATA* setppchashdatastore;
-   SCIP_HASHTABLE* hashdatatable;
-   SCIP_HASHTABLE* setppchashtable;
-   SCIP_HASHTABLE* logicorhashtable;
-   SCIP_CONS** usefullogicor;
-   int nusefullogicor;
-   int susefullogicor;
-   int nsetppchashdatas;
-   int ssetppchashdatas;
-   int ngates;
-   int firstchangedlogicor;
-   SCIP_Bool usefulsetppcexist;
-   SCIP_Bool usefullogicorexist;
-   SCIP_Bool newsetppchashdatas;
-   SCIP_Bool initialized;
-   SCIP_Bool onlysetpart;
+   HASHDATA**            setppchashdatas;    /**< setppc-hashdata array pointing to the storage */
+   HASHDATA*             setppchashdatastore;/**< setppc-hashdata storage */
+   SCIP_HASHTABLE*       hashdatatable;      /**< setppc-hashdata hashtable for usable setppc constraints */
+   SCIP_HASHTABLE*       setppchashtable;    /**< setppc hashtable for usable setppc constraints */
+   SCIP_HASHTABLE*       logicorhashtable;   /**< logicor hashtable for usable logicor constraints */
+   SCIP_CONS**           usefullogicor;      /**< array for usable logicors */
+   int                   nusefullogicor;     /**< number of usable logicors */
+   int                   susefullogicor;     /**< size of array for usable logicor constraints */
+   int                   nsetppchashdatas;   /**< number of setppchashdata elements added to the hashtable */
+   int                   ssetppchashdatas;   /**< size of setppchashdata elements added to the hashtable */
+   int                   ngates;             /**< number of found gates in presolving */
+   int                   firstchangedlogicor;/**< position of the first new/changed logicor constraint in the
+					      *   usefullogicor array
+					      */
+   int                   maxnvarslogicor;    /**< maximal number of variables a logicor constraint has */
+   int                   sorting;            /**< integer parameter how to sort logicor constraints for extracting
+					      *   gates
+					      */
+   SCIP_Bool             usefulsetppcexist;  /**< did we find usable set-packing constraints for gate extraction */
+   SCIP_Bool             usefullogicorexist; /**< did we find usable logicor constraints for gate extraction */
+   SCIP_Bool             newsetppchashdatas; /**< flag indicating whether we found new set-packing constraint with two
+					      *   variables since the last presolving round
+					      */
+   SCIP_Bool             initialized;        /**< was data alredy be initialized */
+   SCIP_Bool             onlysetpart;        /**< boolean parameter whetehr we only want to extract linear gates */
+   SCIP_Bool             searchequations;    /**< boolean parameter whetehr we want to search for equations arising from
+					      *   logicor and setppc constraints
+					      */
 };
 
 
@@ -83,46 +128,7 @@ struct SCIP_PresolData
  * Local methods
  */
 
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(hashGetKeyCons)
-{  /*lint --e{715}*/
-   /* the key is the element itself */
-   return elem;
-}
 
-/** returns TRUE iff both keys are equal; two constraints are equal if they have the same pointer */
-static
-SCIP_DECL_HASHKEYEQ(hashKeyEqCons)
-{
-#ifndef NDEBUG
-   SCIP* scip;
-
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
-#endif
-
-   return (key1 == key2);
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValCons)
-{  /*lint --e{715}*/
-   /* the key is used as the keyvalue too */
-   return (unsigned int)(size_t) key;
-}
-
-
-/* put your local methods here, and declare them static */
-
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(hashdataGetKeyCons)
-{  /*lint --e{715}*/
-   /* the key is the element itself */
-   return elem;
-}
 
 /** returns TRUE iff both keys are equal; two constraints are equal if they have the same pointer */
 static
@@ -158,7 +164,7 @@ SCIP_DECL_HASHKEYEQ(hashdataKeyEqCons)
    }
 
    /* a hashdata object is only equal if it has the same constraint pointer, or one has no constraint pointer, latter
-    * means that this object is a form a logicor constraint derived hashdata object
+    * means that this hashdata object is derived from a logicor constraint
     */
    if( hashdata1->cons == NULL || hashdata2->cons == NULL || hashdata1->cons == hashdata2->cons )
       return TRUE;
@@ -172,27 +178,87 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
 {  /*lint --e{715}*/
    HASHDATA* hashdata;
    unsigned int hashval;
-#if 0
-   int v;
-#endif
 
    hashdata = (HASHDATA*)key;
    assert(hashdata != NULL);
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars == 2);
 
-#if 0
-   hashval = 0;
-   for( v = 1; v >= 0; --v )
-      hashval |= (1<<(SCIPvarGetIndex(hashdata->vars[v])%32));
-#else
-   hashval = (SCIPvarGetIndex(hashdata->vars[1])<<16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
-#endif
+   /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
+   hashval = (SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
 
 
+/** returns TRUE iff both keys are equal; two constraints are equal if they have the same pointer */
+static
+SCIP_DECL_HASHKEYEQ(setppcHashdataKeyEqCons)
+{
+#ifndef NDEBUG
+   SCIP* scip;
+#endif
+   HASHDATA* hashdata1;
+   HASHDATA* hashdata2;
+   int v;
+
+   hashdata1 = (HASHDATA*)key1;
+   hashdata2 = (HASHDATA*)key2;
+#ifndef NDEBUG
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
+
+   /* check data structure */
+   assert(hashdata1->nvars >= 2);
+   assert(hashdata2->nvars >= 2);
+   /* at least one data object needs to be have a real set-packing/partitioning constraint */
+   assert(hashdata1->cons != NULL || hashdata2->cons != NULL);
+
+   if( hashdata1->nvars != hashdata2->nvars )
+      return FALSE;
+
+   for( v = hashdata1->nvars - 1; v >= 0; --v )
+   {
+      /* tests if variables are equal */
+      if( hashdata1->vars[v] != hashdata2->vars[v] )
+	 return FALSE;
+
+      assert(SCIPvarCompare(hashdata1->vars[v], hashdata2->vars[v]) == 0);
+   }
+
+   /* a hashdata object is only equal if it has the same constraint pointer, or one has no constraint pointer, latter
+    * means that this hashdata object is derived from a logicor constraint
+    */
+   if( hashdata1->cons == NULL || hashdata2->cons == NULL || hashdata1->cons == hashdata2->cons )
+      return TRUE;
+   else
+      return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
+{  /*lint --e{715}*/
+   HASHDATA* hashdata;
+   unsigned int hashval;
+   int v;
+
+   hashdata = (HASHDATA*)key;
+   assert(hashdata != NULL);
+   assert(hashdata->vars != NULL);
+   assert(hashdata->nvars >= 2);
+
+   hashval = 0;
+
+   /* if we have more then one variables the index of each variable is imaged to a bit positioned from 0 to 31, and over
+    * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the datas
+    */
+   for( v = 1; v >= 0; --v )
+      hashval |= (1 << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
+
+   return hashval;
+}
 
 /** initialize gateextraction presolver data */
 static
@@ -206,6 +272,7 @@ void presoldataInit(
    presoldata->nusefullogicor = 0;
    presoldata->susefullogicor = 0;
    presoldata->firstchangedlogicor = -1;
+   presoldata->maxnvarslogicor = 0;;
    presoldata->nsetppchashdatas = 0;
    presoldata->ssetppchashdatas = 0;
    presoldata->ngates = 0;
@@ -245,9 +312,9 @@ SCIP_RETCODE presoldataInitHashtables(
    assert(presoldata->logicorhashtable == NULL);
 
    /* create hashtables */
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->hashdatatable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, hashdataGetKeyCons, hashdataKeyEqCons, hashdataKeyValCons, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->setppchashtable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, hashGetKeyCons, hashKeyEqCons, hashKeyValCons, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&(presoldata->logicorhashtable), SCIPblkmem(scip), HASHSIZE_LOGICORCONS, hashGetKeyCons, hashKeyEqCons, hashKeyValCons, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->hashdatatable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, SCIPhashGetKeyStandard, hashdataKeyEqCons, hashdataKeyValCons, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->setppchashtable), SCIPblkmem(scip), HASHSIZE_SETPPCCONS, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&(presoldata->logicorhashtable), SCIPblkmem(scip), HASHSIZE_LOGICORCONS, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, SCIPhashKeyValPtr, (void*) scip) );
 
    return SCIP_OKAY;
 }
@@ -355,6 +422,9 @@ SCIP_RETCODE createPresoldata(
 	    ++h;
 	 }
 	 presoldata->nsetppchashdatas = h;
+
+	 if( presoldata->nsetppchashdatas > 0 )
+	    presoldata->newsetppchashdatas = TRUE;
       }
    }
 
@@ -362,12 +432,12 @@ SCIP_RETCODE createPresoldata(
 
    if( !presoldata->usefullogicorexist )
    {
-      /* find logicor constraints with exactly three varibales */
+      /* capture all logicor constraints */
       for( c = 0; c < nlogicors; ++c )
       {
 	 assert(SCIPconsIsActive(logicors[c]));
 
-	 if( SCIPgetNVarsLogicor(scip, logicors[c]) == 3  && !SCIPconsIsModifiable(logicors[c]) )
+	 if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
 	 {
 	    /* insert new element in hashtable */
 	    SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
@@ -375,6 +445,10 @@ SCIP_RETCODE createPresoldata(
 
 	    usefulconss[nusefulconss] = logicors[c];
 	    ++nusefulconss;
+
+	    /* update maximal entries in a logicor constraint */
+	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
 	 }
       }
 
@@ -525,7 +599,25 @@ SCIP_RETCODE correctPresoldata(
    /* check if there already exist some set-packing and some logicor constraints with the right amount of variables */
    if( !presoldata->usefulsetppcexist || !presoldata->usefullogicorexist )
    {
+      SCIP_Bool usefullogicorexisted = presoldata->usefullogicorexist;
+
       SCIP_CALL( createPresoldata(scip, presoldata, setppcs, nsetppcs, logicors, nlogicors) );
+
+      /* if we already had useful logicor constraints but did not find any useful setppc constraint, the maximal number
+       * of variables appearing in a logicor constraint was not updated, so we do it here
+       */
+      if( usefullogicorexisted && !presoldata->usefulsetppcexist )
+      {
+	 /* correct maximal number of varables in logicor constraints */
+	 for( c = nlogicors - 1; c >= 0; --c )
+	 {
+	    assert(SCIPconsIsActive(logicors[c]));
+
+	    /* update maximal entries in a logicor constraint */
+	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
+	 }
+      }
 
       /* no correct logicor or set-packing constraints available, so abort */
       if( !presoldata->usefulsetppcexist || !presoldata->usefullogicorexist )
@@ -637,7 +729,11 @@ SCIP_RETCODE correctPresoldata(
    /* remove old inactive logicor constraints */
    for( c = presoldata->nusefullogicor - 1; c >= 0; --c )
    {
-      if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) != 3 )
+      /* update maximal entries in a logicor constraint */
+      if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) )
+	 presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
+
+      if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPconsIsModifiable(presoldata->usefullogicor[c]) || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) < 3 )
       {
 	 SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->usefullogicor[c])) );
@@ -655,7 +751,7 @@ SCIP_RETCODE correctPresoldata(
    {
       assert(SCIPconsIsActive(logicors[c]));
 
-      if( SCIPgetNVarsLogicor(scip, logicors[c]) == 3 && !SCIPconsIsModifiable(logicors[c]) )
+      if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
       {
 	 /* check if constraint is new, and correct array size if necessary */
 	 if( !SCIPhashtableExists(presoldata->logicorhashtable, (void*) logicors[c]) )
@@ -681,6 +777,10 @@ SCIP_RETCODE correctPresoldata(
 
 	    presoldata->usefullogicor[presoldata->nusefullogicor] = logicors[c];
 	    ++(presoldata->nusefullogicor);
+
+	    /* update maximal entries in a logicor constraint */
+	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
 	 }
       }
    }
@@ -688,11 +788,336 @@ SCIP_RETCODE correctPresoldata(
    return SCIP_OKAY;
 }
 
+
+/** extract and-constraints and set-partitioning constraints */
+static
+SCIP_RETCODE extractGates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLDATA*      presoldata,         /**< data object of presolver */
+   int                   pos,                /**< position of logicor in usefullogicor array to presolve */
+   SCIP_HASHMAP*         varmap,             /**< variable map mapping inactive variables to their active representation */
+   SCIP_CONS**           gateconss,          /**< allocated memory for all gate-constraints */
+   SCIP_VAR**            activevars,         /**< allocated memory for active variables */
+   SCIP_VAR**            posresultants,      /**< allocated memory for all possible resultant variables */
+   HASHDATA*             hashdata,           /**< allocated memory for a hashdata object */
+   int*                  ndelconss,          /**< pointer to store number of deleted constraints */
+   int*                  naddconss           /**< pointer to store number of added constraints */
+   )
+{
+   SCIP_VAR** logicorvars;
+   SCIP_VAR* tmpvars[2];
+   HASHDATA* hashmaphashdata;
+   SCIP_CONS* logicor;
+   SCIP_Bool negated;
+   int ngateconss;
+   int nlogicorvars;
+   int nposresultants;
+   int d;
+   int v;
+
+   assert(scip != NULL);
+   assert(presoldata != NULL);
+   assert(0 <= pos && pos < presoldata->nusefullogicor);
+   assert(gateconss != NULL);
+   assert(activevars != NULL);
+   assert(posresultants != NULL);
+   assert(hashdata != NULL);
+   assert(hashdata->nvars == 2);
+   assert(hashdata->cons == NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+
+   assert(presoldata->usefullogicor != NULL);
+   logicor = presoldata->usefullogicor[pos];
+   assert(logicor != NULL);
+
+   if( !SCIPconsIsActive(logicor) )
+      return SCIP_OKAY;
+
+   assert(!SCIPconsIsModifiable(logicor));
+
+   nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);
+   assert(nlogicorvars >= 3 && nlogicorvars <= presoldata->maxnvarslogicor);
+
+   logicorvars = SCIPgetVarsLogicor(scip, logicor);
+   assert(logicorvars != NULL);
+
+   nposresultants = 0;
+
+   /* get active logicor variables and determine all possible resultants */
+   for( d = nlogicorvars - 1; d >= 0; --d )
+   {
+      /* do not work with fixed variables */
+      if( SCIPvarGetLbLocal(logicorvars[d]) > 0.5 || SCIPvarGetUbLocal(logicorvars[d]) < 0.5 )
+	 return SCIP_OKAY;
+
+      activevars[d] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[d]);
+
+      if( activevars[d] == NULL )
+      {
+	 SCIP_CALL( SCIPgetBinvarRepresentative(scip, logicorvars[d], &(activevars[d]), &negated) );
+	 SCIP_CALL( SCIPhashmapInsert(varmap, logicorvars[d], activevars[d]) );
+      }
+
+      /* determine possible resultants a check if the other variables can appear in a set-packing constraint */
+      if( SCIPvarIsNegated(activevars[d]) )
+      {
+	 assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
+
+	 if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
+	 {
+	    posresultants[nposresultants] = activevars[d];
+	    ++nposresultants;
+	 }
+	 else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
+	    return SCIP_OKAY;
+      }
+      else
+      {
+	 assert(SCIPvarIsActive(activevars[d]));
+
+	 if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
+	 {
+	    posresultants[nposresultants] = activevars[d];
+	    ++nposresultants;
+	 }
+	 else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
+	    return SCIP_OKAY;
+      }
+   }
+
+   if( nposresultants == 0 )
+      return SCIP_OKAY;
+
+   /* sort variables after indices */
+   SCIPsortPtr((void**)activevars, SCIPvarComp, nlogicorvars);
+
+   /* check that we have really different variables, if not remove the constraint from the hashmap and the data
+    * storage
+    */
+   for( d = nlogicorvars - 1; d > 0; --d )
+   {
+      if( SCIPvarGetIndex(activevars[d]) == SCIPvarGetIndex(activevars[d - 1]) )
+      {
+	 SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) logicor) );
+	 SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
+
+	 assert(presoldata->usefullogicor[pos] == logicor);
+
+	 presoldata->usefullogicor[pos] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
+	 --(presoldata->nusefullogicor);
+
+	 return SCIP_OKAY;
+      }
+   }
+
+   ngateconss = 0;
+
+   for( d = nposresultants - 1; d >= 0; --d )
+   {
+      ngateconss = 0;
+
+      for( v = nlogicorvars - 1; v >= 0; --v )
+      {
+	 if( activevars[v] == posresultants[d] )
+	    continue;
+
+	 /* variables need to be sorted */
+	 if( SCIPvarCompare(posresultants[d], activevars[v]) > 0 )
+	 {
+	    tmpvars[0] = activevars[v];
+	    tmpvars[1] = posresultants[d];
+	 }
+	 else
+	 {
+	    tmpvars[0] = posresultants[d];
+	    tmpvars[1] = activevars[v];
+	 }
+	 hashdata->vars = tmpvars;
+
+	 hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
+
+	 if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
+	 {
+	    gateconss[ngateconss] = hashmaphashdata->cons;
+	    ++ngateconss;
+	 }
+	 else
+	    break;
+      }
+      if( ngateconss == nlogicorvars - 1 )
+	 break;
+   }
+
+   /* @todo, check for clique of all variables except the resultant */
+   /* check if we have a set-partitioning 'gate' */
+   if( ngateconss == nlogicorvars - 1 && nlogicorvars == 3 )
+   {
+      assert(d >= 0 && d < nposresultants);
+      assert(ngateconss >= 2);
+
+      if( activevars[0] == posresultants[d] )
+      {
+	 tmpvars[0] = activevars[1];
+	 tmpvars[1] = activevars[2];
+      }
+      else if( activevars[1] == posresultants[d] )
+      {
+	 tmpvars[0] = activevars[0];
+	 tmpvars[1] = activevars[2];
+      }
+      else
+      {
+	 assert(activevars[2] == posresultants[d]);
+	 tmpvars[0] = activevars[0];
+	 tmpvars[1] = activevars[1];
+      }
+      hashdata->vars = tmpvars;
+
+      hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
+      assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
+
+      if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
+      {
+	 gateconss[ngateconss] = hashmaphashdata->cons;
+	 ++ngateconss;
+      }
+   }
+
+   /* did we find enough (>= number of variables in logicor - 1) set-packing constraints for an upgrade to either
+    * an and-constraint or even a set-partitioning constraint
+    */
+   if( ngateconss == nlogicorvars || (ngateconss >= nlogicorvars - 1 && !presoldata->onlysetpart))
+   {
+      SCIP_CONS* newcons;
+      char name[SCIP_MAXSTRLEN];
+      SCIP_Bool initial;
+      SCIP_Bool separate;
+      SCIP_Bool enforce;
+      SCIP_Bool check;
+      SCIP_Bool propagate;
+      SCIP_Bool local;
+      SCIP_Bool modifiable;
+      SCIP_Bool dynamic;
+      SCIP_Bool removable;
+      SCIP_Bool stickingatnode;
+      int i;
+
+      assert(ngateconss <= nlogicorvars);
+      assert(d >= 0 && d < nposresultants);
+
+      initial = SCIPconsIsInitial(logicor);
+      separate = SCIPconsIsSeparated(logicor);
+      enforce = SCIPconsIsEnforced(logicor);
+      check = SCIPconsIsChecked(logicor);
+      propagate = SCIPconsIsPropagated(logicor);
+      local = SCIPconsIsLocal(logicor);
+      modifiable = SCIPconsIsModifiable(logicor);
+      dynamic = SCIPconsIsDynamic(logicor);
+      removable = SCIPconsIsRemovable(logicor);
+      stickingatnode = SCIPconsIsStickingAtNode(logicor);
+
+#ifdef SCIP_DEBUG
+      if( ngateconss == nlogicorvars )
+	 SCIPdebugMessage("Following constraints form a set-partitioning constraint.\n");
+      else
+	 SCIPdebugMessage("Following constraints form an and-constraint.\n");
+#endif
+
+      for( v = ngateconss - 1; v >= 0; --v )
+      {
+	 assert(gateconss[v] != NULL);
+
+	 initial |= SCIPconsIsInitial(gateconss[v]);
+	 separate |= SCIPconsIsSeparated(gateconss[v]);
+	 enforce |= SCIPconsIsEnforced(gateconss[v]);
+	 check |= SCIPconsIsChecked(gateconss[v]);
+	 propagate |= SCIPconsIsPropagated(gateconss[v]);
+	 local &= SCIPconsIsLocal(gateconss[v]);
+	 modifiable &= SCIPconsIsModifiable(gateconss[v]);
+	 dynamic &= SCIPconsIsDynamic(gateconss[v]);
+	 removable &= SCIPconsIsRemovable(gateconss[v]);
+	 stickingatnode &= SCIPconsIsStickingAtNode(gateconss[v]);
+
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, gateconss[v], NULL) ) );
+
+	 SCIP_CALL( SCIPdelCons(scip, gateconss[v]) );
+	 ++(*ndelconss);
+      }
+
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+
+      if( ngateconss == nlogicorvars - 1 )
+      {
+	 SCIP_VAR** consvars;
+
+	 assert(!presoldata->onlysetpart);
+
+	 SCIP_CALL( SCIPallocBufferArray(scip, &consvars, ngateconss) );
+	 i = 0;
+
+	 /* determine and operands */
+	 for( v = nlogicorvars - 1; v >= 0; --v )
+	 {
+	    if( activevars[v] == posresultants[d] )
+	       continue;
+
+	    SCIP_CALL( SCIPgetNegatedVar(scip, activevars[v], &consvars[i]) );
+	    ++i;
+	 }
+	 assert(i == ngateconss);
+
+	 /* create and add "and" constraint for the extracted gate */
+	 (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andgate_%d", presoldata->ngates);
+	 SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, posresultants[d], ngateconss, consvars,
+	       initial, separate, enforce, check, propagate,
+	       local, modifiable, dynamic, removable, stickingatnode) );
+
+	 SCIP_CALL( SCIPaddCons(scip, newcons) );
+	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+
+	 ++(*naddconss);
+	 ++(presoldata->ngates);
+
+	 SCIP_CALL( SCIPdelCons(scip, logicor) );
+	 ++(*ndelconss);
+
+	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+	 SCIPfreeBufferArray(scip, &consvars);
+      }
+      else
+      {
+	 assert(ngateconss == nlogicorvars);
+
+	 /* create and add set-partitioning constraint */
+	 (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
+	 SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevars,
+	       initial, separate, enforce, check, propagate,
+	       local, modifiable, dynamic, removable, stickingatnode) );
+
+	 SCIP_CALL( SCIPaddCons(scip, newcons) );
+	 SCIPdebugMessage("-------------->\n");
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+
+	 ++(*naddconss);
+	 ++(presoldata->ngates);
+
+	 SCIP_CALL( SCIPdelCons(scip, logicor) );
+	 ++(*ndelconss);
+
+	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of presolver
  */
-
-/* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
 
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -843,12 +1268,15 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
+   SCIP_HASHMAP* varmap;
+   HASHDATA* hashdata;
    SCIP_CONSHDLR* conshdlrsetppc;
    SCIP_CONSHDLR* conshdlrlogicor;
    SCIP_CONS** setppcconss;
    SCIP_CONS** logicorconss;
    int nsetppcconss;
    int nlogicorconss;
+   int size;
    int c;
    SCIP_Bool paramvalue;
 
@@ -858,6 +1286,52 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+#if 0 /* need to include cons_knapsack on top of this file */
+   /* check for possible knapsacks that form with a logicor a weak relaxation of an and-constraint
+    *
+    * the weak relaxation of an and-constraint looks like:
+    *   - row1:             resvar - v1 - ... - vn >= 1-n
+    *   - row2:           n*resvar - v1 - ... - vn <= 0.0
+    *
+    * which look like the following contraints
+    *   - logicor:          resvar + ~v1 + ... + ~vn >= 1
+    *   - knapsack:       n*resvar + ~v1 + ... + ~vn <= n
+    */
+   {
+      SCIP_CONSHDLR* conshdlrknapsack;
+      SCIP_CONS** knapsackconss;
+      int nknapsackconss;
+      SCIP_VAR** vars;
+      SCIP_Longint* vals;
+      SCIP_Longint capacity;
+      int nvars;
+
+      conshdlrknapsack = SCIPfindConshdlr(scip, "knapsack");
+
+      /* get number of active constraints */
+      knapsackconss = SCIPconshdlrGetConss(conshdlrknapsack);
+      nknapsackconss = SCIPconshdlrGetNActiveConss(conshdlrknapsack);
+      assert(nknapsackconss >= 0);
+      assert(knapsackconss != NULL || nknapsackconss == 0);
+
+      for( c = nknapsackconss - 1; c >= 0; --c )
+      {
+	 /* not implemented in master branch, but the constraint may be already sorted */
+	 /*SCIPsortKnapsack(scip, knapsackconss[c]);*/
+
+	 nvars = SCIPgetNVarsKnapsack(scip, knapsackconss[c]);
+	 vals = SCIPgetWeightsKnapsack(scip, knapsackconss[c]);
+	 vars = SCIPgetVarsKnapsack(scip, knapsackconss[c]);
+	 capacity = SCIPgetCapacityKnapsack(scip, knapsackconss[c]);
+
+	 if( nvars > 1 && capacity == nvars - 1 && vals[0] == capacity && vals[1] == 1 )
+	 {
+	    printf("possible knapsack for gate extraction\n");
+	 }
+      }
+   }
+#endif
 
    /* get necessary constraint handlers */
    conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");
@@ -877,15 +1351,15 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
    paramvalue = FALSE;
    if( SCIPgetBoolParam(scip, "constraints/and/linearize", &paramvalue) == SCIP_OKAY )
+   {
       if( paramvalue )
       {
-	 SCIPwarningMessage(scip, "Gate-presolving is the counterpart of linearizing all and constraints, so enabling both presolving steps at ones does not make sense.\n");
+	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps at ones does not make sense.\n");
       }
-
+   }
    *result = SCIP_DIDNOTFIND;
 
    /* get active constraints */
-   nsetppcconss = SCIPconshdlrGetNActiveConss(conshdlrsetppc);
    SCIP_CALL( SCIPduplicateBufferArray(scip, &setppcconss, SCIPconshdlrGetConss(conshdlrsetppc), nsetppcconss) );
 
    assert(setppcconss != NULL);
@@ -907,11 +1381,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
    presoldata->newsetppchashdatas = FALSE;
 
-   /* @todo - we only extract and-gates with two operands, it is possible to expand the functionality to also extract
-    *         bigger and-gastes
-    *       - improve speed of finding gates by adding a hash value to each constraint and do a hash comparison
-    */
-
    if( !presoldata->initialized )
    {
       assert(presoldata->usefullogicor == NULL);
@@ -926,312 +1395,358 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    }
    assert(presoldata->initialized);
 
-   /* we do not have any useful set-packing or logicor constraint, or since last run did not get any new constraints, so abort */
-   if( presoldata->nsetppchashdatas == 0 || presoldata->nusefullogicor == 0 || presoldata->firstchangedlogicor == presoldata->nusefullogicor )
+   if( presoldata->nusefullogicor == 0 )
       goto TERMINATE;
+
+   /* move the biggate extraction to front or back by sort the logicors after number of variables */
+
+   if( presoldata->sorting != 0 )
+   {
+      int* lengths;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lengths, presoldata->nusefullogicor) );
+
+      for( c = presoldata->nusefullogicor - 1; c >= 0; --c )
+      {
+	 lengths[c] = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
+      }
+
+      if( presoldata->sorting == -1 )
+	 SCIPsortDownIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
+      else
+	 SCIPsortIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
+
+      SCIPfreeBufferArray(scip, &lengths);
+   }
+
+   /* maximal number of binary variables */
+   size = SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * size)) );
+
+   /* search for set-partitioning constraints arising from a logicor and a set-packing constraints with equal variables */
+   if( presoldata->searchequations && !SCIPisStopped(scip) )
+   {
+      SCIP_HASHTABLE* setppchashdatatable;
+      HASHDATA** setppchashdatas;
+      HASHDATA* setppchashdatastore;
+      HASHDATA* hashmaphashdata;
+      SCIP_CONS* logicor;
+      SCIP_CONS* setppc;
+      SCIP_VAR** logicorvars;
+      SCIP_VAR** setppcvars;
+      SCIP_VAR** activevarslogicor;
+      SCIP_VAR** activevarssetppc;
+      SCIP_Bool negated;
+      int nsetppchashdatas;
+      int nlogicorvars;
+      int nsetppcvars;
+      int d;
+      int v;
+
+      assert(nsetppcconss > 0);
+
+      /* create local hashtable */
+      SCIP_CALL( SCIPhashtableCreate(&setppchashdatatable, SCIPblkmem(scip), 5 * nsetppcconss, SCIPhashGetKeyStandard, setppcHashdataKeyEqCons, setppcHashdataKeyValCons, (void*) scip) );
+
+      /* maximal number of binary variables */
+      size = presoldata->maxnvarslogicor;
+      assert(size >= 3);
+
+      /* get temporary memory */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &setppchashdatastore, nsetppcconss) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &setppchashdatas, nsetppcconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevarssetppc, size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevarslogicor, size) );
+
+      /* allocate memory for the temporary hashdata object to search for a corresponding set-packing/-partitioning
+       * constraint
+       */
+      SCIP_CALL( SCIPallocBuffer(scip, &hashdata) );
+      hashdata->cons = NULL;
+
+      nsetppchashdatas = 0;
+
+      /* collect all set-packing/-partitioning constraints and corresponding data to be able to search faster */
+      for( d = nsetppcconss - 1; d >= 0; --d )
+      {
+	 setppc = setppcconss[d];
+	 assert(setppc != NULL);
+
+	 if( SCIPconsIsDeleted(setppc) )
+	    continue;
+
+	 /* @todo if of interest could also be implemented for set-covering constraints */
+#if 1
+	 if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_COVERING )
+	    continue;
+#endif
+
+	 nsetppcvars = SCIPgetNVarsSetppc(scip, setppc);
+
+	 if( nsetppcvars < 2 )
+	    continue;
+
+	 if( SCIPconsIsModifiable(setppc) )
+	    continue;
+
+	 /* to big setppc constraints are picked out */
+	 if( nsetppcvars > size )
+	    continue;
+
+	 setppcvars = SCIPgetVarsSetppc(scip, setppc);
+	 assert(setppcvars != NULL);
+
+	 /* get active setppc variables */
+	 for( v = nsetppcvars - 1; v >= 0; --v )
+	 {
+	    /* do not work with fixed variables */
+	    if( SCIPvarGetLbLocal(setppcvars[v]) > 0.5 || SCIPvarGetUbLocal(setppcvars[v]) < 0.5 )
+	       break;
+
+	    activevarssetppc[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, setppcvars[v]);
+
+	    if( activevarssetppc[v] == NULL )
+	    {
+	       SCIP_CALL( SCIPgetBinvarRepresentative(scip, setppcvars[v], &(activevarssetppc[v]), &negated) );
+	       SCIP_CALL( SCIPhashmapInsert(varmap, setppcvars[v], activevarssetppc[v]) );
+	    }
+	 }
+
+	 /* if we found a fixed variable we want disregard this constraint */
+	 if( v >= 0 )
+	    continue;
+
+	 /* variables need to be sorted after indices to be able to do a fast comparison */
+	 SCIPsortPtr((void**)activevarssetppc, SCIPvarComp, nsetppcvars);
+
+	 setppchashdatas[nsetppchashdatas] = &(setppchashdatastore[nsetppchashdatas]);
+
+	 /* memorize set-packing data */
+	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(setppchashdatas[nsetppchashdatas]->vars), activevarssetppc, nsetppcvars) );
+
+	 setppchashdatas[nsetppchashdatas]->nvars = nsetppcvars;
+	 setppchashdatas[nsetppchashdatas]->cons = setppc;
+	 /* need to capture this constraint, because it might get deleted during the process */
+	 SCIP_CALL( SCIPcaptureCons(scip, setppc) );
+
+	 /* add entry to local hashtable */
+	 SCIP_CALL( SCIPhashtableInsert(setppchashdatatable, (void*) setppchashdatas[nsetppchashdatas]) );
+	 ++nsetppchashdatas;
+      }
+
+      /* check all (new) logicors against all collected set-packing/-partitioning constraints */
+      for( c = nlogicorconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
+      {
+	 logicor = logicorconss[c];
+	 assert(logicor != NULL);
+
+	 if( SCIPconsIsDeleted(logicor) )
+	    continue;
+
+	 nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);
+
+	 if( nlogicorvars < 2 )
+	    continue;
+
+	 if( SCIPconsIsModifiable(logicor) )
+	    continue;
+
+	 assert(nlogicorvars <= size);
+
+	 logicorvars = SCIPgetVarsLogicor(scip, logicor);
+	 assert(logicorvars != NULL);
+
+	 /* get active logicor variables */
+	 for( v = nlogicorvars - 1; v >= 0; --v )
+	 {
+	    /* do not work with fixed variables */
+	    if( SCIPvarGetLbLocal(logicorvars[v]) > 0.5 || SCIPvarGetUbLocal(logicorvars[v]) < 0.5 )
+	       break;
+
+	    activevarslogicor[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[v]);
+
+	    /* if image does not exist, then there is no corresponding set-packing constraint */
+	    if( activevarslogicor[v] == NULL )
+	       break;
+	 }
+
+	 if( v == -1 )
+	 {
+	    /* need sorting to be able to find the correct hashdata element */
+	    SCIPsortPtr((void**)activevarslogicor, SCIPvarComp, nlogicorvars);
+
+	    hashdata->nvars = nlogicorvars;
+	    hashdata->vars = activevarslogicor;
+
+	    hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(setppchashdatatable, (void*) hashdata);
+	    assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
+
+	    if( hashmaphashdata != NULL && !SCIPconsIsDeleted(hashmaphashdata->cons) )
+	    {
+	       SCIP_Bool initial;
+	       SCIP_Bool separate;
+	       SCIP_Bool enforce;
+	       SCIP_Bool check;
+	       SCIP_Bool propagate;
+	       SCIP_Bool local;
+	       SCIP_Bool modifiable;
+	       SCIP_Bool dynamic;
+	       SCIP_Bool removable;
+	       SCIP_Bool stickingatnode;
+
+	       setppc = hashmaphashdata->cons;
+	       assert(SCIPconsGetHdlr(setppc) == SCIPfindConshdlr(scip, "setppc"));
+
+	       initial = SCIPconsIsInitial(logicor) || SCIPconsIsInitial(setppc);
+	       separate = SCIPconsIsSeparated(logicor) || SCIPconsIsSeparated(setppc);
+	       enforce = SCIPconsIsEnforced(logicor) || SCIPconsIsEnforced(setppc);
+	       check = SCIPconsIsChecked(logicor) || SCIPconsIsChecked(setppc);
+	       propagate = SCIPconsIsPropagated(logicor) || SCIPconsIsPropagated(setppc);
+	       local = SCIPconsIsLocal(logicor) && SCIPconsIsLocal(setppc);
+	       modifiable = SCIPconsIsModifiable(logicor) && SCIPconsIsModifiable(setppc);
+	       dynamic = SCIPconsIsDynamic(logicor) && SCIPconsIsDynamic(setppc);
+	       removable = SCIPconsIsRemovable(logicor) && SCIPconsIsRemovable(setppc);
+	       stickingatnode = SCIPconsIsStickingAtNode(logicor) && SCIPconsIsStickingAtNode(setppc);
+
+	       /* check if logicor is redundant against a set-partitioning constraint */
+	       if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PARTITIONING )
+	       {
+		  SCIP_CALL( SCIPsetConsInitial(scip, setppc, initial) );
+		  SCIP_CALL( SCIPsetConsSeparated(scip, setppc, separate) );
+		  SCIP_CALL( SCIPsetConsEnforced(scip, setppc, enforce) );
+		  SCIP_CALL( SCIPsetConsChecked(scip, setppc, check) );
+		  SCIP_CALL( SCIPsetConsPropagated(scip, setppc, propagate) );
+		  SCIP_CALL( SCIPsetConsLocal(scip, setppc, local) );
+		  SCIP_CALL( SCIPsetConsModifiable(scip, setppc, modifiable) );
+		  SCIP_CALL( SCIPsetConsDynamic(scip, setppc, dynamic) );
+		  SCIP_CALL( SCIPsetConsRemovable(scip, setppc, removable) );
+		  SCIP_CALL( SCIPsetConsStickingAtNode(scip, setppc, stickingatnode) );
+
+		  SCIPdebugMessage("Following logicor is redundant to the set-partitioning constraint.\n");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+	       }
+	       else
+	       {
+		  SCIP_CONS* newcons;
+		  char name[SCIP_MAXSTRLEN];
+
+		  assert(SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PACKING);
+
+		  SCIPdebugMessage("Following logicor and set-packing constraints form a set-partitioning constraint.\n");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+
+		  /* create and add set-partitioning constraint */
+		  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
+		  SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevarslogicor,
+			initial, separate, enforce, check, propagate,
+			local, modifiable, dynamic, removable, stickingatnode) );
+
+		  SCIP_CALL( SCIPaddCons(scip, newcons) );
+		  SCIPdebugMessage("-------------->\n");
+		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+
+		  ++(*naddconss);
+		  ++(presoldata->ngates);
+
+		  /* delete redundant set-packing constraint */
+		  SCIP_CALL( SCIPdelCons(scip, setppc) );
+		  ++(*ndelconss);
+
+		  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+	       }
+
+	       /* delete redundant logicor constraint */
+	       SCIP_CALL( SCIPdelCons(scip, logicor) );
+	       ++(*ndelconss);
+	    }
+	 }
+      }
+
+      /* need to clear/release parts of hashdata objects */
+      for( d = nsetppchashdatas - 1; d >= 0; --d )
+      {
+	 /* need to release captured constraint */
+	 SCIP_CALL( SCIPreleaseCons(scip, &(setppchashdatas[d]->cons)) );
+	 /* need to free copied memory */
+	 SCIPfreeBlockMemoryArray(scip, &(setppchashdatas[d]->vars), setppchashdatas[d]->nvars);
+      }
+
+      /* delete local hashtable */
+      SCIPhashtableFree(&setppchashdatatable);
+
+      /* free all temporary memory */
+      SCIPfreeBuffer(scip, &hashdata);
+      SCIPfreeBufferArray(scip, &activevarslogicor);
+      SCIPfreeBufferArray(scip, &activevarssetppc);
+      SCIPfreeBlockMemoryArray(scip, &setppchashdatas, nsetppcconss);
+      SCIPfreeBlockMemoryArray(scip, &setppchashdatastore, nsetppcconss);
+   }
+
+   /* we do not have any useful set-packing or logicor constraint, or since last run did not get any new constraints, so abort */
+   if( presoldata->nsetppchashdatas == 0 || (presoldata->firstchangedlogicor == presoldata->nusefullogicor && !presoldata->newsetppchashdatas) )
+   {
+      SCIPhashmapFree(&varmap);
+      goto TERMINATE;
+   }
 
    assert(presoldata->usefullogicor != NULL);
    assert(presoldata->nusefullogicor > 0);
    assert(presoldata->firstchangedlogicor >= 0);
    assert(presoldata->nsetppchashdatas > 0);
 
-   if( presoldata->nsetppchashdatas > 0 )
+   /* search for gates */
+   if( presoldata->nsetppchashdatas > 0 && !SCIPisStopped(scip) )
    {
-      SCIP_HASHMAP* varmap;
-      SCIP_CONS* logicor;
-      int size;
+      SCIP_CONS** gateconss;
+      SCIP_VAR** activevars;
+      SCIP_VAR** posresultants;
       int endloop;
-
-      /* due to negations we can have at most two times the number of binary variables */
-      size = 2 * (SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip));
-
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * size)) );
 
       /* if we found new setppcs we want to check all logicors again */
       if( presoldata->newsetppchashdatas )
 	 endloop = 0;
       else
-	 endloop = presoldata->firstchangedlogicor;
+	 endloop = MAX(presoldata->firstchangedlogicor, 0);
 
-      /* check all (new) logicors against all set-packing constraints constraints */
-      for( c = presoldata->nusefullogicor - 1; c >= endloop; --c )
+      assert(presoldata->maxnvarslogicor >= 3);
+      SCIP_CALL( SCIPallocBufferArray(scip, &gateconss, presoldata->maxnvarslogicor) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevars, presoldata->maxnvarslogicor) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &posresultants, presoldata->maxnvarslogicor) );
+      SCIP_CALL( SCIPallocBuffer(scip, &hashdata) );
+
+      hashdata->nvars = 2;
+      hashdata->cons = NULL;
+
+      /* check all (new) logicors against all set-packing constraints, to extract and-constraints with two or more
+       * operands or set-partitioning constraints three or more variables
+       */
+      for( c = presoldata->nusefullogicor - 1; c >= endloop && !SCIPisStopped(scip); --c )
       {
-	 logicor = presoldata->usefullogicor[c];
-	 assert(logicor != NULL);
-	 assert(SCIPgetNVarsLogicor(scip, logicor) == 3);
-	 assert(!SCIPconsIsModifiable(logicor));
+	 assert(presoldata->usefullogicor[c] != NULL);
 
-	 if( SCIPconsIsActive(logicor) )
-	 {
-	    HASHDATA* hashdata;
-	    HASHDATA* hashmaphashdata;
-	    SCIP_CONS* gateconss[3];
-	    SCIP_VAR** logicorvars;
-	    SCIP_VAR* activevars[3];
-	    SCIP_VAR* tmpvars[2];
-	    SCIP_Bool negated[3];
-	    int nfound = 0;
-	    int d;
-
-	    /* logicor constraint has the form: x + y + z >= 1
-	     *
-	     * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
-	     *                           or:  (~y + ~x >= 1 and ~y + ~z >= 1)  <=>  (y + x <= 1 and y + z <= 1)
-	     *                           or:  (~z + ~x >= 1 and ~z + ~y >= 1)  <=>  (z + x <= 1 and z + y <= 1)
-	     *
-	     * these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
-	     */
-
-	    logicorvars = SCIPgetVarsLogicor(scip, logicor);
-	    assert(logicorvars != NULL);
-
-	    /* get active logicor variables */
-	    for( d = 0; d < 3; ++d )
-	    {
-	       activevars[d] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[d]);
-	       if( activevars[d] == NULL )
-	       {
-		  SCIP_CALL( SCIPgetBinvarRepresentative(scip, logicorvars[d], &(activevars[d]), &(negated[d])) );
-		  SCIP_CALL( SCIPhashmapInsert(varmap, logicorvars[d], activevars[d]) );
-	       }
-	    }
-	    SCIPsortPtr((void**)activevars, SCIPvarComp, 3);
-
-	    assert(SCIPvarGetIndex(activevars[0]) <= SCIPvarGetIndex(activevars[1]));
-	    assert(SCIPvarGetIndex(activevars[1]) <= SCIPvarGetIndex(activevars[2]));
-
-	    /* check that we have really three different variables, if not remove the constraint from the hashmap and the data storage */
-	    if( SCIPvarGetIndex(activevars[0]) == SCIPvarGetIndex(activevars[1]) || SCIPvarGetIndex(activevars[1]) == SCIPvarGetIndex(activevars[2]) )
-	    {
-	       SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
-	       SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->usefullogicor[c])) );
-
-	       presoldata->usefullogicor[c] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
-	       --(presoldata->nusefullogicor);
-
-	       continue;
-	    }
-
-	    BMSclearMemoryArray(gateconss, 3);
-
-	    SCIP_CALL( SCIPallocBuffer(scip, &hashdata) );
-	    hashdata->nvars = 2;
-	    hashdata->cons = NULL;
-
-	    for( d = 0; d < 3; ++d )
-	    {
-
-	       if( d == 0 )
-	       {
-		  tmpvars[0] = activevars[0];
-		  tmpvars[1] = activevars[1];
-	       }
-	       else if ( d == 1 )
-	       {
-		  tmpvars[0] = activevars[0];
-		  tmpvars[1] = activevars[2];
-	       }
-	       else
-	       {
-		  tmpvars[0] = activevars[1];
-		  tmpvars[1] = activevars[2];
-	       }
-
-	       hashdata->vars = tmpvars;
-
-	       hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
-
-	       if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
-	       {
-		  gateconss[d] = hashmaphashdata->cons;
-		  ++nfound;
-	       }
-	    }
-
-	    SCIPfreeBuffer(scip, &hashdata);
-
-	    /* did we find three set-packing constraints for the upgrade to a set-partitioning constraint */
-	    if( nfound == 3 )
-	    {
-	       SCIP_CONS* newcons;
-	       char name[SCIP_MAXSTRLEN];
-	       SCIP_Bool initial;
-	       SCIP_Bool separate;
-	       SCIP_Bool enforce;
-	       SCIP_Bool check;
-	       SCIP_Bool propagate;
-	       SCIP_Bool local;
-	       SCIP_Bool modifiable;
-	       SCIP_Bool dynamic;
-	       SCIP_Bool removable;
-	       SCIP_Bool stickingatnode;
-	       int i;
-
-	       initial = SCIPconsIsInitial(logicor);
-	       separate = SCIPconsIsSeparated(logicor);
-	       enforce = SCIPconsIsEnforced(logicor);
-	       check = SCIPconsIsChecked(logicor);
-	       propagate = SCIPconsIsPropagated(logicor);
-	       local = SCIPconsIsLocal(logicor);
-	       modifiable = SCIPconsIsModifiable(logicor);
-	       dynamic = SCIPconsIsDynamic(logicor);
-	       removable = SCIPconsIsRemovable(logicor);
-	       stickingatnode = SCIPconsIsStickingAtNode(logicor);
-
-	       SCIPdebugMessage("Following four constraints form an set-partitioning constraint.\n");
-
-	       for( i = 2; i >= 0; --i )
-	       {
-		  assert(gateconss[i] != NULL);
-
-		  initial |= SCIPconsIsInitial(gateconss[i]);
-		  separate |= SCIPconsIsSeparated(gateconss[i]);
-		  enforce |= SCIPconsIsEnforced(gateconss[i]);
-		  check |= SCIPconsIsChecked(gateconss[i]);
-		  propagate |= SCIPconsIsPropagated(gateconss[i]);
-		  local &= SCIPconsIsLocal(gateconss[i]);
-		  modifiable &= SCIPconsIsModifiable(gateconss[i]);
-		  dynamic &= SCIPconsIsDynamic(gateconss[i]);
-		  removable &= SCIPconsIsRemovable(gateconss[i]);
-		  stickingatnode &= SCIPconsIsStickingAtNode(gateconss[i]);
-
-		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, gateconss[i], NULL) ) );
-
-		  SCIP_CALL( SCIPdelCons(scip, gateconss[i]) );
-		  ++(*ndelconss);
-	       }
-
-	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
-
-	       /* create and add "and" constraint for the extracted gate */
-	       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
-	       SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, 3, activevars,
-		     initial, separate, enforce, check, propagate,
-		     local, modifiable, dynamic, removable, stickingatnode) );
-
-	       SCIP_CALL( SCIPaddCons(scip, newcons) );
-	       SCIPdebugMessage("-------------->\n");
-	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-
-	       ++(*naddconss);
-	       ++(presoldata->ngates);
-
-	       SCIP_CALL( SCIPdelCons(scip, logicor) );
-	       ++(*ndelconss);
-
-	       /* @todo: maybe remove the deleted logicor from the hashmap too */
-
-	       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-	    }
-	    /* did we find two set-packing constraints for the upgrade to the gate constraint */
-	    else if( !presoldata->onlysetpart && nfound == 2 )
-	    {
-	       SCIP_VAR* vars[2];
-	       SCIP_VAR* resvar = NULL;
-	       SCIP_CONS* newcons;
-	       char name[SCIP_MAXSTRLEN];
-	       SCIP_Bool initial;
-	       SCIP_Bool separate;
-	       SCIP_Bool enforce;
-	       SCIP_Bool check;
-	       SCIP_Bool propagate;
-	       SCIP_Bool local;
-	       SCIP_Bool modifiable;
-	       SCIP_Bool dynamic;
-	       SCIP_Bool removable;
-	       SCIP_Bool stickingatnode;
-	       int i;
-
-	       if( gateconss[0] != NULL )
-	       {
-		  if( gateconss[1] != NULL )
-		  {
-		     assert(gateconss[2] == NULL);
-
-		     resvar = activevars[0];
-		     SCIP_CALL( SCIPgetNegatedVar(scip, activevars[1], &vars[0]) );
-		     SCIP_CALL( SCIPgetNegatedVar(scip, activevars[2], &vars[1]) );
-		  }
-		  else if( gateconss[2] != NULL )
-		  {
-		     assert(gateconss[1] == NULL);
-
-		     resvar = activevars[1];
-		     SCIP_CALL( SCIPgetNegatedVar(scip, activevars[0], &vars[0]) );
-		     SCIP_CALL( SCIPgetNegatedVar(scip, activevars[2], &vars[1]) );
-		  }
-	       }
-	       else if( gateconss[1] != NULL && gateconss[2] != NULL )
-	       {
-		  assert(gateconss[0] == NULL);
-
-		  resvar = activevars[2];
-		  SCIP_CALL( SCIPgetNegatedVar(scip, activevars[0], &vars[0]) );
-		  SCIP_CALL( SCIPgetNegatedVar(scip, activevars[1], &vars[1]) );
-	       }
-	       assert(resvar != NULL);
-
-	       initial = SCIPconsIsInitial(logicor);
-	       separate = SCIPconsIsSeparated(logicor);
-	       enforce = SCIPconsIsEnforced(logicor);
-	       check = SCIPconsIsChecked(logicor);
-	       propagate = SCIPconsIsPropagated(logicor);
-	       local = SCIPconsIsLocal(logicor);
-	       modifiable = SCIPconsIsModifiable(logicor);
-	       dynamic = SCIPconsIsDynamic(logicor);
-	       removable = SCIPconsIsRemovable(logicor);
-	       stickingatnode = SCIPconsIsStickingAtNode(logicor);
-
-	       SCIPdebugMessage("Following three constraints form an and constraint.\n");
-
-	       for( i = 2; i >= 0; --i )
-	       {
-		  if( gateconss[i] != NULL )
-		  {
-		     initial |= SCIPconsIsInitial(gateconss[i]);
-		     separate |= SCIPconsIsSeparated(gateconss[i]);
-		     enforce |= SCIPconsIsEnforced(gateconss[i]);
-		     check |= SCIPconsIsChecked(gateconss[i]);
-		     propagate |= SCIPconsIsPropagated(gateconss[i]);
-		     local &= SCIPconsIsLocal(gateconss[i]);
-		     modifiable &= SCIPconsIsModifiable(gateconss[i]);
-		     dynamic &= SCIPconsIsDynamic(gateconss[i]);
-		     removable &= SCIPconsIsRemovable(gateconss[i]);
-		     stickingatnode &= SCIPconsIsStickingAtNode(gateconss[i]);
-
-		     SCIPdebug( SCIP_CALL( SCIPprintCons(scip, gateconss[i], NULL) ) );
-		     SCIP_CALL( SCIPdelCons(scip, gateconss[i]) );
-		     ++(*ndelconss);
-		  }
-	       }
-	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
-
-	       /* create and add "and" constraint for the extracted gate */
-	       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andgate_%d", presoldata->ngates);
-	       SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, resvar, 2, vars,
-		     initial, separate, enforce, check, propagate,
-		     local, modifiable, dynamic, removable, stickingatnode) );
-
-	       SCIP_CALL( SCIPaddCons(scip, newcons) );
-	       SCIPdebugMessage("-------------->\n");
-	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-
-	       ++(*naddconss);
-	       ++(presoldata->ngates);
-
-
-	       SCIP_CALL( SCIPdelCons(scip, logicor) );
-	       ++(*ndelconss);
-
-	       /* @todo: maybe remove the deleted logicor from the hashmap too */
-
-	       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-	    }
-	 }
+	 /* logicor constraint has the form: x + y + z >= 1
+	  *
+	  * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
+	  *
+	  * - these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
+	  *
+	  * if an additional set-packing constraint exists: y + z <= 1
+	  *
+	  * - these four constraints are aquivalent to: x + y + z = 1
+	  */
+	 SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, hashdata, ndelconss, naddconss) );
       }
-      SCIPhashmapFree(&varmap);
+      SCIPfreeBuffer(scip, &hashdata);
+      SCIPfreeBufferArray(scip, &posresultants);
+      SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &gateconss);
    }
+
+   SCIPhashmapFree(&varmap);
 
  TERMINATE:
    SCIPfreeBufferArray(scip, &setppcconss);
@@ -1241,9 +1756,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
@@ -1275,6 +1787,18 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
          "presolving/"PRESOL_NAME"/onlysetpart",
          "should we only try to extract set-partitioning constraints and no and-constraints",
          &presoldata->onlysetpart, TRUE, DEFAULT_ONLYSETPART, NULL, NULL) );
+
+   /* add gateextraction presolver parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/"PRESOL_NAME"/searchequations",
+         "should we try to extract set-partitioning constraint out of one logicor and one corresponding set-packing constraint",
+         &presoldata->searchequations, TRUE, DEFAULT_SEARCHEQUATIONS, NULL, NULL) );
+
+   /* add gateextraction presolver parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/"PRESOL_NAME"/sorting",
+         "order logicor contraints to extract big-gates before smaller ones (-1), do not order them (0) or order them to extract smaller gates at first (1)",
+         &presoldata->sorting, TRUE, DEFAULT_SORTING, -1, 1, NULL, NULL) );
 
    return SCIP_OKAY;
 }

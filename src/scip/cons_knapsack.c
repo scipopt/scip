@@ -93,6 +93,8 @@
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
 
+/* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
+
 /*
  * Data structures
  */
@@ -9239,19 +9241,18 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-
-   /* include event handler for bound change events */
-   eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecKnapsack,
-         eventhdlrdata) );
+   SCIP_CONSHDLR* conshdlr;
 
    /* create knapsack constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   /* include event handler for bound change events */
+   eventhdlrdata = NULL;
+   conshdlrdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr), EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecKnapsack, eventhdlrdata) );
+
    /* get event handler for bound change events */
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( conshdlrdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for knapsack constraints not found\n");
@@ -9259,21 +9260,36 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    }
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING,
-         conshdlrCopyKnapsack,
-         consFreeKnapsack, consInitKnapsack, consExitKnapsack,
-         consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
-         consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
-         consSepalpKnapsack, consSepasolKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack,
-         consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
-         consActiveKnapsack, consDeactiveKnapsack,
-         consEnableKnapsack, consDisableKnapsack, consDelvarsKnapsack,
-         consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
-         consGetVarsKnapsack, consGetNVarsKnapsack, conshdlrdata) );
+         consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, consLockKnapsack,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropKnapsack, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpKnapsack, consSepasolKnapsack, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
@@ -9394,6 +9410,32 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a knapsack constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsKnapsack(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsKnapsack() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of items in the knapsack */
+   SCIP_VAR**            vars,               /**< array with item variables */
+   SCIP_Longint*         weights,            /**< array with item weights */
+   SCIP_Longint          capacity            /**< capacity of knapsack */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, vars, weights, capacity,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

@@ -9013,6 +9013,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
@@ -9024,23 +9025,34 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS, CONSHDLR_PROP_TIMING,
-         conshdlrCopyExactlp, consFreeExactlp, consInitExactlp, consExitExactlp,
-         consInitpreExactlp, consExitpreExactlp, consInitsolExactlp, consExitsolExactlp,
-         consDeleteExactlp, consTransExactlp, consInitlpExactlp,
-         consSepalpExactlp, consSepasolExactlp, consEnfolpExactlp, consEnfopsExactlp, consCheckExactlp,
-         consPropExactlp, consPresolExactlp, consRespropExactlp, consLockExactlp,
-         consActiveExactlp, consDeactiveExactlp,
-         consEnableExactlp, consDisableExactlp, consDelvarsExactlp,
-         consPrintExactlp, consCopyExactlp, consParseExactlp,
-         consGetVarsExactlp, consGetNVarsExactlp, conshdlrdata) );
+         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
+         consEnfolpExactlp, consEnfopsExactlp, consCheckExactlp, consLockExactlp,
+         conshdlrdata) );
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteExactlp) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitExactlp) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreExactlp) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolExactlp) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeExactlp) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExactlp) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpExactlp) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreExactlp) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExactlp) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExactlp) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExactlp, consSepasolExactlp, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExactlp) );
 
 #ifdef LINCONSUPGD_PRIORITY
-   /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdExactlp, LINCONSUPGD_PRIORITY) );
+   if( SCIPfindConshdlr(scip, "linear") != NULL )
+   {
+      /* include the linear constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdExactlp, LINCONSUPGD_PRIORITY) );
+   }
 #endif
 
    /* add exactlp constraint handler parameters */
