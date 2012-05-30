@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          objpricer->scip_delay_,
-         pricerRedcostObj, pricerdata) ); /*lint !e429*/
+         pricerRedcostObj, pricerFarkasObj, pricerdata) ); /*lint !e429*/
    assert(pricer != NULL);
 
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyObj) );
@@ -238,7 +238,6 @@ SCIP_RETCODE SCIPincludeObjPricer(
    SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitObj) );
    SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolObj) );
    SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolObj) );
-   SCIP_CALL( SCIPsetPricerFarkas(scip, pricer, pricerFarkasObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

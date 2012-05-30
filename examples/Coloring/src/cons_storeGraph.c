@@ -730,10 +730,8 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    conshdlr = NULL;
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING, consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph, consLockStoreGraph,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpStoreGraph, consEnfopsStoreGraph, consCheckStoreGraph, consLockStoreGraph,
          conshdlrData) );
    assert(conshdlr != NULL);
 
@@ -743,7 +741,8 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolStoreGraph) );
    SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveStoreGraph) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveStoreGraph) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStoreGraph, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStoreGraph, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
 
    return SCIP_OKAY;
 }
