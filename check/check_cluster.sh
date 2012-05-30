@@ -48,15 +48,6 @@ CLIENTTMPDIR=${15}
 NOWAITCLUSTER=${16}
 EXCLUSIVE=${17}
 
-if test $QUEUE = "low"
-then
-    QUEUE="mip-low,gas-low"
-fi
-
-if test $QUEUE = "opt"
-then
-    QUEUE="mip-low,gas-low,traffic-low"
-fi
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
@@ -254,6 +245,16 @@ do
       export BASENAME=$FILENAME
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
+
+      if test $QUEUE = "low"
+      then
+	  QUEUE="mip-low,gas-low"
+      fi
+
+      if test $QUEUE = "opt"
+      then
+	  QUEUE="mip-low,gas-low,traffic-low"
+      fi
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"
