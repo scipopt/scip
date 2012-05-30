@@ -157,7 +157,7 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
 
    assert(nodesel != NULL);
 
-   SCIPnodeselSetCopy(nodesel, nodeselCopyDfs);
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyDfs) );
 
    return SCIP_OKAY;
 }

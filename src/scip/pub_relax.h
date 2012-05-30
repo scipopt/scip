@@ -54,48 +54,6 @@ void SCIPrelaxSetData(
    SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
    );
 
-/** set copy method of relaxation handler */
-extern
-void SCIPrelaxSetCopy(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler */
-   );
-
-/** set destructor of relaxation handler */
-extern
-void SCIPrelaxSetFree(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
-   );
-
-/** set initialization method of relaxation handler */
-extern
-void SCIPrelaxSetInit(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
-   );
-
-/** set deinitialization method of relaxation handler */
-extern
-void SCIPrelaxSetExit(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
-   );
-
-/** set solving process initialization method of relaxation handler */
-extern
-void SCIPrelaxSetInitsol(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
-   );
-
-/** set solving process deinitialization method of relaxation handler */
-extern
-void SCIPrelaxSetExitsol(
-   SCIP_RELAX*           relax,              /**< relaxation handler  */
-   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization relaxation handler */
-   );
-
 /** gets name of relaxation handler */
 extern
 const char* SCIPrelaxGetName(

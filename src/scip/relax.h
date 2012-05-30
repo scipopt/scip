@@ -119,6 +119,48 @@ void SCIPrelaxSetPriority(
    int                   priority            /**< new priority of the relaxator */
    );
 
+/** set copy callback of relaxation handler */
+extern
+void SCIPrelaxSetCopy(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler */
+   );
+
+/** set destructor callback of relaxation handler */
+extern
+void SCIPrelaxSetFree(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
+   );
+
+/** set initialization callback of relaxation handler */
+extern
+void SCIPrelaxSetInit(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
+   );
+
+/** set deinitialization callback of relaxation handler */
+extern
+void SCIPrelaxSetExit(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
+   );
+
+/** set solving process initialization callback of relaxation handler */
+extern
+void SCIPrelaxSetInitsol(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
+   );
+
+/** set solving process deinitialization callback of relaxation handler */
+extern
+void SCIPrelaxSetExitsol(
+   SCIP_RELAX*           relax,              /**< relaxation handler  */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization callback relaxation handler */
+   );
+
 /** returns whether the relaxation was completely solved at the current node */
 extern
 SCIP_Bool SCIPrelaxIsSolved(
