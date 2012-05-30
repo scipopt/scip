@@ -681,10 +681,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpDisjunction, consEnfopsDisjunction, consCheckDisjunction, consLockDisjunction,
          conshdlrdata) );
 
@@ -693,9 +690,11 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyDisjunction, consCopyDisjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteDisjunction) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolDisjunction, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintDisjunction) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
 
 

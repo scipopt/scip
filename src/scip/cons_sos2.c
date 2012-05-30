@@ -2182,10 +2182,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2, consLockSOS2,
          conshdlrdata) );
    assert(conshdlr != NULL);
@@ -2201,11 +2198,13 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS2) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS2) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS2) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS2) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS2, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOS2) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOS2, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOS2, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS2) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOS2, consSepasolSOS2, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOS2) );
 
    return SCIP_OKAY;

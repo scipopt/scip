@@ -607,10 +607,9 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, objconshdlr->scip_name_, objconshdlr->scip_desc_,
-         objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
-         objconshdlr->scip_eagerfreq_, objconshdlr->scip_maxprerounds_, objconshdlr->scip_delaysepa_,
-         objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_, objconshdlr->scip_needscons_,
-         objconshdlr->scip_timingmask_, consEnfolpObj, consEnfopsObj, consCheckObj, consLockObj,
+         objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
+         objconshdlr->scip_eagerfreq_, objconshdlr->scip_needscons_,
+         consEnfolpObj, consEnfopsObj, consCheckObj, consLockObj,
          conshdlrdata) ); /*lint !e429*/
    assert(conshdlr != NULL);
 
@@ -633,11 +632,14 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolObj) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpObj) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseObj) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolObj) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolObj, objconshdlr->scip_maxprerounds_,
+         objconshdlr->scip_delaypresol_) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintObj) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropObj, objconshdlr->scip_propfreq_) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropObj, objconshdlr->scip_propfreq_,
+         objconshdlr->scip_delayprop_, objconshdlr->scip_timingmask_) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropObj) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpObj, consSepasolObj, objconshdlr->scip_sepafreq_) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpObj, consSepasolObj, objconshdlr->scip_sepafreq_,
+         objconshdlr->scip_sepapriority_, objconshdlr->scip_delaysepa_) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransObj) );
 
    return SCIP_OKAY; /*lint !e429*/

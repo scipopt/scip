@@ -1768,7 +1768,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
    return SCIP_OKAY;
 }
 
-/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+/** creates an int parameter, sets it to its default value, and adds it to the parameter set */
 SCIP_RETCODE SCIPsetAddIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
