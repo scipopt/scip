@@ -17763,13 +17763,13 @@ SCIP_RETCODE provedBound(
       stat->nprovedfeaslp++;
       if( !SCIPsetIsInfinity(set, -1.0 * (*bound)) )
       {
+#ifdef WITH_EXACTSOLVE
          SCIP_CONS** conss;
 
          conss = SCIPgetConss(set->scip);
          assert(conss != NULL);
          assert(SCIPgetNConss(set->scip) == 1);
 
-#ifdef WITH_EXACTSOLVE
          SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *bound) );
 #endif
          lp->hasprovedbound = TRUE;
