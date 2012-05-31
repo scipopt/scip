@@ -1,7 +1,7 @@
-$(LIBOBJDIR)/scip/lpi_cpx.o: src/scip/lpi_cpx.c lib/cpxinc/cplex.h src/scip/bitencode.h \
- src/scip/lpi.h src/scip/def.h src/scip/type_retcode.h \
- src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
- src/blockmemshell/memory.h src/scip/type_lpi.h
+$(LIBOBJDIR)/scip/lpi_cpx.o: src/scip/lpi_cpx.c lib/cpxinc/cplex.h  \
+ src/scip/bitencode.h src/scip/lpi.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
+ src/scip/struct_message.h src/blockmemshell/memory.h src/scip/type_lpi.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/bitencode.h
