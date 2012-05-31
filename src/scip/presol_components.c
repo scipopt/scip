@@ -462,7 +462,7 @@ SCIP_RETCODE copyAndSolveComponent(
       {
          *result = SCIP_CUTOFF;
       }
-      else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED )
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(subscip) == SCIP_STATUS_INFORUNBD )
       {
          /* TODO: store unbounded ray in original SCIP data structure */
          *result = SCIP_UNBOUNDED;
