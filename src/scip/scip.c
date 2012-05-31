@@ -13135,7 +13135,7 @@ SCIP_Real SCIPadjustedVarUb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13206,7 +13206,7 @@ SCIP_RETCODE SCIPchgVarLb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13330,7 +13330,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
 /** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13398,7 +13398,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13514,7 +13514,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13610,7 +13610,7 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13706,7 +13706,7 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13802,7 +13802,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13993,7 +13993,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -14089,7 +14089,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -14279,7 +14279,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -14377,7 +14377,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
