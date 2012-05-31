@@ -1222,7 +1222,7 @@ SCIP_RETCODE solveNodeInitialLP(
    /* solve initial LP */
    SCIPdebugMessage("node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
-         -1, TRUE, TRUE, FALSE, lperror) );
+         SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -1299,7 +1299,7 @@ SCIP_RETCODE separationRoundResolveLP(
    {
       /* solve LP (with dual simplex) */
       SCIPdebugMessage("separation: resolve LP\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, -1, FALSE, TRUE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
       *mustsepa = TRUE;
@@ -2036,7 +2036,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
    SCIPdebugMessage("node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, prob,
-         -1, FALSE, TRUE, FALSE, lperror) );
+         set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -2156,7 +2156,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                   /* resolve LP */
                   SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
-                        -1, FALSE, TRUE, FALSE, lperror) );
+                        set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
@@ -2317,7 +2317,7 @@ SCIP_RETCODE priceAndCutLoop(
                   /* solve LP (with dual simplex) */
                   SCIPdebugMessage("separation: solve LP\n");
                   SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob,
-                        -1, FALSE, TRUE, FALSE, lperror) );
+                        set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
@@ -2592,7 +2592,8 @@ SCIP_RETCODE solveNodeLP(
    *  is not a feasible lower bound for the solutions in the current subtree. 
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 
    */
-   if( (*pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !(*cutoff) )
+   if( (*pricingaborted) && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT)
+      && !(*cutoff) )
    {
       SCIP_Real tmpcutoff;
       

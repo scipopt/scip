@@ -147,6 +147,8 @@
 /* LP */
 
 #define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_LP_ITERLIM            -1LL /**< iteration limit for each single LP solve; -1: no limit */
+#define SCIP_DEFAULT_LP_ROOTITERLIM        -1LL /**< iteration limit for initial root LP solve; -1: no limit */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
 #define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                                  *   barrier with 'c'rossover) */
@@ -1023,6 +1025,16 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/solvefreq",
          "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
          &(*set)->lp_solvefreq, FALSE, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "lp/iterlim",
+         "iteration limit for each single LP solve (-1: no limit)",
+         &(*set)->lp_iterlim, TRUE, SCIP_DEFAULT_LP_ITERLIM, -1LL, SCIP_LONGINT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "lp/rootiterlim",
+         "iteration limit for initial root LP solve (-1: no limit)",
+         &(*set)->lp_rootiterlim, TRUE, SCIP_DEFAULT_LP_ROOTITERLIM, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solvedepth",

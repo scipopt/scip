@@ -13124,7 +13124,7 @@ SCIP_RETCODE SCIPchgVarLb(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarLb", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarLb", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -13140,6 +13140,7 @@ SCIP_RETCODE SCIPchgVarLb(
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       break;
@@ -13194,7 +13195,7 @@ SCIP_RETCODE SCIPchgVarUb(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarUb", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarUb", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -13210,6 +13211,7 @@ SCIP_RETCODE SCIPchgVarUb(
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       break;

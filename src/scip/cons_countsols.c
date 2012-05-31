@@ -1216,7 +1216,7 @@ SCIP_RETCODE checkSolution(
     * this solution
     */
 
-   /**@todo it might be not necessary to check this assert since we can check in generale all solutions of feasibility
+   /**@todo it might be not necessary to check this assert since we can check in general all solutions of feasibility
     *       independently of the origin; however, the locally fixed technique does only work if the solution comes from
     *       the branch and bound tree; in case the solution comes from a heuristic we should try to sequentially fix the
     *       variables in the branch and bound tree and check after every fixing if all constraints are disabled; at the

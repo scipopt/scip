@@ -5402,26 +5402,71 @@ void SCIPdigraphPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int i;
-   int j;
+   int n;
 
-   for( i = 0; i < digraph->nnodes; ++i )
+   for( n = 0; n < digraph->nnodes; ++n )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", i);
+      int* successors;
+      int nsuccessors;
+      int m;
 
-      for( j = 0; j < digraph->nsuccessors[i] ; ++j )
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", n);
+
+      for( m = 0; m < nsuccessors ; ++m )
       {
-         if( j == 0 )
+         if( m == 0 )
          {
-            SCIPmessageFPrintInfo(messagehdlr, file, "%d", digraph->successors[i][j]);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", successors[m]);
          }
          else
          {
-            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", digraph->successors[i][j]);
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", successors[m]);
          }
       }
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
+}
+
+/** prints the given directed graph structure in GML format into the given file */
+void SCIPdigraphPrintGml(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   int n;
+
+   /* write GML format opening */
+   SCIPgmlOpen(file, TRUE);
+
+   /* write all nodes of the graph */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      char label[SCIP_MAXSTRLEN];
+
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", n);
+      SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", NULL, NULL);
+   }
+
+   /* write all edges */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      int* successors;
+      int nsuccessors;
+      int m;
+
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      for( m = 0; m < nsuccessors; ++m )
+      {
+         SCIPgmlWriteArc(file, (unsigned int)n, (unsigned int)successors[m], NULL, NULL);
+      }
+   }
+   /* write GML format closing */
+   SCIPgmlClose(file);
 }
 
 /** output of the given directed graph via the given message handler */

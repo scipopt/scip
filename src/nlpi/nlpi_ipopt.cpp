@@ -2653,15 +2653,14 @@ void ScipNLP::finalize_solution(
       break;
    }
 
-   /* if Ipopt reports its solution as locally infeasible, then report the intermediate point with lowest constraint violation, if available */
-   if( (x == NULL || nlpiproblem->lastsolstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
+   /* if Ipopt reports its solution as locally infeasible or we don't know feasibility, then report the intermediate point with lowest constraint violation, if available */
+   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
    {
       /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
       assert(nlpiproblem->lastsolprimals != NULL);
       assert(nlpiproblem->lastsoldualcons != NULL);
       assert(nlpiproblem->lastsoldualvarlb != NULL);
       assert(nlpiproblem->lastsoldualvarub != NULL);
-      assert(nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN);
 
       /* check if lastsol is feasible */
       Number constrvioltol;

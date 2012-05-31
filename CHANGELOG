@@ -112,6 +112,7 @@ interface
   initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
 - new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
 - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
+- new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -136,9 +137,11 @@ performance improvements:
 - heur_undercover treats indicator constraints as nonlinear and fixes the binary variable for linearization
 - speed up in linear constraint handler replacing aggregated variables
 - speed up in SCIPboolarrayExtend() in misc.c replacing a for loop with BMSmoveMemoryArray() call
-- speed up mps reader asking paramters only ones
+- speed up mps reader asking parameters only once
 - speed up in var.c changing some recursive calls into iterative calls and reducing the number of VARFIX event that are
   thrown for fixation, aggregation or multi-aggregations
+- changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
+  aggressive separation
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -154,6 +157,8 @@ plugins:
 - added new presolver components, that searches for independent components in the problem structure and solves
   these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
 - added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
+- added hailmary heuristic that solve a copy of the problem without an objective function and with quite strict limits
+  on the number of nodes and LP iterations
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
@@ -172,6 +177,8 @@ fixed bugs:
   time limit
 - fixed bug in SCIP probing mode with cleared LPI state but solved LP
 - fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
+- fixed potential bug in fix-and-infer heuristic with variables being fixed to infinite value
+- fixed bug in diving heuristics with variables being fixed to values outside their domain
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -208,6 +215,8 @@ parameters:
 - new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
 - new parameter <misc/transorigsols> by default set to TRUE, that switches whether SCIP tries to transfer original
   solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
+- new parameters lp/{rootiterlim,iterlim} to set a limit on the LP iterations spend in the initial root LP and each
+  LP resolve, respectively
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -1648,7 +1657,7 @@ interface:
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
 - new method SCIPbsortInd()
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...() Note that the order
-  of the paramters has been changed to simplify the template code in sorttpl.c!
+  of the parameters has been changed to simplify the template code in sorttpl.c!
 - expand sorttpl.c by some parameters
 - added some downwards-sorting methods
 - changed some names for sorting methods

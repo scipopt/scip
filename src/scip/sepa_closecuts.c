@@ -420,3 +420,46 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
 
    return SCIP_OKAY;
 }
+
+/** sets point to be used as base point for computing the point to be separated
+ *
+ *  The point is only stored if separation of relative interior points is used. The solution is copied.
+ */
+SCIP_RETCODE SCIPsetBasePointClosecuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< base point solution */
+   )
+{
+   SCIP_SEPA* sepa;
+   SCIP_SEPADATA* sepadata;
+
+   assert( scip != NULL );
+
+   /* find separator */
+   sepa = SCIPfindSepa(scip, SEPA_NAME);
+   if ( sepa == NULL )
+   {
+      SCIPerrorMessage("Could not find separator <%s>.\n", SEPA_NAME);
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   /* get sepadata */
+   sepadata = SCIPsepaGetData(sepa);
+   assert( sepadata != NULL );
+
+   /* store point if we have to separate relative interior points */
+   if ( sepadata->separelint )
+   {
+      /* possibly free solution */
+      if ( sepadata->sepasol != NULL )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
+      }
+
+      /* copy and store solution */
+      SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->sepasol, sol) );
+   }
+
+   return SCIP_OKAY;
+}

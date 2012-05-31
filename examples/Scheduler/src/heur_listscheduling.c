@@ -44,77 +44,19 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int**                 resourcedemands;     /**< resource demands matrix (job i needs resourcedemands[i][j] units of resource j) */
+   SCIP_DIGRAPH*         precedencegraph;    /**< precedence graph of the jobs */
+   int**                 resourcedemands;    /**< resource demands matrix (job i needs resourcedemands[i][j] units of resource j) */
    SCIP_VAR**            vars;               /**< array of start time variables */
    int*                  durations;          /**< array of duration for each job */
    int*                  capacities;         /**< array to store the capacities of all cum constraints */
    int                   njobs;              /**< number of jobs */
    int                   nresources;         /**< number of resources */
-
    SCIP_Bool             initialized;        /**< stores if initialization has already occurred */
-
-   SCIP_DIGRAPH*         precedencegraph;    /**< precedence graph of the jobs */
 };
 
 /*
  * Local methods
  */
-
-
-/** Sorts variables by local bounds, i.e. local lower bound and upper bound or current solution value, depending on the
- *  timing of the heuristic
- */
-static
-SCIP_RETCODE createInitialPermutation(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< start time variables */
-   int*                  durations,          /**< array of durations */
-   int                   njobs,              /**< number of jobs */
-   SCIP_Real             alpha,              /**< alpha * LB + (1-alpha) * UB */
-   SCIP_Real             beta,               /**< alpha * LB + (1-alpha) * UB + beta*duration, 0<beta<1*/
-   int*                  perm                /**< permutation of the variable array */
-   )
-{
-   SCIP_Real* sorttingkeys;
-   int j;
-
-   assert(0 < beta);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &sorttingkeys, njobs) );
-
-   for( j = 0; j < njobs; ++j )
-   {
-      SCIP_VAR* var;
-      int duration;
-      int idx;
-
-      idx = perm[j];
-      var = vars[idx];
-      duration = durations[idx];
-
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         sorttingkeys[idx] = SCIPgetVarSol(scip, var) + 0.0001 * duration + idx / (SCIP_Real)njobs;
-      }
-      else
-      {
-         int est;
-         int lst;
-
-         est = (int)(SCIPvarGetLbLocal(var) + 0.5);
-         lst = (int)(SCIPvarGetUbLocal(var) + 0.5);
-         sorttingkeys[idx] = alpha * est + (1-alpha) * lst + beta * duration + idx / (SCIP_Real)njobs;
-      }
-   }
-
-   /* sort the permutation array with respect to the earliest latest values */
-   //   SCIPsortRealInt(sorttingkeys, perm, njobs);
-
-   /* free buffer array */
-   SCIPfreeBufferArray(scip, &sorttingkeys);
-
-   return SCIP_OKAY;
-}
 
 /** initializes heuristic data structures */
 static
@@ -365,6 +307,7 @@ int profilesFindLatestFeasibleStart(
 /** collect earliest and latest start times for all variables in the order given in the variables array */
 static
 void collectEstLst(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< array of start time variables */
    int*                  ests,               /**< array to store the earliest start times */
    int*                  lsts,               /**< array to store the latest start times */
@@ -383,8 +326,15 @@ void collectEstLst(
       var = vars[j];
       assert(var != NULL);
 
-      ests[j] = (int)(SCIPvarGetLbLocal(var) + 0.5);
-      lsts[j] = (int)(SCIPvarGetUbLocal(var) + 0.5);
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         ests[j] = (int)(SCIPgetSolVal(scip, NULL, var) + 0.5);
+      }
+      else
+      {
+         ests[j] = (int)(SCIPvarGetLbLocal(var) + 0.5);
+      }
+      lsts[j] = (int)(SCIPvarGetUbGlobal(var) + 0.5);
       assert(ests[j] <= lsts[j]);
    }
 }
@@ -668,7 +618,6 @@ SCIP_RETCODE executeHeuristic(
    SCIP_HEURDATA* heurdata;
    SCIP_VAR** vars;
    int* starttimes;
-   int* component;
    int* ests;
    int* lsts;
    int* perm;
@@ -687,14 +636,37 @@ SCIP_RETCODE executeHeuristic(
    infeasible = FALSE;
 
    /* create initialized permutation */
-   SCIPdigraphGetComponent(heurdata->precedencegraph, 0, &component, NULL);
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &perm, component, njobs) );
-   SCIP_CALL( createInitialPermutation(scip, vars, heurdata->durations, njobs, 1.0, 1.0, perm) );
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Real* solvals;
+      int v;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, njobs) );
+
+      /* in case the LP relaxation was solved to optimality we use the LP solution as initialized permutation */
+      for( v = 0; v < njobs; ++v )
+      {
+         solvals[v] = (int)(SCIPgetSolVal(scip, NULL, vars[v]) + 0.5);
+         perm[v] = v;
+      }
+      SCIPsortRealInt(solvals, perm, njobs);
+
+      SCIPfreeBufferArray(scip, &solvals);
+   }
+   else
+   {
+      int* component;
+
+      /* in case the LP was not solved we use the topologically sorted variables w.r.t. precedences graph */
+      SCIPdigraphGetComponent(heurdata->precedencegraph, 0, &component, NULL);
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &perm, component, njobs) );
+   }
 
    /* collect earliest and latest start times for all variables in the order given in the variables array */
    SCIP_CALL( SCIPallocBufferArray(scip, &ests, njobs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lsts, njobs) );
-   collectEstLst(vars, ests, lsts, njobs);
+   collectEstLst(scip, vars, ests, lsts, njobs);
 
    /* initialize the start times with the earliest start times */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &starttimes, ests, njobs) );
@@ -797,15 +769,11 @@ static
 SCIP_DECL_HEUREXEC(heurExecListScheduling)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;                  /* Primal heuristic data */
-   SCIP_Real alpha;                          /* numerical values for sorting of jobs */
-   SCIP_Real beta;                           /* alpha *LB + (1- alpha) UB + beta * duration */
 
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
-   alpha = 1.0;
-   beta = 1.0;
    (*result) = SCIP_DIDNOTRUN;
 
    heurdata = SCIPheurGetData(heur);
