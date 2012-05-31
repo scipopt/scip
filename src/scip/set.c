@@ -2573,6 +2573,91 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
    return SCIP_OKAY;
 }
 
+/** reinserts a constraint handler with modified sepa priority into the sepa priority sorted array */
+void SCIPsetReinsertConshdlrSepaPrio(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler to be reinserted */
+   int                   oldpriority         /**< the old separation priority of constraint handler */
+   )
+{
+   int newpriority;
+   int newpos;
+   int i;
+   assert(set != NULL);
+   assert(conshdlr != NULL);
+
+   newpriority = SCIPconshdlrGetSepaPriority(conshdlr);
+   newpos = -1;
+
+   /* search for the old position of constraint handler; determine its new position at the same time */
+   if( newpriority > oldpriority )
+   {
+      i = 0;
+      while( i < set->nconshdlrs &&
+            strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      {
+         int priorityatpos;
+
+         priorityatpos = SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]);
+         assert(priorityatpos >= oldpriority);
+
+         /* current index is the position to insert the constraint handler */
+         if( newpriority > priorityatpos && newpos == -1 )
+            newpos = i;
+
+         ++i;
+      }
+      assert(i < set->nconshdlrs);
+
+      /* constraint must change its position in array */
+      if( newpos != -1 )
+      {
+         /* shift all constraint handlers between old and new position by one, and insert constraint handler */
+         for( ; i > newpos; --i )
+         {
+            set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i-1];
+         }
+         set->conshdlrs_sepa[newpos] = conshdlr;
+      }
+
+   }
+   else if( newpriority < oldpriority )
+   {
+      i = set->nconshdlrs - 1;
+      while( i >= 0 &&
+                  strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      {
+         int priorityatpos;
+
+         priorityatpos = SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]);
+         assert(priorityatpos <= oldpriority);
+
+         /* current index is the position to insert the constraint handler */
+         if( newpriority < priorityatpos && newpos == -1 )
+            newpos = i;
+
+         --i;
+      }
+      assert(i >= 0);
+
+      /* constraint must change its position in array */
+      if( newpos != -1 )
+      {
+         /* shift all constraint handlers between old and new position by one, and insert constraint handler */
+         for(; i < newpos; ++i )
+         {
+            set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i + 1];
+         }
+         set->conshdlrs_sepa[newpos] = conshdlr;
+      }
+#ifndef NDEBUG
+      for( i = 0; i < set->nconshdlrs - 1; ++i )
+         assert(SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i])
+               >= SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i + 1]));
+#endif
+   }
+}
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPsetFindConshdlr(
    SCIP_SET*             set,                /**< global SCIP settings */

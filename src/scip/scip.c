@@ -3524,11 +3524,19 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    )
 {
+   int oldsepapriority;
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   oldsepapriority = SCIPconshdlrGetSepaPriority(conshdlr);
    SCIPconshdlrSetSepa(conshdlr, conssepalp, conssepasol, sepafreq, sepapriority, delaysepa);
+
+   /* change the position of the constraint handler in the constraint handler array w.r.t. its new sepa priority */
+   if( oldsepapriority != sepapriority )
+      SCIPsetReinsertConshdlrSepaPrio(scip->set, conshdlr, oldsepapriority);
 
    return SCIP_OKAY;
 }

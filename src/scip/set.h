@@ -554,6 +554,14 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** reinserts a constraint handler with modified sepa priority into the sepa priority sorted array */
+extern
+void SCIPsetReinsertConshdlrSepaPrio(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler to be reinserted */
+   int                   oldpriority         /**< the old separation priority of constraint handler */
+   );
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
 SCIP_CONSHDLR* SCIPsetFindConshdlr(
