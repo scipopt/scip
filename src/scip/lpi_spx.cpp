@@ -75,7 +75,7 @@
 #include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 4)
+#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
 #include "spxsteepexpr.h"
 #endif
 #include "spxparmultpr.h"
@@ -172,7 +172,7 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 4)
+#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
    SPxSteepExPR          m_price_steep_ex;   /**< steepest edge with exact weight initialization */
 #else
    SPxSteepPR            m_price_steep_ex;   /**< fallback to quick start pricer */
