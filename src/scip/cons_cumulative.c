@@ -2267,7 +2267,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
             scalar = 1.0;
             constant = 0.0;
 
-            SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
             assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN);
             assert(!SCIPisZero(scip, scalar));
 

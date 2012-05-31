@@ -1668,7 +1668,7 @@ SCIP_RETCODE checkFixedVariables(
       var = consdata->x;
       scalar = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       if( scalar == 0.0 )
       {
@@ -1802,7 +1802,7 @@ SCIP_RETCODE checkFixedVariables(
       var = consdata->z;
       scalar = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       if( scalar == 0.0 )
       {
@@ -2934,7 +2934,7 @@ SCIP_RETCODE addVarbound(
       SCIP_Real constant;
 
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&vbdvar, &vbdcoef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &vbdvar, &vbdcoef, &constant) );
       if( !SCIPvarIsActive(vbdvar) || (vbdcoef == 0.0) )
          return SCIP_OKAY;
 
@@ -3221,7 +3221,7 @@ SCIP_RETCODE addVarboundsToCutPool(
    scalar   = 1.0;
 
    /* make sure var is active */
-   SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+   SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
    if( !SCIPvarIsActive(var) || scalar == 0.0 )
       return SCIP_OKAY;
 

@@ -1586,7 +1586,7 @@ SCIP_RETCODE removeFixedLinearVariables(
          coef = consdata->lincoefs[i];
          offset = 0.0;
 
-         SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &offset) );
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
 
          SCIPdebugMessage("  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]), coef, SCIPvarGetName(var), offset);
 

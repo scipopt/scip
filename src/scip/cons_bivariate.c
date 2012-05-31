@@ -498,7 +498,7 @@ SCIP_RETCODE removeFixedVariables(
 
       /* replace by new variable, or NULL */
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&consdata->z, &consdata->zcoef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &consdata->z, &consdata->zcoef, &constant) );
       if( consdata->zcoef == 0.0 )
          consdata->z = NULL;
       if( constant != 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -550,7 +550,7 @@ SCIP_RETCODE removeFixedVariables(
 
          coef = 1.0;
          constant = 0.0;
-         SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
 
          if( coef == 0.0 )
          {
@@ -626,7 +626,7 @@ SCIP_RETCODE removeFixedVariables(
 
       coef = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
       assert(coef != 0.0); /* fixed vars should have been handled above */
 
       if( coef == 1.0 && constant == 0.0 )

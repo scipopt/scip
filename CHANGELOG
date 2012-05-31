@@ -113,6 +113,7 @@ interface
 - new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
 - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
 - new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
+- method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -179,6 +180,9 @@ fixed bugs:
 - fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
 - fixed potential bug in fix-and-infer heuristic with variables being fixed to infinite value
 - fixed bug in diving heuristics with variables being fixed to values outside their domain
+- method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
+  variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
+
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines

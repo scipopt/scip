@@ -1518,7 +1518,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
       /* get corresponding active, fixed, or multi-aggregated variable */
       scalar = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
       assert(SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 

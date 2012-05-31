@@ -197,6 +197,7 @@ extern
 SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */

@@ -257,7 +257,7 @@ SCIP_RETCODE depthFirstSearch(
       constant = 0.0;
 
       /* transform variable bound variable to an active variable if possible */
-      SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &scalar, &constant) );
       
       /* we could not resolve the variable bound variable to one active variable, therefore, ignore this variable bound */
       if( !SCIPvarIsActive(vbvar) )
@@ -346,7 +346,7 @@ SCIP_RETCODE catchEvents(
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -395,7 +395,7 @@ SCIP_RETCODE catchEvents(
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -1117,7 +1117,7 @@ SCIP_RETCODE propagateVbounds(
             constant = constants[n];
             
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -1267,7 +1267,7 @@ SCIP_RETCODE propagateVbounds(
             constant = constants[n];
 
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
             
             if( !SCIPvarIsActive(vbvar) )
                continue;

@@ -3643,7 +3643,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
        * multi-aggregated variable, scalar and constant; if the variable resolves to a fixed
        * variable, "scalar" will be 0.0 and the value of the sum will be stored in "constant".
        */
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &activeconstant) );
       assert( var != NULL );
 
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
@@ -3741,7 +3741,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             multconstant = 0;
 
             assert( multvar != NULL );
-            SCIP_CALL( SCIPvarGetProbvarSum(&multvar, &multscalar, &multconstant) );
+            SCIP_CALL( SCIPvarGetProbvarSum(&multvar, set, &multscalar, &multconstant) );
             assert( multvar != NULL );
 
             assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
@@ -4158,7 +4158,7 @@ SCIP_RETCODE SCIPvarAggregate(
    }
 
    /* get active problem variable of aggregation variable */
-   SCIP_CALL( SCIPvarGetProbvarSum(&aggvar, &scalar, &constant) );
+   SCIP_CALL( SCIPvarGetProbvarSum(&aggvar, set, &scalar, &constant) );
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
@@ -8987,7 +8987,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
-      SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, &vlbcoef, &vlbconstant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
       SCIPdebugMessage(" -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", 
          SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
@@ -9258,7 +9258,7 @@ SCIP_RETCODE SCIPvarAddVub(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
-      SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, &vubcoef, &vubconstant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
       SCIPdebugMessage(" -> transformed to variable upper bound <%s> <= %g<%s> + %g\n", 
          SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
@@ -10919,6 +10919,7 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
  */
 SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
    SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
    )
@@ -10945,7 +10946,17 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_FIXED:       /* x = c'          =>  a*x + c ==             (a*c' + c) */
-         (*constant) += *scalar * (*var)->glbdom.lb;
+         if( SCIPsetIsInfinity(set, (*var)->glbdom.lb) || SCIPsetIsInfinity(set, -(*var)->glbdom.lb) )
+         {
+            assert(*scalar != 0.0);
+            assert(!SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)));
+            if(*scalar * (*var)->glbdom.lb > 0.0 )
+               (*constant) = SCIPsetInfinity(set);
+            else
+               (*constant) = -SCIPsetInfinity(set);
+         }
+         else
+            (*constant) += *scalar * (*var)->glbdom.lb;
          *scalar = 0.0;
          return SCIP_OKAY;
 

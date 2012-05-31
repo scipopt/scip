@@ -11994,6 +11994,28 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    return SCIP_OKAY;
 }
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+SCIP_RETCODE SCIPgetProbvarSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(scalar != NULL);
+   assert(constant != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetProbvarSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPvarGetProbvarSum(var, scip->set, scalar, constant) );
+
+   return SCIP_OKAY;
+}
+
 /** return for given variables all their active counterparts; all active variables will be pairwise different
  *  @note It does not hold that the first output variable is the active variable for the first input variable.
  */
@@ -15331,8 +15353,8 @@ SCIP_RETCODE SCIPaggregateVars(
     */
    constantx = 0.0;
    constanty = 0.0;
-   SCIP_CALL( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
-   SCIP_CALL( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
+   SCIP_CALL( SCIPvarGetProbvarSum(&varx, scip->set, &scalarx, &constantx) );
+   SCIP_CALL( SCIPvarGetProbvarSum(&vary, scip->set, &scalary, &constanty) );
 
    /* we cannot aggregate multi-aggregated variables */
    if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
@@ -16243,7 +16265,7 @@ SCIP_RETCODE SCIPisConflictVarUsed(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisConflictVarUsed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
+   return SCIPconflictIsVarUsed(scip->conflict, var, scip->set, boundtype, bdchgidx, used);
 }
 
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower

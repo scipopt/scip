@@ -1989,11 +1989,11 @@ SCIP_RETCODE applyFixings(
    var = consdata->var;
    varscalar = 1.0;
    varconstant = 0.0;
-   SCIP_CALL( SCIPvarGetProbvarSum(&var, &varscalar, &varconstant) );
+   SCIP_CALL( SCIPgetProbvarSum(scip, &var, &varscalar, &varconstant) );
    vbdvar = consdata->vbdvar;
    vbdvarscalar = 1.0;
    vbdvarconstant = 0.0;
-   SCIP_CALL( SCIPvarGetProbvarSum(&vbdvar, &vbdvarscalar, &vbdvarconstant) );
+   SCIP_CALL( SCIPgetProbvarSum(scip, &vbdvar, &vbdvarscalar, &vbdvarconstant) );
    varschanged = (var != consdata->var || vbdvar != consdata->vbdvar);
 
    /* if the variables are equal, the variable bound constraint reduces to standard bounds on the single variable */

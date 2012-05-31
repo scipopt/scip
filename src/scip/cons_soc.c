@@ -1448,7 +1448,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = consdata->offsets[i];
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  lhs term at position %d is replaced by %g * <%s> + %g\n",
          i, coef, SCIPvarGetName(x), offset);
@@ -1493,7 +1493,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  rhs variable is replaced by %g * <%s> + %g\n", coef, SCIPvarGetName(x), offset);
 

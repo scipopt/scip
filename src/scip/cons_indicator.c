@@ -889,7 +889,7 @@ SCIP_RETCODE checkIIS(
             scalar = 1.0;
             constant = 0.0;
 
-            SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
             assert( ! SCIPisZero(scip, scalar) );
 
             /*  SCIPdebugMessage("slack variable aggregated (scalar: %f, constant: %f)\n", scalar, constant); */
@@ -1827,7 +1827,7 @@ SCIP_RETCODE addAltLPConstraint(
       scalar = 1.0;
       constant = 0.0;
 
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       SCIPdebugMessage("slack variable aggregated (scalar: %f, constant: %f)\n", scalar, constant);
 

@@ -2705,7 +2705,7 @@ SCIP_RETCODE removeFixedVariables(
       coef = consdata->lincoefs[i];
       offset = 0.0;
 
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
 
       SCIPdebugMessage("  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]), coef, SCIPvarGetName(var), offset);
 
@@ -2777,7 +2777,7 @@ SCIP_RETCODE removeFixedVariables(
 
       coef   = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
 
       SCIPdebugMessage("  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
 

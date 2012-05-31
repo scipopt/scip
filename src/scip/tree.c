@@ -4952,7 +4952,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       scalar   = 1.0;
       constant = 0.0;
       
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
       
       if( scalar == 0.0 )
       {
@@ -5394,7 +5394,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       scalar   = 1.0;
       constant = 0.0;
 
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
 
       if( scalar == 0.0 )
       {

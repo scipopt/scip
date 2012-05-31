@@ -542,7 +542,7 @@ SCIP_RETCODE presolRoundSOS1(
       /* check for aggregation: if the constant is zero the variable is zero iff the aggregated
        * variable is 0 */
       var = vars[j];
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       /* if constant is zero and we get a different variable, substitute variable */
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
