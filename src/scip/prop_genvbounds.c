@@ -1907,6 +1907,7 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    assert(propdata != NULL);
 
    propdata->genvboundstore = NULL;
+   propdata->genvboundstoresize = NULL;
    propdata->lbevents = NULL;
    propdata->ubevents = NULL;
    propdata->eventhdlr = NULL;
