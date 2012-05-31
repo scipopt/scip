@@ -32,22 +32,23 @@
 
 #include "scip/prop_genvbounds.h"
 
-#define PROP_NAME                       "genvbounds"
-#define PROP_DESC                       "generalized variable bounds propagator"
-#define PROP_TIMING                     SCIP_PROPTIMING_BEFORELP
-#define PROP_PRIORITY                     -10      /**< propagator priority */
-#define PROP_FREQ                           1      /**< propagator frequency */
-#define PROP_DELAY                      FALSE      /**< should propagation method be delayed, if other propagators
-                                                    *   found reductions? */
-#define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after
-                                                    *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY               FALSE      /**< should presolving be delay, if other presolvers found
-                                                    *   reductions? */
-#define PROP_PRESOL_MAXROUNDS              -1      /**< maximal number of presolving rounds the presolver participates
-                                                    *   in (-1: no limit) */
+#define PROP_NAME                            "genvbounds"
+#define PROP_DESC                            "generalized variable bounds propagator"
+#define PROP_TIMING SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY                    -10 /**< propagator priority */
+#define PROP_FREQ                          1 /**< propagator frequency */
+#define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
+                                              *   found reductions? */
+#define PROP_PRESOL_PRIORITY        -2000000 /**< priority of the presolving method (>= 0: before, < 0: after
+                                              *   constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY              FALSE /**< should presolving be delay, if other presolvers found
+                                              *   reductions? */
+#define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
+                                              *   in (-1: no limit) */
 
-#define EVENTHDLR_NAME                  "genvbounds"
-#define EVENTHDLR_DESC                  "event handler for generalized variable bounds propagator"
+#define EVENTHDLR_NAME                       "genvbounds"
+#define EVENTHDLR_DESC                       "event handler for generalized variable bounds propagator"
+
 
 /*
  * Data structures
