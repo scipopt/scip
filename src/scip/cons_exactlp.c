@@ -2726,8 +2726,11 @@ SCIP_RETCODE checkIntegrality(
          SCIP_SOLEX* solex;
          mpq_t tmp;
          SCIP_Bool stored;
+#ifndef NDEBUG
          SCIP_Bool fpvalue;
 
+         fpvalue = TRUE;
+#endif
          SCIPdebugMessage("   ---> exact LP solution is integral\n");
 
          assert(branchvar == -1);
@@ -2737,8 +2740,6 @@ SCIP_RETCODE checkIntegrality(
          /* create exact and approximate primal solution */
          SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
          SCIP_CALL( SCIPsolexCreate(&solex, SCIPblkmem(scip), NULL) );
-
-         fpvalue = TRUE;
 
          /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
          if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
@@ -2754,9 +2755,10 @@ SCIP_RETCODE checkIntegrality(
             mpq_set_d(tmp, scipsolval);
             if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
                inrange = FALSE;
+#ifndef NDEBUG
             if( !mpq_equal(primsol[v], tmp) )
                fpvalue = FALSE;
-
+#endif
             /* set value of variabel in exact and approximate solution */
             /** @todo exiptodo:
              *  - in SCIPsetSolVal() the objval is computed using interval arithmetic which leads to a safe objval in
@@ -3431,7 +3433,6 @@ SCIP_RETCODE psComputeSintPointRay(
    int nconss;
    int nvars;
    int nextendedconss; /* number of extended constraints, # of cols in [A',-A',I,-I] */
-   int nnonz;
    int indx;
    mpq_t mpqtemp;
    mpq_t alpha;
@@ -3465,7 +3466,6 @@ SCIP_RETCODE psComputeSintPointRay(
 
    nconss = consdata->nconss;
    nvars = consdata->nvars;
-   nnonz = consdata->nnonz;
    nextendedconss = conshdlrdata->nextendedconss;
 
    psnvars = 0;
@@ -9776,7 +9776,6 @@ char SCIPselectDualBoundMethod(
    SCIP_Bool projectshift;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
 
    /* find the exactlp constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9796,13 +9795,8 @@ char SCIPselectDualBoundMethod(
    assert(conss != NULL);
    assert(SCIPgetNConss(scip) == 1);
 
-   /* get exactlp constraint data */
-   consdata = SCIPconsGetData(conss[0]);
-   assert(consdata != NULL);
-
    skip = FALSE;
    projectshift = TRUE;
-
    if( infeaslp )
    {
       /* user did choose a dual bounding method */

@@ -294,7 +294,7 @@ static int qsnum_make_ur_space (qsnum_factor_work * f, int space)
     int minspace;
     qsnum_ur_info *ur_inf = f->ur_inf;
     int dimr = f->dimr;
-    int new_nzcnt = 0, old_nzcnt;
+    int new_nzcnt = 0;
     int rbeg;
     int nzcnt;
     int i;
@@ -305,7 +305,6 @@ static int qsnum_make_ur_space (qsnum_factor_work * f, int space)
     nzcnt = space;
     for (i = 0; i < dimr; i++)
         nzcnt += ur_inf[i].nzcnt;
-    old_nzcnt = nzcnt;
     while (nzcnt * 2 >= minspace) {
         minspace = 1+minspace*f->grow_mul;
     }
