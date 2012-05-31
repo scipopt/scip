@@ -43,6 +43,21 @@
 extern "C" {
 #endif
 
+/**@name Expressions and Expression tree methods */
+/**@{ */
+
+/** removes fixed variables from an expression tree, so that at exit all variables are active */
+extern
+SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
+   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
+   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
+   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
+);
+
+/**@} */
+
 /**@name Nonlinear row methods */
 /**@{ */
 
