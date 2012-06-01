@@ -19,6 +19,9 @@
  * @author Frederic Pythoud
  */
 
+/**@todo unify enfolp and enfops callbacks */
+/**@todo enforce by branching on binary variable if slack constraint only returns SCIP_INFEASIBLE */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
