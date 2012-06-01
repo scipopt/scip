@@ -104,8 +104,8 @@ do
     for OPT in ${OPTS[@]}
     do
         # compile SCIP in debug or opt mode
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=false clean
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=false -j2
+        make OPT=$OPT VERSION=$GITHASH ZIMPL=true clean
+        make OPT=$OPT VERSION=$GITHASH ZIMPL=true
 	
         for TEST in ${TESTS[@]}
         do
