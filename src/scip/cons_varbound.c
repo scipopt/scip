@@ -178,7 +178,10 @@ void conshdlrdataFree(
    SCIPfreeMemory(scip, conshdlrdata);
 }
 
-/** catches events for variables */
+/** catches events for variables
+ *
+ *  @todo if lhs or rhs is infinite, catch only changes of the bound that could lead to propagation
+ */
 static
 SCIP_RETCODE catchEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -456,6 +459,8 @@ SCIP_Bool checkCons(
  *   (2) left hand side and upper bound on x -> bound on y
  *   (3) right hand side and bounds on y -> upper bound on x
  *   (4) right hand side and lower bound on x -> bound on y
+ *
+ *  @todo do bound widening like in vbound propagator
  */
 static
 SCIP_RETCODE resolvePropagation(
