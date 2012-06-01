@@ -6685,26 +6685,12 @@ SCIP_RETCODE SCIPcreateProb(
  */
 SCIP_RETCODE SCIPcreateProbBasic(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< problem name */
-   SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
+   const char*           name                /**< problem name */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateProbBasic", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
-   /* free old problem */
-   SCIP_CALL( SCIPfreeProb(scip) );
-   assert(scip->set->stage == SCIP_STAGE_INIT);
-
-   /* switch stage to PROBLEM */
-   scip->set->stage = SCIP_STAGE_PROBLEM;
-
-   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
-
-   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
-         NULL, NULL, NULL, NULL, NULL, NULL, probdata, FALSE) );
-
-   /* create solution pool for original solution candidates */
-   SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
+   SCIP_CALL( SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -6716,7 +6702,7 @@ SCIP_RETCODE SCIPsetProbDelorig(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbDelorig", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDelorig", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetDelorig(scip->origprob, probdelorig);
 
@@ -6730,7 +6716,7 @@ SCIP_RETCODE SCIPsetProbTrans(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbTrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbTrans", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetTrans(scip->origprob, probtrans);
 
@@ -6744,7 +6730,7 @@ SCIP_RETCODE SCIPsetProbDeltrans(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbDeltrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDeltrans", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetDeltrans(scip->origprob, probdeltrans);
 
@@ -6758,7 +6744,8 @@ SCIP_RETCODE SCIPsetProbInitsol(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( checkStage(scip, "SCIPsetProbInitsol", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetInitsol(scip->origprob, probinitsol);
 
@@ -6772,7 +6759,7 @@ SCIP_RETCODE SCIPsetProbExitsol(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbExitsol", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetExitsol(scip->origprob, probexitsol);
 
@@ -6786,7 +6773,7 @@ SCIP_RETCODE SCIPsetProbCopy(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetProbCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetProbCopy", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobSetCopy(scip->origprob, probcopy);
 

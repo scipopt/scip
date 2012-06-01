@@ -2944,6 +2944,19 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  all callback methods will be set to NULL and can be set afterwards, if needed, via SCIPsetProbDelorig(),
+ *  SCIPsetProbTrans(), SCIPsetProbDeltrans(), SCIPsetProbInitsol(), SCIPsetProbExitsol(), and
+ *  SCIPsetProbCopy()
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+extern
+SCIP_RETCODE SCIPcreateProbBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< problem name */
+   );
+
 /** sets callback to free user data of original problem */
 SCIP_RETCODE SCIPsetProbDelorig(
    SCIP*                 scip,               /**< SCIP data structure */
