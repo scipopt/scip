@@ -2035,6 +2035,21 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    return SCIP_OKAY;
 }
 
+/**< sets the default value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPsetSetDefaultBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSetDefaultBool(set->paramset, name, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+
 /** changes the value of an existing Int parameter */
 SCIP_RETCODE SCIPsetChgIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2069,6 +2084,20 @@ SCIP_RETCODE SCIPsetSetIntParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing Int parameter */
+SCIP_RETCODE SCIPsetSetDefaultIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSetDefaultInt(set->paramset, name, defaultvalue) );
 
    return SCIP_OKAY;
 }

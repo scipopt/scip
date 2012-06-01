@@ -292,6 +292,14 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** changes the default value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
 /** changes the value of an existing Int parameter */
 extern
 SCIP_RETCODE SCIPsetChgIntParam(
@@ -308,6 +316,14 @@ SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing Int parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */

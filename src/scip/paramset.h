@@ -222,6 +222,14 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** changes the default value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetDefaultBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
 /** changes the value of an existing int parameter */
 extern
 SCIP_RETCODE SCIPparamsetSetInt(
@@ -230,6 +238,14 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing int parameter */
+extern
+SCIP_RETCODE SCIPparamsetSetDefaultInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -471,6 +487,19 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value,              /**< new value of the parameter */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** sets default value of SCIP_Bool parameter */
+extern
+void SCIPparamSetDefaultBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             defaultvalue        /**< new default value */
+   );
+
+/** sets default value of int parameter */
+void SCIPparamSetDefaultInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   defaultvalue        /**< new default value */
    );
 
 /** sets the parameter to its default setting */

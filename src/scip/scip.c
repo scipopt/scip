@@ -3525,6 +3525,8 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
    )
 {
    int oldsepapriority;
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3537,6 +3539,14 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
    /* change the position of the constraint handler in the constraint handler array w.r.t. its new sepa priority */
    if( oldsepapriority != sepapriority )
       SCIPsetReinsertConshdlrSepaPrio(scip->set, conshdlr, oldsepapriority);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, sepafreq) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
+      SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaysepa) );
 
    return SCIP_OKAY;
 }
@@ -3551,11 +3561,26 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetProp(conshdlr, consprop, propfreq, delayprop, timingmask);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, propfreq) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
+      SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, timingmask) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delayprop) );
 
    return SCIP_OKAY;
 }
@@ -3698,10 +3723,23 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, delaypresol);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, maxprerounds) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaypresol", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaypresol) );
 
    return SCIP_OKAY;
 }
@@ -5079,11 +5117,27 @@ SCIP_RETCODE SCIPsetPropPresol(
    SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
    SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   assert(prop != NULL);
 
+   assert(prop != NULL);
    SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoldelay);
+
+   name = SCIPpropGetName(prop);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolmaxrounds) );
+
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolpriority) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, presoldelay) );
 
    return SCIP_OKAY;
 }
