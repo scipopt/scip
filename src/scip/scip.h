@@ -2944,6 +2944,47 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
+/** sets callback to free user data of original problem */
+SCIP_RETCODE SCIPsetProbDelorig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   );
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+extern
+SCIP_RETCODE SCIPsetProbTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   );
+
+/** sets callback to free user data of transformed problem */
+extern
+SCIP_RETCODE SCIPsetProbDeltrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   );
+
+/** sets solving process initialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
+   );
+
+/** sets solving process deinitialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
+   );
+
+/** sets callback to copy user data to a subscip */
+extern
+SCIP_RETCODE SCIPsetProbCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   );
+
 /** reads problem from file and initializes all solving data structures */
 extern
 SCIP_RETCODE SCIPreadProb(

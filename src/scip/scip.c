@@ -6676,6 +6676,123 @@ SCIP_RETCODE SCIPcreateProb(
    return SCIP_OKAY;
 }
 
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  all callback methods will be set to NULL and can be set afterwards, if needed, via SCIPsetProbDelorig(),
+ *  SCIPsetProbTrans(), SCIPsetProbDeltrans(), SCIPsetProbInitsol(), SCIPsetProbExitsol(), and
+ *  SCIPsetProbCopy()
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+SCIP_RETCODE SCIPcreateProbBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< problem name */
+   SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateProbBasic", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+
+   /* free old problem */
+   SCIP_CALL( SCIPfreeProb(scip) );
+   assert(scip->set->stage == SCIP_STAGE_INIT);
+
+   /* switch stage to PROBLEM */
+   scip->set->stage = SCIP_STAGE_PROBLEM;
+
+   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
+
+   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
+         NULL, NULL, NULL, NULL, NULL, NULL, probdata, FALSE) );
+
+   /* create solution pool for original solution candidates */
+   SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to free user data of original problem */
+SCIP_RETCODE SCIPsetProbDelorig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDelorig", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetDelorig(scip->origprob, probdelorig);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+SCIP_RETCODE SCIPsetProbTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbTrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetTrans(scip->origprob, probtrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to free user data of transformed problem */
+SCIP_RETCODE SCIPsetProbDeltrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDeltrans", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetDeltrans(scip->origprob, probdeltrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization callback of transformed data */
+SCIP_RETCODE SCIPsetProbInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetInitsol(scip->origprob, probinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization callback of transformed data */
+SCIP_RETCODE SCIPsetProbExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetExitsol(scip->origprob, probexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to copy user data to a subscip */
+SCIP_RETCODE SCIPsetProbCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetCopy(scip->origprob, probcopy);
+
+   return SCIP_OKAY;
+}
+
 /** reads problem from file and initializes all solving data structures */
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */

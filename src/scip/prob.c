@@ -323,6 +323,72 @@ SCIP_RETCODE SCIPprobCreate(
    return SCIP_OKAY;
 }
 
+/** sets callback to free user data of original problem */
+void SCIPprobSetDelorig(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdelorig = probdelorig;
+}
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+void SCIPprobSetTrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probtrans = probtrans;
+}
+
+/** sets callback to free user data of transformed problem */
+void SCIPprobSetDeltrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdeltrans = probdeltrans;
+}
+
+/** sets solving process initialization callback of transformed data */
+void SCIPprobSetInitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probinitsol= probinitsol;
+}
+
+/** sets solving process deinitialization callback of transformed data */
+void SCIPprobSetExitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probexitsol= probexitsol;
+}
+
+/** sets callback to copy user data to copy it to a subscip, or NULL */
+void SCIPprobSetCopy(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probcopy= probcopy;
+}
+
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
