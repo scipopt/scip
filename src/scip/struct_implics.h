@@ -55,7 +55,8 @@ struct SCIP_Implics
    SCIP_BOUNDTYPE*       types[2];           /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER)
                                               *                             or y >= b (SCIP_BOUNDTYPE_LOWER) */
    SCIP_Real*            bounds[2];          /**< bounds b     in implications y <= b or y >= b */
-   int*                  ids[2];             /**< unique ids of implications */
+   int*                  ids[2];             /**< unique ids of implications; < 0 iff implication is a shortcut,
+                                              *   i.e., it was added as part of the transitive closure of another implication */
    int                   size[2];            /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
    int                   nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
    int                   nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
