@@ -5312,9 +5312,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( conshdlrlinear != NULL );
 
       /* if copying scip after transforming the original instance before presolving, we need to correct the linear
-       * constraint pointer
-       */
-      if( SCIPisTransformed(sourcescip) && !SCIPconsIsTransformed(sourcelincons) )
+       * constraint pointer */
+      if ( SCIPisTransformed(sourcescip) && ! SCIPconsIsTransformed(sourcelincons) )
       {
 	 SCIP_CONS* translincons;
 
@@ -5323,7 +5322,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
           SCIP_CALL( SCIPcaptureCons(sourcescip, translincons) );
           sourceconsdata->lincons = translincons;
           sourcelincons = translincons;
-       }
+      }
 
       SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcelincons, &targetlincons, conshdlrlinear, varmap, consmap, SCIPconsGetName(sourcelincons),
             SCIPconsIsInitial(sourcelincons), SCIPconsIsSeparated(sourcelincons), SCIPconsIsEnforced(sourcelincons), SCIPconsIsChecked(sourcelincons),
@@ -5335,7 +5334,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( *valid )
    {
       SCIP_VAR* sourcebinvar;
-      
+
       sourcebinvar = sourceconsdata->binvar;
       assert( sourcebinvar != NULL );
 
@@ -5361,7 +5360,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( targetslackvar != NULL ); /*lint !e644*/
 
       SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar,
-            initial, separate, enforce, check, propagate, local, dynamic, modifiable, stickingatnode) );
+            initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
 
    if ( !(*valid) )
@@ -5373,7 +5372,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    if ( SCIPconsIsDeleted(sourcelincons) )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
-   }   
+   }
 
    return SCIP_OKAY;
 }
@@ -6036,7 +6035,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    if ( conshdlrdata->generatebilinear )
    {
       SCIP_Real val;
-   
+
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
       val = 1.0;
       SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
@@ -6049,7 +6048,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaalternativelp, conshdlrdata->forcerestart) );
       assert( consdata != NULL );
-      
+
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
@@ -6217,7 +6216,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive, conshdlrdata->sepaalternativelp, conshdlrdata->forcerestart) );
       assert( consdata != NULL );
-      
+
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
