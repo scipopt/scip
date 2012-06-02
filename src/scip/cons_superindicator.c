@@ -19,6 +19,10 @@
  * @author Frederic Pythoud
  */
 
+/**@todo allow more types for slack constraint */
+/**@todo implement more upgrades, e.g., for nonlinear slack constraints; upgrades could also help to handle difficult
+ *       slack constraints such as pseudoboolean or indicator
+ */
 /**@todo unify enfolp and enfops callbacks */
 /**@todo enforce by branching on binary variable if slack constraint only returns SCIP_INFEASIBLE */
 
@@ -52,10 +56,11 @@
 
 #define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
+#define DEFAULT_CHECKSLACKTYPE          TRUE /**< should type of slack constraint be checked when creating superindicator constraint? */
 #define DEFAULT_UPGDPRIOINDICATOR          1 /**< priority for upgrading to an indicator constraint (-1: never) */
 #define DEFAULT_UPGDPRIOLINEAR             2 /**< priority for upgrading to a linear constraint (-1: never) */
-#define DEFAULT_MAXUPGDCOEFLINEAR        1e4 /**< maximum big-M coefficient of binary variable in upgrade to a linear
-                                              *   constraint (relative to smallest coefficient) */
+#define DEFAULT_MAXUPGDCOEFLINEAR        1e4 /**< maximum big-M coefficient of binary variable in upgrade to a linear constraint
+                                              *   (relative to smallest coefficient) */
 
 
 /*
@@ -72,10 +77,12 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Real             maxupgdcoeflinear;  /**< maximum big-M coefficient of binary variable in upgrade to a linear
-                                              *   constraint (relative to smallest coefficient) */
+   SCIP_Bool             checkslacktype;     /**< should type of slack constraint be checked when creating superindicator constraint? */
+   SCIP_Real             maxupgdcoeflinear;  /**< maximum big-M coefficient of binary variable in upgrade to a linear constraint
+                                              *   (relative to smallest coefficient) */
    int                   upgdprioindicator;  /**< priority for upgrading to an indicator constraint (-1: never) */
    int                   upgdpriolinear;     /**< priority for upgrading to a linear constraint (-1: never) */
+   int                   nrejects;           /**< number of rejected calls to create method */
 };
 
 /*
@@ -853,20 +860,17 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
          assert(*result != SCIP_CUTOFF);
          *result = locresult;
          break;
-
       case SCIP_REDUCEDDOM:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED )
             *result = locresult;
          break;
-
       case SCIP_SEPARATED:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM )
             *result = locresult;
          break;
-
       case SCIP_NEWROUND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -874,7 +878,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
             && *result != SCIP_SEPARATED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTFIND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -883,7 +886,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
             && *result != SCIP_SEPARATED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTRUN:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -893,7 +895,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
             && *result != SCIP_DIDNOTFIND )
             *result = locresult;
          break;
-
       case SCIP_INFEASIBLE:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -904,14 +905,12 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
             && *result != SCIP_NEWROUND )
             *result = locresult;
          break;
-
       case SCIP_DELAYED:
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("sepalp result=%d\n", *result);
@@ -922,7 +921,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
 /** separation method of constraint handler for arbitrary primal solutions */
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert(conshdlr != NULL);
@@ -971,20 +970,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
          assert(*result != SCIP_CUTOFF);
          *result = locresult;
          break;
-
       case SCIP_REDUCEDDOM:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED )
             *result = locresult;
          break;
-
       case SCIP_SEPARATED:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM )
             *result = locresult;
          break;
-
       case SCIP_NEWROUND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -992,7 +988,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
             && *result != SCIP_SEPARATED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTFIND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -1001,7 +996,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
             && *result != SCIP_SEPARATED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTRUN:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -1011,7 +1005,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
             && *result != SCIP_DIDNOTFIND )
             *result = locresult;
          break;
-
       case SCIP_INFEASIBLE:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_CONSADDED
@@ -1022,14 +1015,12 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
             && *result != SCIP_NEWROUND )
             *result = locresult;
          break;
-
       case SCIP_DELAYED:
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("sepa sol result=%d\n", *result);
@@ -1103,14 +1094,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
          *result = locresult;
          cont = FALSE;
          break;
-
       case SCIP_CONSADDED:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
          if( *result != SCIP_CUTOFF )
             *result = locresult;
          break;
-
       case SCIP_REDUCEDDOM:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1118,7 +1107,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
             && *result != SCIP_CONSADDED )
             *result = locresult;
          break;
-
       case SCIP_SEPARATED:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1127,7 +1115,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
             && *result != SCIP_REDUCEDDOM )
             *result = locresult;
          break;
-
       case SCIP_INFEASIBLE:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1138,14 +1125,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
             && *result != SCIP_BRANCHED )
             *result = locresult;
          break;
-
       case SCIP_FEASIBLE:
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("enfolp result=%d\n", *result);
@@ -1221,14 +1206,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
          *result = locresult;
          cont = FALSE;
          break;
-
       case SCIP_CONSADDED:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
          if( *result != SCIP_CUTOFF )
             *result = locresult;
          break;
-
       case SCIP_REDUCEDDOM:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1236,7 +1219,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
             && *result != SCIP_CONSADDED )
             *result = locresult;
          break;
-
       case SCIP_SOLVELP:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1246,7 +1228,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
             && *result != SCIP_BRANCHED )
             *result = locresult;
          break;
-
       case SCIP_INFEASIBLE:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1257,7 +1238,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
             && *result != SCIP_SOLVELP )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTRUN:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1268,7 +1248,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
             && *result != SCIP_SOLVELP
             && *result != SCIP_INFEASIBLE )
             *result = locresult;
-
+         break;
       case SCIP_FEASIBLE:
          assert(*result != SCIP_CUTOFF);
          assert(*result != SCIP_BRANCHED);
@@ -1281,12 +1261,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
             && *result != SCIP_DIDNOTRUN )
             *result = locresult;
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
-
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("enfops result=%d\n", *result);
@@ -1325,7 +1303,7 @@ SCIP_DECL_CONSCHECK(consCheckSuperindicator)
 /** domain propagation method of constraint handler */
 static
 SCIP_DECL_CONSPROP(consPropSuperindicator)
-{
+{  /*lint --e{715}*/
    int i;
 
    assert(scip != NULL);
@@ -1386,20 +1364,17 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
          assert(*result != SCIP_CUTOFF);
          *result = locresult;
          break;
-
       case SCIP_REDUCEDDOM:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_DELAYED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTFIND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_REDUCEDDOM
             && *result != SCIP_DELAYED )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTRUN:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_REDUCEDDOM
@@ -1407,11 +1382,10 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
             && *result != SCIP_DELAYED )
             *result = locresult;
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("prop result=%d\n", *result);
@@ -1422,7 +1396,7 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
-{
+{  /*lint --e{715}*/
    int i;
 
    assert(scip != NULL);
@@ -1467,7 +1441,7 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
          SCIP_Bool success;
          SCIP_Bool deleted;
 
-         upgradeSuperindicator(scip, conss[i], &success, &deleted);
+         SCIP_CALL( upgradeSuperindicator(scip, conss[i], &success, &deleted) );
 
          /* update statistics */
          if( deleted )
@@ -1495,20 +1469,17 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
          assert(*result != SCIP_CUTOFF);
          *result = locresult;
          break;
-
       case SCIP_SUCCESS:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_DELAYED )
             *result = locresult;
          break;
-
       case SCIP_UNBOUNDED:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_DELAYED
             && *result != SCIP_SUCCESS )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTFIND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_UNBOUNDED
@@ -1516,7 +1487,6 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
             && *result != SCIP_SUCCESS )
             *result = locresult;
          break;
-
       case SCIP_DIDNOTRUN:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_UNBOUNDED
@@ -1525,11 +1495,10 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
             && *result != SCIP_SUCCESS )
             *result = locresult;
          break;
-
       default:
          SCIPerrorMessage("invalid SCIP result %d\n", locresult);
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    SCIPdebugMessage("presol result=%d\n", *result);
@@ -1540,7 +1509,7 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -1667,6 +1636,11 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
 
    *valid = TRUE;
 
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
    SCIPdebugMessage("copying superindicator constraint <%s> to <%s>\n", SCIPconsGetName(sourcecons), consname);
 
    if( modifiable )
@@ -1676,11 +1650,6 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
       *valid = FALSE;
       return SCIP_OKAY;
    }
-
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert(sourceconsdata != NULL);
@@ -1771,7 +1740,7 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseSuperindicator)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* binvar;
    SCIP_CONS* slackcons;
    char binvarname[1024];
@@ -1919,6 +1888,8 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    /* create superindicator constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
+   conshdlrdata->nrejects = 0;
+
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
@@ -1978,6 +1949,16 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    }
 
    /* add constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/checkslacktype",
+         "should type of slack constraint be checked when creating superindicator constraint?",
+         &conshdlrdata->checkslacktype, TRUE, DEFAULT_CHECKSLACKTYPE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxupgdcoeflinear",
+         "maximum big-M coefficient of binary variable in upgrade to a linear constraint (relative to smallest coefficient)",
+         &conshdlrdata->maxupgdcoeflinear, TRUE, DEFAULT_MAXUPGDCOEFLINEAR, 0.0, 1e15, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/"CONSHDLR_NAME"/upgdprioindicator",
          "priority for upgrading to an indicator constraint (-1: never)",
@@ -1987,11 +1968,6 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
          "constraints/"CONSHDLR_NAME"/upgdpriolinear",
          "priority for upgrading to an indicator constraint (-1: never)",
          &conshdlrdata->upgdpriolinear, TRUE, DEFAULT_UPGDPRIOLINEAR, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxupgdcoeflinear",
-         "maximum big-M coefficient of binary variable in upgrade to a linear constraint (relative to smallest coefficient)",
-         &conshdlrdata->maxupgdcoeflinear, TRUE, DEFAULT_MAXUPGDCOEFLINEAR, 0.0, 1e15, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2028,6 +2004,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_Bool modifiable;
@@ -2048,9 +2025,35 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /**@todo forbid types of slack constraints that cannot be handled, e.g., pseudoboolean constraints, because they have
-    *       to be upgraded in presolving; return with SCIP_INVALIDCALL in this case
-    */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* only allow types of slack constraints that can be handled */
+   if( conshdlrdata->checkslacktype &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bounddisjunction") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "linear") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "varbound") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS1") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS2") != 0 &&
+      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "superindicator") != 0 )
+   {
+      if( conshdlrdata->nrejects < 5 )
+      {
+         SCIPwarningMessage(scip, "rejected creation of superindicator with slack constraint <%s> of type <%s> "
+            "(use parameter <checkslacktype> to disable check)\n",
+            SCIPconsGetName(slackcons), SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)));
+         conshdlrdata->nrejects++;
+      }
+
+      if( conshdlrdata->nrejects == 5 )
+      {
+         SCIPwarningMessage(scip, "suppressing further warning messages of this type\n");
+         conshdlrdata->nrejects++;
+      }
+
+      return SCIP_INVALIDCALL;
+   }
 
    /* create constraint data */
    SCIP_CALL( consdataCreateSuperindicator(scip, &consdata, binvar, slackcons) );
@@ -2071,7 +2074,6 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-extern
 SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -2094,7 +2096,6 @@ SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
 
 
 /** gets binary variable corresponding to the general indicator constraint */
-extern
 SCIP_VAR* SCIPgetBinaryVarSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    )
@@ -2107,7 +2108,6 @@ SCIP_VAR* SCIPgetBinaryVarSuperindicator(
 }
 
 /** gets the slack constraint corresponding to the general indicator constraint */
-extern
 SCIP_CONS* SCIPgetSlackConsSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    )
@@ -2127,16 +2127,23 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 
 /** transforms the current problem into an IIS (independent irreducible subset) problem */
 SCIP_RETCODE SCIPtransformMinIIS(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            success             /**< could all constraints be transformed? */
    )
 {
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    char name[SCIP_MAXSTRLEN];
    int maxbranchprio;
+   int ntransconss;
    int nconss;
    int nvars;
    int i;
+
+   assert(scip != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    if( SCIPgetStage(scip) !=  SCIP_STAGE_PROBLEM )
    {
@@ -2166,12 +2173,14 @@ SCIP_RETCODE SCIPtransformMinIIS(
    /* transform each constraint to slack constraint in a newly created superindicator constraint; note that we also need
     * to transform superindicator constraints, since their binary variable might have down-locks
     */
+   ntransconss = 0;
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CONS* cons;
       SCIP_CONS* supindcons;
       SCIP_VAR* binvar;
       SCIP_VAR* negbinvar;
+      SCIP_RETCODE retcode;
 
       cons = conss[i];
       assert(cons != NULL);
@@ -2181,33 +2190,56 @@ SCIP_RETCODE SCIPtransformMinIIS(
       SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddVar(scip, binvar) );
-
-      /* increase the branching priority */
-      SCIP_CALL( SCIPchgVarBranchPriority(scip, binvar, maxbranchprio) );
-
       /* get negated variable, since we want to minimize the number of violated constraints */
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &negbinvar) );
 
-      /**@todo handle the case that slack constraint might not be accepted by superindicator; in this case we could
-       *       either delete this constraint or keep it in the problem
-       */
-
       /* create superindicator constraint */
-      SCIP_CALL ( SCIPcreateConsSuperindicator(scip, &supindcons, SCIPconsGetName(cons), negbinvar, cons,
-            SCIPconsIsInitial(cons),  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-            SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
+      retcode = SCIPcreateConsSuperindicator(scip, &supindcons, SCIPconsGetName(cons), negbinvar, cons,
+         SCIPconsIsInitial(cons),  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+         SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons));
 
-      SCIP_CALL( SCIPaddCons(scip, supindcons) );
+      if( retcode == SCIP_OKAY )
+      {
+         /* add binary variable and increase its branching priority */
+         SCIP_CALL( SCIPaddVar(scip, binvar) );
+         SCIP_CALL( SCIPchgVarBranchPriority(scip, binvar, maxbranchprio) );
 
-      /* realeas new variable and constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &supindcons) );
-      SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
+         /* add superindicator constraint */
+         SCIP_CALL( SCIPaddCons(scip, supindcons) );
 
-      /* remove the slack constraint; it is still captured by the superindicator constraint */
-      SCIP_CALL( SCIPdelCons(scip, cons) );
+         /* release binary variable and superindicator constraint */
+         SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
+         SCIP_CALL( SCIPreleaseCons(scip, &supindcons) );
+
+         /* delete slack constraint; it is still captured by the superindicator constraint */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         ntransconss++;
+      }
+      else if( retcode == SCIP_INVALIDCALL )
+      {
+         SCIPdebugMessage("constraint <%s> of type <%s> could not be transformed to superindicator and was removed\n",
+            SCIPconsGetName(cons), SCIPconshdlrGetName(SCIPconsGetHdlr(cons)));
+
+         /* release binary variable */
+         SCIP_CALL( SCIPreleaseVar(scip, &binvar) );
+
+         /* delete slack constraint; this is necessary, because, e.g., the indicator expects its linear slack constraint
+          * present in the problem, but this has just be transformed; hence, it cannot function any more and we have to
+          * remove it
+          */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+      }
+      else
+      {
+         /* return all other error codes */
+         SCIP_CALL( retcode );
+      }
    }
+
+   if( ntransconss == nconss )
+      *success = TRUE;
 
    /* minimize the number of violated constraints */
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
@@ -2227,6 +2259,8 @@ SCIP_RETCODE SCIPtransformMinIIS(
 /** dialog execution method for the count command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
 {  /*lint --e{715}*/
+   SCIP_Bool success;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -2235,14 +2269,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
    case SCIP_STAGE_INIT:
       SCIPdialogMessage(scip, NULL, "no problem exists\n");
       break;
-
    case SCIP_STAGE_PROBLEM:
-      SCIPdialogMessage(scip, NULL, "change problem to minIIS problem\n");
+      SCIPdialogMessage(scip, NULL, "change problem to minIIS\n");
       SCIPdialogMessage(scip, NULL, "==============\n");
+
+      SCIP_CALL( SCIPtransformMinIIS(scip, &success) );
+
+      if( !success )
+      {
+         SCIPdialogMessage(scip, NULL, "some constraints could not be transformed to superindicator constraints and were removed\n");
+      }
+
       SCIPdialogMessage(scip, NULL, "\n");
-
-      SCIP_CALL( SCIPtransformMinIIS(scip) );
-
       SCIPdialogMessage(scip, NULL, "changed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
          SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNImplVars(scip), SCIPgetNContVars(scip),
          SCIPgetNConss(scip));
@@ -2250,7 +2288,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
       SCIPdialogMessage(scip, NULL, "increased branching priority of new binary variables");
 
       break;
-
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
@@ -2265,11 +2302,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
    case SCIP_STAGE_FREE:
       SCIPdialogMessage(scip, NULL, "problem has to be in problem stage to create minIIS problem\n");
       break;
-
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
-   } /*lint --e{616}*/
+   }  /*lint --e{616}*/
 
    SCIPdialogMessage(scip, NULL, "\n");
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);

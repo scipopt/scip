@@ -115,7 +115,8 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 /** transforms the current problem into an IIS (independent irreducible subset) problem */
 extern
 SCIP_RETCODE SCIPtransformMinIIS(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            success             /**< could all constraints be transformed? */
    );
 
 
