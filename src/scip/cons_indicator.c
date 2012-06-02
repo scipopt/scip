@@ -3260,6 +3260,8 @@ SCIP_RETCODE propIndicator(
    if ( consdata->nfixednonzero > 1 )
    {
       SCIPdebugMessage("the node is infeasible, both the slack variable and the binary variable are fixed to be nonzero.\n");
+      *cutoff = TRUE;
+
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       assert( SCIPvarGetLbLocal(consdata->binvar) > 0.5 );
       assert( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) );
@@ -3277,7 +3279,6 @@ SCIP_RETCODE propIndicator(
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, NULL) );
       SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
-      *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
