@@ -142,7 +142,7 @@ SCIP_DECL_PROBEXITSOL(probExitsolObj)
    assert(probdata->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   SCIP_CALL( probdata->objprobdata->scip_exitsol(scip) );
+   SCIP_CALL( probdata->objprobdata->scip_exitsol(scip, restart) );
 
    return SCIP_OKAY;
 }

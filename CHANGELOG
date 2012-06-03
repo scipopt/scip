@@ -115,6 +115,7 @@ interface
 - new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
 - method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead;
   also method SCIPexprtreeRemoveFixedVars() is not public anymore
+- all objscip *.h file now use the default SCIP interface macros (this should avoid errors when changing the interface)
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
