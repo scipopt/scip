@@ -201,34 +201,34 @@ typedef struct sortkeypair SORTKEYPAIR;
 /** status of GUB constraint */
 enum GUBVarstatus
 {
-   GUBVARSTATUS_UNINITIAL        = -1,  /** unintitialized variable status */
-   GUBVARSTATUS_CAPACITYEXCEEDED =  0,  /** variable with weight exceeding the knapsack capacity */
-   GUBVARSTATUS_BELONGSTOSET_R   =  1,  /** variable in noncovervars R */
-   GUBVARSTATUS_BELONGSTOSET_F   =  2,  /** variable in noncovervars F */
-   GUBVARSTATUS_BELONGSTOSET_C2  =  3,  /** variable in covervars C2 */
-   GUBVARSTATUS_BELONGSTOSET_C1  =  4,  /** variable in covervars C1 */
+   GUBVARSTATUS_UNINITIAL        = -1,       /** unintitialized variable status */
+   GUBVARSTATUS_CAPACITYEXCEEDED =  0,       /** variable with weight exceeding the knapsack capacity */
+   GUBVARSTATUS_BELONGSTOSET_R   =  1,       /** variable in noncovervars R */
+   GUBVARSTATUS_BELONGSTOSET_F   =  2,       /** variable in noncovervars F */
+   GUBVARSTATUS_BELONGSTOSET_C2  =  3,       /** variable in covervars C2 */
+   GUBVARSTATUS_BELONGSTOSET_C1  =  4,       /** variable in covervars C1 */
 };
 typedef enum GUBVarstatus GUBVARSTATUS;
 
 /** status of variable in GUB constraint */
 enum GUBConsstatus
 {
-   GUBCONSSTATUS_UNINITIAL         = -1, /** unintitialized GUB constraint status */
-   GUBCONSSTATUS_BELONGSTOSET_GR   =  0, /** all GUB variables are in noncovervars R */
-   GUBCONSSTATUS_BELONGSTOSET_GF   =  1, /** all GUB variables are in noncovervars F (and noncovervars R) */
-   GUBCONSSTATUS_BELONGSTOSET_GC2  =  2, /** all GUB variables are in covervars C2 */
-   GUBCONSSTATUS_BELONGSTOSET_GNC1 =  3, /** some GUB variables are in covervars C1, others in noncovervars R or F */
-   GUBCONSSTATUS_BELONGSTOSET_GOC1 =  4, /** all GUB variables are in covervars C1 */
+   GUBCONSSTATUS_UNINITIAL         = -1,     /** unintitialized GUB constraint status */
+   GUBCONSSTATUS_BELONGSTOSET_GR   =  0,     /** all GUB variables are in noncovervars R */
+   GUBCONSSTATUS_BELONGSTOSET_GF   =  1,     /** all GUB variables are in noncovervars F (and noncovervars R) */
+   GUBCONSSTATUS_BELONGSTOSET_GC2  =  2,     /** all GUB variables are in covervars C2 */
+   GUBCONSSTATUS_BELONGSTOSET_GNC1 =  3,     /** some GUB variables are in covervars C1, others in noncovervars R or F */
+   GUBCONSSTATUS_BELONGSTOSET_GOC1 =  4,     /** all GUB variables are in covervars C1 */
 };
 typedef enum GUBConsstatus GUBCONSSTATUS;
 
 /** data structure of GUB constraints */
 struct SCIP_GUBCons
 {
-   int*                  gubvars;         /**< indices of GUB variables in knapsack constraint */
-   GUBVARSTATUS*         gubvarsstatus;   /**< status of GUB variables */
-   int                   ngubvars;        /**< number of GUB variables */
-   int                   gubvarssize;     /**< size of gubvars array */
+   int*                  gubvars;            /**< indices of GUB variables in knapsack constraint */
+   GUBVARSTATUS*         gubvarsstatus;      /**< status of GUB variables */
+   int                   ngubvars;           /**< number of GUB variables */
+   int                   gubvarssize;        /**< size of gubvars array */
 };
 typedef struct SCIP_GUBCons SCIP_GUBCONS;
 
