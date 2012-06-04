@@ -260,6 +260,7 @@ features:
 - automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
   adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
 - new constraint handler "superindicator" for indicator constraints with slack constraints of arbitrary type
+- added possibility to use GUBs for lifting knapsack cuts (disabled)
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
