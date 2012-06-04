@@ -3094,10 +3094,9 @@ SCIP_RETCODE SCIPlpiexCreateFactor(
       {
          printf ("Matrix is nonsingular \n");
       }
+      BMSfreeMemoryArray( &basis );
       if( rval )
          return SCIP_ERROR;
-
-      BMSfreeMemoryArray( &basis );
    }
    return SCIP_OKAY;
 }
