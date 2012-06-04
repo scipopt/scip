@@ -169,7 +169,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, len);
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
 
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);

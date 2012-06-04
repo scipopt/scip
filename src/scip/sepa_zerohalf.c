@@ -155,25 +155,6 @@ enum preprocessingmethods
 typedef enum preprocessingmethods PREPROCESSINGMETHODS;  
 #endif
 
-/** description of the ppmethods parameter */
-static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =  
-   "preprocessing methods and ordering:\n\
-   #                      'd' columns with small LP solution,\n \
-   #                      'G' modified Gaussian elimination,\n  \
-   #                      'i' identical columns,\n\
-   #                      'I' identical rows,\n\
-   #                      'L' large slack rows,\n\
-   #                      'M' large slack rows (minslack),\n\
-   #                      's' column singletons,\n\
-   #                      'X' add trivial zerohalf cuts,\n\
-   #                      'z' zero columns,\n\
-   #                      'Z' zero rows,\n\
-   #                      'C' fast {'z','s'},\n\
-   #                      'R' fast {'Z','L','I'}\n\
-   #                      \n                      \
-   #                      '-' no preprocessing\n  \
-   #                     ";
-
 /** separation methods, usable within the sepamethods parameter  */
 enum sepamethods 
    {
@@ -188,20 +169,6 @@ enum sepamethods
 #if 0 /* currently not used */
 typedef enum sepamethods SEPAMETHODS;
 #endif
-
-/** description of the sepamethods parameter */
-static const char sepamethodsdescription[SCIP_MAXSTRLEN] =        
-   "separating methods and ordering:\n\
-   #                      '!' stop further processing if a cut was found,\n\
-   #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),\n\
-   #                      'e' enumeration heuristics (k=1: try all preprocessed rows),\n\
-   #                      'E' enumeration heuristics (k=2: try all combinations of up to two preprocessed rows),\n\
-   #                      'g' Extended Gaussian elimination heuristics,\n\
-   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n\
-   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n\
-   #                      \n\
-   #                      '-' no processing\n\
-   #                     ";
 
 /** statistics: "origin" of separated cut */
 enum cutseparatedby 
@@ -1384,14 +1351,14 @@ void debugPrintSubLpData(
    SCIPdebugMessage(" rrows:   (nrrows=%d)\n", sublpdata->nrrows);
    for( i = 0 ; i < sublpdata->nrrows ; ++i)
    {
-      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6lf  slack: %6lf  name: %s\n",
+      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6g  slack: %6g  name: %s\n",
          i, sublpdata->rrows[i], sublpdata->rrowsrhs[i], sublpdata->rrowsslack[i],
          SCIProwGetName(lpdata->rows[sublpdata->rrows[i]]));
    }
    SCIPdebugMessage("\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
    for( j = 0 ; j < sublpdata->nrcols ; ++j)
    {
-      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6lf  ubslack: %6lf\n",
+      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6g  ubslack: %6g\n",
          i, sublpdata->rcols[i], sublpdata->rcolslbslack[i], sublpdata->rcolsubslack[i]);        
    }
 }
@@ -1432,7 +1399,7 @@ void debugPrintMod2Data(
       for( k = 0 ; k < mod2data->ncolsind ; ++k )
          if( mod2data->colsind[k] == j )
             break;
-      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6lf  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
+      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6g  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
          k < mod2data->ncolsind ? k : -1,
          SCIPvarGetName(SCIPcolGetVar(lpdata->cols[mod2data->relatedsubproblem->rcols[j]])));
    }
@@ -1465,7 +1432,7 @@ void debugPrintMod2Data(
          SCIPdebugPrintf("  0");
       }
       SCIPdebugPrintf("  [%4d] ", nnonz);    
-      SCIPdebugPrintf("(%6lf)  ", mod2data->slacks[mod2data->rowsind[i]]);
+      SCIPdebugPrintf("(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
 
       if( printaggregations )
       {
@@ -1510,13 +1477,13 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
    ZEROHALF_LPDATA*      lpdata              /**< data of current LP relaxation */
    )
 {
-   assert(scip != NULL);
-   assert(lpdata != NULL);
-
    int                   i;
    int                   j;
    char                  temp[SCIP_MAXSTRLEN];
-  
+
+   assert(scip != NULL);
+   assert(lpdata != NULL);
+
    SCIPdebugMessage("\n\nLP rows:\n");
    for( i = 0 ; i < lpdata->nrows ; ++i)
    {
@@ -7173,6 +7140,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
        */
       if( lpdata->subproblems[subproblemindex]->nrrows == 1 && lpdata->subproblems[subproblemindex]->nrcols == 0 )
       {        
+         SCIP_Real* weights;
+
 #ifdef SCIP_DEBUG
          SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
          SCIPdebugMessage("\n");
@@ -7180,7 +7149,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          SCIPdebugMessage("\n");
 #endif
          /* create weightvector */
-         SCIP_Real* weights;
          weights = NULL;
          SCIP_CALL( getZerohalfWeightvectorForSingleRow(scip, sepadata, lpdata, lpdata->subproblems[subproblemindex]->rrows[0],
                0, &weights) );
@@ -7480,7 +7448,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
  * separator specific interface methods 
  * -------------------------------------------------------------------------------------------------------------------- */
 
-
 /** creates the zerohalf separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
@@ -7488,6 +7455,74 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
 {
    SCIP_SEPADATA*        sepadata;
    SCIP_SEPA* sepa;
+
+   /* description of the preprocessing methods parameter */
+   char preprocessingmethodsdescription[SCIP_MAXSTRLEN];
+   /* description of the sepamethods parameter */
+   char sepamethodsdescription[SCIP_MAXSTRLEN];
+   /* description of the subscip parameter */
+   char subscipobjectivedescription[SCIP_MAXSTRLEN];
+   int ncharsprinted;
+
+   ncharsprinted = SCIPmemccpy(preprocessingmethodsdescription,
+      "preprocessing methods and ordering:\n"
+      "   #                      'd' columns with small LP solution,\n"
+      "   #                      'G' modified Gaussian elimination,\n"
+      "   #                      'i' identical columns,\n"
+      "   #                      'I' identical rows,\n"
+      "   #                      'L' large slack rows,\n"
+      "   #                      'M' large slack rows (minslack),\n"
+      "   #                      's' column singletons,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(preprocessingmethodsdescription[ncharsprinted - 1]),
+      "   #                      'X' add trivial zerohalf cuts,\n"
+      "   #                      'z' zero columns,\n"
+      "   #                      'Z' zero rows,\n"
+      "   #                      'C' fast {'z','s'},\n"
+      "   #                      'R' fast {'Z','L','I'}\n"
+      "   #                      \n"
+      "   #                      '-' no preprocessing\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted = SCIPmemccpy(sepamethodsdescription,
+      "separating methods and ordering:\n"
+      "   #                      '!' stop further processing if a cut was found,\n"
+      "   #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),\n"
+      "   #                      'e' enumeration heuristics (k=1: try all preprocessed rows),\n"
+      "   #                      'E' enumeration heuristics (k=2: try all combinations of up to two preprocessed rows),\n"
+      "   #                      'g' Extended Gaussian elimination heuristics,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(sepamethodsdescription[ncharsprinted - 1]),
+      "   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n"
+      "   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n"
+      "   #                      \n"
+      "   #                      '-' no processing\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted = SCIPmemccpy(subscipobjectivedescription,
+      "auxiliary IP objective:\n"
+      "   #                      'v' maximize cut violation,\n"
+      "   #                      'u' minimize number of aggregated rows in cut,\n"
+      "   #                      'w' minimize number of aggregated rows in cut\n"
+      "   #                          weighted by the number of rows in the aggregation,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(subscipobjectivedescription[ncharsprinted - 1]),
+      "   #                      'p' maximize cut violation and penalize a high number\n"
+      "   #                          of aggregated rows in the cut weighted by the number\n"
+      "   #                          of rows in the aggregation and the penalty factor p\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
    /* create zerohalf separator data */
    SCIP_CALL(SCIPallocMemory(scip, &sepadata));
@@ -7649,15 +7684,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &(sepadata->subscipuseallsols), FALSE, DEFAULT_SUBSCIPUSEALLSOLS, NULL, NULL));
    SCIP_CALL(SCIPaddCharParam(scip,
          "separating/zerohalf/separating/auxip/objective", 
-         "auxiliary IP objective:\n\
-   #                      'v' maximize cut violation,\n\
-   #                      'u' minimize number of aggregated rows in cut,\n\
-   #                      'w' minimize number of aggregated rows in cut\n\
-   #                          weighted by the number of rows in the aggregation,\n\
-   #                      'p' maximize cut violation and penalize a high number\n\
-   #                          of aggregated rows in the cut weighted by the number\n\
-   #                          of rows in the aggregation and the penalty factor p\n\
-   #                     ",
+	 subscipobjectivedescription,
          &(sepadata->subscipobjective), FALSE, DEFAULT_SUBSCIPOBJECTIVE, "uvwp", NULL, NULL));
 
    return SCIP_OKAY;

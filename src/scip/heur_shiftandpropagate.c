@@ -74,7 +74,7 @@ struct SCIP_HeurData
       int                nprobings;          /**< how many probings has the heuristic executed? */
       int                ncutoffs;           /**< has the probing node been cutoff? */
       int                nredundantrows;     /**< how many rows were redundant after relaxation? */
-      );
+      )
 };
 
 /** status of a variable in heuristic transformation */

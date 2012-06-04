@@ -2461,7 +2461,7 @@ void subtractStartingJobDemands(
    )
 {
 
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
    oldidx = *idx;
 #endif
@@ -2500,7 +2500,7 @@ void addEndingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
    oldidx = *idx;
 #endif
@@ -7585,10 +7585,12 @@ SCIP_DECL_CONSPROP(consPropCumulative)
       }
    }
 
-   // if( !cutoff && conshdlrdata->dualpresolve )
-   // {
-   //    SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, NULL) );
-   // }
+#if 0
+   if( !cutoff && conshdlrdata->dualpresolve )
+   {
+      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, NULL) );
+   }
+#endif
 
    if( cutoff )
    {

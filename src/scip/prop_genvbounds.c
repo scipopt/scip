@@ -194,14 +194,14 @@ SCIP_Real getMinActivity(
                                               */
    )
 {
+   SCIP_Real minval;
+   int i;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(nvars >= 0);
    assert(bdchgidx == NULL || !global);
-
-   SCIP_Real minval;
-   int i;
 
    minval = 0.0;
 
@@ -1460,15 +1460,14 @@ SCIP_RETCODE sortGenVBounds(
    SCIP_PROPDATA*        propdata            /**< data of the genvbounds propagator */
    )
 {
+   GENVBOUND** genvboundssorted;            /* array to store the sorted genvbounds */
+   SCIP_DIGRAPH* graph;
+   int sortedindex;
+   int i;
+
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(propdata->componentsstart == NULL);
-
-   GENVBOUND** genvboundssorted;            /* array to store the sorted genvbounds */
-   SCIP_DIGRAPH* graph;
-
-   int i;
-   int sortedindex;
 
    SCIPdebugMessage("(re-)sort genvbounds topologically\n");
 
@@ -1552,8 +1551,10 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMessage("genvbounds got: %d\n", propdata->ngenvbounds);
    for( i = 0; i < propdata->ncomponents; i++ )
    {
-      SCIPdebugMessage("{\n");
       int j;
+
+      SCIPdebugMessage("{\n");
+
       for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
       {
          SCIPdebugMessage("  [%d] ", j);

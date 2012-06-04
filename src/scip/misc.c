@@ -4512,7 +4512,7 @@ int profileFindFeasibleStart(
    {
       if( profile->loads[pos] + demand > profile->capacity )
       {
-         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", profile, profile->timepoints[pos], pos);
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", (void*)profile, profile->timepoints[pos], pos);
          startpos = pos + 1;
          remainingduration = duration;
 
@@ -4558,7 +4558,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    assert(profile->ntimepoints > 0);
    assert(profile->loads[profile->ntimepoints-1] == 0);
 
-   SCIPdebugMessage("profile <%p>: find earliest start time (demad %d, duration %d) [%d,%d]\n", profile, demand, duration, est, lst);
+   SCIPdebugMessage("profile <%p>: find earliest start time (demad %d, duration %d) [%d,%d]\n", (void*)profile, demand, duration, est, lst);
 
    if( duration == 0 || demand == 0 )
    {
@@ -4567,7 +4567,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    }
 
    found = SCIPprofileFindLeft(profile, est, &pos);
-   SCIPdebugMessage("profile <%p>: earliest start time does %s exist as time point (pos %d)\n", profile, found ? "" : "not", pos);
+   SCIPdebugMessage("profile <%p>: earliest start time does %s exist as time point (pos %d)\n", (void*)profile, found ? "" : "not", pos);
 
    /* if the position is the last time point in the profile, the core can be inserted at its earliest start time */
    if( pos == profile->ntimepoints - 1 )
@@ -4661,7 +4661,7 @@ int profileFindDownFeasibleStart(
    {
       if( profile->loads[pos-1] + demand > profile->capacity )
       {
-         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", profile, profile->timepoints[pos-1], pos-1);
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", (void*)profile, profile->timepoints[pos-1], pos-1);
 
          endpos = pos - 1;
          remainingduration = duration;
@@ -4720,7 +4720,7 @@ int SCIPprofileGetLatestFeasibleStart(
    lct = lst + duration;
 
    found = SCIPprofileFindLeft(profile, lct, &pos);
-   SCIPdebugMessage("profile <%p>: latest completion time %d does %s exist as time point (pos %d)\n", profile, lct, found ? "" : "not", pos);
+   SCIPdebugMessage("profile <%p>: latest completion time %d does %s exist as time point (pos %d)\n", (void*)profile, lct, found ? "" : "not", pos);
 
    if( found )
    {

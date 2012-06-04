@@ -1019,9 +1019,13 @@ SCIP_RETCODE extractGates(
 
 #ifdef SCIP_DEBUG
       if( ngateconss == nlogicorvars )
+      {
 	 SCIPdebugMessage("Following constraints form a set-partitioning constraint.\n");
+      }
       else
+      {
 	 SCIPdebugMessage("Following constraints form an and-constraint.\n");
+      }
 #endif
 
       for( v = ngateconss - 1; v >= 0; --v )

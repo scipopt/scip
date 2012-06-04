@@ -2083,7 +2083,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
 
    if( (*linecnt) > PIP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);

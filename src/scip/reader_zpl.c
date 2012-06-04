@@ -1196,7 +1196,7 @@ Var* xlp_addvar(
       {
          assert(readerdata->sol != NULL);
          SCIPdebugMessage("change solution solution <%p>: <%s> = <%g>\n", 
-            readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
+            (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */
          SCIP_CALL_ABORT( SCIPsetSolVal(scip, readerdata->sol, var, (SCIP_Real)numb_todbl(startval)) );
