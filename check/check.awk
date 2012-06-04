@@ -50,6 +50,7 @@ BEGIN {
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
+   namelength = 18;             # maximal length of instance names (can be increased)
 
    nprobs = 0;
    sbab = 0;
@@ -116,8 +117,8 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( useshortnames && length(prob) > 18 )
-      shortprob = substr(prob, length(prob)-17, 18);
+   if( useshortnames && length(prob) > namelength )
+      shortprob = substr(prob, length(prob)-namelength-1, namelength);
    else
       shortprob = prob;
 
@@ -197,8 +198,6 @@ BEGIN {
       lpsname = "msk";
    else if( $13 == "Gurobi" )
       lpsname = "grb";
-   else if( $13 == "NONE" )
-      lpsname = "none";
    else if( $13 == "QSopt" )
       lpsname = "qso";
 #   else if( $13 == "???" )
@@ -219,6 +218,7 @@ BEGIN {
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
 /^SCIP> / { $0 = substr($0, 7, length($0)-6); }
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
+/^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
 #
@@ -477,11 +477,23 @@ BEGIN {
             printf("rr") > TEXFILE;
          printf("@{}}\n") > TEXFILE;
       }
-      
-      #print header of table when this regular expression is matched for the first time
-      tablehead1 = "------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
-      tablehead2 = "Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
-      tablehead3 = "------------------+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+
+      # print header of table when this regular expression is matched for the first time
+
+      # prepare header
+      hyphenstr = "";
+      for (i = 0; i < namelength; ++i)
+         hyphenstr = sprintf("%s-", hyphenstr);
+
+      # first part: name of given length
+      tablehead1 = hyphenstr;
+      tablehead2 = sprintf("Name%*s", namelength-4, " ");
+      tablehead3 = hyphenstr;
+
+      # append rest of header
+      tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+      tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+      tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
 
       if( printsoltimes == 1 ) 
       {
@@ -569,12 +581,22 @@ BEGIN {
          probtype = "   --";
       else if( lincons < cons )
       {
-	 if( cons == lincons+quadcons )  
-	    probtype = "MIQCP";
-	 else if( cons == lincons+quadcons+nonlincons )  
-	    probtype = "MINLP";
-	 else
-	    probtype = "  CIP";
+         if( cons == lincons+quadcons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  QCP";
+            else
+               probtype = "MIQCP";
+         }
+         else if( cons == lincons+quadcons+nonlincons )
+         {
+            if( binvars == 0 && intvars == 0 )
+               probtype = "  NLP";
+            else
+               probtype = "MINLP";
+         }
+         else
+            probtype = "  CIP";
       }
       else if( binvars == 0 && intvars == 0 )
          probtype = "   LP";
@@ -850,15 +872,16 @@ BEGIN {
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
          if (TEXFILE != "") {
-            printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-                   pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+            printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+                   namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
             if( printsoltimes )
                printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
             printf("\\\\\n") > TEXFILE;
          }
 
-         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
-                shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
+         # note: probtype has length 5, but field width is 6
+         printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
+                namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
          printf("%s\n", status);

@@ -113,12 +113,12 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 /** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 extern
 SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
-   SCIP*                   scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_NONLINCONSUPGD((*nonlinconsupgd)),/**< method to call for upgrading nonlinear constraint, or NULL */
    SCIP_DECL_EXPRGRAPHNODEREFORM((*nodereform)),/**< method to call for reformulating expression graph node, or NULL */
-   int                     priority,           /**< priority of upgrading method */
-   SCIP_Bool               active,             /**< should the upgrading method by active by default? */
-   const char*             conshdlrname        /**< name of the constraint handler */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
    );
 
 /** creates and captures a nonlinear constraint
@@ -165,6 +165,31 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    );
 
 /** creates and captures a nonlinear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  this variant takes expression trees as input
+ *
+ *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear variables in the constraint */
+   SCIP_VAR**            linvars,            /**< array with linear variables of constraint entries */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
+   int                   nexprtrees,         /**< number of expression trees for nonlinear part of constraint */
+   SCIP_EXPRTREE**       exprtrees,          /**< expression trees for nonlinear part of constraint */
+   SCIP_Real*            nonlincoefs,        /**< coefficients for expression trees for nonlinear part, or NULL if all 1.0 */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
+/** creates and captures a nonlinear constraint
  * this variant takes a node of the expression graph as input and can only be used during presolving
  * it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
  * the given exprgraphnode is captured in this method
@@ -207,6 +232,31 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
+/** creates and captures a nonlinear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  this variant takes a node of the expression graph as input and can only be used during presolving
+ *  it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
+ *  the given exprgraphnode is captured in this method
+ *
+ *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicNonlinear2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear variables in the constraint */
+   SCIP_VAR**            linvars,            /**< array with linear variables of constraint entries */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of constraint linear entries */
+   SCIP_EXPRGRAPHNODE*   exprgraphnode,      /**< expression graph node associated to nonlinear expression */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** adds a linear variable with coefficient to a nonlinear constraint */
 extern
 SCIP_RETCODE SCIPaddLinearVarNonlinear(
@@ -221,6 +271,18 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
  */
 extern
 SCIP_RETCODE SCIPsetExprtreesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nexprtrees,         /**< number of expression trees */
+   SCIP_EXPRTREE**       exprtrees,          /**< new expression trees, or NULL if nexprtrees is 0 */
+   SCIP_Real*            coefs               /**< coefficients of expression trees, or NULL if all 1.0 */
+   );
+
+/** adds expression trees to a nonlinear constraint
+ * constraint must not be active yet
+ */
+extern
+SCIP_RETCODE SCIPaddExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    int                   nexprtrees,         /**< number of expression trees */

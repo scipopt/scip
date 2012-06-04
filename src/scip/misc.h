@@ -24,6 +24,8 @@
 #define __SCIP_MISC_H__
 
 
+#include <gmp.h> 
+
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
@@ -34,6 +36,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * Numerical methods for rational numbers
+ */
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+extern
+SCIP_RETCODE SCIPmpqCalcIntegralScalar(
+   const mpq_t*          vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   mpq_t                 intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   );
 
 /*
  * Dynamic Arrays
@@ -311,6 +327,80 @@ int SCIPptrarrayGetMinIdx(
 extern
 int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   );
+
+/** creates a dynamic array of mpq_t values */
+extern
+SCIP_RETCODE SCIPmpqarrayCreate(
+   SCIP_MPQARRAY**       mpqarray,           /**< pointer to store the mpq array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** creates a copy of a dynamic array of mpq_t values */
+extern
+SCIP_RETCODE SCIPmpqarrayCopy(
+   SCIP_MPQARRAY**       mpqarray,           /**< pointer to store the copied mpq array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MPQARRAY*        sourcempqarray      /**< dynamic mpq array to copy */
+   );
+
+/** frees a dynamic array of mpq_t values */
+extern
+SCIP_RETCODE SCIPmpqarrayFree(
+   SCIP_MPQARRAY**       mpqarray            /**< pointer to the mpq array */
+   );
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+extern
+SCIP_RETCODE SCIPmpqarrayExtend(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
+   );
+
+/** clears a dynamic real array */
+extern
+SCIP_RETCODE SCIPmpqarrayClear(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
+   );
+
+/** gets value of entry in dynamic array */
+extern
+void SCIPmpqarrayGetVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   int                   idx,                /**< array index to get value for */
+   mpq_t                 val                 /**< pointer to store value of entry */   
+   );
+
+/** sets value of entry in dynamic array */
+extern
+SCIP_RETCODE SCIPmpqarraySetVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   const mpq_t           val                 /**< value to set array index to */
+   );
+
+/** increases value of entry in dynamic array */
+extern
+SCIP_RETCODE SCIPmpqarrayIncVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   const mpq_t           incval              /**< value to increase array index */
+   );
+
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPmpqarrayGetMinIdx(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPmpqarrayGetMaxIdx(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
    );
 
 /*

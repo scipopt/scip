@@ -113,8 +113,8 @@ export EVALFILE=$EVALFILE
 
 echo > $EVALFILE
 
-# we add 10% to the time limit and additional 10 seconds in case of small time limits
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
+# we add 50% to the time limit and additional 10 seconds in case of small time limits
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 2\``
 
 # echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 
@@ -275,6 +275,8 @@ do
 
     echo $BASENAME >> $EVALFILE
 
+    COUNT=`expr $COUNT + 1`
+
     # in case we want to continue we check if the job was already performed 
     if test "$CONTINUE" != "false"
       then
@@ -284,8 +286,6 @@ do
         continue
       fi
     fi
-
-    COUNT=`expr $COUNT + 1`
 
     GMSFILE=`basename $i`
     INPUTDIR=`pwd`/`dirname $i`

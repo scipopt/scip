@@ -29,6 +29,9 @@
 
 #include "scip/def.h"
 #include "scip/scip.h"
+#include "objscip/type_objprobcloneable.h"
+
+
 
 namespace scip
 {
@@ -40,21 +43,16 @@ namespace scip
    {
       virtual ~ObjProbCloneable() {}
 
-      /** clone method which will be used to copy objective constraint handlers and variable pricer plugins */
-      virtual ObjProbCloneable* clone(
-         SCIP*                 scip,               /**< SCIP data structure */
-         SCIP_Bool*            valid               /**< pointer to store whether to copy is valid w.r.t. copying dual reductions */
-         ) const
+      /** clone method which will be used to copy constraint handler and variable pricer objects */
+      virtual SCIP_DECL_OBJPROBCLONE(ObjProbCloneable* clone)
       {
          return 0;
       }
 
-      /** returns whether the objective plugin is copyable */
-      virtual SCIP_Bool iscloneable(
-         void
-         ) const
+      /** returns whether the plugin object is copyable */
+      virtual SCIP_DECL_OBJPROBISCLONEABLE(iscloneable)
       {
-         return false;
+         return FALSE;
       }
    };
 }

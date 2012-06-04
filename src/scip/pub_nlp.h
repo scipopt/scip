@@ -84,15 +84,6 @@ int SCIPexprtreeFindVar(
    SCIP_VAR*             var                 /**< variable to search for */
 );
 
-/** removes fixed variables from an expression tree, so that at exit all variables are active */
-extern
-SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
-   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
-   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
-);
-
 /**@} */
 
 /**@name Nonlinear row methods */
@@ -137,8 +128,8 @@ SCIP_VAR** SCIPnlrowGetQuadVars(
 /** gives position of variable in quadvars array of row, or -1 if not found */
 extern
 int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,                /**< nonlinear row */
-   SCIP_VAR*             var                   /**< variable to search for */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_VAR*             var                 /**< variable to search for */
    );
 
 /** gets number of quadratic elements in quadratic part */

@@ -70,6 +70,7 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar));         /**< set value of floating point parameter in a problem  */
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar));       /**< get value of string parameter in a problem  */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar));       /**< set value of string parameter in a problem  */
+   SCIP_DECL_NLPISETMESSAGEHDLR    ((*nlpisetmessagehdlr));     /**< set message handler  */
    SCIP_NLPIDATA*                  nlpidata;                    /**< NLP interface local data */
 };
 

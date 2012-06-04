@@ -1,0 +1,16 @@
+STATISTICS
+  Problem name     : linking.cip
+  Variables        : 5 (3 binary, 2 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : maximize
+VARIABLES
+  [binary] <x1>: obj=1, original bounds=[0,1]
+  [binary] <x2>: obj=2, original bounds=[0,1]
+  [binary] <x3>: obj=1, original bounds=[0,1]
+  [integer] <y1>: obj=0, original bounds=[0,10]
+  [integer] <y2>: obj=0, original bounds=[0,10]
+CONSTRAINTS
+  [linking] <test>: <y1> = +3 <x1> +4 <x2> +5 <x3>;
+  [linking] <test>: <y2> = no binary variables yet;
+END

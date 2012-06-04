@@ -45,21 +45,25 @@ interface
   of variables statistics which is used for example for branching
 - allowed to start diving mode even if LP is not flushed, not solved, or not solved to optimality
 - changed the message handler system within SCIP heavily such that it is thread save
-- the follwing methods need additionally the SCIP pointer as parameter to make the output thread save:
+- the follwing methods additionally need the SCIP pointer as parameter to make the output thread save:
   SCIPprintVersion(), SCIPsetMessagehdlr(), SCIPgetMessagehdlr(), and SCIPwarningMessage()
 - the following methods additionally need a message handler: SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), all message
   handler methods (see pub_message.h), SCIPhashtablePrintStatistics(), SCIPhashmapPrintStatistics(), SCIPlpiCreate()
-- new method SCIPsetMessagehdlrFree() which frees the current instance message handler and adds the given one
+- new method SCIPmessagehdlrCapture() which captures a given message handler (increases number of uses)
+- new method SCIPmessagehdlrRelease() which releases and possibly frees a given message handler (decreases number of uses)
 - new method SCIPsetMessagehdlrLogfile() which can be used to write into a log file
 - new method SCIPsetMessagehdlrQuiet() which can be used to turn the screen output on and off
 - removed method SCIPcreateMesshdlr(), please use SCIPmessagehdlrCreate() (see pub_message.c)
-- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrFree() (see pub_message.c)
+- removed method SCIPfreeMesshdlr(), please use SCIPmessagehdlrRelease() (see pub_message.c)
 - the error messages are not handled via the message handler anymore; per default the error message a written to stderr
 - the error printing method can be replaced using the method SCIPmessageSetErrorPrinting(); the default error message
-  printing can be recoverd via SCIPmessageSetErrorPrintingDefault(), (see pub_message.h)
+  printing can be recoverd via SCIPmessageSetErrorPrintingDefault() (see pub_message.h)
 - method SCIPprintError() does not need the file stream anymore. The error is written via the error message callback.
 - since the error messages are not handled via the messages handler anymore, the parameter list of SCIPmessagehdlrCreate()
   changes; see pub_message.h and type_message.h.
+- new NLPI callback SCIP_DECL_NLPISETMESSAGEHDLR() to set message handler in NLP solver interfaces
+- new parameter in SCIPcopyPlugins() to indicate whether the message handler from the source SCIP should be passed to the
+  target SCIP (only the pointer is copied and the usage counter of the message handler is increased)
 - removed SCIPparamSetBool(), please use SCIPchgBoolParam()
 - removed SCIPparamSetInt(), please use SCIPchgIntParam()
 - removed SCIPparamSetLongint(), please use SCIPchgLongintParam()
@@ -94,6 +98,24 @@ interface
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
 - data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
+- renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
+- tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
+- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
+- new methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
+  the fixing status of a parameter can be requested by SCIPparamIsFixed();
+  in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
+- added new method SCIPvarGetAggregatedObj() which computes for a (not active) variable the corresponding objective
+  value
+- renamed parameter SCRDIR of "make testgams" to CLIENTTMPDIR and changed its default to "/tmp"
+- renamed SCIPmarkNonlinearitiesPresent() to SCIPenableNLP(), removed SCIPmarkContinuousNonlinearitiesPresent(),
+  renamed SCIPhasContinuousNonlinearitiesPresent() to SCIPhasNLPContinuousNonlinearity() and allow call only during
+  initsolve and solve, renamed SCIPhasNonlinearitiesPresent() to SCIPisNLPEnabled()
+- new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
+- SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
+- new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
+- method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead;
+  also method SCIPexprtreeRemoveFixedVars() is not public anymore
+- all objscip *.h file now use the default SCIP interface macros (this should avoid errors when changing the interface)
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -118,18 +140,28 @@ performance improvements:
 - heur_undercover treats indicator constraints as nonlinear and fixes the binary variable for linearization
 - speed up in linear constraint handler replacing aggregated variables
 - speed up in SCIPboolarrayExtend() in misc.c replacing a for loop with BMSmoveMemoryArray() call
-- speed up mps reader asking paramters only ones
+- speed up mps reader asking parameters only once
 - speed up in var.c changing some recursive calls into iterative calls and reducing the number of VARFIX event that are
   thrown for fixation, aggregation or multi-aggregations
+- changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
+  aggressive separation
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
   for integer variable 0 <= x <= 10 the binary variables y0, y1, y2, and y3 are created, such that
   1 y0 + 2 y1 + 4 y2 + 8 y3 <= 10 and x = 1 y0 + 2 y1 + 4 y2 + 8 y3
 - added nlpdiving heuristic that comprises several civing heuristics using an NLP relaxation
-- added new presolver gateextraction, which tries to find and-gates/constraints with two operands which are linearized
+- added new presolver gateextraction, which tries to find and-gates/constraints which are linearized
   e.g. (x + y + z >= 1, x + y <= 1 and x + z <= 1 => x == AND(~y,~z)), in special cases it also detects set-partitioning
-  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1))
+  constraints e.g. (x + y + z >= 1, x + y <= 1, x + z <= 1 and y + z <= 1 => x + y + z == 1));
+  gate-extractor is also able to detect logicor constraints and set-packing/-partitioning constraints with the same
+  variables, to upgrade these both constraints to a set-partitioning constraint
+- added reader for MI(NL)Ps in OSiL (Optimization Services Instance Language) format
+- added new presolver components, that searches for independent components in the problem structure and solves
+  these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
+- added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
+- added hailmary heuristic that solve a copy of the problem without an objective function and with quite strict limits
+  on the number of nodes and LP iterations
 
 fixed bugs:
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
@@ -143,6 +175,16 @@ fixed bugs:
   solution could also have been added
 - fixed bug in cons_linear concerning huge activity values: besides infinite contributions, we now also treat huge
   contributions separately, count their occurences in a constraint, and provide a relaxed activity value
+- fixed bug in mutation heuristic with unnecessary aborts due to a wrong memory limit
+- fixed bug in Cplex LPI: after running simplex, solisbasic flag was always true, which might be wrong if Cplex hit a
+  time limit
+- fixed bug in SCIP probing mode with cleared LPI state but solved LP
+- fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
+- fixed potential bug in fix-and-infer heuristic with variables being fixed to infinite value
+- fixed bug in diving heuristics with variables being fixed to values outside their domain
+- method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
+  variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
+
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -160,12 +202,27 @@ parameters:
 - new parameter separating/oddcycle/maxunsucessfull to automatically turn off separation
 - new parameter numerics/recompfac which denotes the factor, by which the absolute of an iteratively updated value has
   to be decreased in order to recompute the value from scratch
-- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter 
+- new parameters separating/cgmip/{minnodelimit,maxnodelimit} to determine node limit. Removed parameter
   separating/cgmip/nodelimit.
 - new parameter <presolving/gateextraction/onlysetpart> by default is set to FALSE, that parameter allows you to
   only extract set-partitioning and no and-constraints
 - new parameter oncepernode in Rounding and Simple Rounding heuristic
 - new parameter <numerics/hugeval> that defines the smalles value counting as huge (see new method SCIPisHugeValue())
+- new parameter <limits/totalnodes> that allows to stop at the correct node if a restart occured; therefor the new
+  SCIP_STATUS_TOTALNODELIMIT is added
+- new parameter propagating/probing/maxdepth to set the maximal depth until the probing propagation is executed
+- new parameter <presolving/gateextraction/searchequations> by default is set to TRUE, that parameter allows you to
+  search for logicor constraints and set-packing/-partitioning constraints with same variables
+- new parameter <presolving/gateextraction/sorting> by default is set to 1, that parameter determines if you want to try
+  to extract big-gates(-1) or small-gates(1) at first by ordering bigger/smaller logicor constraint up front, or use
+  them as they are (0)
+- new parameter <reading/cnfreader/useobj> to state whether an artificial objective, depending on the number of clauses
+  a variable appears in, should be used, by default set to FALSE, old default behavior of reader corresponds to TRUE
+- new parameter <constraints/and/dualpresolving> by default set to TRUE, enabling dual-presolving on and-constraints
+- new parameter <misc/transorigsols> by default set to TRUE, that switches whether SCIP tries to transfer original
+  solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
+- new parameters lp/{rootiterlim,iterlim} to set a limit on the LP iterations spend in the initial root LP and each
+  LP resolve, respectively
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -180,6 +237,33 @@ features:
 - added setup timer to all plugins and therefor SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
 - added counter and clock for SCIPcopy() calls
+- better handling of memory limits, in particular for large problems
+- estimate memory consumption for sub-SCIP and do not copy them if close to memory limit
+- number of presolving calls of plugins is counted and displayed in the statistics,
+  can be accessed via SCIPpresolGetNCalls() and SCIP<prop/conshdlr>getNPresolCalls()
+- new methods SCIPhashGetKeyStandard() which returns the element itself as the key, SCIPhashKeyEqPtr(),
+  SCIPhashKeyValPtr() which do the hash-comparison/-conversion on a pointer in pub_misc.h
+- correct initialization of steepest edge weights with SoPlex 1.6.0.4
+- CNF reader now creates feasibility instances per default, usage of an objective has to be set by a parameter
+- make test now also checks instances in wbo, cnf, osil, and fzn format
+- parametes can now be fixed, which means that their value cannot be changed unless they are unfixed, first;
+  the fixing status of a parameter is copied to sub-SCIPs, which allows to ensure that certain parameters
+  are also not changed when, e.g., heuristics change emphasis settings or also specific parameters
+- added dual presolving for and-constraints
+- the statistics shows for a branching rule the number of calls for LP, extern, and pseudo candidates
+- new NLPI parameter SCIP_NLPPAR_FASTFAIL to enable convergence checks in NLP solver to stop early on seemingly
+  difficult instances (no guarantees)
+- new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
+  statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
+- new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
+  SCIPgmlWriteNode() wo write to a given GML file
+- automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
+  adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
+- new constraint handler "superindicator" for indicator constraints with slack constraints of arbitrary type
+
+Makefile
+- CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
+  the default for EXPRINT has changed from none to cppad
 
 SCIP version 2.1.2
 ==================
@@ -204,6 +288,7 @@ fixed bugs:
 - fixed bug in SCIPsolveKnapsackExactly(), trying to allocate too much memory which led to an overflow and later to a
   segmentation fault
 - fixed bug in cons_xor.c which did not copy the artificial integer variable (used for the lp relaxation)
+- fixed bug in sepa_rapidlearning, carrying on the optimization process, when already solved
 
 performance improvements:
 - fixed performance issue in debug mode, where SCIPvarGetLPSol_rec() calculated a value to often, which in the end lead
@@ -1579,7 +1664,7 @@ interface:
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
 - new method SCIPbsortInd()
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...() Note that the order
-  of the paramters has been changed to simplify the template code in sorttpl.c!
+  of the parameters has been changed to simplify the template code in sorttpl.c!
 - expand sorttpl.c by some parameters
 - added some downwards-sorting methods
 - changed some names for sorting methods

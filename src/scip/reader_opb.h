@@ -19,7 +19,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This file reader parses the \f$opb\f$ format and is also used by the \f$wbo\f$ reader for the \f$wbo\f$ format. For a
+ * This file reader parses the @a opb format and is also used by the @a wbo reader for the @a wbo format. For a
  * detailed description of this format see http://www.cril.univ-artois.fr/PB10/format.pdf .
  */
 

@@ -108,6 +108,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
@@ -132,13 +133,14 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    );
 
 /** get cuts in the separation storage */
 extern
 SCIP_ROW** SCIPsepastoreGetCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
@@ -156,13 +158,13 @@ int SCIPsepastoreGetNCutsFound(
 /** get number of cuts found so far in current separation round */
 extern
 int SCIPsepastoreGetNCutsFoundRound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
 extern
 int SCIPsepastoreGetNCutsApplied(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 #ifdef __cplusplus

@@ -414,6 +414,19 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+extern
+SCIP_RETCODE SCIPvarGetProbvarSum(
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
+
 /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
@@ -427,11 +440,11 @@ extern
 SCIP_RETCODE SCIPvarsGetActiveVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist
+                                              */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist
+                                              */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );

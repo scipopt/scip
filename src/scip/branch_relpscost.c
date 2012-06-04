@@ -20,6 +20,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode;
+                   *  same as in scip.c */
 
 #include <assert.h>
 #include <string.h>
@@ -235,7 +237,11 @@ SCIP_RETCODE execRelpscost(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
+#ifdef USESBGAIN
    exactsolve = SCIPisExactSolve(scip);
+#else
+   exactsolve = TRUE;
+#endif
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -532,9 +538,16 @@ SCIP_RETCODE execRelpscost(
          {
             if( !SCIPisStopped(scip) )
             {
+#ifdef WITH_EXACTSOLVE
+               /* happens very often on numerically difficult instances. increase the verblevel to avoid huge logfiles */
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
+                  SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#else
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
+#endif
             }
             break;
          }
@@ -722,7 +735,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(SCIPisLT(scip, provedbound, cutoffbound));
+      assert(exactsolve || SCIPisLT(scip, provedbound, cutoffbound));
 
       var = branchcands[bestcand];
 
@@ -861,17 +874,21 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create relpscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
-         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
-         branchCopyRelpscost,
-         branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
-         branchExeclpRelpscost, branchExecextRelpscost, branchExecpsRelpscost,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+
+   assert(branchrule != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions*/
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRelpscost) );
 
    /* relpscost branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

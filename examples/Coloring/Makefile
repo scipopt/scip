@@ -116,10 +116,11 @@ test:           $(MAINFILE)
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
-		-rm -f $(OBJDIR)/*.o
-		-rmdir $(OBJDIR)
+		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
+		@echo "-> remove main objective files"
 endif
-		-rm -f $(MAINFILE)
+		@-rm -f $(MAINFILE) $(MAINSHORTLINK)
+		@echo "-> remove binary"
 
 .PHONY: tags
 tags:

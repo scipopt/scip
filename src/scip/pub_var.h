@@ -168,17 +168,6 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
    SCIP_Real*            right               /**< pointer to right bound of open interval in hole to transform */
    );
 
-/** transforms given variable, scalar and constant to the corresponding active, fixed, or
- *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
- */
-extern
-SCIP_RETCODE SCIPvarGetProbvarSum(
-   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
-   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
-   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
-   );
-
 /** retransforms given variable, scalar and constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
@@ -295,6 +284,15 @@ SCIP_Bool SCIPvarsHaveCommonClique(
    SCIP_Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
    );
 
+/** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
+ *  e.g. obj(x) = 1 this method returns for ~x the value -1
+ */
+extern
+SCIP_RETCODE SCIPvarGetAggregatedObj(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real*            aggrobj             /**< pointer to store the aggregated objective value */
+   );
+
 
 #ifndef NDEBUG
 
@@ -346,6 +344,27 @@ extern
 void SCIPvarSetDeltransData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
+   );
+
+/** sets method to copy this variable into sub-SCIPs */
+extern
+void SCIPvarSetCopyData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARCOPY     ((*varcopy))        /**< copy method of the variable */
+   );
+
+/** sets the initial flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetInitial(
+   SCIP_VAR*            var,
+   SCIP_Bool            initial
+   );
+
+/** sets the removable flag of a variable; only possible for original or loose variables */
+extern
+SCIP_RETCODE SCIPvarSetRemovable(
+   SCIP_VAR*            var,
+   SCIP_Bool            removable
    );
 
 /** gets status of variable */
@@ -760,8 +779,10 @@ SCIP_Real* SCIPvarGetImplBounds(
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
-/** gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,  
- *  there are no implications for nonbinary variable x
+/** Gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,
+ *  there are no implications for nonbinary variable x.
+ *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
+ *  its id is negative, otherwise it is nonnegative.
  */
 extern
 int* SCIPvarGetImplIds(

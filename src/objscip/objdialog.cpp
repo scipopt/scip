@@ -127,7 +127,7 @@ SCIP_DECL_DIALOGEXEC(dialogExecObj)
    assert(dialogdata->objdialog != 0);
 
    /* call virtual method of dialog object */
-   SCIP_CALL( dialogdata->objdialog->scip_exec(scip, dialoghdlr, dialog, nextdialog) );
+   SCIP_CALL( dialogdata->objdialog->scip_exec(scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
 }

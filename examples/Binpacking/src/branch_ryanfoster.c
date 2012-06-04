@@ -273,18 +273,17 @@ SCIP_RETCODE SCIPincludeBranchruleRyanFoster(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    /* create ryan foster branching rule data */
    branchruledata = NULL;
-   
+   branchrule = NULL;
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
-	 BRANCHRULE_MAXBOUNDDIST,
-         branchCopyRyanFoster,
-         branchFreeRyanFoster, branchInitRyanFoster, branchExitRyanFoster,
-         branchInitsolRyanFoster, branchExitsolRyanFoster,
-         branchExeclpRyanFoster, branchExecrelRyanFoster, branchExecpsRyanFoster,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+   assert(branchrule != NULL);
+
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRyanFoster) );
 
    /* add ryan foster branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */

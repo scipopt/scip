@@ -20,11 +20,6 @@
  * @author Stefan Vigerske
  */
 
-/** @todo check whether the constraint handler correctly distinguishes between constraints added to SCIP and those that
- *        were only created; if the latter are automatically added to the expressiongraph, they might be enforced although not
- *        valid
- */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -503,7 +498,7 @@ SCIP_RETCODE removeFixedVariables(
 
       /* replace by new variable, or NULL */
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&consdata->z, &consdata->zcoef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &consdata->z, &consdata->zcoef, &constant) );
       if( consdata->zcoef == 0.0 )
          consdata->z = NULL;
       if( constant != 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -533,9 +528,15 @@ SCIP_RETCODE removeFixedVariables(
       SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
       SCIPvarGetProbvar(vars[0]) == SCIPvarGetProbvar(vars[1]) )
    {
-      /* if number of variable reduces, then upgrade to nonlinear constraint */
+      /* if number of variable reduces, then upgrade to nonlinear constraint
+       * except if we are in the exit-presolving stage, where upgrading is not allowed
+       * in the latter case, we just do nothing, which may not be most efficient, but should still work
+       */
       SCIP_EXPRTREE* tree;
       SCIP_CONS* nlcons;
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_EXITPRESOLVE )
+         return SCIP_OKAY;
 
       SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &tree, consdata->f) );
 
@@ -549,7 +550,7 @@ SCIP_RETCODE removeFixedVariables(
 
          coef = 1.0;
          constant = 0.0;
-         SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
 
          if( coef == 0.0 )
          {
@@ -625,7 +626,7 @@ SCIP_RETCODE removeFixedVariables(
 
       coef = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
       assert(coef != 0.0); /* fixed vars should have been handled above */
 
       if( coef == 1.0 && constant == 0.0 )
@@ -728,7 +729,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
             continue;
          }
 
-      } while( FALSE );
+      }
+      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -4629,12 +4631,12 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 /** tightens bounds on a variable to given interval */
 static
 SCIP_RETCODE propagateBoundsTightenVar(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_VAR*             var,               /**< variable which bounds to tighten */
-   SCIP_INTERVAL         bounds,            /**< new bounds */
-   SCIP_CONS*            cons,              /**< constraint that is propagated */
-   SCIP_RESULT*          result,            /**< pointer where to update the result of the propagation call */
-   int*                  nchgbds            /**< buffer where to add the the number of changed bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which bounds to tighten */
+   SCIP_INTERVAL         bounds,             /**< new bounds */
+   SCIP_CONS*            cons,               /**< constraint that is propagated */
+   SCIP_RESULT*          result,             /**< pointer where to update the result of the propagation call */
+   int*                  nchgbds             /**< buffer where to add the the number of changed bounds */
    )
 {
    SCIP_Bool infeas;
@@ -4955,8 +4957,8 @@ SCIP_RETCODE propagateBounds(
          *result = propresult;
          success = TRUE;
       }
-
-   } while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
+   }
+   while( success && *result != SCIP_CUTOFF && ++roundnr < conshdlrdata->maxproprounds );
 
    return SCIP_OKAY;
 }
@@ -5580,19 +5582,11 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
 static
 SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 {  /*lint --e{715}*/
-#ifndef NDEBUG
-   SCIP_CONSHDLRDATA* conshdlrdata;
-#endif
    SCIP_CONSDATA*     consdata;
    int                c;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifndef NDEBUG
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5617,10 +5611,12 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA*     consdata;
    int                c;
    SCIP_Bool          changed;
    SCIP_Bool          upgraded;
+#ifndef NDEBUG
+   SCIP_CONSDATA*     consdata;
+#endif
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
@@ -5642,28 +5638,22 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
+      /* make sure variable fixations have been resolved */
+      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
+      assert(!upgraded);
+
+#ifndef NDEBUG
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* make sure variable fixations have been resolved */
-      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
-      if( upgraded )
-      {
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
-         continue;
-      }
-
       assert(consdata->f != NULL);
       assert(SCIPexprtreeGetNVars(consdata->f) == 2);
-      assert(SCIPvarIsActive(SCIPexprtreeGetVars(consdata->f)[0]) || SCIPvarGetStatus(SCIPexprtreeGetVars(consdata->f)[0]) == SCIP_VARSTATUS_MULTAGGR);
-      assert(SCIPvarIsActive(SCIPexprtreeGetVars(consdata->f)[1]) || SCIPvarGetStatus(SCIPexprtreeGetVars(consdata->f)[1]) == SCIP_VARSTATUS_MULTAGGR);
       assert(consdata->z == NULL || SCIPvarIsActive(consdata->z) || SCIPvarGetStatus(consdata->z) == SCIP_VARSTATUS_MULTAGGR);
+#endif
 
       /* tell SCIP that we have something nonlinear */
-      SCIPmarkNonlinearitiesPresent(scip);
-      if( SCIPvarGetType(SCIPexprtreeGetVars(consdata->f)[0]) >= SCIP_VARTYPE_CONTINUOUS ||
-         SCIPvarGetType( SCIPexprtreeGetVars(consdata->f)[1]) >= SCIP_VARTYPE_CONTINUOUS )
-         SCIPmarkContinuousNonlinearitiesPresent(scip);
+      if( SCIPconsIsAdded(conss[c]) )
+         SCIPenableNLP(scip);
    }
 
    return SCIP_OKAY;
@@ -5737,7 +5727,7 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )  /*lint !e613*/
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
       {
          SCIP_NLROW* nlrow;
 
@@ -6639,6 +6629,10 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
 
+   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
+   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+      *result = SCIP_DELAYED;
+
    return SCIP_OKAY;
 }
 #else
@@ -7473,27 +7467,44 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create bivariate constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyBivariate,
-         consFreeBivariate, consInitBivariate, consExitBivariate,
-         consInitpreBivariate, consExitpreBivariate, consInitsolBivariate, consExitsolBivariate,
-         consDeleteBivariate, consTransBivariate, consInitlpBivariate,
-         consSepalpBivariate, consSepasolBivariate, consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate,
-         consPropBivariate, consPresolBivariate, consRespropBivariate, consLockBivariate,
-         consActiveBivariate, consDeactiveBivariate,
-         consEnableBivariate, consDisableBivariate, consDelvarsBivariate,
-         consPrintBivariate, consCopyBivariate, consParseBivariate,
-         consGetVarsBivariate, consGetNVarsBivariate, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate, consLockBivariate,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBivariate, consCopyBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBivariate) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBivariate) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBivariate) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBivariate) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdBivariate, QUADCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );
@@ -7526,16 +7537,18 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
          "number of reference points in each direction where to compute linear support for envelope in LP initialization",
          &conshdlrdata->ninitlprefpoints, FALSE, 3, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processLinearVarEvent, NULL) );
-   conshdlrdata->linvareventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+   conshdlrdata->linvareventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
+         processLinearVarEvent, NULL) );
+   assert(conshdlrdata->linvareventhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange2", "signals a bound change in a nonlinear variable to the bivariate constraint handler",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNonlinearVarEvent, (SCIP_EVENTHDLRDATA*)conshdlrdata) );
-   conshdlrdata->nonlinvareventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange2");
+   conshdlrdata->nonlinvareventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->nonlinvareventhdlr), CONSHDLR_NAME"_boundchange2", "signals a bound change in a nonlinear variable to the bivariate constraint handler",
+         processNonlinearVarEvent, (SCIP_EVENTHDLRDATA*)conshdlrdata) );
+   assert(conshdlrdata->nonlinvareventhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+         processNewSolutionEvent, NULL) );
 
    /* create expression interpreter */
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &conshdlrdata->exprinterpreter) );
@@ -7627,6 +7640,34 @@ SCIP_RETCODE SCIPcreateConsBivariate(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an absolute power constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBivariate(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBivariate() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_EXPRTREE*        f,                  /**< expression tree specifying bivariate function f(x,y) */
+   SCIP_BIVAR_CONVEXITY  convextype,         /**< kind of convexity of f(x,y) */
+   SCIP_VAR*             z,                  /**< linear variable in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of linear variable */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBivariate(scip, cons, name, f, convextype, z, zcoef, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

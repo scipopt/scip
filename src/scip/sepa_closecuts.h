@@ -44,6 +44,16 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets point to be used as base point for computing the point to be separated
+ *
+ *  The point is only stored if separation of relative interior points is used. The solution is copied.
+ */
+extern
+SCIP_RETCODE SCIPsetBasePointClosecuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< base point solution */
+   );
+
 #ifdef __cplusplus
 }
 #endif

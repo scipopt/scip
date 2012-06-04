@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org"   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd" >
+<instanceHeader>
+<description>circle</description>
+</instanceHeader>
+<instanceData>
+<variables numberOfVariables="3">
+<var name="x1" lb="-INF"/>
+<var name="x2" lb="-INF"/>
+<var name="objvar"/>
+</variables>
+<objectives numberOfObjectives="1">
+<obj maxOrMin="min" name="e10" numberOfObjCoef="1">
+<coef idx="2">1</coef>
+</obj>
+</objectives>
+<constraints numberOfConstraints="10">
+<con name="e1" ub="0"/>
+<con name="e2" ub="0"/>
+<con name="e3" ub="0"/>
+<con name="e4" ub="0"/>
+<con name="e5" ub="0"/>
+<con name="e6" ub="0"/>
+<con name="e7" ub="0"/>
+<con name="e8" ub="0"/>
+<con name="e9" ub="0"/>
+<con name="e10" ub="0"/>
+</constraints>
+<nonlinearExpressions  numberOfNonlinearExpressions="10" >
+<nl  idx="0">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="2.545724188" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="9.983058643" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="1">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="8.589400372" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="6.208600402" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="2">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="5.953378204" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="9.920197351" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="3">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="3.710241136" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="7.860254203" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="4">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="3.629909053" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="2.176232347" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="5">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="3.016475803" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="6.757468831" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="6">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="4.148474536" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="2.435660776" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="7">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="8.706433123" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="3.250724797" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="8">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="1.604023507" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="7.020357481" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+<nl  idx="9">
+<minus>
+<plus>
+<square>
+<minus>
+<number  value="5.501896021" type="real"/>
+<variable  idx="0"  coef="1"/>
+</minus>
+</square>
+<square>
+<minus>
+<number  value="4.918207429" type="real"/>
+<variable  idx="1"  coef="1"/>
+</minus>
+</square>
+</plus>
+<square>
+<variable  idx="2"  coef="1"/>
+</square>
+</minus>
+</nl>
+</nonlinearExpressions>
+</instanceData>
+</osil>

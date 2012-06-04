@@ -17,6 +17,7 @@
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,6 +26,7 @@
 #include <string.h>
 
 #include "scip/dialog_default.h"
+#include "scip/cons_exactlp.h"
 #include "nlpi/nlpi.h"
 
 
@@ -486,6 +488,36 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
+
+#ifdef WITH_EXACTSOLVE
+   {
+      SCIP_CONS** conss;
+      int c;
+
+      assert(SCIPisExactSolve(scip));
+
+      conss = SCIPgetOrigConss(scip);
+      
+      for( c = 0; c < SCIPgetNOrigConss(scip); ++c )
+      {
+         if( SCIPconsIsChecked(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+         {
+            SCIP_CALL( SCIPcheckBestSolex(scip, conss[c], &feasible, TRUE) );
+         }
+      }
+      if( feasible )
+         SCIPdialogMessage(scip, NULL, "exact solution is feasible in original problem\n");
+      
+      SCIPdialogMessage(scip, NULL, "\n");
+
+      *nextdialog = SCIPdialogGetParent(dialog);
+      
+      return SCIP_OKAY;
+   }
+#endif
+
+   assert(!SCIPisExactSolve(scip));
+
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
@@ -1098,9 +1130,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-   SCIPdialogMessage(scip, NULL, "\n");
 
+#ifdef WITH_EXACTSOLVE
+   {
+      SCIP_CONS** conss;
+
+      assert(SCIPisExactSolve(scip));
+
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+
+      SCIP_CALL( SCIPprintBestSolex(scip, conss[0], NULL, FALSE) );
+
+      SCIPdialogMessage(scip, NULL, "\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+      return SCIP_OKAY;
+   }
+#endif
+
+   assert(!SCIPisExactSolve(scip));
+
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
@@ -1151,6 +1204,36 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
+#ifdef WITH_EXACTSOLVE
+   assert(SCIPisExactSolve(scip));
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+
+   if( varname[0] != '\0' )
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname, TRUE) );
+
+      var = SCIPfindVar(scip, varname);
+      if( var == NULL )
+         SCIPdialogMessage(scip, NULL, "variable <%s> not found\n", varname);
+      else
+      {
+         SCIP_CALL( SCIPprintBestSolexVar(scip, var, NULL) );
+      }      
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+      
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      
+   return SCIP_OKAY;
+#endif
+
+   assert(!SCIPisExactSolve(scip));
+      
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
@@ -1246,9 +1329,27 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
+
+#ifdef WITH_EXACTSOLVE
+   assert(SCIPisExactSolve(scip));
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPprintBestTransSolex(scip, NULL, FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no exact solution available\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+      
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      
+   return SCIP_OKAY;
+#endif
+
+   assert(!SCIPisExactSolve(scip));
+   
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       {
          SCIPdialogMessage(scip, NULL, "best solution exists only in original problem space\n");
       }
@@ -1315,9 +1416,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -1357,9 +1461,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
@@ -1633,8 +1740,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( !error )
       {
-         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
+         retcode = SCIPchgBoolParam(scip, param, boolval);
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
+         if( retcode != SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+
+            SCIP_CALL( retcode );
+         }
       }
 
       break;
@@ -1661,8 +1774,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgIntParam(scip, param, intval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
+         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
+
          SCIP_CALL( retcode );
       }
+
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
@@ -1687,6 +1803,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgLongintParam(scip, param, longintval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
+         SCIPdialogMessage(scip, NULL, "%s = %"SCIP_LONGINT_FORMAT"\n", SCIPparamGetName(param), longintval);
+
          SCIP_CALL( retcode );
       }
       break;
@@ -1713,6 +1831,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgRealParam(scip, param, realval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
+         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
+
          SCIP_CALL( retcode );
       }
       break;
@@ -1738,6 +1858,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgCharParam(scip, param, charval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
+         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
+
          SCIP_CALL( retcode );
       }
       break;
@@ -1758,6 +1880,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgStringParam(scip, param, valuestr);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
+
          SCIP_CALL( retcode );
       }
       break;
@@ -1822,6 +1946,64 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
 
    /* display parameter's current value */
    SCIPdialogMessage(scip, NULL, " [%s]", valuestr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the fix parameter command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecFixParam)
+{  /*lint --e{715}*/
+   SCIP_PARAM* param;
+   char prompt[SCIP_MAXSTRLEN];
+   char* valuestr;
+   SCIP_Bool fix;
+   SCIP_Bool endoffile;
+   SCIP_Bool error;
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* get the parameter to set */
+   param = (SCIP_PARAM*)SCIPdialogGetData(dialog);
+
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current fixing status: %s, new value (TRUE/FALSE): ",
+         SCIPparamIsFixed(param) ? "TRUE" : "FALSE");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   fix = parseBoolValue(scip, valuestr, &error);
+
+   if( !error )
+   {
+      SCIPparamSetFixed(param, fix);
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, (fix ? "TRUE" : "FALSE"), TRUE) );
+      SCIPdialogMessage(scip, NULL, "<%s> %s\n", SCIPparamGetName(param), (fix ? "fixed" : "unfixed"));
+   }
+
+   return SCIP_OKAY;
+}
+
+/** dialog description method for the fix parameter command */
+SCIP_DECL_DIALOGDESC(SCIPdialogDescFixParam)
+{  /*lint --e{715}*/
+   SCIP_PARAM* param;
+
+   /* get the parameter to set */
+   param = (SCIP_PARAM*)SCIPdialogGetData(dialog);
+
+   /* display parameter's description */
+   SCIPdialogMessage(scip, NULL, "%s", SCIPparamGetDesc(param));
+
+   /* display parameter's current fixing status */
+   if( SCIPparamIsFixed(param) )
+      SCIPdialogMessage(scip, NULL, " [fixed]");
+   else
+      SCIPdialogMessage(scip, NULL, " [not fixed]");
 
    return SCIP_OKAY;
 }
@@ -2521,6 +2703,28 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          else
          {
             SCIPinfoMessage(scip, file, "\n");
+#ifdef WITH_EXACTSOLVE
+            {
+               SCIP_CONS** conss;
+
+               assert(SCIPisExactSolve(scip));
+               conss = SCIPgetConss(scip);
+               assert(conss != NULL);
+               retcode = SCIPprintBestSolex(scip, conss[0], file, FALSE);
+               if( retcode != SCIP_OKAY )
+               {
+                  fclose(file);
+                  SCIP_CALL( retcode );
+               }
+               else
+               {
+                  SCIPdialogMessage(scip, NULL, "written exact solution information to file <%s>\n", filename);
+                  fclose(file);
+               }
+
+            }
+#else
+            assert(!SCIPisExactSolve(scip));
             retcode = SCIPprintBestSol(scip, file, FALSE);
             if( retcode != SCIP_OKAY )
             {
@@ -2532,6 +2736,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
                SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
                fclose(file);
             }
+#endif
          }
       }
    }
@@ -3087,6 +3292,9 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    /* set */
    SCIP_CALL( SCIPincludeDialogDefaultSet(scip) );
 
+   /* fix */
+   SCIP_CALL( SCIPincludeDialogDefaultFix(scip) );
+
    /* write */
    if( !SCIPdialogHasEntry(root, "write") )
    {
@@ -3218,7 +3426,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
  *  recursively in the sub menu; if no '/' occurs in the name, adds a parameter change dialog into the given dialog menu
  */
 static
-SCIP_RETCODE addParamDialog(
+SCIP_RETCODE addSetParamDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          menu,               /**< dialog menu to insert the parameter into */
    SCIP_PARAM*           param,              /**< parameter to add a dialog for */
@@ -3319,7 +3527,118 @@ SCIP_RETCODE addParamDialog(
       }
 
       /* recursively call add parameter method */
-      SCIP_CALL( addParamDialog(scip, submenu, param, paramname) );
+      SCIP_CALL( addSetParamDialog(scip, submenu, param, paramname) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** if a '/' occurs in the parameter's name, adds a sub menu dialog to the given menu and inserts the parameter dialog
+ *  recursively in the sub menu; if no '/' occurs in the name, adds a fix parameter dialog into the given dialog menu
+ */
+static
+SCIP_RETCODE addFixParamDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIALOG*          menu,               /**< dialog menu to insert the parameter into */
+   SCIP_PARAM*           param,              /**< parameter to add a dialog for */
+   char*                 paramname           /**< parameter name to parse */
+   )
+{
+   char* slash;
+   char* dirname;
+
+   assert(paramname != NULL);
+
+   /* check for a '/' */
+   slash = strchr(paramname, '/');
+
+   if( slash == NULL )
+   {
+      /* check, if the corresponding dialog already exists */
+      if( !SCIPdialogHasEntry(menu, paramname) )
+      {
+         SCIP_DIALOG* paramdialog;
+
+         if( SCIPparamIsAdvanced(param) )
+         {
+            SCIP_DIALOG* advmenu;
+
+            if( !SCIPdialogHasEntry(menu, "advanced") )
+            {
+               /* if not yet existing, create an advanced sub menu */
+               char desc[SCIP_MAXSTRLEN];
+
+               (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "advanced parameters");
+               SCIP_CALL( SCIPincludeDialog(scip, &advmenu,
+                     NULL,
+                     SCIPdialogExecMenu, NULL, NULL, "advanced", desc, TRUE, NULL) );
+               SCIP_CALL( SCIPaddDialogEntry(scip, menu, advmenu) );
+               SCIP_CALL( SCIPreleaseDialog(scip, &advmenu) );
+            }
+
+            /* find the corresponding sub menu */
+            (void)SCIPdialogFindEntry(menu, "advanced", &advmenu);
+            if( advmenu == NULL )
+            {
+               SCIPerrorMessage("dialog sub menu not found\n");
+               return SCIP_PLUGINNOTFOUND;
+            }
+
+            if( !SCIPdialogHasEntry(advmenu, paramname) )
+            {
+               /* create a fix parameter dialog */
+               SCIP_CALL( SCIPincludeDialog(scip, &paramdialog,
+                     NULL,
+                     SCIPdialogExecFixParam, SCIPdialogDescFixParam, NULL,
+                     paramname, SCIPparamGetDesc(param), FALSE, (SCIP_DIALOGDATA*)param) );
+               SCIP_CALL( SCIPaddDialogEntry(scip, advmenu, paramdialog) );
+               SCIP_CALL( SCIPreleaseDialog(scip, &paramdialog) );
+            }
+         }
+         else
+         {
+            /* create a fix parameter dialog */
+            SCIP_CALL( SCIPincludeDialog(scip, &paramdialog,
+                  NULL,
+                  SCIPdialogExecFixParam, SCIPdialogDescFixParam, NULL,
+                  paramname, SCIPparamGetDesc(param), FALSE, (SCIP_DIALOGDATA*)param) );
+            SCIP_CALL( SCIPaddDialogEntry(scip, menu, paramdialog) );
+            SCIP_CALL( SCIPreleaseDialog(scip, &paramdialog) );
+         }
+      }
+   }
+   else
+   {
+      SCIP_DIALOG* submenu;
+
+      /* split the parameter name into dirname and parameter name */
+      dirname = paramname;
+      paramname = slash+1;
+      *slash = '\0';
+
+      /* if not yet existing, create a corresponding sub menu */
+      if( !SCIPdialogHasEntry(menu, dirname) )
+      {
+         char desc[SCIP_MAXSTRLEN];
+
+         (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "parameters for <%s>", dirname);
+         SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL, dirname, desc, TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, menu, submenu) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+      }
+
+      /* find the corresponding sub menu */
+      (void)SCIPdialogFindEntry(menu, dirname, &submenu);
+      if( submenu == NULL )
+      {
+         SCIPerrorMessage("dialog sub menu not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
+
+      /* recursively call add parameter method */
+      SCIP_CALL( addFixParamDialog(scip, submenu, param, paramname) );
    }
 
    return SCIP_OKAY;
@@ -4052,7 +4371,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       
       pname = SCIPparamGetName(params[i]);
       SCIP_ALLOC( BMSduplicateMemoryArray(&paramname, pname, strlen(pname)+1) );
-      SCIP_CALL( addParamDialog(scip, setmenu, params[i], paramname) );
+      SCIP_CALL( addSetParamDialog(scip, setmenu, params[i], paramname) );
       BMSfreeMemoryArray(&paramname);
    }
 
@@ -4109,6 +4428,521 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             "optimality", "predefined parameter settings for proving optimality fast", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** includes or updates the "fix" menu for each available parameter setting */
+SCIP_RETCODE SCIPincludeDialogDefaultFix(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_DIALOG* root;
+   SCIP_DIALOG* fixmenu;
+   SCIP_DIALOG* submenu;
+   SCIP_DIALOG* dialog;
+   SCIP_PARAM** params;
+   char* paramname;
+   int nparams;
+   int i;
+
+   SCIP_BRANCHRULE** branchrules;
+   SCIP_CONFLICTHDLR** conflicthdlrs;
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_DISP** disps;
+   SCIP_HEUR** heurs;
+   SCIP_NLPI** nlpis;
+   SCIP_NODESEL** nodesels;
+   SCIP_PRESOL** presols;
+   SCIP_PRICER** pricers;
+   SCIP_READER** readers;
+   SCIP_SEPA** sepas;
+   int nbranchrules;
+   int nconflicthdlrs;
+   int nconshdlrs;
+   int ndisps;
+   int nheurs;
+   int nnlpis;
+   int nnodesels;
+   int npresols;
+   int npricers;
+   int nreaders;
+   int nsepas;
+
+   /* get root dialog */
+   root = SCIPgetRootDialog(scip);
+   if( root == NULL )
+   {
+      SCIPerrorMessage("root dialog not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* find (or create) the "fix" menu of the root dialog */
+   if( !SCIPdialogHasEntry(root, "fix") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &fixmenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "fix", "fix/unfix parameters", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, fixmenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &fixmenu) );
+   }
+   if( SCIPdialogFindEntry(root, "fix", &fixmenu) != 1 )
+   {
+      SCIPerrorMessage("fix sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* fix branching */
+   if( !SCIPdialogHasEntry(fixmenu, "branching") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "branching", "fix parameters for branching rules", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "branching", &submenu) != 1 )
+   {
+      SCIPerrorMessage("branching sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nbranchrules = SCIPgetNBranchrules(scip);
+   branchrules = SCIPgetBranchrules(scip);
+
+   for( i = 0; i < nbranchrules; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrules[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPbranchruleGetName(branchrules[i]), SCIPbranchruleGetDesc(branchrules[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix conflict */
+   if( !SCIPdialogHasEntry(fixmenu, "conflict") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "conflict", "fix parameters for conflict handlers", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "conflict", &submenu) != 1 )
+   {
+      SCIPerrorMessage("conflict sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nconflicthdlrs = SCIPgetNConflicthdlrs(scip);
+   conflicthdlrs = SCIPgetConflicthdlrs(scip);
+
+   for( i = 0; i < nconflicthdlrs; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlrs[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPconflicthdlrGetName(conflicthdlrs[i]), SCIPconflicthdlrGetDesc(conflicthdlrs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix constraints */
+   if( !SCIPdialogHasEntry(fixmenu, "constraints") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "constraints", "fix parameters for constraint handlers", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "constraints", &submenu) != 1 )
+   {
+      SCIPerrorMessage("constraints sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
+
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlrs[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix display */
+   if( !SCIPdialogHasEntry(fixmenu, "display") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "display", "fix parameters for display columns", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "display", &submenu) != 1 )
+   {
+      SCIPerrorMessage("display sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   ndisps = SCIPgetNDisps(scip);
+   disps = SCIPgetDisps(scip);
+
+   for( i = 0; i < ndisps; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disps[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPdispGetName(disps[i]), SCIPdispGetDesc(disps[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix heuristics */
+   if( !SCIPdialogHasEntry(fixmenu, "heuristics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "heuristics", "fix parameters for primal heuristics", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "heuristics", &submenu) != 1 )
+   {
+      SCIPerrorMessage("heuristics sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nheurs = SCIPgetNHeurs(scip);
+   heurs = SCIPgetHeurs(scip);
+
+   for( i = 0; i < nheurs; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heurs[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPheurGetName(heurs[i]), SCIPheurGetDesc(heurs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix limits */
+   if( !SCIPdialogHasEntry(fixmenu, "limits") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "limits", "fix parameters for time, memory, objective value, and other limits", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix LP */
+   if( !SCIPdialogHasEntry(fixmenu, "lp") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "lp", "fix parameters for linear programming relaxations", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix NLP */
+   if( !SCIPdialogHasEntry(fixmenu, "nlp") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "nlp", "fix parameters for nonlinear programming relaxations", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix memory */
+   if( !SCIPdialogHasEntry(fixmenu, "memory") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "memory", "fix parameters for memory management", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix misc */
+   if( !SCIPdialogHasEntry(fixmenu, "misc") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "misc", "fix parameters for miscellaneous stuff", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix nlpi */
+   if( !SCIPdialogHasEntry(fixmenu, "nlpi") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "nlpi", "fix parameters for NLP solver interfaces", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "nlpi", &submenu) != 1 )
+   {
+      SCIPerrorMessage("nlpi sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nnlpis = SCIPgetNNlpis(scip);
+   nlpis = SCIPgetNlpis(scip);
+
+   for( i = 0; i < nnlpis; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPnlpiGetName(nlpis[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPnlpiGetName(nlpis[i]), SCIPnlpiGetDesc(nlpis[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix nodeselection */
+   if( !SCIPdialogHasEntry(fixmenu, "nodeselection") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "nodeselection", "fix parameters for node selectors", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "nodeselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("nodeselection sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nnodesels = SCIPgetNNodesels(scip);
+   nodesels = SCIPgetNodesels(scip);
+
+   for( i = 0; i < nnodesels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesels[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPnodeselGetName(nodesels[i]), SCIPnodeselGetDesc(nodesels[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix numerics */
+   if( !SCIPdialogHasEntry(fixmenu, "numerics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "numerics", "fix parameters for numerical values", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix presolving */
+   if( !SCIPdialogHasEntry(fixmenu, "presolving") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "presolving", "fix parameters for presolving", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "presolving", &submenu) != 1 )
+   {
+      SCIPerrorMessage("presolving sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   npresols = SCIPgetNPresols(scip);
+   presols = SCIPgetPresols(scip);
+
+   for( i = 0; i < npresols; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presols[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL, SCIPdialogExecMenu, NULL, NULL,
+               SCIPpresolGetName(presols[i]), SCIPpresolGetDesc(presols[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix pricing */
+   if( !SCIPdialogHasEntry(fixmenu, "pricing") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "pricing", "fix parameters for pricing variables", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "pricing", &submenu) != 1 )
+   {
+      SCIPerrorMessage("pricing sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   npricers = SCIPgetNPricers(scip);
+   pricers = SCIPgetPricers(scip);
+
+   for( i = 0; i < npricers; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricers[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPpricerGetName(pricers[i]), SCIPpricerGetDesc(pricers[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix propagation */
+   if( !SCIPdialogHasEntry(fixmenu, "propagating") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "propagating", "fix parameters for constraint propagation", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* fix reading */
+   if( !SCIPdialogHasEntry(fixmenu, "reading") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "reading", "fix parameters for problem file readers", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "reading", &submenu) != 1 )
+   {
+      SCIPerrorMessage("reading sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nreaders = SCIPgetNReaders(scip);
+   readers = SCIPgetReaders(scip);
+
+   for( i = 0; i < nreaders; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(readers[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPreaderGetName(readers[i]), SCIPreaderGetDesc(readers[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix separating */
+   if( !SCIPdialogHasEntry(fixmenu, "separating") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "separating", "fix parameters for cut separators", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "separating", &submenu) != 1 )
+   {
+      SCIPerrorMessage("separating sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   nsepas = SCIPgetNSepas(scip);
+   sepas = SCIPgetSepas(scip);
+
+   for( i = 0; i < nsepas; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepas[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+               NULL, SCIPdialogExecMenu, NULL, NULL,
+               SCIPsepaGetName(sepas[i]), SCIPsepaGetDesc(sepas[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix timing */
+   if( !SCIPdialogHasEntry(fixmenu, "timing") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "timing", "fix parameters for timing issues", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* get SCIP's parameters */
+   params = SCIPgetParams(scip);
+   nparams = SCIPgetNParams(scip);
+
+   /* insert each parameter into the fix menu */
+   for( i = 0; i < nparams; ++i )
+   {
+      const char* pname;
+
+      pname = SCIPparamGetName(params[i]);
+      SCIP_ALLOC( BMSduplicateMemoryArray(&paramname, pname, strlen(pname)+1) );
+      SCIP_CALL( addFixParamDialog(scip, fixmenu, params[i], paramname) );
+      BMSfreeMemoryArray(&paramname);
    }
 
    return SCIP_OKAY;

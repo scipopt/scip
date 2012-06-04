@@ -15,7 +15,7 @@
 
 /**@file   pub_relax.h
  * @ingroup PUBLICMETHODS
- * @brief  public methods for relaxators
+ * @brief  public methods for relaxation handlers
  * @author Tobias Achterberg
  */
 
@@ -33,45 +33,49 @@
 extern "C" {
 #endif
 
-/** compares two relaxators w. r. to their priority */
+/** compares two relaxation handlers w. r. to their priority */
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp);
 
-/** gets user data of relaxator */
+/** comparison method for sorting relaxators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPrelaxCompName);
+
+/** gets user data of relaxation handler */
 extern
 SCIP_RELAXDATA* SCIPrelaxGetData(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** sets user data of relaxator; user has to free old data in advance! */
+/** sets user data of relaxation handler; user has to free old data in advance! */
 extern
 void SCIPrelaxSetData(
-   SCIP_RELAX*           relax,              /**< relaxator */
-   SCIP_RELAXDATA*       relaxdata           /**< new relaxator user data */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
    );
 
-/** gets name of relaxator */
+/** gets name of relaxation handler */
 extern
 const char* SCIPrelaxGetName(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets description of relaxator */
+/** gets description of relaxation handler */
 extern
 const char* SCIPrelaxGetDesc(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets priority of relaxator */
+/** gets priority of relaxation handler */
 extern
 int SCIPrelaxGetPriority(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets frequency of relaxator */
+/** gets frequency of relaxation handler */
 extern
 int SCIPrelaxGetFreq(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets time in seconds used in this relaxator for setting up for next stages */
@@ -80,28 +84,28 @@ SCIP_Real SCIPrelaxGetSetupTime(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
-/** gets time in seconds used in this relaxator */
+/** gets time in seconds used in this relaxation handler */
 extern
 SCIP_Real SCIPrelaxGetTime(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets the total number of times, the relaxator was called */
+/** gets the total number of times, the relaxation handler was called */
 extern
 SCIP_Longint SCIPrelaxGetNCalls(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** is relaxator initialized? */
+/** is relaxation handler initialized? */
 extern
 SCIP_Bool SCIPrelaxIsInitialized(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** marks the current relaxation unsolved, s.t. the relaxator is called again in the next solving round */
+/** marks the current relaxation unsolved, s.t. the relaxation handler is called again in the next solving round */
 extern
 void SCIPrelaxMarkUnsolved(
-   SCIP_RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 #ifdef __cplusplus

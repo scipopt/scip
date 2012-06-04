@@ -242,13 +242,16 @@ SCIP_RETCODE SCIPincludeReaderBpa(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
    /* create binpacking reader data */
    readerdata = NULL;
    
    /* include binpacking reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyBpa, readerFreeBpa, readerReadBpa, readerWriteBpa, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBpa) );
    
    return SCIP_OKAY;
 }

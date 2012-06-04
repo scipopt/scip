@@ -78,6 +78,27 @@ void SCIPconshdlrSetData(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
+/* sets all separation related callbacks of the constraint handler */
+extern
+void SCIPconshdlrSetSepa(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
+   );
+
+/* sets both the propagation callback and the propagation frequency of the constraint handler */
+extern
+void SCIPconshdlrSetProp(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+         );
+
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
  *
@@ -321,6 +342,12 @@ int SCIPconshdlrGetNChgSides(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets number of times the presolving method of the constraint handler was called and tried to find reductions */
+extern
+int SCIPconshdlrGetNPresolCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets separation priority of constraint handler */
 extern
 int SCIPconshdlrGetSepaPriority(
@@ -426,6 +453,12 @@ SCIP_Bool SCIPconshdlrIsClonable(
 /** returns the timing mask of the propagation method of the constraint handler */
 extern
 SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** force enforcement of constaint handler for LP and pseudo solution */
+extern
+void SCIPconshdlrForceEnforcement(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

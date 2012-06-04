@@ -216,6 +216,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    )
 {
    SCIP_PRICERDATA* pricerdata;
+   SCIP_PRICER* pricer;
 
    assert(scip != NULL);
    assert(objpricer != NULL);
@@ -226,12 +227,17 @@ SCIP_RETCODE SCIPincludeObjPricer(
    pricerdata->deleteobject = deleteobject;
 
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
+   SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          objpricer->scip_delay_,
-         pricerCopyObj,
-         pricerFreeObj, pricerInitObj, pricerExitObj, 
-         pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
-         pricerdata) ); /*lint !e429*/
+         pricerRedcostObj, pricerFarkasObj, pricerdata) ); /*lint !e429*/
+   assert(pricer != NULL);
+
+   SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyObj) );
+   SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeObj) );
+   SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitObj) );
+   SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitObj) );
+   SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolObj) );
+   SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

@@ -65,6 +65,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
@@ -108,6 +110,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
+   SCIPclockFree(&(*stat)->provedfeaslptime);
+   SCIPclockFree(&(*stat)->provedinfeaslptime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -172,7 +176,10 @@ void SCIPstatReset(
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->nodeactivationtime);
+   SCIPclockReset(stat->nlpsoltime);
    SCIPclockReset(stat->copyclock);
+   SCIPclockReset(stat->provedfeaslptime);
+   SCIPclockReset(stat->provedinfeaslptime);
 
    SCIPhistoryReset(stat->glbhistory);
 
@@ -296,6 +303,11 @@ void SCIPstatResetCurrentRun(
    stat->ncreatednodesrun = 0;
    stat->nactivatednodes = 0;
    stat->ndeactivatednodes = 0;
+   stat->nprovedfeaslp = 0;
+   stat->nfailprovedfeaslp = 0;
+   stat->nprovedinfeaslp = 0;
+   stat->nfailprovedinfeaslp = 0;
+   stat->nabortprovedinfeaslp = 0;
    stat->nbacktracks = 0;
    stat->ndelayedcutoffs = 0;
    stat->nreprops = 0;

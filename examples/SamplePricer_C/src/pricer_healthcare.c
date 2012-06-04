@@ -238,17 +238,17 @@ SCIP_RETCODE HCPincludePricerHealthcare(
    )
 {
    SCIP_PRICERDATA* pricerdata;
+   SCIP_PRICER* pricer;
 
    /* create healthcare variable pricer data */
    pricerdata = NULL;
    /* TODO: (optional) create variable pricer specific data here */
 
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyHealthcare,
-         pricerFreeHealthcare, pricerInitHealthcare, pricerExitHealthcare, 
-         pricerInitsolHealthcare, pricerExitsolHealthcare, pricerRedcostHealthcare, pricerFarkasHealthcare,
-         pricerdata) );
+   SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerRedcostHealthcare, NULL, pricerdata) );
+
+   SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyHealthcare) );
 
    /* add healthcare variable pricer parameters */
    /* TODO: (optional) add variable pricer specific parameters with SCIPaddTypeParam() here */

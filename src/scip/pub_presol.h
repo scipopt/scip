@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
 
+/** comparison method for sorting presolvers w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPpresolCompName);
+
 /** gets user data of presolver */
 extern
 SCIP_PRESOLDATA* SCIPpresolGetData(
@@ -155,6 +159,12 @@ int SCIPpresolGetNChgCoefs(
 /** gets number of constraint sides changed in presolver */
 extern
 int SCIPpresolGetNChgSides(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of times the presolver was called and tried to find reductions */
+extern
+int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 

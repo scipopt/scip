@@ -607,8 +607,8 @@ SCIP_Bool isValue(
 /** returns whether the current token is an equation sense */
 static
 SCIP_Bool isSense(
-   PIPINPUT*              pipinput,           /**< PIP reading data */
-   PIPSENSE*              sense               /**< pointer to store the equation sense, or NULL */
+   PIPINPUT*             pipinput,           /**< PIP reading data */
+   PIPSENSE*             sense               /**< pointer to store the equation sense, or NULL */
    )
 {
    assert(pipinput != NULL);
@@ -2083,7 +2083,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
 
    if( (*linecnt) > PIP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -3745,13 +3745,18 @@ SCIP_RETCODE SCIPincludeReaderPip(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create lp reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyPip, readerFreePip, readerReadPip, readerWritePip, readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyPip) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadPip) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWritePip) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

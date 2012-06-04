@@ -86,6 +86,13 @@
 #define SORTTPL_HASFIELD5(x)    /**/
 #define SORTTPL_HASFIELD5PAR(x) /**/
 #endif
+#ifdef SORTTPL_FIELD6TYPE
+#define SORTTPL_HASFIELD6(x)    x
+#define SORTTPL_HASFIELD6PAR(x) x,
+#else
+#define SORTTPL_HASFIELD6(x)    /**/
+#define SORTTPL_HASFIELD6PAR(x) /**/
+#endif
 #ifdef SORTTPL_PTRCOMP
 #define SORTTPL_HASPTRCOMP(x)    x
 #define SORTTPL_HASPTRCOMPPAR(x) x,
@@ -159,6 +166,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -186,6 +194,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          SORTTPL_HASFIELD3( SORTTPL_FIELD3TYPE tempfield3 = field3[i]; )
          SORTTPL_HASFIELD4( SORTTPL_FIELD4TYPE tempfield4 = field4[i]; )
          SORTTPL_HASFIELD5( SORTTPL_FIELD5TYPE tempfield5 = field5[i]; )
+         SORTTPL_HASFIELD6( SORTTPL_FIELD6TYPE tempfield6 = field6[i]; )
 
          j = i;
          while( j >= h && SORTTPL_ISBETTER(tempkey, key[j-h]) )
@@ -196,15 +205,17 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3( field3[j] = field3[j-h]; )
             SORTTPL_HASFIELD4( field4[j] = field4[j-h]; )
             SORTTPL_HASFIELD5( field5[j] = field5[j-h]; )
+            SORTTPL_HASFIELD6( field6[j] = field6[j-h]; )
             j -= h;
          }
-          
+
          key[j] = tempkey;
          SORTTPL_HASFIELD1( field1[j] = tempfield1; )
          SORTTPL_HASFIELD2( field2[j] = tempfield2; )
          SORTTPL_HASFIELD3( field3[j] = tempfield3; )
          SORTTPL_HASFIELD4( field4[j] = tempfield4; )
          SORTTPL_HASFIELD5( field5[j] = tempfield5; )
+         SORTTPL_HASFIELD6( field6[j] = tempfield6; )
       }
    }
 }
@@ -220,6 +231,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -237,11 +249,11 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
       int lo;
       int hi;
       int mid;
-      
+
       /* select pivot element */
       mid = (start+end)/2;
       pivotkey = key[mid];
-      
+
       /* partition the array into elements < pivot [start,hi] and elements >= pivot [lo,end] */
       lo = start;
       hi = end;
@@ -264,25 +276,26 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
 
          if( lo >= hi )
             break;
-         
+
          SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[hi]);
          SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]); )
          SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]); )
          SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]); )
          SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]); )
          SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[hi]); )
-         
+         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[lo], field6[hi]); )
+
          lo++;
          hi--;
       }
       assert((hi == lo-1) || (type && hi == start) || (!type && lo == end));
-      
+
       /* skip entries which are equal to the pivot element (three partitions, <, =, > than pivot)*/
       if( type )
       {
          while( lo < end && !SORTTPL_ISBETTER(pivotkey, key[lo]) )
             lo++;
-         
+
          /* make sure that we have at least one element in the smaller partition */
          if( lo == start )
          {
@@ -295,6 +308,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]); )
             SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]); )
             SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[lo], field5[mid]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[lo], field6[mid]); )
             lo++;
          }
       }
@@ -315,6 +329,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[hi], field3[mid]); )
             SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[hi], field4[mid]); )
             SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field5[hi], field5[mid]); )
+            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field6[hi], field6[mid]); )
             hi--;
          }
       }
@@ -332,6 +347,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                 SORTTPL_HASFIELD3PAR(field3)
                 SORTTPL_HASFIELD4PAR(field4)
                 SORTTPL_HASFIELD5PAR(field5)
+                SORTTPL_HASFIELD6PAR(field6)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
@@ -353,6 +369,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                 SORTTPL_HASFIELD3PAR(field3)
                 SORTTPL_HASFIELD4PAR(field4)
                 SORTTPL_HASFIELD5PAR(field5)
+                SORTTPL_HASFIELD6PAR(field6)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
@@ -364,7 +381,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
       }
       type = !type;
    }
-   
+
    /* use shell sort on the remaining small list */
    if( end - start >= 1 )
    {
@@ -375,6 +392,7 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3PAR(field3)
             SORTTPL_HASFIELD4PAR(field4)
             SORTTPL_HASFIELD5PAR(field5)
+            SORTTPL_HASFIELD6PAR(field6)
             SORTTPL_HASPTRCOMPPAR(ptrcomp)
             SORTTPL_HASINDCOMPPAR(indcomp)
             SORTTPL_HASINDCOMPPAR(dataptr)
@@ -412,6 +430,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -432,6 +451,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3PAR(field3)
             SORTTPL_HASFIELD4PAR(field4)
             SORTTPL_HASFIELD5PAR(field5)
+            SORTTPL_HASFIELD6PAR(field6)
             SORTTPL_HASPTRCOMPPAR(ptrcomp)
             SORTTPL_HASINDCOMPPAR(indcomp)
             SORTTPL_HASINDCOMPPAR(dataptr)
@@ -446,6 +466,7 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
             SORTTPL_HASFIELD3PAR(field3)
             SORTTPL_HASFIELD4PAR(field4)
             SORTTPL_HASFIELD5PAR(field5)
+            SORTTPL_HASFIELD6PAR(field6)
             SORTTPL_HASPTRCOMPPAR(ptrcomp)
             SORTTPL_HASINDCOMPPAR(indcomp)
             SORTTPL_HASINDCOMPPAR(dataptr)
@@ -474,6 +495,7 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -483,6 +505,7 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE     field3val  )  /**< field1 value of new element */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE     field4val  )  /**< field1 value of new element */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE     field5val  )  /**< field1 value of new element */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE     field6val  )  /**< field1 value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insert position, or NULL */
    )
@@ -497,6 +520,7 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
       SORTTPL_HASFIELD3( field3[j] = field3[j-1]; )
       SORTTPL_HASFIELD4( field4[j] = field4[j-1]; )
       SORTTPL_HASFIELD5( field5[j] = field5[j-1]; )
+      SORTTPL_HASFIELD6( field6[j] = field6[j-1]; )
    }
 
    key[j] = keyval;
@@ -505,6 +529,7 @@ void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3( field3[j] = field3val; )
    SORTTPL_HASFIELD4( field4[j] = field4val; )
    SORTTPL_HASFIELD5( field5[j] = field5val; )
+   SORTTPL_HASFIELD6( field6[j] = field6val; )
 
    (*len)++;
 
@@ -521,6 +546,7 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD5PAR(  SORTTPL_FIELD5TYPE*    field5 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD6PAR(  SORTTPL_FIELD6TYPE*    field6 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -542,6 +568,7 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
       SORTTPL_HASFIELD3( field3[j] = field3[j+1]; )
       SORTTPL_HASFIELD4( field4[j] = field4[j+1]; )
       SORTTPL_HASFIELD5( field5[j] = field5[j+1]; )
+      SORTTPL_HASFIELD6( field6[j] = field6[j+1]; )
    }
 }
 
@@ -610,6 +637,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 #undef SORTTPL_FIELD3TYPE
 #undef SORTTPL_FIELD4TYPE
 #undef SORTTPL_FIELD5TYPE
+#undef SORTTPL_FIELD6TYPE
 #undef SORTTPL_PTRCOMP
 #undef SORTTPL_INDCOMP
 #undef SORTTPL_HASFIELD1
@@ -617,6 +645,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 #undef SORTTPL_HASFIELD3
 #undef SORTTPL_HASFIELD4
 #undef SORTTPL_HASFIELD5
+#undef SORTTPL_HASFIELD6
 #undef SORTTPL_HASPTRCOMP
 #undef SORTTPL_HASINDCOMP
 #undef SORTTPL_HASFIELD1PAR
@@ -624,6 +653,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 #undef SORTTPL_HASFIELD3PAR
 #undef SORTTPL_HASFIELD4PAR
 #undef SORTTPL_HASFIELD5PAR
+#undef SORTTPL_HASFIELD6PAR
 #undef SORTTPL_HASPTRCOMPPAR
 #undef SORTTPL_HASINDCOMPPAR
 #undef SORTTPL_ISBETTER

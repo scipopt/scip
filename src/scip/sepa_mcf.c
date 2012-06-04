@@ -165,25 +165,25 @@ typedef struct SCIP_McfNetwork SCIP_MCFNETWORK;
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_MCFNETWORK**     mcfnetworks;                /**< array of multi-commodity-flow network structures */
-   int                   nmcfnetworks;               /**< number of multi-commodity-flow networks (-1: extraction not yet done) */
-   int                   nclusters;                  /**< number of clusters to generate in the shrunken network -- default separation */
-   SCIP_Real             maxweightrange;             /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-   int                   maxtestdelta;               /**< maximal number of different deltas to try (-1: unlimited)  -- default separation */
-   SCIP_Bool             trynegscaling;              /**< should negative values also be tested in scaling? */
-   SCIP_Bool             fixintegralrhs;             /**< should an additional variable be complemented if f0 = 0? */
-   SCIP_Bool             dynamiccuts;                /**< should generated cuts be removed from the LP if they are no longer tight? */
-   int                   modeltype;                  /**< model type of the network */
-   int                   maxsepacuts;                /**< maximal number of cmir cuts separated per separation round */
-   int                   maxsepacutsroot;            /**< maximal number of cmir cuts separated per separation round in root node -- default separation */
-   SCIP_Real             maxinconsistencyratio;      /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) for separation at all*/
-   SCIP_Real             maxarcinconsistencyratio;   /**< maximum inconsistency ratio for arcs not to be deleted */
-   SCIP_Bool             checkcutshoreconnectivity;  /**< should we only separate if the cuts shores are connected */
-   SCIP_Bool             separatesinglenodecuts;     /**< should we separate inequalities based on single node cuts ? */
-   SCIP_Bool             separateflowcutset;         /**< should we separate flowcutset inequalities on the network cuts ? */
-   SCIP_Bool             separateknapsack;           /**< should we separate knapsack cover inequalities on the network cuts ? */
-   SCIP_Bool             lastroundsuccess;           /**< did we find a cut in the last round? */
-   MCFEFFORTLEVEL        effortlevel;                /**< effort level of separation (off / aggressive / default) */
+   SCIP_MCFNETWORK**     mcfnetworks;        /**< array of multi-commodity-flow network structures */
+   int                   nmcfnetworks;       /**< number of multi-commodity-flow networks (-1: extraction not yet done) */
+   int                   nclusters;          /**< number of clusters to generate in the shrunken network -- default separation */
+   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   int                   maxtestdelta;       /**< maximal number of different deltas to try (-1: unlimited)  -- default separation */
+   SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
+   SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   int                   modeltype;          /**< model type of the network */
+   int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node -- default separation */
+   SCIP_Real             maxinconsistencyratio; /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) for separation at all*/
+   SCIP_Real             maxarcinconsistencyratio; /**< maximum inconsistency ratio for arcs not to be deleted */
+   SCIP_Bool             checkcutshoreconnectivity;/**< should we only separate if the cuts shores are connected */
+   SCIP_Bool             separatesinglenodecuts; /**< should we separate inequalities based on single node cuts ? */
+   SCIP_Bool             separateflowcutset; /**< should we separate flowcutset inequalities on the network cuts ? */
+   SCIP_Bool             separateknapsack;   /**< should we separate knapsack cover inequalities on the network cuts ? */
+   SCIP_Bool             lastroundsuccess;   /**< did we find a cut in the last round? */
+   MCFEFFORTLEVEL        effortlevel;        /**< effort level of separation (off / aggressive / default) */
 };
 
 /** internal MCF extraction data to pass to subroutines */
@@ -244,7 +244,7 @@ typedef struct nodepair NODEPAIRENTRY;
 struct nodepairqueue
 {
    SCIP_PQUEUE*          pqueue;             /**< priority queue of elements */
-   NODEPAIRENTRY*        nodepairs;    /**< elements on the heap */
+   NODEPAIRENTRY*        nodepairs;          /**< elements on the heap */
 };
 typedef struct nodepairqueue NODEPAIRQUEUE;
 
@@ -277,7 +277,7 @@ static
 SCIP_RETCODE mcfnetworkCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK**     mcfnetwork          /**< MCF network structure */
-)
+   )
 {
    assert(mcfnetwork != NULL);
 
@@ -303,7 +303,7 @@ static
 SCIP_RETCODE mcfnetworkFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK**     mcfnetwork          /**< MCF network structure */
-)
+   )
 {
    assert(mcfnetwork != NULL);
 
@@ -360,7 +360,7 @@ SCIP_RETCODE mcfnetworkFill(
    int                   ncompnodes,         /**< number of nodes in the component */
    int*                  comparcs,           /**< array of arc ids of the component */
    int                   ncomparcs           /**< number of arcs in the component */
-)
+   )
 {
    unsigned char*    flowrowsigns     = mcfdata->flowrowsigns;
    SCIP_Real*        flowrowscalars   = mcfdata->flowrowscalars;
@@ -648,7 +648,7 @@ SCIP_RETCODE mcfnetworkFill(
 static
 void mcfnetworkPrint(
    SCIP_MCFNETWORK*      mcfnetwork          /**< MCF network structure */
-)
+   )
 {
    if( mcfnetwork == NULL )
       MCFdebugMessage("MCF network is empty\n");
@@ -695,7 +695,7 @@ static
 void printCommodities(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    unsigned char* flowrowsigns     = mcfdata->flowrowsigns;
    unsigned char* capacityrowsigns = mcfdata->capacityrowsigns;
@@ -824,9 +824,9 @@ SCIP_DECL_SORTINDCOMP(compCands)
 /** extracts flow conservation from the LP */
 static
 SCIP_RETCODE extractFlowRows(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   MCFDATA*              mcfdata                  /**< internal MCF extraction data to pass to subroutines */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
+   )
 {
    unsigned char* flowrowsigns;
    SCIP_Real*     flowrowscalars;
@@ -1041,7 +1041,7 @@ static
 SCIP_RETCODE extractCapacityRows(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    unsigned char*    flowrowsigns       = mcfdata->flowrowsigns;
    int*              colcommodity       = mcfdata->colcommodity;
@@ -1409,7 +1409,7 @@ static
 SCIP_RETCODE createNewCommodity(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    /* get memory for commoditysigns array */
    assert(mcfdata->ncommodities <= mcfdata->commoditysignssize);
@@ -1436,7 +1436,7 @@ SCIP_RETCODE createNewArc(
    int                   source,             /**< source of new arc */
    int                   target,             /**< target of new arc */
    int*                  newarcid            /**< pointer to store id of new arc */
-)
+   )
 {
    assert(source != target );
    assert(0 <= source && source < mcfdata->nnodes);
@@ -1490,7 +1490,7 @@ void addFlowrowToCommodity(
    unsigned char         rowsign,            /**< possible flow row signs to use */
    int*                  comcolids,          /**< array of column indices of columns in commodity */
    int*                  ncomcolids          /**< pointer to number of columns in commodity */
-)
+   )
 {
    unsigned char* flowrowsigns   = mcfdata->flowrowsigns;
    SCIP_Bool*     plusflow       = mcfdata->plusflow;
@@ -1637,7 +1637,7 @@ void invertCommodity(
    int                   ncomrows,           /**< number of flow rows (number of nodes) in commodity k */
    int*                  comcolids,          /**< column indices of columns in commodity k */
    int                   ncomcolids          /**< number of columns in commodity k */
-)
+   )
 {
    unsigned char* flowrowsigns = mcfdata->flowrowsigns;
    SCIP_Bool*     plusflow     = mcfdata->plusflow;
@@ -1702,7 +1702,7 @@ void deleteCommodity(
    int                   nrows,              /**< number of flow rows in the commodity */
    int*                  ndelflowrows,       /**< pointer to store number of flow rows in deleted commodity */
    int*                  ndelflowvars        /**< pointer to store number of flow vars in deleted commodity */
-)
+   )
 {
    unsigned char* flowrowsigns = mcfdata->flowrowsigns;
    SCIP_Bool*     plusflow     = mcfdata->plusflow;
@@ -1785,7 +1785,7 @@ void getFlowrowFit(
    int                   k,                  /**< commodity that the flow row should enter */
    unsigned char*        rowsign,            /**< pointer to store the possible flow row signs */
    SCIP_Bool*            invertcommodity     /**< pointer to store whether the commodity has to be inverted to accommodate the row */
-)
+   )
 {
    unsigned char* flowrowsigns   = mcfdata->flowrowsigns;
    SCIP_Bool*     plusflow       = mcfdata->plusflow;
@@ -1916,7 +1916,7 @@ void getNextFlowrow(
    SCIP_ROW**            nextrow,            /**< pointer to store next row */
    unsigned char*        nextrowsign,        /**< pointer to store possible signs of next row */
    SCIP_Bool*            nextinvertcommodity /**< pointer to store whether current commodity has to be inverted to accommodate the next row */
-)
+   )
 {
    SCIP_Real* flowrowscores = mcfdata->flowrowscores;
    SCIP_Bool* plusflow      = mcfdata->plusflow;
@@ -2028,11 +2028,11 @@ void getNextFlowrow(
 /** extracts flow conservation rows and puts them into commodities */
 static
 SCIP_RETCODE extractFlow(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   MCFDATA*              mcfdata,                 /**< internal MCF extraction data to pass to subroutines */
-   SCIP_Real             maxflowvarflowrowratio,  /**< maximum ratio of flowvars and flowrows */
-   SCIP_Bool*            failed                   /**< pointer to store whether flowrowflowvarratio exceeded */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   SCIP_Real             maxflowvarflowrowratio, /**< maximum ratio of flowvars and flowrows */
+   SCIP_Bool*            failed              /**< pointer to store whether flowrowflowvarratio exceeded */
+   )
 {
    int* flowcands = mcfdata->flowcands;
 
@@ -2224,7 +2224,7 @@ static
 SCIP_RETCODE extractCapacities(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
 
    unsigned char*    capacityrowsigns   = mcfdata->capacityrowsigns;
@@ -2393,7 +2393,7 @@ void collectIncidentFlowCols(
    MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
    SCIP_ROW*             flowrow,            /**< flow conservation constraint that defines the node */
    int                   basecommodity       /**< commodity of the base row */
-)
+   )
 {
    int*           colcommodity  = mcfdata->colcommodity;
    int*           colarcid      = mcfdata->colarcid;
@@ -2485,7 +2485,7 @@ SCIP_RETCODE getNodeSimilarityScore(
    SCIP_Real*            score,              /**< pointer to store the similarity score */
    SCIP_Bool*            invertcommodity     /**< pointer to store whether the arcs in the commodity of the row have
                                               *   to be inverted for the row to be compatible to the base row */
-)
+   )
 {
    unsigned char*    flowrowsigns   = mcfdata->flowrowsigns;
    int*              commoditysigns = mcfdata->commoditysigns;
@@ -2679,7 +2679,7 @@ static
 SCIP_RETCODE extractNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    unsigned char*    flowrowsigns   = mcfdata->flowrowsigns;
    int               ncommodities   = mcfdata->ncommodities;
@@ -2950,7 +2950,7 @@ static
 void fixCommoditySigns(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    int* commoditysigns = mcfdata->commoditysigns;
    int k;
@@ -2971,7 +2971,7 @@ void getIncidentNodes(
    SCIP_COL*             col,                /**< flow column */
    int*                  sourcenode,         /**< pointer to store the source node of the flow column */
    int*                  targetnode          /**< pointer to store the target node of the flow column */
-)
+   )
 {
    unsigned char*    flowrowsigns     = mcfdata->flowrowsigns;
    int*              commoditysigns   = mcfdata->commoditysigns;
@@ -3067,7 +3067,7 @@ static
 SCIP_RETCODE findUncapacitatedArcs(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    int*              flowcands          = mcfdata->flowcands;
    int               nflowcands         = mcfdata->nflowcands;
@@ -3408,7 +3408,7 @@ static
 SCIP_RETCODE cleanupNetwork(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
-)
+   )
 {
    int*       flowcands      = mcfdata->flowcands;
    int        nflowcands     = mcfdata->nflowcands;
@@ -3722,11 +3722,11 @@ SCIP_RETCODE cleanupNetwork(
 /** for each arc identifies a source and target node */
 static
 SCIP_RETCODE identifySourcesTargets(
-   SCIP*                 scip,                  /**< SCIP data structure */
-   MCFDATA*              mcfdata,               /**< internal MCF extraction data to pass to subroutines */
-   SCIP_SEPADATA*        sepadata,              /**< separator data */
-   MCFEFFORTLEVEL*       effortlevel            /**< pointer to store effort level of separation */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   MCFEFFORTLEVEL*       effortlevel         /**< pointer to store effort level of separation */
+   )
 {
    int*              colarcid                 = mcfdata->colarcid;
    int*              colcommodity             = mcfdata->colcommodity;
@@ -4079,7 +4079,7 @@ SCIP_RETCODE identifyComponent(
    int*                  ncompnodes,         /**< pointer to store the number of nodes in the component */
    int*                  comparcs,           /**< array to store arc ids of the component */
    int*                  ncomparcs           /**< pointer to store the number of arcs in the component */
-)
+   )
 {
    int* arcsources   = mcfdata->arcsources;
    int* arctargets   = mcfdata->arctargets;
@@ -4207,7 +4207,7 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIP_MCFNETWORK***    mcfnetworks,        /**< pointer to store array of MCF network structures */
    int*                  nmcfnetworks,       /**< pointer to store number of MCF networks */
    MCFEFFORTLEVEL*       effortlevel         /**< effort level of separation */
-)
+   )
 {
    MCFDATA mcfdata;
 
@@ -4510,10 +4510,10 @@ SCIP_RETCODE mcfnetworkExtract(
 /** extracts MCF network structures from the current LP */
 static
 SCIP_RETCODE printFlowSystemInfo(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_MCFNETWORK**    mcfnetworks,        /**< array of MCF network structures */
-   int                  nmcfnetworks       /**< number of MCF networks */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MCFNETWORK**     mcfnetworks,        /**< array of MCF network structures */
+   int                   nmcfnetworks        /**< number of MCF networks */
+   )
 {
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -4674,9 +4674,11 @@ SCIP_RETCODE printFlowSystemInfo(
  */
 
 /** initializes a union find data structure by putting each element into its own set */
-static void
-unionfindInitSets (int *representatives, /**< mapping an element v to its representative */
-                   int nelems)           /**< number of elements in the ground set */
+static
+void unionfindInitSets(
+   int*                  representatives,    /**< mapping an element v to its representative */
+   int                   nelems              /**< number of elements in the ground set */
+   )
 {
    int v;
 
@@ -4686,9 +4688,11 @@ unionfindInitSets (int *representatives, /**< mapping an element v to its repres
 }
 
 /** applies a union find algorithm to get the representative of v */
-static int
-unionfindGetRepresentative (int *representatives, /**< mapping an element v to its representative */
-                            int v)                /**< element v to get a representative for */
+static
+int unionfindGetRepresentative(
+   int*                  representatives,    /**< mapping an element v to its representative */
+   int                   v                   /**< element v to get a representative for */
+   )
 {
    assert(representatives != NULL);
 
@@ -4702,10 +4706,12 @@ unionfindGetRepresentative (int *representatives, /**< mapping an element v to i
 }
 
 /** joins two sets in the union find framework */
-static void
-unionfindJoinSets (int *representatives, /**< mapping an element v to its representative */
-                   int rep1,             /**< representative of first set */
-                   int rep2)             /**< representative of second set */
+static
+void unionfindJoinSets(
+   int*                  representatives,    /**< mapping an element v to its representative */
+   int                   rep1,               /**< representative of first set */
+   int                   rep2                /**< representative of second set */
+   )
 {
    assert(rep1 != rep2);
    assert(representatives[rep1] == rep1);
@@ -4835,7 +4841,7 @@ SCIP_RETCODE nodepairqueueCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPAIRQUEUE**       nodepairqueue       /**< pointer to nodepair priority queue */
-)
+   )
 {
    /* For every nodepair that is used in the network (at least one arc exists having this nodepair as endnodes)
     * we calculate a weight:
@@ -5149,7 +5155,7 @@ static
 void nodepairqueueFree(
    SCIP*                 scip,               /**< SCIP data structure */
    NODEPAIRQUEUE**       nodepairqueue       /**< pointer to nodepair priority queue */
-)
+   )
 {
    assert(nodepairqueue != NULL);
    assert(*nodepairqueue != NULL);
@@ -5163,8 +5169,8 @@ void nodepairqueueFree(
 /** returns whether there are any nodepairs left on the queue */
 static
 SCIP_Bool nodepairqueueIsEmpty(
-   NODEPAIRQUEUE*             nodepairqueue            /**< nodepair priority queue */
-)
+   NODEPAIRQUEUE*        nodepairqueue       /**< nodepair priority queue */
+   )
 {
    assert(nodepairqueue != NULL);
 
@@ -5175,8 +5181,8 @@ SCIP_Bool nodepairqueueIsEmpty(
 /** removes the top element from the nodepair priority queue, returns nodepair entry or NULL */
 static
 NODEPAIRENTRY* nodepairqueueRemove(
-   NODEPAIRQUEUE*             nodepairqueue            /**< nodepair priority queue */
-)
+   NODEPAIRQUEUE*        nodepairqueue       /**< nodepair priority queue */
+   )
 {
 
    assert(nodepairqueue != NULL);
@@ -5195,7 +5201,7 @@ static
 int nodepartitionGetRepresentative(
    NODEPARTITION*        nodepartition,      /**< node partition data structure */
    int                   v                   /**< node id to get representative for */
-)
+   )
 {
    return unionfindGetRepresentative(nodepartition->representatives, v);
 }
@@ -5206,7 +5212,7 @@ void nodepartitionJoin(
    NODEPARTITION*        nodepartition,      /**< node partition data structure */
    int                   rep1,               /**< representative of first cluster */
    int                   rep2                /**< representative of second cluster */
-)
+   )
 {
    unionfindJoinSets (nodepartition->representatives, rep1, rep2);
 }
@@ -5218,7 +5224,7 @@ SCIP_RETCODE nodepartitionCreate(
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION**       nodepartition,      /**< pointer to node partition data structure */
    int                   nclusters           /**< number of clusters to generate */
-)
+   )
 {
    NODEPAIRQUEUE* nodepairqueue;
    int* clustersize;
@@ -5366,7 +5372,7 @@ static
 void nodepartitionFree(
    SCIP*                 scip,               /**< SCIP data structure */
    NODEPARTITION**       nodepartition       /**< pointer to node partition data structure */
-)
+   )
 {
    assert(nodepartition != NULL);
    assert(*nodepartition != NULL);
@@ -5385,7 +5391,7 @@ SCIP_Bool nodeInPartition(
    unsigned int          partition,          /**< partition of nodes, or node number in single-node partition */
    SCIP_Bool             inverted,           /**< should partition be inverted? */
    int                   v                   /**< node to check */
-)
+   )
 {
    /* if the node does not exist, it is not in the partition
     * (and also not in the inverted partition)
@@ -5409,12 +5415,13 @@ SCIP_Bool nodeInPartition(
 }
 
 /** returns whether each of the sets S and T defined by the nodepartition is connected */
-static int
-nodepartitionIsConnected
-(SCIP*                 scip,          /**< SCIP data structure */
- SCIP_MCFNETWORK*      mcfnetwork,    /**< MCF network structure */
- NODEPARTITION*        nodepartition, /**< node partition data structure */
- unsigned int          partition )      /**< partition of nodes, or node number in single-node partition */
+static
+int nodepartitionIsConnected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure */
+   unsigned int          partition           /**< partition of nodes, or node number in single-node partition */
+   )
 {
    const int* nodeclusters = nodepartition->nodeclusters;
    const int* arcsources   = mcfnetwork->arcsources;
@@ -5497,7 +5504,7 @@ nodepartitionIsConnected
 static
 void nodepartitionPrint(
    NODEPARTITION*        nodepartition       /**< node partition data structure */
-)
+   )
 {
    int c;
 
@@ -5522,7 +5529,7 @@ SCIP_RETCODE outputGraph(
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    SCIP_Bool             inverted,           /**< should partition be inverted? */
    unsigned int          partition           /**< partition of nodes, or node number */
-)
+   )
 {
    FILE* file;
    char filename[SCIP_MAXSTRLEN];
@@ -5755,7 +5762,7 @@ SCIP_RETCODE addCut(
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
-)
+   )
 {
    SCIP_ROW* cut;
    char cutname[SCIP_MAXSTRLEN];
@@ -5856,7 +5863,7 @@ SCIP_RETCODE generateClusterCuts(
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
-)
+   )
 {
    SCIP_ROW***       nodeflowrows      = mcfnetwork->nodeflowrows;
    SCIP_Real**       nodeflowscales    = mcfnetwork->nodeflowscales;
@@ -6573,7 +6580,7 @@ SCIP_RETCODE separateCuts(
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
-)
+   )
 {
    /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
@@ -6889,8 +6896,9 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
-   /* create cmir separator data */
+   /* create mcf separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->mcfnetworks = NULL;
    sepadata->nmcfnetworks = -1;
@@ -6899,12 +6907,19 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    sepadata->effortlevel = MCFEFFORTLEVEL_OFF;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyMcf, sepaFreeMcf, sepaInitMcf, sepaExitMcf,
-         sepaInitsolMcf, sepaExitsolMcf,
          sepaExeclpMcf, sepaExecsolMcf,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyMcf) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeMcf) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolMcf) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolMcf) );
+
 
    /** @todo introduce parameters such as maxrounds (see other separators) */
    /* add mcf separator parameters */

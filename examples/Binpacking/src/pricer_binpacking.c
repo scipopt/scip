@@ -682,6 +682,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    )
 {
    SCIP_PRICERDATA* pricerdata;
+   SCIP_PRICER* pricer;
 
    /* create binpacking variable pricer data */
    SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
@@ -696,10 +697,12 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    pricerdata->capacity = 0;
    
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyBinpacking, pricerFreeBinpacking, pricerInitBinpacking, pricerExitBinpacking, 
-         pricerInitsolBinpacking, pricerExitsolBinpacking, pricerRedcostBinpacking, pricerFarkasBinpacking,
-         pricerdata) );
+   SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerRedcostBinpacking, NULL, pricerdata) );
+
+   SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeBinpacking) );
+   SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitBinpacking) );
+   SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolBinpacking) );
 
    /* add binpacking variable pricer parameters */
    /* TODO: (optional) add variable pricer specific parameters with SCIPaddTypeParam() here */

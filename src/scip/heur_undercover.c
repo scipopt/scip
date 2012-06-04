@@ -13,9 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* uncomment to get statistical output at the end of undercover run */
-/* #define STATISTIC_INFORMATION */
-
 /**@file   heur_undercover.c
  * @brief  Undercover primal heuristic for MINLPs
  * @author Timo Berthold
@@ -98,13 +95,6 @@
 #define MINTIMELEFT             1.0          /**< don't start expensive parts of the heuristics if less than this amount of time left */
 #define SUBMIPSETUPCOSTS        200          /**< number of nodes equivalent for the costs for setting up the sub-CIP */
 
-
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                {x}
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -749,10 +739,20 @@ SCIP_RETCODE createCoveringProblem(
          }
 
          /* if constraints with inactive variables are present, we have to find the corresponding active variable */
-	 andres = SCIPgetResultantAnd(scip, andcons);
-	 assert(andres != NULL);
+         andres = SCIPgetResultantAnd(scip, andcons);
+         assert(andres != NULL);
          probindex = SCIPvarGetProbindex(andres);
          negated = FALSE;
+
+         /* if resultant is fixed this constraint can be either linearized or is redundant because all operands can be fixed */
+         if( termIsConstant(scip, andres, 1.0, globalbounds) )
+         {
+            /* free memory for covering constraint */
+            SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+            SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+
+            continue;
+         }
 
          if( probindex == -1 )
          {
@@ -761,6 +761,7 @@ SCIP_RETCODE createCoveringProblem(
             /* get binary representative of variable */
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, SCIPgetResultantAnd(scip, andcons), &repvar, &negated) );
             assert(repvar != NULL);
+            assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
 
             if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_MULTAGGR )
             {
@@ -769,14 +770,6 @@ SCIP_RETCODE createCoveringProblem(
                SCIPfreeBufferArray(coveringscip, &coveringconsvals);
                SCIPfreeBufferArray(coveringscip, &coveringconsvars);
                goto TERMINATE;
-            }
-            else if( SCIPvarGetStatus(repvar) == SCIP_VARSTATUS_FIXED )
-            {
-               /* free memory for covering constraint */
-               SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-               SCIPfreeBufferArray(coveringscip, &coveringconsvars);
-
-               continue;
             }
 
             /* check for negation */
@@ -792,14 +785,14 @@ SCIP_RETCODE createCoveringProblem(
                negated = FALSE;
             }
          }
-	 else if( SCIPvarGetLbGlobal(andres) > 0.5 || SCIPvarGetUbGlobal(andres) < 0.5 )
-	 {
-	    /* free memory for covering constraint */
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvals);
-	    SCIPfreeBufferArray(coveringscip, &coveringconsvars);
+         else if( SCIPvarGetLbGlobal(andres) > 0.5 || SCIPvarGetUbGlobal(andres) < 0.5 )
+         {
+            /* free memory for covering constraint */
+            SCIPfreeBufferArray(coveringscip, &coveringconsvals);
+            SCIPfreeBufferArray(coveringscip, &coveringconsvars);
 
-	    continue;
-	 }
+            continue;
+         }
          assert(probindex >= 0);
          assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
@@ -992,7 +985,6 @@ SCIP_RETCODE createCoveringProblem(
          SCIP_CONS* indcons;
          SCIP_VAR* binvar;
          SCIP_VAR* coveringvar;
-         SCIP_Bool negated;
 
          /* get constraint and variables */
          indcons = SCIPconshdlrGetConss(conshdlr)[c];
@@ -1013,6 +1005,7 @@ SCIP_RETCODE createCoveringProblem(
          if( probindex == -1 )
          {
             SCIP_VAR* repvar;
+            SCIP_Bool negated;
 
             /* get binary representative of variable */
             negated = FALSE;
@@ -1029,15 +1022,11 @@ SCIP_RETCODE createCoveringProblem(
 
             /* check for negation */
             if( SCIPvarIsNegated(repvar) )
-            {
                probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
-               negated = TRUE;
-            }
             else
             {
                assert(SCIPvarIsActive(repvar));
                probindex = SCIPvarGetProbindex(repvar);
-               negated = FALSE;
             }
          }
          assert(probindex >= 0);
@@ -1313,17 +1302,17 @@ SCIP_RETCODE createCoveringProblem(
    /* free expression interpreter */
    SCIP_CALL( SCIPexprintFree(&exprint) );
 
-   STATISTIC(
+   SCIPstatistic(
       int nnonzs;
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          nnonzs += termcounter[i];
-      SCIPinfoMessage(scip, NULL, "UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
+      SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
       nnonzs = 0;
       for( i = 0; i < nvars; ++i)
          if( conscounter[i] > 0 )
             nnonzs++;
-      SCIPinfoMessage(scip, NULL, "UCstats nlvars: %6d\n", nnonzs);
+      SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
       );
 
    /* free counter arrays for weighted objectives */
@@ -2717,7 +2706,9 @@ SCIP_RETCODE SCIPapplyUndercover(
    maxcoversize = nvars*heurdata->maxcoversizevars;
    if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
    {
-      maxcoversize = MIN(maxcoversize,heurdata->maxcoversizeconss * nnlconss / (SCIP_Real) SCIPgetNConss(scip) );
+      SCIP_Real maxcoversizeconss;
+      maxcoversizeconss = heurdata->maxcoversizeconss * nnlconss / ((SCIP_Real) SCIPgetNConss(scip));
+      maxcoversize = MIN(maxcoversize, maxcoversizeconss);
    }
 
    /* create covering problem */
@@ -2755,6 +2746,7 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* update memory left */
    memorylimit -= SCIPgetMemUsed(coveringscip)/1048576.0;
+   memorylimit -= SCIPgetMemExternEstim(coveringscip)/1048576.0;
 
    /* allocate memory for storing bound disjunction information along probing path */
    SCIP_CALL( SCIPallocBufferArray(scip, &bdvars, 2*nvars) );
@@ -2792,11 +2784,11 @@ SCIP_RETCODE SCIPapplyUndercover(
       if( !reusecover )
       {
          SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, &coversize, cover,
-               timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, maxcoversize, &success) );
+               timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, maxcoversize, &success) );
 
-         STATISTIC(
+         SCIPstatistic(
             if( ncovers == 0 && success )
-               SCIPinfoMessage(scip, NULL, "UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
+               SCIPstatisticPrintf("UCstats coversize abs: %6d rel: %9.6f\n", coversize, 100*coversize /(SCIP_Real)nvars);
             );
 
          assert(coversize >= 0);
@@ -3247,8 +3239,12 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* only call heuristics if we have enough memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMessage("skipping undercover heuristic: too little memory\n");
       return SCIP_OKAY;
@@ -3319,6 +3315,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create undercover primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -3327,11 +3324,19 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    heurdata->globalbounds = FALSE;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyUndercover, heurFreeUndercover, heurInitUndercover, heurExitUndercover,
-         heurInitsolUndercover, heurExitsolUndercover, heurExecUndercover,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecUndercover, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 
    /* add string parameters */
    heurdata->fixingalts = NULL;
@@ -3392,7 +3397,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* add int parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/mincoveredabs",
          "minimum number of nonlinear constraints in the original problem",
-         &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0.0, INT_MAX, NULL, NULL) );
+         &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
          "maximum number of backtracks in fix-and-propagate",
@@ -3499,17 +3504,20 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
       SCIPdebugMessage("solving covering problem\n\n");
 
       SCIP_CALL( solveCoveringProblem(coveringscip, nvars, coveringvars, coversize, coverinds,
-            timelimit, memorylimit + SCIPgetMemUsed(coveringscip)/1048576.0, objlimit, success) );
+            timelimit, memorylimit + (SCIPgetMemExternEstim(coveringscip)+SCIPgetMemUsed(coveringscip))/1048576.0, objlimit, success) );
 
-      assert(*coversize >= 0);
-      assert(*coversize <= nvars);
-
-      /* return original variables in the cover */
-      for( i = *coversize-1; i >= 0; i-- )
+      if( *success )
       {
-         assert(coverinds[i] >= 0);
-         assert(coverinds[i] < nvars);
-         cover[i] = vars[coverinds[i]];
+         assert(*coversize >= 0);
+         assert(*coversize <= nvars);
+
+         /* return original variables in the cover */
+         for( i = *coversize-1; i >= 0; i-- )
+         {
+            assert(coverinds[i] >= 0);
+            assert(coverinds[i] < nvars);
+            cover[i] = vars[coverinds[i]];
+         }
       }
    }
    else

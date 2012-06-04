@@ -13,7 +13,7 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-In most cases (LINUX and MAC) it is quite easy to compile and install
+In most cases (LINUX and MAC), it is quite easy to compile and install
 SCIP. Therefore, reading the section "Brief installation description"
 should usually be enough. If this is not the case you find "Detailed
 installation description" below as well as some examples.
@@ -32,24 +32,26 @@ I Brief installation description
 The easiest way to install SCIP is to use the ZIB Optimization Suite which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
 the ZIB Optimization Suite (In case of the ZIB Optimization Suite, there is
-not need to specify any directories, the compiling process is fully
+no need to specify any directories, the compiling process is fully
 automated).
 
 Compiling SCIP directly can be done as follows:
 
-1) unpack the tarball "tar xvf scip-x.y.z.tgz"
+1) unpack the tarball "tar xvzf scip-x.y.z.tgz"
 2) change into the directory "cd scip-x.y.z"
 3) start compiling SCIP "make"
-4) (optional) install the header, libraries, and binary "make install INSTALLDIR="/usr/local/"
+3) (recommended) check your SCIP installation "make test"
+4) (optional) install the header, libraries, and binary, e.g.,
+   "make install INSTALLDIR="/usr/local/"
 
 On your first compilation you will be asked for some soft-link targets,
 depending on the LP solver you want to use. Usually, SCIP needs the
 following information
- (a) the directory where the include files of the LP solver lie
+ (a) the directory where the include files of the LP solver are located
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 
-Beside that SCIP needs the some soft-link targets, for ZIMPL lie
- (a) the directory where the include files of ZIMPL
+Beside that, SCIP needs the some soft-link targets for ZIMPL
+ (a) the directory where the include files of ZIMPL are located
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 
 You will need either the .a or the .so files and can skip the others by
@@ -136,15 +138,15 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
 
    - "GMP=true"        to use GMP library for exact counting
-   - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library 
+   - "GMP=false"       disable GMP usage; Note that GMP=false is not compatible with ZIMP=true since ZIMPL needs the GMP library
    - "GMP=auto"        to automaticaly link the GMP library in case ZIMPL is enabled (default)
-   
+
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT)
    - "IPOPT=false"     to disable IPOPT interface (default)
-   
-   - "EXPRINT=cppad"   to use CppAD as expressions interpreter
-   - "EXPRINT=none"    to use no expressions interpreter (default)
- 
+
+   - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
+   - "EXPRINT=none"    to use no expressions interpreter
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
@@ -183,7 +185,7 @@ III Examples
 ---
 make[1]: Entering directory `/sw/scip'
 
-** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt EXPRINT=none
+** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt EXPRINT=cppad
 
 ** creating directory "lib/zimplinc"
 ** missing soft-link "lib/spxinc"
@@ -261,7 +263,6 @@ make[1]: Entering directory `/sw/scip'
 
   -> "clp.*" is a directory containing the Clp installation, i.e., "clp.*/include/coin/ClpModel.hpp" should exist.
   -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/include/coin/IpIpoptApplication.hpp", "ipopt.*/lib/libipopt*", ... should exist.
-  -> "cppad" is a directory containing the CppAD header files, i.e., "cppad/cppad.hpp" should exist.
 
 - preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
 > Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed): 
@@ -423,13 +424,12 @@ make[1]: Leaving directory `/sw/scip'
 6. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
 
-7. To run the MIPLIB 3 test bench, download the MIPLIB instances from
-   "http://scip.zib.de/download/files/scip-miplib3.zip" and extract the archive into the SCIP base directory.
-   The instances will be unziped into the subdirectory "check/IP/miplib3/". Afterwards, enter
-   "make [options] test" with the same options with which you compiled SCIP in step 1.
+7. To run a short test, enter "make [options] test" with the same options with which you compiled SCIP in step 1.
+   If you use EXPRINT=none, a few MINLP instances might be aborted. If you use LPS=none, many instances will fail or take ages to be solved
 
 
 
+-----------------------------------------------
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------
 
@@ -454,7 +454,308 @@ http://www.gmplib.org/
 (The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the packages into the mingw folder.)
 
 Now "make READLINE=false" should be compiling without errors.
+
 Please note that we do NOT support creating the doxygen documentation or readline-usage under Windows.
 
 Since there are no real symlinks in MSYS, the include and library files of SoPlex and ZIMPL are actually copied into the SCIP-lib-folder.
 When you recompile ZIMPL or SoPlex after compiling SCIP you have to copy the libraries manually into the SCIP-lib-folder and recompile SCIP afterwards.
+
+
+
+---------------------------------------------------------------------
+Installing SCIP in Exact Solving Mode (without Floating-Point Errors)
+---------------------------------------------------------------------
+
+This version of SCIP can solve MIP instances exactly over the rational
+numbers. So far the branch-and-bound algorithm of SCIP has been adapted for
+exact MIP solving. It works with safe primal and dual bounds and supports
+the branching plugins of SCIP. All additional plugins, like separators,
+primal heuristics, and presolvers must not be included (adding them might
+introduce rounding errors).
+
+
+The following variables were added to the Makefile to enable compiling SCIP
+for exact MIP solving.
+
+
+- $(REDUCEDSOLVE): whether to reduce SCIP to a pure branch-and-bound algorithm, excluding all additional plugins
+             "true", "false"
+
+- $(BRANCHPLGS): whether to include all branching plugins
+  	     (otherwise the branch-and-bound algorithm will apply first-fractional variable branching)
+             "true", "false"
+
+- $(EXACTSOLVE): whether to run the branch-and-bound algorithm in exact solving mode
+             "true", "false"
+
+- $(LPSEX):  the exact LP solver to use
+             "qsoex", "none"
+
+
+Here is what you have to do to get SCIP running in exact mode:
+
+
+1. Install and link the following software packages.
+
+   Package: GNU Multiple Precision Arithmetic Library (GMP) -- tested with version 4.3.1
+   =====================================================================================
+
+   GMP is required for the exact LP solver QSopt_ex, SCIP in exact solving
+   mode, ZIMPL, and the GNU MPFR library. It can be downloaded from
+   "ftp://ftp.gnu.org/gnu/gmp". For correct behavior in QSopt_ex, it must
+   be compiled using the option "--enable-alloca=malloc-reentrant" which
+   avoids memory overwriting problems. You can use the following commands
+   for correctly installing GMP (see also "Installing GMP" on
+   "http://gmplib.org/manual").
+
+   - "cd <path>/gmp-4.3.1"
+   - "./configure --disable-shared --enable-static --enable-alloca=malloc-reentrant --prefix=<path>/gmp-4.3.1/lib"
+   - "make"
+   - "make check"
+   - "make install"
+
+   If you need to use a local GMP installation for SCIP, please provide the
+   corresponding path via a new local makefile
+   "myscip/make/local/make.$(HOSTNAME)". For example,
+   "myscip/make/local/make.alibaba" could contain lines of the form
+
+   FLAGS	      +=	-I<path>/gmp-4.3.1/lib/include
+   LDFLAGS	      +=	-L<path>/gmp-4.3.1/lib/lib
+
+
+   Package: GNU MPFR Library (MPFR) -- tested with version 2.4.2
+   =============================================================
+
+   SCIP in exact solving mode requires MPFR. It can be downloaded from
+   "ftp://ftp.gnu.org/gnu/mpfr". You can use the following commands
+   for correctly installing MPFR (see also "Installing MPFR" on
+   "http://www.mpfr.org/mpfr-current/mpfr.html").
+
+   - "cd <path>/mpfr-2.4.2
+   - "./configure --disable-shared --enable-static --prefix=<path>/mpfr-2.4.2/lib"
+   - "make"
+   - "make check"
+   - "make install"
+
+   If you need to use a local MPFR installation for SCIP, please provide
+   the corresponding path via a (new) local makefile
+   "myscip/make/local/make.$(HOSTNAME)". For example,
+   "myscip/make/local/make.alibaba" could contain lines of the form
+
+   FLAGS           +=      -I<path>/mpfr-2.4.2/lib/include
+   LDFLAGS         +=      -L<path>/mpfr-2.4.2/lib/lib
+
+
+   Package: ZIMPL version 3.0.0
+   ============================
+
+   SCIP in exact solving mode requires ZIMPL for reading in a MIP instance
+   without floating-point errors. Please stick to version 3.0.0; the ZIMPL
+   reader of the present SCIP version is not compatible with newer ZIMPL
+   versions. It can be downloaded from "http://zimpl.zib.de/download". You
+   can use the following commands for installing ZIMPL.
+
+   - "cd <path>/zimpl-3.0.0
+   - "make"
+   - "make check"
+
+   SCIP will automatically ask for the path to ZIMPL while compiling (see
+   standard SCIP instructions above).
+
+   Note that for some larger MIP instances, ZIMPL 3.0.0 only works if the
+   stack size is large enough, otherwise you will get a segmentation
+   fault. In a bash shell, the command "ulimit -s unlimited" corrects this
+   problem.
+
+   To convert files given in mps-format to files in zpl-format for ZIMPL,
+   you can use the script "mps2zpl.sh"; see Step 5.
+
+
+   Package: Standard LP solver
+   ===========================
+
+   You will need a standard LP solver based on floating-point
+   arithmetic. SCIP will automatically ask for the path to the standard LP
+   solver while compiling (see standard SCIP instructions above).
+
+
+   Package: QSopt_ex version 2.5.5
+   ===============================
+
+   You need the exact LP solver QSopt_ex. You can obtain it via
+
+   - "svn co https://conexo.dii.uchile.cl/SVN/ESolver/tags/QSopt_ex-2.5.5 QSopt_ex-2.5.5".
+
+   Please stick to version 2.5.5. We tested the interface of SCIP for this
+   version and, in particular, the following required replacement will only
+   work for QSopt_ex 2.5.5. You need to add the functions
+   "QSexact_verify()" and "QSexact_basis_dualstatus()" to QSopt_ex, which
+   test a given basis for dual feasibility. For this, please, replace the
+   files
+
+   - "QSopt_ex-2.5.5/EXact/exact.c"
+   - "QSopt_ex-2.5.5/EXact/exact.h"
+   - "QSopt_ex-2.5.5/include/QSopt_ex.h"
+
+   by the ones provided in the directory "QSopt_ex-2.5.5-replace".
+
+   For installing the QSopt_ex, we refer to the file
+   "QSopt_ex-2.5.5/README". The most important point is that QSopt_ex
+   requires the GMP library to be compiled using the option
+   "--enable-alloca=malloc-reentrant", which avoids memory overwriting
+   problems (see point "Package: GMP").
+
+   Before compiling QSopt_ex, make sure to update the GMP path in
+   "QSopt_ex-2.5.5/make.conf" (copy of "QSopt_ex-2.5.5/make.conf.default")
+   and "QSopt_ex-2.5.5/EGlib/make.conf". For example, replace the the
+   "GNUMP_LIB_DIR" and "GNUMP_INCLUDE_DIR" lines in both files by
+
+   GNUMP_LIB_DIR += <path>/gmp-4.3.1/lib/lib
+   GNUMP_INCLUDE_DIR += <path>/gmp-4.3.1/lib/include
+
+   You can use the following commands for installing QSopt_ex.
+
+   - "cd <path>/QSopt_ex-2.5.5
+   - "make"
+
+   SCIP will automatically ask for missing links to QSopt_ex while
+   compiling (see Step 2).
+
+
+2. Compile the library and the solver program: In your SCIP main directory,
+   enter "make [options]" with the options "OPT", "COMP", "LPS", "ZLIB",
+   and "READLINE", explained in the standard SCIP instructions above, and the
+   following additional options:
+
+
+   - "ZIMPL=true"       to enable ZIMPL file reader (default)
+   - "ZIMPL=false"      to disable ZIMPL file reader (not compatible with "EXACTSOLVE=true")
+
+   - "GMP=true"         to use GMP library
+   - "GMP=false"        to disable GMP usage (not compatible with "EXACTSOLVE=true" or "ZIMPL=true")
+   - "GMP=auto"         to automatically link the GMP library in case "ZIMPL" or "EXACTSOLVE" is enabled (default)
+
+   - "REDUCEDSOLVE=true"  to reduce SCIP to a pure branch-and-bound algorithm, excluding all additional plugins
+   - "REDUCEDSOLVE=false" to use SCIP with all default plugins (default; not compatible with "EXACTSOLVE=true")
+
+   - "BRANCHPLGS=true"  to include all branching plugins (default)
+   - "BRANCHPLGS=false" to exclude all branching plugins and thus use first-fractional variable branching
+                        Note: the value of "BRANCHPLGS" has no effect if "REDUCEDSOLVE=false".
+
+   - "LPSEX=qsoex"      to use QSopt_ex as exact LP solver
+   - "LPSEX=none        to use no exact LP solver (default; not compatible with "EXACTSOLVE=true")
+
+   - "EXACTSOLVE=true"  to run SCIP in exact solving mode (requires "ZIMPL=true", "GMP=auto/true", "REDUCEDSOLVE=true", "LPSEX=qsoex")
+   - "EXACTSOLVE=false" to run SCIP in standard, floating-point, solving mode (default)
+
+   On your first compilation with "LPSEX=qsoex" you will be asked for
+   additional soft-link targets. SCIP needs the following information
+
+     (a) the directory with the include files of QSopt_ex
+     (b) the library file(s) "lib*.a" or/and "lib*.so" of QSopt_ex
+
+     (c) the directory with the include files of EGlib (part of the QSopt_ex distribution)
+     (d) the library file(s) "lib*.a" or/and "lib*.so" of the EGlib library
+
+     (e) include- and lib-info for ZIMPL (see standard SCIP instructions above)
+
+   See also Step 3 for more details about the soft-links. You will need
+   either the ".a" or the ".so" files and can skip the others by just
+   pressing "return".
+
+
+   Example 1 (Branch-and-bound algorithm in exact solving mode, all branching plugins)
+   ===================================================================================
+
+   Typing
+
+   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true"
+
+   uses CPLEX as standard LP solver and QSopt_ex as exact LP solver. It
+   results in a reduced version of SCIP (only branch-and-bound) with SCIP's
+   default branching plugins. It will solve a MIP instance exactly.
+
+
+   Example 2 (Branch-and-bound algorithm in exact solving mode, no branching plugins)
+   ==================================================================================
+
+   Typing
+
+   "make LPS=cpx LPSEX=qsoex REDUCEDSOLVE=true EXACTSOLVE=true BRANCHPLGS=false"
+
+   uses CPLEX as standard LP solver and QSopt_ex as exact LP solver. It
+   results in a reduced version of SCIP (only branch-and-bound) with only
+   first-fractional variable branching. It will solve a MIP instance
+   exactly.
+
+
+   Example 3 (Branch-and-bound algorithm in standard solving mode, all branching plugins)
+   ======================================================================================
+
+   Typing
+
+   "make LPS=cpx REDUCEDSOLVE=true"
+
+   uses CPLEX as standard LP solver and no exact LP solver. It results in a
+   reduced version of SCIP (only branch-and-bound) with SCIP's default
+   branching plugins. It will solve a MIP instance with floating-point
+   arithmetic and thus cannot guarantee to produce correct results.
+
+
+   Example 4 (Branch-and-bound algorithm in standard solving mode, no branching plugins)
+   =====================================================================================
+
+   Typing
+
+   "make LPS=cpx REDUCEDSOLVE=true BRANCHPLGS=false"
+
+   uses CPLEX as standard LP solver and no exact LP solver. It results in a
+   reduced version of SCIP (only branch-and-bound) with only
+   first-fractional variable branching. It will solve a MIP instance with
+   floating-point arithmetic and thus cannot guarantee to produce correct
+   results.
+
+
+3. Instructions for manually creating the soft-links, if the query script
+   fails:
+
+   Create necessary soft-links in the "lib/" subdirectory of SCIP:
+
+   (a1) to use QSopt_ex
+       - ln -s <path to directory of QSopt_ex.h> <path to SCIP>/lib/qsexinc
+         (e.g. "cd scip; ln -s /QSopt_ex-2.5.5/include lib/qsexinc")
+       - ln -s <file QSopt_ex.a> <path to SCIP>/lib/libqsoptex.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s /QSopt_ex-2.5.5/lib/QSopt_ex.a lib/libqsoptex.linux.x86.gnu.a")
+
+   (a2) to use EGlib
+       - ln -s <path to directory of EGlib.h> <path to SCIP>/lib/EGlibinc
+         (e.g. "cd scip; ln -s /QSopt_ex-2.5.5/EGlib/include lib/EGlibinc")
+       - ln -s <file EGlib.a> <path to SCIP>/lib/libeglib.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s /QSopt_ex-2.5.5/EGlib/lib/EGlib.a lib/libeglib.linux.x86.gnu.a")
+
+4. To run the program enter
+   "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/scip.linux.x86.gnu.opt.cpx") or just "bin/scip" for the last
+   compiled version. NOTE: In the interactive shell, you can change the
+   default values of the user parameters. The parameter "misc/usefprelax"
+   has to be set before a MIP instance is read in as it influences the
+   behavior of the ZIMPL reader.
+
+5. To run some of the MIPLIB test instances, download the MIPLIB 3.0 test
+   set from "http://scip.zib.de/download/files/scip-miplib3.zip" and
+   extract the archive into the SCIP base directory. The instances will be
+   unziped into the subdirectory "check/IP/miplib3/". For the exact version
+   of SCIP you have to convert the downloaded mps-files into zpl-files (to
+   be able to read them via the ZIMPL reader). Please, use the "mps2zpl.sh"
+   script, which you will find in the SCIP base directory, to convert all
+   instances stated in "check/shortmiplibex.test". For example, run
+
+   "mps2zpl.sh check/IP/miplib3/air03.mps"
+
+   Afterwards, enter
+
+   "make [options] TEST=shortmiplibex test"
+
+   with the same options with which you compiled SCIP in step 1.

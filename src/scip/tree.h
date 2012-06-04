@@ -255,6 +255,8 @@ void SCIPnodeUpdateLowerbound(
 extern
 SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
+   char                  lowerboundtype,     /**< type of lower bound to be generated from LP 
+                                              *   ('i'gnore bound, 's'afe bound, 'u'nsafe bound) */ 
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */

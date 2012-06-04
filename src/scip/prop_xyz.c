@@ -237,17 +237,29 @@ SCIP_RETCODE SCIPincludePropXyz(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create xyz propagator data */
    propdata = NULL;
    /* TODO: (optional) create propagator specific data here */
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
-         PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyXyz, propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
-         propInitsolXyz, propExitsolXyz, propPresolXyz, propExecXyz, propRespropXyz,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecXyz, propRespropXyz,
          propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyXyz) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeXyz) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitXyz) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitXyz) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolXyz) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolXyz) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreXyz) );
+   SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreXyz) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolXyz, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* add xyz propagator parameters */
    /* TODO: (optional) add propagator specific parameters with SCIPaddTypeParam() here */

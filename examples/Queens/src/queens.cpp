@@ -34,7 +34,7 @@ scipexamples::QueensSolver::QueensSolver(int n)
    SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
 
    // disable scip output to stdout
-   SCIP_CALL_EXC( SCIPsetMessagehdlrFree(_scip, NULL) );
+   SCIP_CALL_EXC( SCIPsetMessagehdlr(_scip, NULL) );
 
    // create an empty problem
    SCIP_CALL_EXC( SCIPcreateProb(_scip, "queens", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );

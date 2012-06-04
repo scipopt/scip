@@ -203,6 +203,7 @@ SCIP_RETCODE SCIPincludeObjPresol(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    assert(scip != NULL);
    assert(objpresol != NULL);
@@ -211,14 +212,20 @@ SCIP_RETCODE SCIPincludeObjPresol(
    presoldata = new SCIP_PRESOLDATA;
    presoldata->objpresol = objpresol;
    presoldata->deleteobject = deleteobject;
+   presol = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, objpresol->scip_name_, objpresol->scip_desc_,
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
-         presolCopyObj,
-         presolFreeObj, presolInitObj, presolExitObj, 
-         presolInitpreObj, presolExitpreObj, presolExecObj,
-         presoldata) ); /*lint !e429*/
+         presolExecObj, presoldata) ); /*lint !e429*/
+   assert(presol != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyObj) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeObj) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitObj) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitObj) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreObj) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

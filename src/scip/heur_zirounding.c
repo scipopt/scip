@@ -41,12 +41,6 @@
 #define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
 #define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -821,9 +815,8 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          SCIPdebugMessage("found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
-         STATISTIC(
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
-            )
+         SCIPstatisticMessage("  ZI Round solution value: %g \n", SCIPgetSolOrigObj(scip, sol));
+
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -852,17 +845,24 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create zirounding primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyZirounding,
-         heurFreeZirounding, heurInitZirounding, heurExitZirounding,
-         heurInitsolZirounding, heurExitsolZirounding, heurExecZirounding,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZirounding) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeZirounding) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitZirounding) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitZirounding) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolZirounding) );
 
    /* add zirounding primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",
@@ -875,8 +875,8 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
          "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
          &heurdata->stoppercentage, TRUE, DEFAULT_STOPPERCENTAGE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls",
-         "determines the minimum number of calls before percentage-based deactivation of"
-         " Zirounding is applied", &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
+         "determines the minimum number of calls before percentage-based deactivation of Zirounding is applied",
+         &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -50,7 +50,7 @@ extern "C" {
 #endif
 
 #define SCIP_VERSION                211 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2012 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -197,7 +197,11 @@ extern "C" {
  * Defines for handling SCIP return codes
  */
 
+#ifndef NDEBUG
 #define SCIPABORT() assert(FALSE)
+#else
+#define SCIPABORT() abort()
+#endif
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )

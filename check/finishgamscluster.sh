@@ -32,4 +32,4 @@ then
   exit 0
 fi
 
-./evalcheck_gamscluster.sh -r $EVALFILE
+./evalcheck_gamscluster.sh $EVALFILE

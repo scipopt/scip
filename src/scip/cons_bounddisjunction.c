@@ -965,12 +965,12 @@ SCIP_RETCODE processWatchedVars(
             boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bounds[watchedvar1], SCIPgetDepth(scip));
          if( boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER )
          {
-            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, FALSE,
+            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1, TRUE,
                   &infbdchg, NULL) );
          }
          assert(!infbdchg);
@@ -2813,10 +2813,12 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
+   SCIP_CONFLICTHDLR* conflicthdlr;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecBounddisjunction, NULL) );
    
    /* allocate memory for conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
@@ -2827,30 +2829,39 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          &conflicthdlrdata->continuousfrac, FALSE, DEFAULT_CONTINUOUSFRAC, 0.0, 1.0, NULL, NULL) );
 
    /* create conflict handler for bound disjunction constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, conflictFreeBounddisjunction, NULL, NULL, NULL, NULL, conflictExecBounddisjunction, conflicthdlrdata) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecBounddisjunction, conflicthdlrdata) );
+
+   SCIP_CALL( SCIPsetConflicthdlrFree(scip, conflicthdlr, conflictFreeBounddisjunction) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyBounddisjunction,
-         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction,
-         consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
-         consDeleteBounddisjunction, consTransBounddisjunction,
-         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction,
-         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction,
-         consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
-         consActiveBounddisjunction, consDeactiveBounddisjunction,
-         consEnableBounddisjunction, consDisableBounddisjunction, consDelvarsBounddisjunction,
-         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
-         consGetVarsBounddisjunction, consGetNVarsBounddisjunction,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, consLockBounddisjunction,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBounddisjunction, consCopyBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBounddisjunction, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBounddisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
 
    /* register upgrade of quadratic complementarity constraints in cons_quadratic */
    if( SCIPfindConshdlr(scip, "quadratic") )
@@ -2918,6 +2929,32 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an and constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBounddisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBounddisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds              /**< bounds of the literals */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

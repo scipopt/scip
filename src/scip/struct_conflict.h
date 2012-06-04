@@ -72,12 +72,12 @@ struct SCIP_ConflictSet
 /** set of LP bound change */
 struct SCIP_LPBdChgs
 {
-   int*                 bdchginds;           /**< array of column indices */
-   SCIP_Real*           bdchglbs;            /**< array of lower bounds */
-   SCIP_Real*           bdchgubs;            /**< array of upper bounds */
-   int*                 bdchgcolinds;        /**< array of ???????????? */
-   SCIP_Bool*           usedcols;            /**< array to mark if a column is used */
-   int                  nbdchgs;             /**< number of stored LP bound changes */
+   int*                  bdchginds;          /**< array of column indices */
+   SCIP_Real*            bdchglbs;           /**< array of lower bounds */
+   SCIP_Real*            bdchgubs;           /**< array of upper bounds */
+   int*                  bdchgcolinds;       /**< array of ???????????? */
+   SCIP_Bool*            usedcols;           /**< array to mark if a column is used */
+   int                   nbdchgs;            /**< number of stored LP bound changes */
 };
 
 /** conflict analysis data structure */

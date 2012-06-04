@@ -164,7 +164,7 @@ static
 SCIP_RETCODE catchRhsVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons               /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -254,7 +254,7 @@ static
 SCIP_RETCODE dropRhsVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons               /**< constraint for which to catch bound change events */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1154,7 +1154,8 @@ SCIP_RETCODE generateSparseCut(
          x[ind[i]] = SCIPgetSolVal(scip, sol, consdata->vars[ind[i]]);
 
       maxnz = nextmaxnz;
-   } while( TRUE );  /*lint !e506*/
+   }
+   while( TRUE );  /*lint !e506*/
 
    SCIPfreeBufferArray(scip, &x);
    SCIPfreeBufferArray(scip, &dist);
@@ -1447,7 +1448,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = consdata->offsets[i];
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  lhs term at position %d is replaced by %g * <%s> + %g\n",
          i, coef, SCIPvarGetName(x), offset);
@@ -1492,7 +1493,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  rhs variable is replaced by %g * <%s> + %g\n", coef, SCIPvarGetName(x), offset);
 
@@ -2476,10 +2477,10 @@ SCIP_RETCODE presolveCreateOuterApprox(
 /** propagates variable bounds */
 static
 SCIP_RETCODE propagateBounds(
-   SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONS*      cons,      /**< constraint */
-   SCIP_RESULT*    result,    /**< buffer to store result of propagation */
-   int*            nchgbds    /**< buffer where to add number of tightened bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_RESULT*          result,             /**< buffer to store result of propagation */
+   int*                  nchgbds             /**< buffer where to add number of tightened bounds */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2659,10 +2660,10 @@ SCIP_RETCODE propagateBounds(
 /** tries to adjust a solution such that it satisfies a given constraint by increasing the value for the constraints right hand side variable */
 static
 SCIP_RETCODE polishSolution(
-   SCIP*           scip,      /**< SCIP data structure */
-   SCIP_CONS*      cons,      /**< constraint */
-   SCIP_SOL*       sol,       /**< solution to polish */
-   SCIP_Bool*      success    /**< buffer to store whether polishing was successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to polish */
+   SCIP_Bool*            success             /**< buffer to store whether polishing was successful */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3080,12 +3081,7 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_Bool iscutoff;
-   SCIP_Bool isdeleted;
-   int dummy;
    int c;
-   int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -3094,35 +3090,13 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
 
    *result = SCIP_FEASIBLE;
 
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
+   /* tell SCIP that we have something nonlinear */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( presolveRemoveFixedVariables(scip, conshdlr, conss[c], &dummy, &dummy, &dummy, &dummy, &iscutoff, &isdeleted) ); /*lint !e613*/
-      if( iscutoff )
+      if( SCIPconsIsAdded(conss[c]) )
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-
-      /* if conss[c] has been deleted, skip the rest */
-      if( isdeleted )
-         continue;
-
-      /* tell SCIP that we have something nonlinear */
-      SCIPmarkNonlinearitiesPresent(scip);
-      if( !SCIPhasContinuousNonlinearitiesPresent(scip) )
-      {
-         consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
-         assert(consdata != NULL);
-
-         for( i = 0; i < consdata->nvars; ++i )
-            if( SCIPvarGetType(consdata->vars[i]) >= SCIP_VARTYPE_CONTINUOUS )
-            {
-               SCIPmarkContinuousNonlinearitiesPresent(scip);
-               break;
-            }
+         SCIPenableNLP(scip);
+         break;
       }
    }
 
@@ -3150,15 +3124,18 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
    {
       for( c = 0; c < nconss; ++c )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
-         if( consdata->nlrow == NULL )
+         if( SCIPconsIsEnabled(conss[c]) )
          {
-            SCIP_CALL( createNlRow(scip, conshdlr, conss[c]) );
-            assert(consdata->nlrow != NULL);
+            consdata = SCIPconsGetData(conss[c]);
+            assert(consdata != NULL);
+
+            if( consdata->nlrow == NULL )
+            {
+               SCIP_CALL( createNlRow(scip, conshdlr, conss[c]) );
+               assert(consdata->nlrow != NULL);
+            }
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
 
@@ -3796,7 +3773,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          return SCIP_OKAY;
       }
       if( isdeleted )
-      { /* conss[c] has been deleted */
+      {
+         /* conss[c] has been deleted */
          *result = SCIP_SUCCESS;
          continue;
       }
@@ -3819,12 +3797,16 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
       case SCIP_CUTOFF:
          *result = SCIP_CUTOFF;
          SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-         break;
+         return SCIP_OKAY;
       default:
          SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
          return SCIP_ERROR;
       } /*lint !e788*/
    }
+
+   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
+   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
+      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -4262,7 +4244,7 @@ SCIP_DECL_CONSPARSE(consParseSOC)
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
-SCIP_DECL_CONSGETVARS(consGetVarsSoc)
+SCIP_DECL_CONSGETVARS(consGetVarsSOC)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
@@ -4283,7 +4265,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsSoc)
 
 /** constraint method of constraint handler which returns the number of variable (if possible) */
 static
-SCIP_DECL_CONSGETNVARS(consGetNVarsSoc)
+SCIP_DECL_CONSGETNVARS(consGetNVarsSOC)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
@@ -4308,36 +4290,47 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->trysolheur = NULL;
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange",
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_boundchange",
          "signals a bound change to a second order cone constraint",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+         processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
 
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution",
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution",
          "handles the event that a new primal solution has been found",
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+         processNewSolutionEvent, NULL) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopySOC, consFreeSOC, consInitSOC, consExitSOC,
-         consInitpreSOC, consExitpreSOC, consInitsolSOC, consExitsolSOC,
-         consDeleteSOC, consTransSOC, consInitlpSOC,
-         consSepalpSOC, consSepasolSOC, consEnfolpSOC, consEnfopsSOC, consCheckSOC,
-         consPropSOC, consPresolSOC, consRespropSOC, consLockSOC,
-         consActiveSOC, consDeactiveSOC,
-         consEnableSOC, consDisableSOC, consDelvarsSOC,
-         consPrintSOC, consCopySOC, consParseSOC,
-         consGetVarsSoc, consGetNVarsSoc, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpSOC, consEnfopsSOC, consCheckSOC, consLockSOC,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOC, consCopySOC) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOC) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitSOC) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOC) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOC) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOC) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOC) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOC) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSOC) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOC) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOC) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOC) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOC) );   /* include constraint handler */
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )
    {
@@ -4516,6 +4509,32 @@ SCIP_RETCODE SCIPcreateConsSOC(
 
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, *cons) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a second order cone constraint with all its constraint flags
+ *  set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables on left hand side of constraint (n) */
+   SCIP_VAR**            vars,               /**< array with variables on left hand side (x_i) */
+   SCIP_Real*            coefs,              /**< array with coefficients of left hand side variables (alpha_i), or NULL if all 1.0 */
+   SCIP_Real*            offsets,            /**< array with offsets of variables (beta_i), or NULL if all 0.0 */
+   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side of constraint (x_{n+1}) */
+   SCIP_Real             rhscoeff,           /**< coefficient of variable on right hand side (alpha_{n+1}) */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side (beta_{n+1}) */
+   )
+{
+   SCIP_CALL( SCIPcreateConsSOC(scip, cons, name, nvars, vars, coefs, offsets, constant,
+         rhsvar, rhscoeff, rhsoffset,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

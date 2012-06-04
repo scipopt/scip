@@ -133,7 +133,8 @@ public:
     *  to the transformed user problem data are released.
     */
    virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip                /**< SCIP data structure */
+      SCIP*              scip,                /**< SCIP data structure */
+      SCIP_Bool          restart              /**< was this exit solve call triggered by a restart? */
       )
    {  /*lint --e{715}*/
       return SCIP_OKAY;

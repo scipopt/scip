@@ -724,6 +724,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    SCIP_Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   SCIP_Bool             isshortcut,         /**< is the implication a shortcut, i.e., added as part of the transitive closure of another implication? */
    SCIP_Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
    SCIP_Bool*            added               /**< pointer to store whether the implication was added */
    )
@@ -834,7 +835,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -907,7 +908,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -934,7 +935,6 @@ SCIP_RETCODE SCIPimplicsDel(
    SCIP_BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    )
 {
-   int i;
    int poslower;
    int posupper; 
    int posadd;
@@ -965,13 +965,16 @@ SCIP_RETCODE SCIPimplicsDel(
    assert((*implics)->types[varfixing][posadd] == impltype);
 
    /* removes y from implications of x */
-   for( i = posadd; i < (*implics)->nimpls[varfixing] - 1; i++ )
+   if( (*implics)->nimpls[varfixing] - posadd > 1 )
    {
-      (*implics)->vars[varfixing][i] = (*implics)->vars[varfixing][i+1];
-      (*implics)->types[varfixing][i] = (*implics)->types[varfixing][i+1];
-      (*implics)->bounds[varfixing][i] = (*implics)->bounds[varfixing][i+1];
+      int amount = ((*implics)->nimpls[varfixing] - posadd - 1);
+
+      BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd]), &((*implics)->types[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd]), &((*implics)->vars[varfixing][posadd+1]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd]), &((*implics)->bounds[varfixing][posadd+1]), amount); /*lint !e866*/
    }
    (*implics)->nimpls[varfixing]--;
+
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       assert(posadd < (*implics)->nbinimpls[varfixing]);
@@ -1585,8 +1588,8 @@ void SCIPcliquelistRemoveFromCliques(
             /* remove the entry from the clique */
             if( clique->nvars - pos - 1 > 0 )
             {
-               memmove(&clique->vars[pos], &clique->vars[pos+1], sizeof(clique->vars[0]) * (clique->nvars - pos - 1));
-               memmove(&clique->values[pos], &clique->values[pos+1], sizeof(clique->values[0]) * (clique->nvars - pos - 1));
+               BMSmoveMemoryArray(&(clique->vars[pos]), &(clique->vars[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
+               BMSmoveMemoryArray(&(clique->values[pos]), &(clique->values[pos+1]), clique->nvars - pos - 1); /*lint !e866*/
             }
             clique->nvars--;
 
@@ -2001,7 +2004,10 @@ SCIP_Real* SCIPimplicsGetBounds(
    return implics != NULL ? implics->bounds[varfixing] : NULL;
 }
 
-/** gets array with unique implication identifiers for a given binary variable fixing */
+/** Gets array with unique implication identifiers for a given binary variable fixing.
+ *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
+ *  its id is negative, otherwise it is nonnegative.
+ */
 int* SCIPimplicsGetIds(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */

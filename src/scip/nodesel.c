@@ -608,7 +608,8 @@ SCIP_RETCODE SCIPnodepqBound(
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(node) >= cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound)) )
       {
          SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
@@ -617,9 +618,13 @@ SCIP_RETCODE SCIPnodepqBound(
           * lower bound than the cut off value
           */
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound));
+            || (set->misc_exactsolve && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound)
+            || (!set->misc_exactsolve 
+               && SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound)));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound));
+            || (set->misc_exactsolve && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound)
+            || (!set->misc_exactsolve
+               && SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound)));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);
@@ -1027,13 +1032,81 @@ SCIP_NODESELDATA* SCIPnodeselGetData(
 
 /** sets user data of node selector; user has to free old data in advance! */
 void SCIPnodeselSetData(
-   SCIP_NODESEL*         nodesel,            /**< node selector */
-   SCIP_NODESELDATA*     nodeseldata         /**< new node selector user data */
+   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_NODESELDATA*    nodeseldata         /**< new node selector user data */
    )
 {
    assert(nodesel != NULL);
 
    nodesel->nodeseldata = nodeseldata;
+}
+
+/* new callback/method setter methods */
+
+/** sets copy method of node selector */
+void SCIPnodeselSetCopy(
+   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselcopy = nodeselcopy;
+}
+
+/** sets destructor method of node selector */
+void SCIPnodeselSetFree(
+   SCIP_NODESEL*         nodesel,           /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))   /**< destructor of node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselfree = nodeselfree;
+}
+
+/** sets initialization method of node selector */
+void SCIPnodeselSetInit(
+   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))   /**< initialize node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselinit = nodeselinit;
+}
+
+/** sets deinitialization method of node selector */
+void SCIPnodeselSetExit(
+   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))   /**< deinitialize node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselexit = nodeselexit;
+}
+
+/** sets solving process initialization method of node selector */
+void SCIPnodeselSetInitsol(
+   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselinitsol = nodeselinitsol;
+}
+
+/** sets solving process deinitialization method of node selector */
+void SCIPnodeselSetExitsol(
+   SCIP_NODESEL*         nodesel,           /**< node selector */
+   SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   nodesel->nodeselexitsol = nodeselexitsol;
 }
 
 /** is node selector initialized? */

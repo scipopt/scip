@@ -743,21 +743,26 @@ SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    assert(scip != NULL);
 
    /* create branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
 
+   branchrule = NULL;
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
-	 BRANCHRULE_MAXBOUNDDIST,
-         branchCopyStrongcoloring,
-         branchFreeStrongcoloring, branchInitStrongcoloring, branchExitStrongcoloring,
-         branchInitsolStrongcoloring, branchExitsolStrongcoloring,
-         branchExeclpStrongcoloring, branchExecrelStrongcoloring, branchExecpsStrongcoloring,
-         branchruledata) );
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+   assert(branchrule != NULL);
    
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyStrongcoloring) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeStrongcoloring) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpStrongcoloring) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitStrongcoloring) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitStrongcoloring) );
+
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/strongcoloring/lookahead",
          "number of candidates to be considered in branchingmode 2",

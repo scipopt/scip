@@ -24,6 +24,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define DUALFARKASPROOF_OUT /** uncomment to get info about dual farkas proof value as computed by cplex */
 
 #include <assert.h>
 
@@ -53,7 +54,7 @@
       }                                                                 \
    }
 
-#define CPX_INT_MAX 2100000000 /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -63,7 +64,8 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #define NUMINTPARAM  10
-static const int intparam[NUMINTPARAM] = {
+static const int intparam[NUMINTPARAM] =
+{
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
@@ -75,8 +77,10 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SCRIND,
    CPX_PARAM_THREADS
 };
+
 #define NUMDBLPARAM  7
-static const int dblparam[NUMDBLPARAM] = {
+static const int dblparam[NUMDBLPARAM] =
+{
    CPX_PARAM_EPRHS,
    CPX_PARAM_EPOPT,
    CPX_PARAM_BAREPCOMP,
@@ -85,7 +89,9 @@ static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_TILIM,
    CPX_PARAM_EPMRK
 };
-static const double dblparammin[NUMDBLPARAM] = {
+
+static const double dblparammin[NUMDBLPARAM] =
+{
    +1e-09, /*CPX_PARAM_EPRHS*/
    +1e-09, /*CPX_PARAM_EPOPT*/
    +1e-12, /*CPX_PARAM_BAREPCOMP*/
@@ -143,7 +149,7 @@ struct SCIP_LPi
                                               *   we set the thread count to 1. In order to fulfill assert in lp.c,
                                               *   we have to return the value set by SCIP and not the real thread count */
 #endif
-   SCIP_MESSAGEHDLR*        messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
 /** LPi state stores basis information */
@@ -322,6 +328,12 @@ SCIP_RETCODE setBase(
    /* load basis information into CPLEX */
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
+   /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+
    return SCIP_OKAY;
 }
 
@@ -353,9 +365,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -369,9 +381,9 @@ void lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   const SCIP_LPISTATE* lpistate,            /**< pointer to LPi state data */
-   int*                 cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   int*                 rstat                /**< buffer for storing basis status of rows in unpacked format */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
+   int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -594,11 +606,13 @@ void setIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
       {
          lpi->cpxparam.intparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -622,11 +636,13 @@ void setDblParam(
       parval = -1e+75;
 
    for( i = 0; i < NUMDBLPARAM; ++i )
+   {
       if( dblparam[i] == param )
       {
          lpi->cpxparam.dblparval[i] = parval;
          return;
       }
+   }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
@@ -635,7 +651,7 @@ void setDblParam(
 /** marks the current LP to be unsolved */
 static
 void invalidateSolution(
-   SCIP_LPI*const        lpi                 /**< LP interface structure */
+   SCIP_LPI* const       lpi                 /**< LP interface structure */
    )
 {
    assert(lpi != NULL);
@@ -966,7 +982,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   int          restat;
+   int restat;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
@@ -1012,7 +1028,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
-   (*lpi)->solisbasic = TRUE;
+   (*lpi)->solisbasic = FALSE;
    (*lpi)->cpxlp = CPXcreateprob((*lpi)->cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
    (*lpi)->fromscratch = FALSE;
@@ -1990,6 +2006,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2018,7 +2035,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2065,6 +2081,23 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
+   if( lpi->solstat == CPX_STAT_OPTIMAL ||  lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2076,6 +2109,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    int retval;
    int primalfeasible;
    int dualfeasible;
+   int solntype;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2104,7 +2138,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   lpi->solisbasic = TRUE;
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2150,6 +2185,23 @@ SCIP_RETCODE SCIPlpiSolveDual(
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
+   }
+
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
+   if( lpi->solstat == CPX_STAT_OPTIMAL || lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   {
+#ifdef NDEBUG
+      lpi->solisbasic = TRUE;
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+      assert(lpi->solisbasic);
+#endif
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    }
 
 #if 0
@@ -2235,7 +2287,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {
    int solntype;
@@ -3053,7 +3105,16 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling CPLEX dual Farkas: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
+#ifdef DUALFARKASPROOF_OUT
+   {
+      SCIP_Real proof;
+      proof = 0.0;
+      CHECK_ZERO( CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, &proof) );
+      printf("cpxsolstat<%d>(3=infeas): cpx dual farkas proof <%f> should be pos for infeas LP\n", lpi->solstat, proof);
+   }
+#else
    CHECK_ZERO( lpi->messagehdlr, CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, NULL) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -3073,8 +3134,10 @@ SCIP_RETCODE SCIPlpiGetIterations(
 }
 
 /** gets information about the quality of an LP solution
- * Such information is usually only available, if also a (maybe not optimal) solution is available.
- * The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available. */
+ *
+ *  Such information is usually only available, if also a (maybe not optimal) solution is available.
+ *  The LPI should return SCIP_INVALID for *quality, if the requested quantity is not available.
+ */
 extern
 SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3202,8 +3265,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3241,8 +3303,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3284,8 +3345,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3324,8 +3384,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3366,8 +3425,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
    retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
-   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
-      || retval == CPXERR_NO_BASIS )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -3486,11 +3544,25 @@ SCIP_RETCODE SCIPlpiSetState(
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /* extend the basis to the current LP */
+   /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = CPX_AT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   {
+      SCIP_Real bnd;
+      CHECK_ZERO( lpi->messagehdlr, CPXgetlb(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+      if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+      {
+         /* if lower bound is +/- infinity -> try upper bound */
+         CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
+         if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
+            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free -> super basic */
+         else
+            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+      }
+      else
+         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+   }
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = CPX_BASIC;
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
@@ -3657,8 +3729,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   return the value set by SCIP and not the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  return the value set by SCIP and not the real thread count */
       *ival = lpi->pseudonthreads;
       assert(getIntParam(lpi, CPX_PARAM_THREADS) == 1);
 #else
@@ -3756,8 +3828,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_THREADS:
 #if (CPX_VERSION == 1100 || (CPX_VERSION == 1220 && (CPX_SUBVERSION == 0 || CPX_SUBVERSION == 2)))
-      /**< Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
-       *   store the value set by SCIP and return it later instead of the real thread count */
+      /** Due to CPLEX bug, we always set the thread count to 1. In order to fulfill an assert in lp.c, we have to
+       *  store the value set by SCIP and return it later instead of the real thread count */
       lpi->pseudonthreads = ival;
       ival = 1;
 #else

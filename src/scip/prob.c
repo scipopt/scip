@@ -34,6 +34,8 @@
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
+#include "scip/scip.h"
+#include "scip/cons_exactlp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
@@ -321,6 +323,72 @@ SCIP_RETCODE SCIPprobCreate(
    return SCIP_OKAY;
 }
 
+/** sets callback to free user data of original problem */
+void SCIPprobSetDelorig(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdelorig = probdelorig;
+}
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+void SCIPprobSetTrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probtrans = probtrans;
+}
+
+/** sets callback to free user data of transformed problem */
+void SCIPprobSetDeltrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdeltrans = probdeltrans;
+}
+
+/** sets solving process initialization callback of transformed data */
+void SCIPprobSetInitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probinitsol= probinitsol;
+}
+
+/** sets solving process deinitialization callback of transformed data */
+void SCIPprobSetExitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probexitsol= probexitsol;
+}
+
+/** sets callback to copy user data to copy it to a subscip, or NULL */
+void SCIPprobSetCopy(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probcopy= probcopy;
+}
+
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
@@ -491,8 +559,12 @@ SCIP_RETCODE SCIPprobTransform(
       }
    }
    
-   /* objective value is always integral, iff original objective value is always integral and shift is integral */
-   (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+   /* in exact solving mode, we can not rely on this integrality check as it is not safe yet */
+   if( !set->misc_exactsolve )
+   {
+      /* objective value is always integral, iff original objective value is always integral and shift is integral */
+      (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+   }
 
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
@@ -1307,11 +1379,15 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    int v;
 
    assert(prob != NULL);
-   
+
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( prob->objisintegral )
       return SCIP_OKAY;
-   
+
+   /* in exact solving mode, we can not rely on the integrality check procedure as it is not safe yet */
+   if( set->misc_exactsolve )
+      return SCIP_OKAY;
+
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
    if( set->nactivepricers != 0 )
       return SCIP_OKAY;
@@ -1332,7 +1408,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
          /* if variable's objective value is fractional, the problem's objective value may also be fractional */
          if( !SCIPsetIsIntegral(set, obj) )
             break;
-         
+
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
          if( SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
             break;
@@ -1366,8 +1442,6 @@ void SCIPprobUpdateNObjVars(
 
    if( !SCIPsetIsZero(set, newobj) )
       prob->nobjvars++;
-
-   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
 }
 
 /** update the dual bound if its better as the current one */
@@ -1414,6 +1488,10 @@ SCIP_RETCODE SCIPprobScaleObj(
 
    assert(prob != NULL);
    assert(set != NULL);
+
+   /* in exact solving mode, we can not rely on the scaling procedure as it is not safe yet */
+   if( set->misc_exactsolve )
+      return SCIP_OKAY;
 
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 )
@@ -1580,6 +1658,9 @@ SCIP_RETCODE SCIPprobInitSolve(
    {
       SCIP_CALL( prob->probinitsol(set->scip, prob->probdata) );
    }
+
+   /* assert that the counter for variables with nonzero objective is correct */
+   assert(prob->nobjvars == SCIPprobGetNObjVars(prob, set));
 
    return SCIP_OKAY;
 }
@@ -1821,6 +1902,7 @@ void SCIPprobPrintPseudoSol(
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
@@ -1828,9 +1910,27 @@ void SCIPprobPrintStatistics(
    assert(prob != NULL);
 
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
+#ifdef WITH_EXACTSOLVE
+   assert(set->misc_exactsolve);
+   assert(prob->conss != NULL);
+   assert(prob->nconss == 1);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous) (%d inf bounds, %d large bounds, %d inf bounds on non-continuous)\n",
+      prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
+      SCIPgetNInfiniteBounds(prob->conss[0]), SCIPgetNLargeBounds(prob->conss[0]), 
+      SCIPgetNInfiniteIntegerBounds(prob->conss[0]));
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal, %d linear (%d by split), would split %d conss for FP-relaxation\n", 
+      prob->startnconss, prob->maxnconss, SCIPgetNConssExactlp(prob->conss[0]), 
+      set->misc_usefprelax ? SCIPgetNSplitconssExactlp(prob->conss[0]) : 0,
+      SCIPgetNSplitconssExactlp(prob->conss[0]));
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Nonzeros         : %d (%d integral)\n", SCIPgetNNonzExactlp(prob->conss[0]), 
+      SCIPgetNIntegralExactlp(prob->conss[0]));
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Max Coef Ratio   : %.0f\n", SCIPgetCoefRatioExactlp(set->scip, prob->conss[0]));
+#else
+   assert(!set->misc_exactsolve);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+#endif
    if( ! prob->transformed )
       SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
 }

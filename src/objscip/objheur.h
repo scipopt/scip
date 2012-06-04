@@ -50,10 +50,10 @@ public:
 
    /** name of the primal heuristic */
    char* scip_name_;
-   
+
    /** description of the primal heuristic */
    char* scip_desc_;
-   
+
    /** display character of primal heuristic */
    const char scip_dispchar_;
 
@@ -65,7 +65,7 @@ public:
 
    /** frequency offset for calling primal heuristic */
    const int scip_freqofs_;
-   
+
    /** maximal depth level to call heuristic at (-1: no limit) */
    const int scip_maxdepth_;
 
@@ -114,83 +114,62 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur                /**< the primal heuristic itself */
-      )
+   /** destructor of primal heuristic to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_HEURFREE(x) in @ref type_heur.h
+    */
+   virtual SCIP_DECL_HEURFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** initialization method of primal heuristic (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur                /**< the primal heuristic itself */
-      )
+
+   /** initialization method of primal heuristic (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_HEURINIT(x) in @ref type_heur.h
+    */
+   virtual SCIP_DECL_HEURINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur                /**< the primal heuristic itself */
-      )
+
+   /** deinitialization method of primal heuristic (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_HEUREXIT(x) in @ref type_heur.h
+    */
+   virtual SCIP_DECL_HEUREXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
     *
-    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
-    *  The primal heuristic may use this call to initialize its branch and bound specific data.
-    *
+    *  @see SCIP_DECL_HEURINITSOL(x) in @ref type_heur.h
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur                /**< the primal heuristic itself */
-      )
+   virtual SCIP_DECL_HEURINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
     *
-    *  This method is called before the branch and bound process is freed.
-    *  The primal heuristic should use this call to clean up its branch and bound data.
+    *  @see SCIP_DECL_HEUREXITSOL(x) in @ref type_heur.h
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur                /**< the primal heuristic itself */
-      )
+   virtual SCIP_DECL_HEUREXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** execution method of primal heuristic
     *
-    *  Searches for feasible primal solutions. The method is called in the node processing loop.
-    *
-    *  possible return values for *result:
-    *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found
-    *  - SCIP_DIDNOTFIND : the heuristic searched, but did not find a feasible solution
-    *  - SCIP_DIDNOTRUN  : the heuristic was skipped
-    *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
-    *                      its frequency
+    *  @see SCIP_DECL_HEUREXEC(x) in @ref type_heur.h
     */
-   virtual SCIP_RETCODE scip_exec(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_HEUR*         heur,               /**< the primal heuristic itself */
-      SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
-      SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
-      ) = 0;
+   virtual SCIP_DECL_HEUREXEC(scip_exec) = 0;
 };
 
 } /* namespace scip */
 
 
-   
+
 /** creates the primal heuristic for the given primal heuristic object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

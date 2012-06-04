@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   heur_shiftandpropagate.c
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
@@ -32,7 +33,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE     /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHT_INEQUALITY   1   /**< the heuristic row weight for inequalities */
 #define DEFAULT_WEIGHT_EQUALITY     3   /**< the heuristic row weight for equations */
@@ -40,19 +41,13 @@
 #define DEFAULT_PROBING          TRUE   /**< Is propagation of solution values enabled? */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
 #define DEFAULT_NPROPROUNDS        10   /**< The default number of propagation rounds for each propagation used */
-#define DEFAULT_PROPBREAKER      65000   /**< fixed maximum number of propagations */
+#define DEFAULT_PROPBREAKER     65000   /**< fixed maximum number of propagations */
 #define DEFAULT_CUTOFFBREAKER      15   /**< fixed maximum number of allowed cutoffs before the heuristic stops */
 #define DEFAULT_RANDSEED            3141598   /**< the default random seed for random number generation */
 #define DEFAULT_SORTKEY            'u'  /**< the default key for variable sorting */
 #define DEFAULT_SORTVARS         TRUE   /**< should variables be processed in sorted order? */
-#define SORTKEYS                  "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
+#define SORTKEYS                 "nru"  /**< options sorting key: (n)orms down, norms (u)p or (r)andom */
 
-/* enable statistic output by defining macro STATISTIC_INFORMATION */
-#ifdef STATISTIC_INFORMATION
-#define STATISTIC(x)                x
-#else
-#define STATISTIC(x)             /**/
-#endif
 
 /*
  * Data structures
@@ -61,18 +56,18 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool            relax;              /**< should continuous variables be relaxed from the problem */
-   SCIP_Bool            probing;            /**< should probing be executed? */
-   SCIP_Bool            onlywithoutsol;     /* Should heuristic only be executed if no primal solution was found, yet? */
-   int                  nproprounds;        /**< The default number of propagation rounds for each propagation used */
-   int                  cutoffbreaker;      /**< the number of cutoffs before heuristic execution is stopped, or -1 for no
+   SCIP_Bool             relax;              /**< should continuous variables be relaxed from the problem */
+   SCIP_Bool             probing;            /**< should probing be executed? */
+   SCIP_Bool             onlywithoutsol;     /**< Should heuristic only be executed if no primal solution was found, yet? */
+   int                   nproprounds;        /**< The default number of propagation rounds for each propagation used */
+   int                   cutoffbreaker;      /**< the number of cutoffs before heuristic execution is stopped, or -1 for no
                                                * limit */
-   unsigned int         randseed;           /**< seed for random number generation */
-   char                 sortkey;            /**< the key by which variables are sorted */
-   SCIP_Bool            sortvars;           /**< should variables be processed in sorted order? */
+   unsigned int          randseed;           /**< seed for random number generation */
+   char                  sortkey;            /**< the key by which variables are sorted */
+   SCIP_Bool             sortvars;           /**< should variables be processed in sorted order? */
 
-   STATISTIC(
-      SCIP_LPSOLSTAT     lpsolstat;           /**< the probing status after probing */
+   SCIPstatistic(
+      SCIP_LPSOLSTAT     lpsolstat;          /**< the probing status after probing */
       SCIP_Longint       ntotaldomredsfound; /**< the total number of domain reductions during heuristic */
       SCIP_Longint       nlpiters;           /**< number of LP iterations which the heuristic needed */
       int                nremainingviols;    /**< the number of remaining violations */
@@ -317,7 +312,8 @@ void transformVariable(
    colpos = SCIPcolGetLPPos(col);
 
    assert(0 <= colpos && colpos < matrix->ncols);
-   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE);
+   assert(matrix->transformstatus[colpos] == TRANSFORMSTATUS_NONE
+      || matrix->transformstatus[colpos] == TRANSFORMSTATUS_FREE);
 
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
@@ -702,7 +698,6 @@ void checkViolations(
    assert(violatedrows != NULL);
    assert(violatedrowpos != NULL);
    assert(nviolatedrows != NULL);
-   assert(nredundantrows != NULL);
 
    /* get RHS, LHS and number of the problem rows */
    rhs = matrix->rhs;
@@ -711,7 +706,8 @@ void checkViolations(
 
    SCIPdebugMessage("Entering violation check for %d rows! \n", nrows);
    *nviolatedrows = 0;
-   *nredundantrows = 0;
+   if( nredundantrows != NULL )
+      *nredundantrows = 0;
 
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
@@ -729,7 +725,7 @@ void checkViolations(
       assert((violatedrowpos[i] == -1 && SCIPisFeasGE(scip, rhs[i], 0.0) && SCIPisFeasGE(scip, -lhs[i], 0.0))
          || (violatedrowpos[i] >= 0 &&(SCIPisFeasLT(scip, rhs[i], 0.0) || SCIPisFeasLT(scip, -lhs[i], 0.0))));
 
-      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) )
+      if( SCIPisInfinity(scip, rhs[i]) && SCIPisInfinity(scip, -lhs[i]) && nredundantrows != NULL)
          ++(*nredundantrows);
    }
 }
@@ -1048,6 +1044,34 @@ void updateTransformation(
          matrix->upperbounds[varindex] = ub - lb;
    }
 
+   if( status == TRANSFORMSTATUS_FREE )
+   {
+      /* in case of a free transform status, if one of the bounds has become finite, we want
+       * to transform this variable to a variable with a lowerbound or a negated transform status */
+      if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
+      {
+         SCIP_COL** lpcols;
+         SCIP_VAR* var;
+
+         lpcols = SCIPgetLPCols(scip);
+
+         assert(lpcols != NULL);
+         var = SCIPcolGetVar(lpcols[varindex]);
+
+         assert(SCIPvarIsIntegral(var));
+         transformVariable(scip, var, matrix);
+
+         /* violations have to be rechecked for all rows
+          * todo : change this and only update violations of rows in which this variable
+          *        appears
+          */
+         checkViolations(scip, matrix, violatedrows, violatedrowpos, nviolatedrows, NULL);
+
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
+         assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+      }
+   }
+
    /* if the bound, by which the variable was shifted, has changed, deltashift is larger than zero, which requires
     * an update of all affected rows
     */
@@ -1199,19 +1223,19 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    }
 
    /* if statistic mode is enabled, statistics are printed to console */
-   STATISTIC(
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+   SCIPstatistic(
+      SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat,
          heurdata->nredundantrows);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPstatisticMessage(
          "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
          heurdata->nlpiters);
-      )
+      );
 
    return SCIP_OKAY;
 }
@@ -1219,7 +1243,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 /** initialization method of primal heuristic(called after problem was transformed). We only need this method for
  *  statistic mode of heuristic.
  */
-#ifdef STATISTIC_INFORMATION
+#ifdef SCIP_STATISTIC
 static
 SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1344,9 +1368,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   STATISTIC(
-      heurdata->nlpiters = SCIPgetNLPIterations(scip);
-      )
+   SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
 
    nlprows = SCIPgetNLPRows(scip);
 
@@ -1591,9 +1613,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
          ++nprobings;
-         STATISTIC(
-            heurdata->ntotaldomredsfound += ndomredsfound;
-            )
+         SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
          SCIPdebugMessage("Propagation finished! <%lld> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
@@ -1722,12 +1742,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
          /* print the solution value to the console */
-         STATISTIC(
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
-                  SCIPgetSolOrigObj(scip, sol));
-         )
+         SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
       }
-
    }
    else if( nviolatedrows == 0 && !cutoff )
    {
@@ -1747,7 +1763,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
 #ifdef NDEBUG
-     {
+      {
          SCIP_Bool retstat;
          retstat = SCIPsolveProbingLP(scip, -1, &lperror);
          if( retstat != SCIP_OKAY )
@@ -1784,22 +1800,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIPdebugMessage("found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
-            STATISTIC(
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  Shiftandpropagate solution value: %16.9g \n",
-                  SCIPgetSolOrigObj(scip, sol));
-               )
+            SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
          }
       }
 
-      STATISTIC(
-         heurdata->lpsolstat = SCIPgetLPSolstat(scip);
-         )
+      SCIPstatistic( heurdata->lpsolstat = SCIPgetLPSolstat(scip) );
    }
 
-   STATISTIC(
+   SCIPstatistic(
       heurdata->nremainingviols = nviolatedrows;
       heurdata->nredundantrows = nredundantrows;
-      )
+      );
 
  TERMINATE2:
    /* free all allocated memory */
@@ -1811,11 +1822,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
  TERMINATE:
    /* terminate probing mode and free the remaining memory */
-   STATISTIC(
+   SCIPstatistic(
       heurdata->ncutoffs += ncutoffs;
       heurdata->nprobings += nprobings;
       heurdata->nlpiters = SCIPgetNLPIterations(scip) - heurdata->nlpiters;
-      )
+      );
 
    SCIP_CALL( SCIPendProbing(scip) );
    freeMatrix(scip, &matrix);
@@ -1834,18 +1845,23 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create shiftandpropagate primal heuristic data */
+   /* create Shiftandpropagate primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->randseed = DEFAULT_RANDSEED;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyShiftandpropagate,
-         heurFreeShiftandpropagate, heurInitShiftandpropagate, heurExitShiftandpropagate,
-         heurInitsolShiftandpropagate, heurExitsolShiftandpropagate, heurExecShiftandpropagate,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShiftandpropagate) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShiftandpropagate) );
 
    /* add shiftandpropagate primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nproprounds", "The number of propagation rounds used for each propagation",
@@ -1857,7 +1873,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/onlywithoutsol", "Should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/cutoffbreaker", "The number of cutoffs before heuristic stops",
-           &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
+         &heurdata->cutoffbreaker, TRUE, DEFAULT_CUTOFFBREAKER, -1, 1000000, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/sortkey", "the key for variable sorting: (n)orms or (r)andom",
          &heurdata->sortkey, TRUE, DEFAULT_SORTKEY, SORTKEYS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/sortvars", "Should variables be sorted for the heuristic?",

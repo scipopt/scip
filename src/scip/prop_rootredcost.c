@@ -286,17 +286,24 @@ SCIP_RETCODE SCIPincludePropRootredcost(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create rootredcost propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    propdata->lastcutoffbound = SCIPinfinity(scip);
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
-         propCopyRootredcost,
-         propFreeRootredcost, propInitRootredcost, propExitRootredcost, propInitpreRootredcost, propExitpreRootredcost,
-         propInitsolRootredcost, propExitsolRootredcost, propPresolRootredcost, propExecRootredcost, propRespropRootredcost,
+   /* include propagator */
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecRootredcost, propRespropRootredcost,
          propdata) );
+
+   assert(prop != NULL);
+
+   /* set optional callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyRootredcost) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeRootredcost) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolRootredcost) );
 
    return SCIP_OKAY;
 }

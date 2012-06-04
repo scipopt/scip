@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPsepaComp);
 
+/** comparison method for sorting separators w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPsepaCompName);
+
 /** gets user data of separator */
 extern
 SCIP_SEPADATA* SCIPsepaGetData(
@@ -87,7 +91,7 @@ SCIP_Real SCIPsepaGetMaxbounddist(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/**< does the separator use a secondary SCIP instance? */
+/** does the separator use a secondary SCIP instance? */
 extern
 SCIP_Bool SCIPsepaUsesSubscip(
    SCIP_SEPA*            sepa                /**< separator */

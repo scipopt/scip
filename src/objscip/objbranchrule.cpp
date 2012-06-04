@@ -233,6 +233,7 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
 
    assert(scip != NULL);
    assert(objbranchrule != NULL);
@@ -241,14 +242,23 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    branchruledata = new SCIP_BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
    branchruledata->deleteobject = deleteobject;
+   branchrule = NULL;
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
+   SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, objbranchrule->scip_name_, objbranchrule->scip_desc_,
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
-         branchCopyObj,
-         branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
-         branchExeclpObj, branchExecextObj, branchExecpsObj,
          branchruledata) ); /*lint !e429*/
+   assert(branchrule != NULL);
+
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyObj) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeObj) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitObj) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitObj) );
+   SCIP_CALL( SCIPsetBranchruleInitsol(scip, branchrule, branchInitsolObj) );
+   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolObj) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpObj) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextObj) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

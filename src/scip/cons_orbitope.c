@@ -242,12 +242,12 @@ void printMatrix(
 /** Print SCI in nice form for debugging */
 static
 SCIP_RETCODE printSCI(
-   SCIP* scip,                /**< SCIP pointer */
-   int   p,                   /**< number of rows */
-   int   q,                   /**< number of columns */
-   int** cases,               /**< SCI dynamic programming table */
-   int i,                     /**< row position of bar */
-   int j                      /**< column position of bar */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   p,                  /**< number of rows */
+   int                   q,                  /**< number of columns */
+   int**                 cases,              /**< SCI dynamic programming table */
+   int                   i,                  /**< row position of bar */
+   int                   j                   /**< column position of bar */
    )
 {
    int k;
@@ -813,24 +813,31 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-            /* add bounds (variables fixed to 0) that result in the first nonzero entry */
-            for (j = 0; j <= lastcolumn; ++j)
+            if ( ispart )
             {
-               if ( ispart && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
-                  break;
-               if ( ! ispart && SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
-                  break;
+               /* add bounds (variables fixed to 0) that result in the first nonzero entry */
+               for (j = 0; j <= lastcolumn; ++j)
+               {
+                  /* add varaibles in row up to the first variable fixed to 0 */
+                  if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+                     break;
 
-               /* at this point the variable should be fixed to 0 */
-               assert( !ispart || SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  assert( SCIPvarGetUbLocal(vars[i][j]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+               }
             }
-
-            /* add bounds that result in the last one - check top left entry for packing case */
-            if ( ! ispart && lastones[0] == -1 )
+            else
             {
-               assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               /* add bounds that result in the last one - check top left entry for packing case */
+               if ( lastones[0] == -1 )
+               {
+                  assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
+               }
+
+               /* mark variable fixed to 1 */
+               assert( SCIPvarGetLbLocal(vars[i][firstnonzeroinrow]) > 0.5 );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][firstnonzeroinrow]) );
             }
 
             /* add bounds that result in the last one - pass through rows */
@@ -2238,27 +2245,37 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create orbitope constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyOrbitope,
-         consFreeOrbitope, consInitOrbitope, consExitOrbitope,
-         consInitpreOrbitope, consExitpreOrbitope, consInitsolOrbitope, consExitsolOrbitope,
-         consDeleteOrbitope, consTransOrbitope, consInitlpOrbitope,
-         consSepalpOrbitope, consSepasolOrbitope, consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope,
-         consPropOrbitope, consPresolOrbitope, consRespropOrbitope, consLockOrbitope,
-         consActiveOrbitope, consDeactiveOrbitope, consEnableOrbitope, consDisableOrbitope,
-         consDelvarsOrbitope, consPrintOrbitope, consCopyOrbitope, consParseOrbitope,
-         consGetVarsOrbitope, consGetNVarsOrbitope, conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpOrbitope, consEnfopsOrbitope, consCheckOrbitope, consLockOrbitope,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
 
-   /* add orbitope constraint handler parameters */
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbitope, consCopyOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitope, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbitope, consSepasolOrbitope, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitope) );
 
    return SCIP_OKAY;
 }
@@ -2360,6 +2377,29 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an orbitope constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
+   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
+   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
+   )
+{
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, resolveprop,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

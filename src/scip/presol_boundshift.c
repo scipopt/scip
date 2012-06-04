@@ -51,9 +51,9 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Longint          maxshift;         /**< absolute value of maximum shift */
-   SCIP_Bool             flipping;         /**< is flipping allowed? */
-   SCIP_Bool             integer;          /**< shift only integer values? */
+   SCIP_Longint          maxshift;           /**< absolute value of maximum shift */
+   SCIP_Bool             flipping;           /**< is flipping allowed? */
+   SCIP_Bool             integer;            /**< shift only integer values? */
 };
 
 
@@ -255,17 +255,21 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presolptr;
 
    /* create boundshift presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
    initPresoldata(presoldata);
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyBoundshift,
-         presolFreeBoundshift, presolInitBoundshift, presolExitBoundshift, 
-         presolInitpreBoundshift, presolExitpreBoundshift, presolExecBoundshift,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolExecBoundshift,
          presoldata) );
+
+   assert(presolptr != NULL);
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presolptr, presolCopyBoundshift) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presolptr, presolFreeBoundshift) );
 
    /* add probing presolver parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,

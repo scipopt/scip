@@ -26,6 +26,7 @@
 #define __SCIP_TYPE_NLPI_H__
 
 #include "scip/def.h"
+#include "scip/type_message.h"
 #include "blockmemshell/memory.h"
 #include "nlpi/type_expr.h"
 
@@ -49,7 +50,8 @@ enum SCIP_NlpParam
    SCIP_NLPPAR_INFINITY       =  5,      /**< value for infinity used to decide unbounded sides, unbounded variable and constraint bounds, and upper objective limit (real) */
    SCIP_NLPPAR_ITLIM          =  6,      /**< NLP iteration limit (int) */
    SCIP_NLPPAR_TILIM          =  7,      /**< NLP time limit (real) */
-   SCIP_NLPPAR_OPTFILE        =  8       /**< name of a solver specific option file (string) */
+   SCIP_NLPPAR_OPTFILE        =  8,      /**< name of a solver specific option file (string) */
+   SCIP_NLPPAR_FASTFAIL       =  9       /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes (int) */
 };
 typedef enum SCIP_NlpParam SCIP_NLPPARAM;  /**< NLP solver parameter */
 
@@ -495,6 +497,14 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - sval parameter value
  */
 #define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char* sval)
+
+/** sets message handler for message output
+ *
+ * input:
+ *  - nlpi NLP interface structure
+ *  - messagehdlr SCIP message handler, or NULL to suppress all output
+ */
+#define SCIP_DECL_NLPISETMESSAGEHDLR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_MESSAGEHDLR* messagehdlr)
 
 /**@} */
 #ifdef __cplusplus

@@ -156,7 +156,7 @@ SCIP_RETCODE preprocessGraph(
 
    /* compute maximum clique */
    tcliqueMaxClique(NULL, NULL, NULL, NULL, currgraph, NULL, NULL, maxcliquenodes,
-      &nmaxcliquenodes, &maxcliqueweight, 0, 0, 50000, 0, INT_MAX, -1, &status);
+      &nmaxcliquenodes, &maxcliqueweight, 0, 0, 50000, 0, INT_MAX, -1, NULL, &status);
    opt = ( status == TCLIQUE_OPTIMAL ? ' ' : '*' );
    printf("size of the maximum clique: %d%c \n", nmaxcliquenodes, opt);
 
@@ -663,10 +663,8 @@ SCIP_RETCODE SCIPcreateProbColoring(
    probdata->nstablesets = 0;
 
    /* include variable deleted event handler into SCIP */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, eventFreeProbdatavardeleted, eventInitProbdatavardeleted, eventExitProbdatavardeleted,
-         eventInitsolProbdatavardeleted, eventExitsolProbdatavardeleted, eventDeleteProbdatavardeleted, eventExecProbdatavardeleted,
-         NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecProbdatavardeleted, NULL) );
 
    /* create problem in SCIP */
    SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 

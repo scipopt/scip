@@ -397,11 +397,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
-                  /* only take cuts that have been successfully transformed, except the force flag is TRUE */
-                  if( !sepadata->forcecuts && !success )
+                  /* only take cuts which were successfully transformed to integral coefficients except the force flag
+                   * is set to TRUE
+                   */
+                  if( (SCIPisInfinity(scip, -SCIProwGetLhs(cut)) && SCIPisInfinity(scip, SCIProwGetRhs(cut))) ||
+                     (!sepadata->forcecuts && !success) )
                   {
                      SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
                         cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
+
+		     /* release the row */
+		     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
                      continue;
                   }
 
@@ -469,18 +476,23 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyGomory, sepaFreeGomory, sepaInitGomory, sepaExitGomory,
-         sepaInitsolGomory, sepaExitsolGomory,
          sepaExeclpGomory, sepaExecsolGomory,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyGomory) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeGomory) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

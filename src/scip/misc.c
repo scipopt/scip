@@ -27,6 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#ifdef WITH_GMP
+#include "gmp.h"
+#endif
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -36,6 +39,182 @@
 
 #include "scip/struct_misc.h"
 
+
+/*
+ * GML graphical printing methods
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
+ */
+
+#define GMLNODEWIDTH 120.0
+#define GMLNODEHEIGTH 30.0
+#define GMLFONTSIZE 13
+#define GMLNODETYPE "rectangle"
+#define GMLNODEFILLCOLOR "#ff0000"
+#define GMLEDGECOLOR "black"
+#define GMLNODEBORDERCOLOR "#000000"
+
+
+/** writes a node section to the given graph file */
+void SCIPgmlWriteNode(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          id,                 /**< id of the node */
+   const char*           label,              /**< label of the node */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
+   )
+{
+   assert(file != NULL);
+   assert(label != NULL);
+
+   fprintf(file, "  node\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    id      %u\n", id);
+   fprintf(file, "    label   \"%s\"\n", label);
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      w       %g\n", GMLNODEWIDTH);
+   fprintf(file, "      h       %g\n", GMLNODEHEIGTH);
+
+   if( nodetype != NULL )
+      fprintf(file, "      type    \"%s\"\n", nodetype);
+   else
+      fprintf(file, "      type    \"%s\"\n", GMLNODETYPE);
+
+   if( fillcolor != NULL )
+      fprintf(file, "      fill    \"%s\"\n", fillcolor);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLNODEFILLCOLOR);
+
+   if( bordercolor != NULL )
+      fprintf(file, "      outline \"%s\"\n", bordercolor);
+   else
+      fprintf(file, "      outline \"%s\"\n", GMLNODEBORDERCOLOR);
+
+   fprintf(file, "    ]\n");
+   fprintf(file, "    LabelGraphics\n");
+   fprintf(file, "    [\n");
+   fprintf(file, "      text      \"%s\"\n", label);
+   fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+   fprintf(file, "      fontName  \"Dialog\"\n");
+   fprintf(file, "      anchor    \"c\"\n");
+   fprintf(file, "    ]\n");
+   fprintf(file, "  ]\n");
+}
+
+/** writes an edge section to the given graph file */
+void SCIPgmlWriteEdge(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   /* fprintf(file, "      arrow     \"both\"\n"); */
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes an arc section to the given graph file */
+void SCIPgmlWriteArc(
+   FILE*                 file,               /**< file to write to */
+   unsigned int          source,             /**< source node id of the node */
+   unsigned int          target,             /**< target node id of the edge */
+   const char*           label,              /**< label of the edge, or NULL */
+   const char*           color               /**< color of the edge, or NULL */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "  edge\n");
+   fprintf(file, "  [\n");
+   fprintf(file, "    source  %u\n", source);
+   fprintf(file, "    target  %u\n", target);
+
+   if( label != NULL)
+      fprintf(file, "    label   \"%s\"\n", label);
+
+   fprintf(file, "    graphics\n");
+   fprintf(file, "    [\n");
+
+   if( color != NULL )
+      fprintf(file, "      fill    \"%s\"\n", color);
+   else
+      fprintf(file, "      fill    \"%s\"\n", GMLEDGECOLOR);
+
+   fprintf(file, "      targetArrow     \"standard\"\n");
+   fprintf(file, "    ]\n");
+
+   if( label != NULL)
+   {
+      fprintf(file, "    LabelGraphics\n");
+      fprintf(file, "    [\n");
+      fprintf(file, "      text      \"%s\"\n", label);
+      fprintf(file, "      fontSize  %d\n", GMLFONTSIZE);
+      fprintf(file, "      fontName  \"Dialog\"\n");
+      fprintf(file, "      anchor    \"c\"\n");
+      fprintf(file, "    ]\n");
+   }
+
+   fprintf(file, "  ]\n");
+}
+
+/** writes the starting line to a GML graph file, does not open a file */
+void SCIPgmlOpen(
+   FILE*                 file,               /**< file to write to */
+   SCIP_Bool             directed            /**< is the graph directed */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "graph\n");
+   fprintf(file, "[\n");
+   fprintf(file, "  hierarchic      1\n");
+
+   if( directed )
+      fprintf(file, "  directed        1\n");
+}
+
+/** writes the ending lines to a GML graph file, does not close a file */
+void SCIPgmlClose(
+   FILE*                 file                /**< file to close */
+   )
+{
+   assert(file != NULL);
+
+   fprintf(file, "]\n");
+}
 
 
 /*
@@ -778,6 +957,27 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 }
 
 
+/** gets the element as the key */
+SCIP_DECL_HASHGETKEY(SCIPhashGetKeyStandard)
+{  /*lint --e{715}*/
+   /* the key is the element itself */
+   return elem;
+}
+
+/** returns TRUE iff both keys(pointer) are equal */
+SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
+{  /*lint --e{715}*/
+   return (key1 == key2);
+}
+
+/** returns the hash value of the key */
+SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
+{  /*lint --e{715}*/
+   /* the key is used as the keyvalue too */
+   return (unsigned int)(size_t) key;
+}
+
+
 
 /*
  * Hash Map
@@ -1148,7 +1348,7 @@ void SCIPhashmapPrintStatistics(
 
 /** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int i;
@@ -1163,7 +1363,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
 
 /** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int count = 0;
@@ -1178,7 +1378,7 @@ int SCIPhashmapGetNEntries(
 
 /** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
-   SCIP_HASHMAP*      hashmap          /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    assert(hashmap != NULL);
@@ -1188,8 +1388,8 @@ int SCIPhashmapGetNLists(
 
 /** gives a specific list (bucket) in a hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
-   SCIP_HASHMAP*     hashmap,          /**< hash map */
-   int               listindex         /**< index of hash map list */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   int                   listindex           /**< index of hash map list */
 )
 {
    assert(hashmap != NULL);
@@ -1201,7 +1401,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
 
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
 )
 {
    int count = 0;
@@ -1214,7 +1414,7 @@ int SCIPhashmapListGetNEntries(
 
 /** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1224,7 +1424,7 @@ void* SCIPhashmapListGetOrigin(
 
 /** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1234,7 +1434,7 @@ void* SCIPhashmapListGetImage(
 
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
-   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 )
 {
    assert(hashmaplist != NULL);
@@ -1244,7 +1444,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 
 /** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
-   SCIP_HASHMAP*     hashmap           /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
 )
 {
    int listidx;
@@ -2698,7 +2898,406 @@ int SCIPptrarrayGetMaxIdx(
    return ptrarray->maxusedidx;
 }
 
+#ifdef WITH_GMP
+/** creates a dynamic array of mpq_t values */
+SCIP_RETCODE SCIPmpqarrayCreate(
+   SCIP_MPQARRAY**       mpqarray,           /**< pointer to store the mpq array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(mpqarray != NULL);
+   assert(blkmem != NULL);
 
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, mpqarray) );
+   (*mpqarray)->blkmem = blkmem;
+   (*mpqarray)->vals = NULL;
+   (*mpqarray)->valssize = 0;
+   (*mpqarray)->firstidx = -1;
+   (*mpqarray)->minusedidx = INT_MAX;
+   (*mpqarray)->maxusedidx = INT_MIN;
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a dynamic array of mpq_t values */
+SCIP_RETCODE SCIPmpqarrayCopy(
+   SCIP_MPQARRAY**       mpqarray,           /**< pointer to store the copied mpq array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MPQARRAY*        sourcempqarray      /**< dynamic mpq array to copy */
+   )
+{
+   assert(mpqarray != NULL);
+   assert(sourcempqarray != NULL);
+
+   SCIP_CALL( SCIPmpqarrayCreate(mpqarray, blkmem) );
+   if( sourcempqarray->valssize > 0 )
+   {
+      int j;
+
+      /* allocate, initialize, and copy mpq array */
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*mpqarray)->vals, sourcempqarray->valssize) );
+      for( j = 0; j < sourcempqarray->valssize; ++j )
+      {
+         mpq_init((*mpqarray)->vals[j]);
+         mpq_set((*mpqarray)->vals[j], sourcempqarray->vals[j]);
+      }
+   }
+
+   (*mpqarray)->valssize = sourcempqarray->valssize;
+   (*mpqarray)->firstidx = sourcempqarray->firstidx;
+   (*mpqarray)->minusedidx = sourcempqarray->minusedidx;
+   (*mpqarray)->maxusedidx = sourcempqarray->maxusedidx;
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic array of mpq_t values */
+SCIP_RETCODE SCIPmpqarrayFree(
+   SCIP_MPQARRAY**       mpqarray            /**< pointer to the mpq array */
+   )
+{
+   int j;
+
+   assert(mpqarray != NULL);
+   assert(*mpqarray != NULL);
+
+   for( j = 0; j < (*mpqarray)->valssize; ++j )
+   {
+      mpq_clear((*mpqarray)->vals[j]);
+   }
+   BMSfreeBlockMemoryArrayNull((*mpqarray)->blkmem, &(*mpqarray)->vals, (*mpqarray)->valssize);
+   BMSfreeBlockMemory((*mpqarray)->blkmem, mpqarray);
+
+   return SCIP_OKAY;
+}
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+SCIP_RETCODE SCIPmpqarrayExtend(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
+   )
+{
+   int nused;
+   int nfree;
+   int newfirstidx;
+   int i;
+
+   assert(mpqarray != NULL);
+   assert(mpqarray->minusedidx == INT_MAX || mpqarray->firstidx >= 0);
+   assert(mpqarray->maxusedidx == INT_MIN || mpqarray->firstidx >= 0);
+   assert(mpqarray->minusedidx == INT_MAX || mpqarray->minusedidx >= mpqarray->firstidx);
+   assert(mpqarray->maxusedidx == INT_MIN || mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+   
+   minidx = MIN(minidx, mpqarray->minusedidx);
+   maxidx = MAX(maxidx, mpqarray->maxusedidx);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+
+   SCIPdebugMessage("extending mpqarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+      (void*)mpqarray, mpqarray->firstidx, mpqarray->valssize, mpqarray->minusedidx, mpqarray->maxusedidx, minidx, maxidx);
+
+   /* check, whether we have to allocate additional memory, or shift the array */
+   nused = maxidx - minidx + 1;
+   if( nused > mpqarray->valssize )
+   {
+      mpq_t* newvals;
+      int newvalssize;
+
+      /* allocate new memory storage */
+      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      SCIP_ALLOC( BMSallocBlockMemoryArray(mpqarray->blkmem, &newvals, newvalssize) );
+      nfree = newvalssize - nused;
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + newvalssize);
+
+      /* initialize memory array by copying old values and setting new values to zero */
+      if( mpqarray->firstidx != -1 )
+      {
+         for( i = 0; i < newvalssize; ++i )
+         {
+            mpq_init(newvals[i]);
+            if( i >= mpqarray->minusedidx - newfirstidx && i < mpqarray->maxusedidx - newfirstidx + 1 )
+               mpq_set(newvals[i], mpqarray->vals[i + newfirstidx - mpqarray->firstidx]);
+            else
+               mpq_set_d(newvals[i], 0.0);
+         }
+      }
+      else
+      {
+         for( i = 0; i < newvalssize; ++i )
+         {
+            mpq_init(newvals[i]);
+            mpq_set_d(newvals[i], 0.0);
+         }
+      }
+
+      /* free old memory storage, and set the new array parameters */
+      for( i = 0; i < mpqarray->valssize; ++i )
+         mpq_clear(mpqarray->vals[i]);
+      BMSfreeBlockMemoryArrayNull(mpqarray->blkmem, &mpqarray->vals, mpqarray->valssize);
+      mpqarray->vals = newvals;
+      mpqarray->valssize = newvalssize;
+      mpqarray->firstidx = newfirstidx;
+   }
+   else if( mpqarray->firstidx == -1 )
+   {
+      /* a sufficiently large memory storage exists, but it was cleared */
+      nfree = mpqarray->valssize - nused;
+      assert(nfree >= 0);
+      mpqarray->firstidx = minidx - nfree/2;
+      assert(mpqarray->firstidx <= minidx);
+      assert(maxidx < mpqarray->firstidx + mpqarray->valssize);
+#ifndef NDEBUG
+      for( i = 0; i < mpqarray->valssize; ++i )
+         assert(mpq_sgn(mpqarray->vals[i]) == 0);
+#endif
+   }
+   else if( minidx < mpqarray->firstidx )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the right */
+      nfree = mpqarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + mpqarray->valssize);
+      
+      if( mpqarray->minusedidx <= mpqarray->maxusedidx )
+      {
+         int shift;
+
+         assert(mpqarray->firstidx <= mpqarray->minusedidx);
+         assert(mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+
+         /* shift used part of array to the right */
+         shift = mpqarray->firstidx - newfirstidx;
+         assert(shift > 0);
+         for( i = mpqarray->maxusedidx - mpqarray->firstidx; i >= mpqarray->minusedidx - mpqarray->firstidx; --i )
+         {
+            assert(0 <= i + shift && i + shift < mpqarray->valssize);
+            mpq_set(mpqarray->vals[i + shift], mpqarray->vals[i]);
+         }
+         /* clear the formerly used head of the array */
+         for( i = 0; i < shift; ++i )
+            mpq_set_d(mpqarray->vals[mpqarray->minusedidx - mpqarray->firstidx + i], 0.0);
+      }
+      mpqarray->firstidx = newfirstidx;
+   }
+   else if( maxidx >= mpqarray->firstidx + mpqarray->valssize )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the left */
+      nfree = mpqarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + mpqarray->valssize);
+      
+      if( mpqarray->minusedidx <= mpqarray->maxusedidx )
+      {
+         int shift;
+
+         assert(mpqarray->firstidx <= mpqarray->minusedidx);
+         assert(mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+
+         /* shift used part of array to the left */
+         shift = newfirstidx - mpqarray->firstidx;
+         assert(shift > 0);
+         for( i = mpqarray->minusedidx - mpqarray->firstidx; i <= mpqarray->maxusedidx - mpqarray->firstidx; ++i )
+         {
+            assert(0 <= i - shift && i - shift < mpqarray->valssize);
+            mpq_set(mpqarray->vals[i - shift], mpqarray->vals[i]);
+         }
+         /* clear the formerly used tail of the array */
+         for( i = 0; i < shift; ++i )
+            mpq_set_d(mpqarray->vals[mpqarray->maxusedidx - mpqarray->firstidx - i], 0.0);
+      }
+      mpqarray->firstidx = newfirstidx;
+   }
+
+   assert(minidx >= mpqarray->firstidx);
+   assert(maxidx < mpqarray->firstidx + mpqarray->valssize);
+
+   return SCIP_OKAY;
+}
+
+/** clears a dynamic real array */
+SCIP_RETCODE SCIPmpqarrayClear(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
+   )
+{
+   assert(mpqarray != NULL);
+
+   SCIPdebugMessage("clearing mpqarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+      (void*)mpqarray, mpqarray->firstidx, mpqarray->valssize, mpqarray->minusedidx, mpqarray->maxusedidx);
+
+   if( mpqarray->minusedidx <= mpqarray->maxusedidx )
+   {
+      int i;
+   
+      assert(mpqarray->firstidx <= mpqarray->minusedidx);
+      assert(mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+      assert(mpqarray->firstidx != -1);
+      assert(mpqarray->valssize > 0);
+
+      /* clear the used part of array */
+      for( i = mpqarray->minusedidx - mpqarray->firstidx; i <= mpqarray->maxusedidx - mpqarray->firstidx; ++i )
+         mpq_set_d(mpqarray->vals[i], 0.0);
+
+      /* mark the array cleared */
+      mpqarray->minusedidx = INT_MAX;
+      mpqarray->maxusedidx = INT_MIN;
+   }
+   assert(mpqarray->minusedidx == INT_MAX);
+   assert(mpqarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
+}
+
+/** gets value of entry in dynamic array */
+void SCIPmpqarrayGetVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   int                   idx,                /**< array index to get value for */
+   mpq_t                 val                 /**< pointer to store value of entry */   
+   )
+{
+   assert(mpqarray != NULL);
+   assert(idx >= 0);
+   
+   if( idx < mpqarray->minusedidx || idx > mpqarray->maxusedidx )
+      mpq_set_d(val, 0.0);
+   else
+   {
+      assert(mpqarray->vals != NULL);
+      assert(idx - mpqarray->firstidx >= 0);
+      assert(idx - mpqarray->firstidx < mpqarray->valssize);
+
+      mpq_set(val, mpqarray->vals[idx - mpqarray->firstidx]);
+   }
+}
+
+/** sets value of entry in dynamic array */
+SCIP_RETCODE SCIPmpqarraySetVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   const mpq_t           val                 /**< value to set array index to */
+   )
+{
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
+
+   assert(mpqarray != NULL);
+   assert(idx >= 0);
+
+#ifdef SCIP_DEBUG
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "setting mpqarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %Qd\n",
+      (void*)mpqarray, mpqarray->firstidx, mpqarray->valssize, mpqarray->minusedidx, mpqarray->maxusedidx, idx, val);
+   SCIPdebugMessage(s);
+#endif
+
+   if( mpq_sgn(val) != 0 )
+   {
+      /* extend array to be able to store the index */
+      SCIP_CALL( SCIPmpqarrayExtend(mpqarray, set, idx, idx) );
+      assert(idx >= mpqarray->firstidx);
+      assert(idx < mpqarray->firstidx + mpqarray->valssize);
+      
+      /* set the array value of the index */
+      mpq_set(mpqarray->vals[idx - mpqarray->firstidx], val);
+
+      /* update min/maxusedidx */
+      mpqarray->minusedidx = MIN(mpqarray->minusedidx, idx);
+      mpqarray->maxusedidx = MAX(mpqarray->maxusedidx, idx);
+   }
+   else if( idx >= mpqarray->firstidx && idx < mpqarray->firstidx + mpqarray->valssize )
+   {
+      /* set the array value of the index to zero */
+      mpq_set(mpqarray->vals[idx - mpqarray->firstidx], val);
+      
+      /* check, if we can tighten the min/maxusedidx */
+      if( idx == mpqarray->minusedidx )
+      {
+         assert(mpqarray->maxusedidx >= 0);
+         assert(mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+         do
+         {
+            mpqarray->minusedidx++;
+         }
+         while( mpqarray->minusedidx <= mpqarray->maxusedidx
+            && mpq_sgn(mpqarray->vals[mpqarray->minusedidx - mpqarray->firstidx]) == 0 );
+         if( mpqarray->minusedidx > mpqarray->maxusedidx )
+         {
+            mpqarray->minusedidx = INT_MAX;
+            mpqarray->maxusedidx = INT_MIN;
+         }
+      }
+      else if( idx == mpqarray->maxusedidx )
+      {
+         assert(mpqarray->minusedidx >= 0);
+         assert(mpqarray->minusedidx < mpqarray->maxusedidx);
+         assert(mpqarray->maxusedidx < mpqarray->firstidx + mpqarray->valssize);
+         do
+         {
+            mpqarray->maxusedidx--;
+            assert(mpqarray->minusedidx <= mpqarray->maxusedidx);
+         }
+         while( mpq_sgn(mpqarray->vals[mpqarray->maxusedidx - mpqarray->firstidx]) == 0 );
+      }      
+   }
+
+   return SCIP_OKAY;
+}
+
+/** increases value of entry in dynamic array */
+SCIP_RETCODE SCIPmpqarrayIncVal(
+   SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   const mpq_t           incval              /**< value to increase array index */
+   )
+{
+   mpq_t newval;
+
+   mpq_init(newval);
+
+   SCIPmpqarrayGetVal(mpqarray, idx, newval);
+   mpq_add(newval, newval, incval);
+
+   SCIP_CALL( SCIPmpqarraySetVal(mpqarray, set, idx, newval) );
+
+   mpq_clear(newval);
+   
+   return SCIP_OKAY;
+}
+
+/** returns the minimal index of all stored non-zero elements */
+int SCIPmpqarrayGetMinIdx(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
+   )
+{
+   assert(mpqarray != NULL);
+
+   return mpqarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPmpqarrayGetMaxIdx(
+   SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
+   )
+{
+   assert(mpqarray != NULL);
+
+   return mpqarray->maxusedidx;
+}
+#endif
 
 
 /*
@@ -2989,6 +3588,14 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortIntIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntInt
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntIntLong
 #define SORTTPL_KEYTYPE     int
@@ -3088,6 +3695,27 @@ void SCIPsort(
 #define SORTTPL_FIELD4TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
 
+
+/* SCIPsortPtrIntIntBoolBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrIntIntBoolBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortIntPtrIntIntBoolBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntPtrIntIntBoolBool
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
+#include "scip/sorttpl.c" /*lint !e451*/
 
 
 /* now all downwards-sorting methods */
@@ -3384,6 +4012,15 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownIntIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntInt
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownIntIntLong
 #define SORTTPL_KEYTYPE     int
@@ -3478,169 +4115,254 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownPtrIntIntBoolBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrIntIntBoolBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownIntPtrIntIntBoolBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntPtrIntIntBoolBool
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  SCIP_Bool
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /*
- * Stair map
+ * Resource Profile
  */
 
-/** creates stair map */
-SCIP_RETCODE SCIPstairmapCreate(
-   SCIP_STAIRMAP**       stairmap,           /**< pointer to store the created stair map */
-   int                   upperbound,         /**< upper bound of the stairmap */
-   int                   ntimepoints         /**< minimum size to ensure */
+/** creates resource profile */
+SCIP_RETCODE SCIPprofileCreate(
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
    )
 {
-   assert(stairmap != NULL);
-   assert(upperbound > 0);
-   assert(ntimepoints > 0);
+   assert(profile != NULL);
+   assert(capacity > 0);
 
-   SCIP_ALLOC( BMSallocMemory(stairmap) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->timepoints, ntimepoints) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*stairmap)->freecapacities, ntimepoints) );
+   SCIP_ALLOC( BMSallocMemory(profile) );
 
-   /* setup cumulative stairmap for use */
-   (*stairmap)->ntimepoints = 2;
-   (*stairmap)->timepoints[0] = 0;
-   (*stairmap)->timepoints[1] = INT_MAX;
-   (*stairmap)->freecapacities[0] = upperbound;
-   (*stairmap)->freecapacities[1] = 0;
-   (*stairmap)->arraysize = ntimepoints;
-   
+   (*profile)->arraysize = 10;
+   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, (*profile)->arraysize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->loads, (*profile)->arraysize) );
+
+   /* setup resource profile for use */
+   (*profile)->ntimepoints = 1;
+   (*profile)->timepoints[0] = 0;
+   (*profile)->loads[0] = 0;
+   (*profile)->capacity = capacity;
+
    return SCIP_OKAY;
 }
 
-/** frees given stair map */
-void SCIPstairmapFree(
-   SCIP_STAIRMAP**       stairmap            /**< pointer to the stair map */
+/** frees given resource profile */
+void SCIPprofileFree(
+   SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    )
 {
-   assert(stairmap != NULL);
-   assert(*stairmap != NULL);
-   
+   assert(profile != NULL);
+   assert(*profile != NULL);
+
    /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*stairmap)->freecapacities);
-   BMSfreeMemoryArray(&(*stairmap)->timepoints);
-   BMSfreeMemory(stairmap);
+   BMSfreeMemoryArray(&(*profile)->loads);
+   BMSfreeMemoryArray(&(*profile)->timepoints);
+   BMSfreeMemory(profile);
 }
 
-/** resizes the stair map arrays */
-SCIP_RETCODE SCIPstairmapResize(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to resize */
-   int                   ntimepoints         /**< minimum size to ensure */
-   )
-{
-   assert(stairmap != NULL);
-   assert(ntimepoints >= 0);
-   assert(stairmap->timepoints != NULL);
-   assert(stairmap->freecapacities != NULL);
-   
-   if( stairmap->ntimepoints >= ntimepoints )
-      return SCIP_OKAY;
-
-   /* grow arrays of times and free capacity */
-   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->timepoints, ntimepoints) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&stairmap->freecapacities, ntimepoints) );
-   stairmap->arraysize = ntimepoints;
-
-   return SCIP_OKAY;
-}
-
-/** output of the given stair map */
-void SCIPstairmapPrint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to output */
+/** output of the given resource profile */
+void SCIPprofilePrint(
+   SCIP_PROFILE*         profile,            /**< resource profile to output */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    int t;
-   
-   for( t = 0; t < stairmap->ntimepoints; ++t )
+
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
+
+   for( t = 0; t < profile->ntimepoints; ++t )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "i: %d, tp: %d, fc: %d ;", t, stairmap->timepoints[t], stairmap-> freecapacities[t]); 
+      if( t == 0 )
+         SCIPmessageFPrintInfo(messagehdlr, file, "%d:(%d,%d)", t, profile->timepoints[t], profile->loads[t]);
+      else
+         SCIPmessageFPrintInfo(messagehdlr, file, ", %d:(%d,%d)", t, profile->timepoints[t], profile->loads[t]);
    }
-   
+
    SCIPmessageFPrintInfo(messagehdlr, file,"\n");
 }
 
-/** returns if the given time point exists in the stair map and stores the position of the given time point if it
- *  exists; otherwise the position of the next smaller existing time point is stored
- */
-static
-SCIP_Bool stairmapFindLeft(
-   SCIP_STAIRMAP*        stairmap,             /**< stair map to search */
-   int                   timepoint,            /**< time point to search for */
-   int*                  pos                   /**< pointer to store the position */
+/** returns the capacity of the resource profile */
+int SCIPprofileGetCapacity(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
    )
 {
-   assert(stairmap != NULL);
+   assert(profile != NULL);
+
+   return profile->capacity;
+}
+
+/** returns the number time points of the resource profile */
+int SCIPprofileGetNTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->ntimepoints;
+}
+
+/** returns the time points of the resource profile */
+int* SCIPprofileGetTimepoints(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->timepoints;
+}
+
+/** returns the loads of the resource profile */
+int* SCIPprofileGetLoads(
+   SCIP_PROFILE*         profile             /**< resource profile to use */
+   )
+{
+   assert(profile != NULL);
+
+   return profile->loads;
+}
+
+/** returns the time point for given position of the resource profile */
+int SCIPprofileGetTime(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos                 /**< position */
+   )
+{
+   assert(profile != NULL);
+   assert(pos >= 0 && pos < profile->ntimepoints);
+
+   return profile->timepoints[pos];
+}
+
+/** returns the loads of the resource profile at the given position */
+int SCIPprofileGetLoad(
+   SCIP_PROFILE*         profile,            /**< resource profile */
+   int                   pos                 /**< position */
+   )
+{
+   assert(profile != NULL);
+   assert(pos >= 0 && pos < profile->ntimepoints);
+
+   return profile->loads[pos];
+}
+
+/** returns if the given time point exists in the resource profile and stores the position of the given time point if it
+ *  exists; otherwise the position of the next smaller existing time point is stored
+ */
+SCIP_Bool SCIPprofileFindLeft(
+   SCIP_PROFILE*         profile,            /**< resource profile to search */
+   int                   timepoint,          /**< time point to search for */
+   int*                  pos                 /**< pointer to store the position */
+   )
+{
+   assert(profile != NULL);
    assert(timepoint >= 0);
-   assert(stairmap->ntimepoints > 0);
-   assert(stairmap->timepoints[0] == 0);
+   assert(profile->ntimepoints > 0);
+   assert(profile->timepoints[0] == 0);
 
    /* find the position of time point in the time points array via binary search */
-   if( SCIPsortedvecFindInt(stairmap->timepoints, timepoint, stairmap->ntimepoints, pos) )
+   if( SCIPsortedvecFindInt(profile->timepoints, timepoint, profile->ntimepoints, pos) )
       return TRUE;
- 
+
    assert(*pos > 0);
    (*pos)--;
-   
+
    return FALSE;
 }
 
-/** inserts the given time point into the stairmap if it this time point does not exists yet; returns its position in the
- *  time point array 
- */
+/* ensures that resource profile arrays is big enough */
 static
-int stairmapInsertTimepoint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to insert the time point */
-   int                   timepoint           /**< time point to insert */
+SCIP_RETCODE ensureProfileSize(
+   SCIP_PROFILE*         profile,            /**< resource profile to insert the time point */
+   int                   neededsize          /**< needed size */
    )
 {
-   int pos;
+   assert(profile->arraysize > 0);
 
-   assert(stairmap != NULL);
+   /* check whether the arrays are big enough */
+   if( neededsize <= profile->arraysize )
+      return SCIP_OKAY;
+
+   profile->arraysize *= 2;
+
+   SCIP_ALLOC( BMSreallocMemoryArray(&profile->timepoints, profile->arraysize) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&profile->loads, profile->arraysize) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts the given time point into the resource profile if it this time point does not exists yet; returns its
+ *  position in the time point array
+ */
+static
+SCIP_RETCODE profileInsertTimepoint(
+   SCIP_PROFILE*         profile,            /**< resource profile to insert the time point */
+   int                   timepoint,          /**< time point to insert */
+   int*                  pos                 /**< pointer to store the insert position */
+   )
+{
+   assert(profile != NULL);
    assert(timepoint >= 0);
-   assert(stairmap->arraysize >= stairmap->ntimepoints);
+   assert(profile->arraysize >= profile->ntimepoints);
 
-   if( timepoint == 0 )
-      return 0;
-      
-   /* get the position of the given time point in the stair map array if it exists; otherwise the position of the next
-    * smaller existing time point 
+   /* get the position of the given time point in the resource profile array if it exists; otherwise the position of the
+    * next smaller existing time point
     */
-   if( stairmapFindLeft(stairmap, timepoint, &pos) )
+   if( !SCIPprofileFindLeft(profile, timepoint, pos) )
    {
-      /* if the time point exists return the corresponding position */
-      assert(pos >= 0 && pos < stairmap->ntimepoints);
-      return pos;
+      assert(*pos >= 0 && *pos < profile->ntimepoints);
+      assert(timepoint >= profile->timepoints[*pos]);
+
+      /* ensure that the arrays are big enough */
+      SCIP_CALL( ensureProfileSize(profile, profile->ntimepoints + 1) );
+      assert(profile->arraysize > profile->ntimepoints);
+
+      /* insert new time point into the (sorted) resource profile */
+      SCIPsortedvecInsertIntInt(profile->timepoints, profile->loads, timepoint, profile->loads[*pos],
+         &profile->ntimepoints, pos);
    }
 
-   assert(pos >= 0 && pos < stairmap->ntimepoints);
-   assert(timepoint >= stairmap->timepoints[pos]);
-   assert(pos + 1 < stairmap->arraysize);
-
-   /* insert new time point into the (sorted) stair map */
-   SCIPsortedvecInsertIntInt(stairmap->timepoints, stairmap->freecapacities, timepoint, stairmap->freecapacities[pos],
-      &stairmap->ntimepoints, NULL);
-   
 #ifndef NDEBUG
    /* check if the time points are sorted */
    {
-      int i;   
-      for( i = 1; i < stairmap->ntimepoints; ++i )
-         assert(stairmap->timepoints[i-1] < stairmap->timepoints[i]);
+      int i;
+      for( i = 1; i < profile->ntimepoints; ++i )
+         assert(profile->timepoints[i-1] < profile->timepoints[i]);
    }
 #endif
-   
-   return pos+1;
+
+   return SCIP_OKAY;
 }
 
-/** updates the stair map due to inserting of a core */
+/** updates the resource profile due to inserting of a core */
 static
-void stairmapUpdate(
-   SCIP_STAIRMAP*        stairmap,           /**< stairmap to update */
+SCIP_RETCODE profileUpdate(
+   SCIP_PROFILE*         profile,            /**< resource profile to update */
    int                   left,               /**< left side of core interval */
    int                   right,              /**< right side of core interval */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
+   int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the update is infeasible */
    )
 {
@@ -3648,268 +4370,404 @@ void stairmapUpdate(
    int endpos;
    int i;
 
-   assert(stairmap != NULL);
-   assert(stairmap->arraysize >= stairmap->ntimepoints);
+   assert(profile != NULL);
+   assert(profile->arraysize >= profile->ntimepoints);
    assert(left >= 0);
    assert(left < right);
    assert(infeasible != NULL);
-   
-   (*infeasible) = FALSE;
-   
-   /* get position of the starttime in stairmap */
-   startpos = stairmapInsertTimepoint(stairmap, left);
-   assert(stairmap->timepoints[startpos] == left);
 
-   /* get position of the endtime in stairmap */
-   endpos = stairmapInsertTimepoint(stairmap, right);
-   assert(stairmap->timepoints[endpos] == right);
+   (*infeasible) = FALSE;
+   (*pos) = -1;
+
+   /* get position of the starttime in profile */
+   SCIP_CALL( profileInsertTimepoint(profile, left, &startpos) );
+   assert(profile->timepoints[startpos] == left);
+
+   /* get position of the endtime in profile */
+   SCIP_CALL( profileInsertTimepoint(profile, right, &endpos) );
+   assert(profile->timepoints[endpos] == right);
 
    assert(startpos < endpos);
-   assert(stairmap->arraysize >= stairmap->ntimepoints);
+   assert(profile->arraysize >= profile->ntimepoints);
 
-   /* remove/add the given height from the stair map */
+   /* remove/add the given demand from the core */
    for( i = startpos; i < endpos; ++i )
    {
-      stairmap->freecapacities[i] -= height;
+      profile->loads[i] += demand;
 
-      if( stairmap->freecapacities[i] < 0 )
+      /* check if the core fits */
+      if( profile->loads[i] > profile->capacity )
       {
-         *infeasible = TRUE;
+         SCIPdebugMessage("core insertion detected infeasibility (pos %d)\n", i);
 
-         /* remove infeasible core */
+         (*infeasible) = TRUE;
+         (*pos) = i;
+
+         /* remove the partly inserted core since it does fit completely */
          for( ; i >= startpos; --i ) /*lint !e445*/
-            stairmap->freecapacities[i] += height;
-         
+            profile->loads[i] -= demand;
+
          break;
-      }      
+      }
    }
+
+   return SCIP_OKAY;
 }
 
-/** insert a core into stair map; if core is non-empty the stair map will be updated otherwise nothing happens */
-void SCIPstairmapInsertCore(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+/** insert a core into resource profile; if the core is non-empty the resource profile will be updated otherwise nothing
+ *  happens
+ */
+SCIP_RETCODE SCIPprofileInsertCore(
+   SCIP_PROFILE*         profile,            /**< resource profile */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
+   int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    )
 {
-   assert(stairmap != NULL);
+   assert(profile != NULL);
    assert(left < right);
+   assert(demand >= 0);
    assert(infeasible != NULL);
-   
+
    (*infeasible) = FALSE;
-   
-   /* insert core into the stair map */
-   SCIPdebugMessage("insert core [%d,%d] with height %d\n", left, right, height);
-   
-   /* try to insert core into the stair map */
-   stairmapUpdate(stairmap, left, right, height, infeasible);
+   (*pos) = -1;
+
+   /* insert core into the resource profile */
+   SCIPdebugMessage("insert core [%d,%d] with demand %d\n", left, right, demand);
+
+   if( demand > 0 )
+   {
+      /* try to insert core into the resource profile */
+      SCIP_CALL( profileUpdate(profile, left, right, demand, pos, infeasible) );
+   }
+
+   return SCIP_OKAY;
 }
 
-/** subtracts the height from the stair map during core time */
-void SCIPstairmapDeleteCore(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
+/** subtracts the demand from the resource profile during core time */
+SCIP_RETCODE SCIPprofileDeleteCore(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height              /**< height of the core */
+   int                   demand              /**< demand of the core */
    )
 {
    SCIP_Bool infeasible;
-   
+   int pos;
+
    assert(left < right);
 #ifndef NDEBUG
-      {
-         /* check if the begin and end time points of the core correspond to a time point in the stairmap; this should be
-          * the case since we added the core before to the stair map 
-          */
-         int pos;
-         assert(stairmapFindLeft(stairmap, left, &pos));
-         assert(stairmapFindLeft(stairmap, right, &pos));
-      }
-#endif
-      
-      /* remove the core from the current stair map */
-      SCIPdebugMessage("delete core [%d,%d] with height %d\n", left, right, height);
-      
-      stairmapUpdate(stairmap, left, right, -height, &infeasible);
-      assert(!infeasible);
-}
-   
-/** returns the time point at the given position */   
-int SCIPstairmapGetTimepoint(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   pos                 /**< position */
-   )
-{
-   assert(stairmap != NULL);
-   assert(pos < stairmap->ntimepoints);
-
-   return stairmap->timepoints[pos];
-}
-
-/** returns TRUE if the core  (given by its height and during) can be inserted at the given time point; otherwise FALSE */
-SCIP_Bool SCIPstairmapIsFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   timepoint,          /**< time point to start */
-   int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   int*                  pos                 /**< pointer to store the earliest position where the core does not fit */
-   )
-{
-   int endtime;
-   int startpos;
-   int endpos;
-   int p;
-
-   assert(stairmap != NULL);
-   assert(timepoint >= 0);
-   assert(height >= 0);
-   assert(pos != NULL);
-
-   if( duration == 0 )
-      return TRUE;
-   
-   endtime = timepoint + duration; 
-
-   /* check if the activity fits at timepoint */
-   (void)stairmapFindLeft(stairmap, timepoint, &startpos);
-
-   if( !stairmapFindLeft(stairmap, endtime, &endpos) )
-      endpos++;
-   
-   assert(stairmap->timepoints[startpos] <= timepoint);
-   assert(stairmap->timepoints[endpos] >= endtime);
-   
-   for( p = startpos; p < endpos; ++p )
    {
-      if( stairmap->freecapacities[p] < height )
-      {
-         (*pos) = p;
-         return FALSE;
-      }
+      /* check if the left and right time points of the core correspond to a time point in the resource profile; this
+       * should be the case since we added the core before to the resource profile
+       */
+      assert(SCIPprofileFindLeft(profile, left, &pos));
+      assert(SCIPprofileFindLeft(profile, right, &pos));
    }
-   
-   return TRUE;
+#endif
+
+   /* remove the core from the resource profile */
+   SCIPdebugMessage("delete core [%d,%d] with demand %d\n", left, right, demand);
+
+   SCIP_CALL( profileUpdate(profile, left, right, -demand, &pos, &infeasible) );
+   assert(!infeasible);
+
+   return SCIP_OKAY;
 }
 
-/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
+/** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */
+static
+int profileFindFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos,                /**< pointer to store the position in the profile to start the serch */
+   int                   lst,                /**< latest start time */
+   int                   duration,           /**< duration of the core */
+   int                   demand,             /**< demand of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
+   )
+{
+   int remainingduration;
+   int startpos;
+
+   assert(profile != NULL);
+   assert(pos >= 0);
+   assert(pos < profile->ntimepoints);
+   assert(duration > 0);
+   assert(demand > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
+
+   remainingduration = duration;
+   startpos = pos;
+   (*infeasible) = FALSE;
+
+   if( profile->timepoints[startpos] > lst )
+   {
+      (*infeasible) = TRUE;
+      return pos;
+   }
+
+   while( pos < profile->ntimepoints - 1 )
+   {
+      if( profile->loads[pos] + demand > profile->capacity )
+      {
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", (void*)profile, profile->timepoints[pos], pos);
+         startpos = pos + 1;
+         remainingduration = duration;
+
+         if( profile->timepoints[startpos] > lst )
+         {
+            (*infeasible) = TRUE;
+            return pos;
+         }
+      }
+      else
+         remainingduration -= profile->timepoints[pos+1] - profile->timepoints[pos];
+
+      if( remainingduration <= 0 )
+         break;
+
+      pos++;
+   }
+
+   return startpos;
+}
+
+/** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its demand
  *  and duration)
  */
-int SCIPstairmapGetEarliestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest starting time of the given core */
-   int                   ub,                 /**< latest starting time of the given core */
+int SCIPprofileGetEarliestFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   est,                /**< earliest starting time of the given core */
+   int                   lst,                /**< latest starting time of the given core */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
-   SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
+   int                   demand,             /**< demand of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    )
 {
-   int starttime;
+   SCIP_Bool found;
    int pos;
-   
-   assert(stairmap != NULL);
-   assert(lb >= 0);
-   assert(duration >= 0);
-   assert(height >= 0);
-   assert(infeasible != NULL);
-   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
 
-   if( lb > ub )
-   {
-      *infeasible = TRUE;
-      return lb;
-   }
-   
-   if( duration == 0 || height == 0 ) 
+   assert(profile != NULL);
+   assert(est >= 0);
+   assert(est <= lst);
+   assert(duration >= 0);
+   assert(demand >= 0);
+   assert(infeasible != NULL);
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
+
+   SCIPdebugMessage("profile <%p>: find earliest start time (demad %d, duration %d) [%d,%d]\n", (void*)profile, demand, duration, est, lst);
+
+   if( duration == 0 || demand == 0 )
    {
       *infeasible = FALSE;
-      return lb;
+      return est;
    }
 
-   starttime = lb;
+   found = SCIPprofileFindLeft(profile, est, &pos);
+   SCIPdebugMessage("profile <%p>: earliest start time does %s exist as time point (pos %d)\n", (void*)profile, found ? "" : "not", pos);
 
-   (void)stairmapFindLeft(stairmap, starttime, &pos);
-   assert(stairmap->timepoints[pos] <= starttime);
-   
-   (*infeasible) = TRUE;
-
-   while( (*infeasible) && starttime <= ub )
+   /* if the position is the last time point in the profile, the core can be inserted at its earliest start time */
+   if( pos == profile->ntimepoints - 1 )
    {
-      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-    
-      /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; therefore we
-       * can proceed with the next time point
-       */
-      assert(stairmap->freecapacities[pos] < height);
-      pos++;
-      
-      /* check if we exceed the time point array */
-      if( pos >= stairmap->ntimepoints )
-         break;
-      
-      starttime = stairmap->timepoints[pos];
+      (*infeasible) = FALSE;
+      return est;
    }
-   
-   assert(*infeasible || starttime <= ub);
-   return starttime;
+
+   if( found )
+   {
+      /* if the start time matches a time point in the profile we can just search */
+      assert(profile->timepoints[pos] == est);
+      pos = profileFindFeasibleStart(profile, pos, lst, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints);
+      est = profile->timepoints[pos];
+   }
+   else if( profile->loads[pos] + demand > profile->capacity )
+   {
+      /* if the the time point left to the start time has not enough free capacity we can just search the profile
+       * starting from the next time point
+       */
+      assert(profile->timepoints[pos] <= est);
+      pos = profileFindFeasibleStart(profile, pos+1, lst, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints);
+      est = profile->timepoints[pos];
+   }
+   else
+   {
+      int remainingduration;
+
+      /* check if the core can be placed at its earliest start time */
+
+      assert(pos < profile->ntimepoints - 1);
+
+      remainingduration = duration - (profile->timepoints[pos+1] - est);
+      SCIPdebugMessage("remaining duration %d\n", remainingduration);
+
+
+      if( remainingduration <= 0 )
+         (*infeasible) = FALSE;
+      else
+      {
+         pos = profileFindFeasibleStart(profile, pos+1, profile->timepoints[pos+1], remainingduration, demand, infeasible);
+         SCIPdebugMessage("remaining duration can%s be processed\n", *infeasible ? "not" : "");
+
+         if( *infeasible )
+         {
+            pos = profileFindFeasibleStart(profile, pos+1, lst, duration, demand, infeasible);
+
+            assert(pos < profile->ntimepoints);
+            est = profile->timepoints[pos];
+         }
+      }
+   }
+
+   return est;
 }
 
-/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
+/** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */
+static
+int profileFindDownFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   pos,                /**< pointer to store the position in the profile to start the search */
+   int                   ect,                /**< earliest completion time */
+   int                   duration,           /**< duration of the core */
+   int                   demand,             /**< demand of the core */
+   SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
+   )
+{
+   int remainingduration;
+   int endpos;
+
+   assert(profile != NULL);
+   assert(pos >= 0);
+   assert(pos < profile->ntimepoints);
+   assert(duration > 0);
+   assert(demand > 0);
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
+
+   remainingduration = duration;
+   endpos = pos;
+   (*infeasible) = TRUE;
+
+   if( profile->timepoints[endpos] < ect - duration )
+      return pos;
+
+   while( pos > 0 )
+   {
+      if( profile->loads[pos-1] + demand > profile->capacity )
+      {
+         SCIPdebugMessage("profile <%p>: core does not fit at time point %d (pos %d)\n", (void*)profile, profile->timepoints[pos-1], pos-1);
+
+         endpos = pos - 1;
+         remainingduration = duration;
+
+         if( profile->timepoints[endpos] < ect - duration )
+            return pos;
+      }
+      else
+         remainingduration -= profile->timepoints[pos] - profile->timepoints[pos-1];
+
+      if( remainingduration <= 0 )
+      {
+         *infeasible = FALSE;
+         break;
+      }
+
+      pos--;
+   }
+
+   return endpos;
+}
+
+/** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its demand and
  *  duration)
  */
-int SCIPstairmapGetLatestFeasibleStart(
-   SCIP_STAIRMAP*        stairmap,           /**< stair map to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
+int SCIPprofileGetLatestFeasibleStart(
+   SCIP_PROFILE*         profile,            /**< resource profile to use */
+   int                   est,                /**< earliest possible start point */
+   int                   lst,                /**< latest possible start point */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    )
 {
-   int starttime;
+   SCIP_Bool found;
+   int ect;
+   int lct;
    int pos;
 
-   assert(stairmap != NULL);
-   assert(lb >= 0);
-   assert(lb <= ub);
+   assert(profile != NULL);
+   assert(est >= 0);
+   assert(est <= lst);
    assert(duration >= 0);
-   assert(height >= 0);
+   assert(demand >= 0);
    assert(infeasible != NULL);
-   assert(stairmap->timepoints[stairmap->ntimepoints-1] > ub);
-   
-   if( duration == 0 || height == 0 ) 
-      return ub;
+   assert(profile->ntimepoints > 0);
+   assert(profile->loads[profile->ntimepoints-1] == 0);
 
-   starttime = ub;   
-   (void)stairmapFindLeft(stairmap, starttime, &pos);
-   assert(stairmap->timepoints[pos] <= starttime);
-   
-   (*infeasible) = TRUE;
-
-   while( (*infeasible) && starttime >= lb )
+   if( duration == 0 || demand == 0 )
    {
-      if( SCIPstairmapIsFeasibleStart(stairmap, starttime, duration, height, &pos) )
-      {
-         (*infeasible) = FALSE;
-         return starttime;
-      }
-      assert(pos >= 0);
-
-      /* the core did not fit into the stair map since at time point "pos" not enough capacity is available; 
-       * therefore we can proceed with the next time point  */
-      assert(stairmap->freecapacities[pos] < height);
-            
-      starttime = stairmap->timepoints[pos] - duration;
+      *infeasible = FALSE;
+      return lst;
    }
 
-   assert(*infeasible || starttime >= lb);
-  
-   return starttime;
+   ect = est + duration;
+   lct = lst + duration;
+
+   found = SCIPprofileFindLeft(profile, lct, &pos);
+   SCIPdebugMessage("profile <%p>: latest completion time %d does %s exist as time point (pos %d)\n", (void*)profile, lct, found ? "" : "not", pos);
+
+   if( found )
+   {
+      /* if the start time matches a time point in the profile we can just search */
+      assert(profile->timepoints[pos] == lct);
+      pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints && pos >= 0);
+      lct = profile->timepoints[pos];
+   }
+   else if( profile->loads[pos] + demand > profile->capacity )
+   {
+      /* if the time point left to the start time has not enough free capacity we can just search the profile starting
+       * from the next time point
+       */
+      assert(profile->timepoints[pos] < lct);
+      pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
+
+      assert(pos < profile->ntimepoints && pos >= 0);
+      lct = profile->timepoints[pos];
+   }
+   else
+   {
+      int remainingduration;
+
+      /* check if the core can be placed at its latest start time */
+      assert(profile->timepoints[pos] < lct);
+
+      remainingduration = duration - (lct - profile->timepoints[pos]);
+
+      if( remainingduration <= 0 )
+         (*infeasible) = FALSE;
+      else
+      {
+         pos = profileFindDownFeasibleStart(profile, pos, profile->timepoints[pos], remainingduration, demand, infeasible);
+
+         if( *infeasible )
+         {
+            pos = profileFindDownFeasibleStart(profile, pos, ect, duration, demand, infeasible);
+
+            assert(pos < profile->ntimepoints && pos >= 0);
+            lct = profile->timepoints[pos];
+         }
+      }
+   }
+
+   return lct - duration;
 }
 
 /*
@@ -3925,23 +4783,85 @@ SCIP_RETCODE SCIPdigraphCreate(
    assert(digraph != NULL);
    assert(nnodes > 0);
 
+   /* allocate memory for the graph and the arrays storing arcs and datas */
    SCIP_ALLOC( BMSallocMemory(digraph) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodes, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->adjnodessize, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nadjnodes, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
+
+   /* at the beginning, no components are stored */
    (*digraph)->ncomponents = 0;
    (*digraph)->componentstartsize = 0;
+   (*digraph)->components = NULL;
+   (*digraph)->componentstarts = NULL;
 
    return SCIP_OKAY;
 }
 
-/** sets the sizes of the adjacency lists for the nodes in a directed graph and allocates memory for the lists */
+/** copies directed graph structure */
+SCIP_RETCODE SCIPdigraphCopy(
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   )
+{
+   int ncomponents;
+   int nnodes;
+   int i;
+
+   SCIP_ALLOC( BMSallocMemory(targetdigraph) );
+
+   nnodes = sourcedigraph->nnodes;
+   ncomponents = sourcedigraph->ncomponents;
+   (*targetdigraph)->nnodes = nnodes;
+   (*targetdigraph)->ncomponents = ncomponents;
+
+   /* copy arcs and datas */
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdatas, nnodes) );
+
+   /* copy lists of successors and arc datas */
+   for( i = 0; i < nnodes; ++i )
+   {
+      if( sourcedigraph->nsuccessors[i] > 0 )
+      {
+         assert(sourcedigraph->successors[i] != NULL);
+         assert(sourcedigraph->arcdatas[i] != NULL);
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
+               sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
+               sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+      }
+   }
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
+
+   /* copy component data */
+   if( ncomponents > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
+            sourcedigraph->componentstarts[ncomponents]) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+            sourcedigraph->componentstarts,ncomponents + 1) );
+      (*targetdigraph)->componentstartsize = ncomponents + 1;
+   }
+   else
+   {
+      (*targetdigraph)->components = NULL;
+      (*targetdigraph)->componentstarts = NULL;
+      (*targetdigraph)->componentstartsize = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
 SCIP_RETCODE SCIPdigraphSetSizes(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int*                  sizes               /**< sizes of the adjacency lists */
+   int*                  sizes               /**< sizes of the successor lists */
    )
 {
    int i;
@@ -3951,9 +4871,10 @@ SCIP_RETCODE SCIPdigraphSetSizes(
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[i], sizes[i]) );
-      digraph->adjnodessize[i] = sizes[i];
-      digraph->nadjnodes[i] = 0;
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) ); /*lint !e866*/
+      digraph->successorssize[i] = sizes[i];
+      digraph->nsuccessors[i] = 0;
    }
 
    return SCIP_OKAY;
@@ -3969,32 +4890,34 @@ void SCIPdigraphFree(
    assert(digraph != NULL);
    assert(*digraph != NULL);
 
+   /* free arrays storing the successor nodes and arc datas */
    for( i = 0; i < (*digraph)->nnodes; ++i )
    {
-      assert(((*digraph)->adjnodessize == 0) == ((*digraph)->adjnodes == NULL));
-      if( (*digraph)->adjnodessize[i] > 0 )
-      {
-         BMSfreeMemoryArray(&(*digraph)->adjnodes[i]);
-      }
+      BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
+      BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
    }
 
    /* free components structure */
    SCIPdigraphFreeComponents(*digraph);
    assert((*digraph)->ncomponents == 0);
    assert((*digraph)->componentstartsize == 0);
+   assert((*digraph)->components == NULL);
+   assert((*digraph)->componentstarts == NULL);
 
    /* free directed graph data structure */
-   BMSfreeMemoryArray(&(*digraph)->adjnodessize);
-   BMSfreeMemoryArray(&(*digraph)->nadjnodes);
-   BMSfreeMemoryArray(&(*digraph)->adjnodes);
+   BMSfreeMemoryArray(&(*digraph)->successorssize);
+   BMSfreeMemoryArray(&(*digraph)->nsuccessors);
+   BMSfreeMemoryArray(&(*digraph)->successors);
+   BMSfreeMemoryArray(&(*digraph)->arcdatas);
+
    BMSfreeMemory(digraph);
 }
 
-#define STARTADJNODESSIZE 5
+#define STARTSUCCESSORSSIZE 5
 
-/* ensures that adjnodes array of one node in a directed graph is big enough */
+/* ensures that successors array of one node in a directed graph is big enough */
 static
-SCIP_RETCODE ensureAdjnodesSize(
+SCIP_RETCODE ensureSuccessorsSize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   idx,                /**< index for which the size is ensured */
    int                   newsize             /**< needed size */
@@ -4006,30 +4929,34 @@ SCIP_RETCODE ensureAdjnodesSize(
    assert(newsize > 0);
 
    /* check whether array is big enough, and realloc, if needed */
-   if( newsize > digraph->adjnodessize[idx] )
+   if( newsize > digraph->successorssize[idx] )
    {
-      if( digraph->adjnodessize[idx] == 0 )
+      if( digraph->successorssize[idx] == 0 )
       {
-         digraph->adjnodessize[idx] = STARTADJNODESSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
+         digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
-         digraph->adjnodessize[idx] = 2 * digraph->adjnodessize[idx];
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->adjnodes[idx], digraph->adjnodessize[idx]) );
+         digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
    }
 
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the directed graph structure
- *  @note: if the edge is already contained, it is added a second time
+/** add (directed) arc and a related data to the directed graph structure
+ *
+ *  @note if the arc is already contained, it is added a second time
  */
-SCIP_RETCODE SCIPdigraphAddEdge(
+SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode,            /**< start node of the arc */
+   void*                 data                /**< data that should be stored for the arc; or NULL */
    )
 {
    assert(digraph != NULL);
@@ -4038,22 +4965,29 @@ SCIP_RETCODE SCIPdigraphAddEdge(
    assert(startnode < digraph->nnodes);
    assert(endnode < digraph->nnodes);
 
-   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
+   SCIP_CALL( ensureSuccessorsSize(digraph, startnode, digraph->nsuccessors[startnode] + 1) );
 
-   /* add edge */
-   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
-   digraph->nadjnodes[startnode]++;
+   /* add arc */
+   digraph->successors[startnode][digraph->nsuccessors[startnode]] = endnode;
+   digraph->arcdatas[startnode][digraph->nsuccessors[startnode]] = data;
+   digraph->nsuccessors[startnode]++;
 
    return SCIP_OKAY;
 }
 
-/** add (directed) edge to the directed graph structure, if it is not contained, yet */
-SCIP_RETCODE SCIPdigraphAddEdgeSafe(
+/** add (directed) arc to the directed graph structure, if it is not contained, yet
+ *
+ * @note if there already exists an arc from startnode to endnode, the new arc is not added,
+ *       even if its data is different
+ */
+SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   startnode,          /**< start node of the edge */
-   int                   endnode             /**< start node of the edge */
+   int                   startnode,          /**< start node of the arc */
+   int                   endnode,            /**< start node of the arc */
+   void*                 data                /**< data that should be stored for the arc; or NULL */
    )
 {
+   int nsuccessors;
    int i;
 
    assert(digraph != NULL);
@@ -4062,48 +4996,98 @@ SCIP_RETCODE SCIPdigraphAddEdgeSafe(
    assert(startnode < digraph->nnodes);
    assert(endnode < digraph->nnodes);
 
-   for( i = 0; i < digraph->nadjnodes[startnode]; ++i )
-      if( digraph->adjnodes[startnode][i] == endnode )
+   nsuccessors = digraph->nsuccessors[startnode];
+
+   /* search for the arc in existing arcs */
+   for( i = 0; i < nsuccessors; ++i )
+      if( digraph->successors[startnode][i] == endnode )
          return SCIP_OKAY;
 
-   SCIP_CALL( ensureAdjnodesSize(digraph, startnode, digraph->nadjnodes[startnode] + 1) );
+   SCIP_CALL( ensureSuccessorsSize(digraph, startnode, nsuccessors + 1) );
 
-   /* add edge */
-   digraph->adjnodes[startnode][digraph->nadjnodes[startnode]] = endnode;
-   digraph->nadjnodes[startnode]++;
+   /* add arc */
+   digraph->successors[startnode][nsuccessors] = endnode;
+   digraph->arcdatas[startnode][nsuccessors] = data;
+   ++(digraph->nsuccessors[startnode]);
 
    return SCIP_OKAY;
 }
 
-/** returns the number of edges originating at the given node */
-int SCIPdigraphGetNOutEdges(
-   SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the number of outgoing edges is returned */
+/** returns the number of nodes of the given digraph */
+int SCIPdigraphGetNNodes(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
    assert(digraph != NULL);
-   assert(node >= 0);
-   assert(node < digraph->nnodes);
-   assert(digraph->nadjnodes[node] >= 0);
-   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
 
-   return digraph->nadjnodes[node];
+   return digraph->nnodes;
 }
 
-/** returns the array of edges originating at the given node; this array must not be changed from outside */
-int* SCIPdigraphGetOutEdges(
+/** returns the total number of arcs in the given digraph */
+int SCIPdigraphGetNArcs(
+   SCIP_DIGRAPH*         digraph             /**< directed graph */
+   )
+{
+   int i;
+   int narcs;
+
+   assert(digraph != NULL);
+
+   /* count number of arcs */
+   narcs = 0;
+   for( i = 0; i < digraph->nnodes; ++i )
+      narcs += digraph->nsuccessors[i];
+
+   return narcs;
+}
+
+/** returns the number of successor nodes of the given node */
+int SCIPdigraphGetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int                   node                /**< node for which the array of outgoing edges is returned */
+   int                   node                /**< node for which the number of outgoing arcs is returned */
    )
 {
    assert(digraph != NULL);
    assert(node >= 0);
    assert(node < digraph->nnodes);
-   assert(digraph->nadjnodes[node] >= 0);
-   assert(digraph->nadjnodes[node] <= digraph->adjnodessize[node]);
-   assert((digraph->nadjnodes[node] == 0) || (digraph->adjnodes[node] != NULL));
+   assert(digraph->nsuccessors[node] >= 0);
+   assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
 
-   return digraph->adjnodes[node];
+   return digraph->nsuccessors[node];
+}
+
+/** returns the array of indices of the successor nodes; this array must not be changed from outside */
+int* SCIPdigraphGetSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the array of outgoing arcs is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nsuccessors[node] >= 0);
+   assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
+   assert((digraph->nsuccessors[node] == 0) || (digraph->successors[node] != NULL));
+
+   return digraph->successors[node];
+}
+
+/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+ *  array must not be changed from outside
+ */
+void** SCIPdigraphGetSuccessorsDatas(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+   assert(digraph->nsuccessors[node] >= 0);
+   assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
+   assert(digraph->arcdatas != NULL);
+
+   return digraph->arcdatas[node];
 }
 
 /** performs depth-first-search in the given directed graph from the given start node */
@@ -4146,15 +5130,15 @@ void depthFirstSearch(
       assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
       visited[currnode] = TRUE;
 
-      /* iterate through the adjacency list until we reach unhandled node */
-      while( stackadjvisited[stacksize - 1] < digraph->nadjnodes[currnode]
-         && visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]] )
+      /* iterate through the successor list until we reach unhandled node */
+      while( stackadjvisited[stacksize - 1] < digraph->nsuccessors[currnode]
+         && visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]] )
       {
          stackadjvisited[stacksize - 1]++;
       }
 
       /* the current node was completely handled, remove it from stack */
-      if( stackadjvisited[stacksize - 1] == digraph->nadjnodes[currnode] )
+      if( stackadjvisited[stacksize - 1] == digraph->nsuccessors[currnode] )
       {
          stacksize--;
 
@@ -4162,13 +5146,13 @@ void depthFirstSearch(
          dfsnodes[(*ndfsnodes)] = currnode;
          (*ndfsnodes)++;
       }
-      /* handle next unhandled adjacent node */
+      /* handle next unhandled successor node */
       else
       {
-         assert(!visited[digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]]]);
+         assert(!visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]]);
 
-         /* put the adjacent node onto the stack */
-         dfsstack[stacksize] = digraph->adjnodes[currnode][stackadjvisited[stacksize - 1]];
+         /* put the successor node onto the stack */
+         dfsstack[stacksize] = digraph->successors[currnode][stackadjvisited[stacksize - 1]];
          stackadjvisited[stacksize] = 0;
          stackadjvisited[stacksize - 1]++;
          stacksize++;
@@ -4179,8 +5163,8 @@ void depthFirstSearch(
 
 /** Compute undirected connected components on the given graph.
  *
- *  @note For each edge, its reverse is added, so the graph does not need
- *        to be the directed representation of an undirected graph.
+ *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
+ *        undirected graph.
  */
 SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -4194,7 +5178,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    )
 {
    SCIP_Bool* visited;
-   int* ndirectedadjnodes;
+   int* ndirectedsuccessors;
    int* stackadjvisited;
    int* dfsstack;
    int ndfsnodes;
@@ -4214,19 +5198,19 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
    SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedadjnodes, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes) );
 
    digraph->componentstarts[0] = 0;
 
    /* store the number of directed arcs per node */
-   BMScopyMemoryArray(ndirectedadjnodes, digraph->nadjnodes, digraph->nnodes);
+   BMScopyMemoryArray(ndirectedsuccessors, digraph->nsuccessors, digraph->nnodes);
 
-   /* add reverse edges to the graph */
-   for( i = digraph->nnodes - 1; i>= 0; --i )
+   /* add reverse arcs to the graph */
+   for( i = digraph->nnodes - 1; i >= 0; --i )
    {
-      for( j = 0; j < ndirectedadjnodes[i]; ++j )
+      for( j = 0; j < ndirectedsuccessors[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddEdge(digraph, digraph->adjnodes[i][j], i) );
+         SCIP_CALL( SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL) );
       }
    }
 
@@ -4258,7 +5242,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          /* store component number for contained nodes if array was given */
          if( components != NULL )
          {
-            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >=  compstart; --i )
+            for( i = digraph->componentstarts[digraph->ncomponents] - 1; i >= compstart; --i )
             {
                components[digraph->components[i]] = digraph->ncomponents - 1;
             }
@@ -4267,14 +5251,14 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    }
 
    /* restore the number of directed arcs per node */
-   BMScopyMemoryArray(digraph->nadjnodes, ndirectedadjnodes, digraph->nnodes);
+   BMScopyMemoryArray(digraph->nsuccessors, ndirectedsuccessors, digraph->nnodes);
    BMSclearMemoryArray(visited, digraph->nnodes);
 
    /* return number of components, if the pointer was given */
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
-   BMSfreeMemoryArray(&ndirectedadjnodes);
+   BMSfreeMemoryArray(&ndirectedsuccessors);
    BMSfreeMemoryArray(&stackadjvisited);
    BMSfreeMemoryArray(&dfsstack);
    BMSfreeMemoryArray(&visited);
@@ -4282,12 +5266,11 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    return SCIP_OKAY;
 }
 
-/** Performes an (almost) topological sort on the undirected components of the directed graph.
- *  The undirected components should be computed before using SCIPdigraphComputeUndirectedComponents().
+/** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
+ *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
- *  Note, that in general a topological sort is not unique.
- *  Note, that there might be directed cycles, that are randomly broken,
- *  which is the reason for having only almost topologically sorted arrays.
+ *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
+ *        broken, which is the reason for having only almost topologically sorted arrays.
  */
 SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -4397,11 +5380,126 @@ void SCIPdigraphFreeComponents(
    {
       BMSfreeMemoryArray(&digraph->componentstarts);
       BMSfreeMemoryArray(&digraph->components);
+      digraph->components = NULL;
+      digraph->componentstarts = NULL;
+      digraph->ncomponents = 0;
+      digraph->componentstartsize = 0;
    }
-   digraph->ncomponents = 0;
-   digraph->componentstartsize = 0;
+#ifndef NDEBUG
+   else
+   {
+      assert(digraph->components == NULL);
+      assert(digraph->componentstarts == NULL);
+      assert(digraph->ncomponents == 0);
+   }
+#endif
 }
 
+/** output of the given directed graph via the given message handler */
+void SCIPdigraphPrint(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int n;
+
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      int* successors;
+      int nsuccessors;
+      int m;
+
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "node %d --> ", n);
+
+      for( m = 0; m < nsuccessors ; ++m )
+      {
+         if( m == 0 )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", successors[m]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", successors[m]);
+         }
+      }
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
+}
+
+/** prints the given directed graph structure in GML format into the given file */
+void SCIPdigraphPrintGml(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   int n;
+
+   /* write GML format opening */
+   SCIPgmlOpen(file, TRUE);
+
+   /* write all nodes of the graph */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      char label[SCIP_MAXSTRLEN];
+
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", n);
+      SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", NULL, NULL);
+   }
+
+   /* write all edges */
+   for( n = 0; n < digraph->nnodes; ++n )
+   {
+      int* successors;
+      int nsuccessors;
+      int m;
+
+      nsuccessors = digraph->nsuccessors[n];
+      successors = digraph->successors[n];
+
+      for( m = 0; m < nsuccessors; ++m )
+      {
+         SCIPgmlWriteArc(file, (unsigned int)n, (unsigned int)successors[m], NULL, NULL);
+      }
+   }
+   /* write GML format closing */
+   SCIPgmlClose(file);
+}
+
+/** output of the given directed graph via the given message handler */
+void SCIPdigraphPrintComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   int c;
+   int i;
+
+   for( c = 0; c < digraph->ncomponents; ++c )
+   {
+      int start = digraph->componentstarts[c];
+      int end =  digraph->componentstarts[c+1];
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "Components %d --> ", c);
+
+      for( i = start; i < end; ++i )
+      {
+         if( i == start )
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, "%d", digraph->components[i]);
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, ", %d", digraph->components[i]);
+         }
+      }
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
+}
 
 /*
  * Binary search tree
@@ -4463,20 +5561,27 @@ void bstnodeFreeLeaf(
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
+#if 0
    /* remove reference from parent node */
    if( (*node)->parent != NULL )
    {
+      assert(*node != NULL);
+
       assert((*node)->parent->left == *node || ((*node)->parent->right == *node));
 
       if( (*node)->parent->left == *node )
+      {
          (*node)->parent->left = NULL;
+      }
       else
       {
          assert((*node)->parent->right == *node);
          (*node)->parent->right = NULL;
       }
    }
+#endif
 
+   assert(*node != NULL);
    BMSfreeBlockMemory(tree->blkmem, node);
    assert(*node == NULL);
 }
@@ -4509,6 +5614,21 @@ void SCIPbstnodeFree(
    bstnodeFreeLeaf(tree, node);
    assert(*node == NULL);
 }
+
+/* some simple variable functions implemented as defines */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPbstnodeIsLeaf
+#undef SCIPbstnodeGetData
+#undef SCIPbstnodeGetKey
+#undef SCIPbstnodeGetParent
+#undef SCIPbstnodeGetLeftchild
+#undef SCIPbstnodeGetRightchild
 
 /** returns whether the search node is a leaf */
 SCIP_Bool SCIPbstnodeIsLeaf(
@@ -4680,6 +5800,73 @@ void SCIPbstFree(
    BMSfreeMemory(tree);
 }
 
+/** prints the rooted subtree of the given binary search tree node in GML format into the given file */
+static
+void bstPrintSubtree(
+   SCIP_BSTNODE*         node,               /**< binary search tree node */
+   FILE*                 file,               /**< file to write to */
+   int*                  nnodes              /**< pointer to count the number of nodes */
+   )
+{
+   SCIP_BSTNODE* left;
+   SCIP_BSTNODE* right;
+   char label[SCIP_MAXSTRLEN];
+
+   assert(node != NULL);
+
+   (*nnodes)++;
+   (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", *nnodes);
+
+   SCIPgmlWriteNode(file, (unsigned int)(size_t)node, label, "circle", NULL, NULL);
+
+   left = SCIPbstnodeGetLeftchild(node);
+   right = SCIPbstnodeGetRightchild(node);
+
+   if( left != NULL )
+   {
+      bstPrintSubtree(left, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)left, NULL, NULL);
+   }
+
+   if( right != NULL )
+   {
+      bstPrintSubtree(right, file, nnodes);
+
+      SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)right, NULL, NULL);
+   }
+}
+
+/** prints the binary search tree in GML format into the given file */
+void SCIPbstPrintGml(
+   SCIP_BST*             tree,               /**< binary search tree */
+   FILE*                 file                /**< file to write to */
+   )
+{
+   /* write GML opening */
+   SCIPgmlOpen(file, TRUE);
+
+   if( !SCIPbstIsEmpty(tree) )
+   {
+      SCIP_BSTNODE* root;
+      int nnodes;
+
+      root = SCIPbstGetRoot(tree);
+      assert(root != NULL);
+
+      nnodes = 0;
+
+      bstPrintSubtree(root, file, &nnodes);
+   }
+
+   /* write GML closing */
+   SCIPgmlClose(file);
+}
+
+/* some simple variable functions implemented as defines */
+#undef SCIPbstIsEmpty
+#undef SCIPbstGetRoot
+
 /** returns whether the binary search tree is empty (has no nodes) */
 SCIP_Bool SCIPbstIsEmpty(
    SCIP_BST*             tree                /**< binary search tree */
@@ -4692,7 +5879,7 @@ SCIP_Bool SCIPbstIsEmpty(
 
 /** returns the the root node of the binary search or NULL if the binary search tree is empty */
 SCIP_BSTNODE* SCIPbstGetRoot(
-   SCIP_BST*             tree                 /**< tree to be evaluated */
+   SCIP_BST*             tree                /**< tree to be evaluated */
    )
 {
    assert(tree != NULL);
@@ -4705,8 +5892,8 @@ SCIP_BSTNODE* SCIPbstGetRoot(
  *  @note The old root including the rooted subtree is not delete.
  */
 void SCIPbstSetRoot(
-   SCIP_BST*             tree,                /**< tree to be evaluated */
-   SCIP_BSTNODE*         root                 /**< new root, or NULL */
+   SCIP_BST*             tree,               /**< tree to be evaluated */
+   SCIP_BSTNODE*         root                /**< new root, or NULL */
    )
 {
    assert(tree != NULL);
@@ -4769,7 +5956,7 @@ int SCIPbstComp(
    assert(node2 != NULL);
    assert(tree->comparer != NULL);
 
-   return (*tree->comparer)(node1, node2);
+   return (*tree->comparer)(node1->key, node2->key);
 }
 
 /** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
@@ -4905,7 +6092,8 @@ SCIP_Longint SCIPcalcGreComDiv(
          do 
          {
             val1 >>= 1;   /*lint !e704*/
-         } while( !(val1 & 1) );
+         }
+         while( !(val1 & 1) );
       }
       else 
       {
@@ -4914,7 +6102,8 @@ SCIP_Longint SCIPcalcGreComDiv(
          do 
          {
             val2 >>= 1;  /*lint !e704*/
-         } while( !(val2 & 1) );
+         }
+         while( !(val2 & 1) );
       }
    }
 
@@ -5385,7 +6574,124 @@ SCIP_Real SCIPselectSimpleValue(
 }
 
 
+/*
+ * Numerical methods for rational numbers
+ */
 
+#ifdef WITH_GMP
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_RETCODE SCIPmpqCalcIntegralScalar(
+   const mpq_t*          vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   mpq_t                 intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
+
+   SCIP_Longint gcd;
+   SCIP_Longint scm;
+   SCIP_Longint numerator;
+   SCIP_Longint denominator;
+   mpz_t mpznumerator;
+   mpz_t mpzdenominator;
+   SCIP_Bool scalable; 
+   int c;
+
+   assert(vals != NULL);
+   assert(nvals >= 0);
+   assert(success != NULL);
+
+   SCIPdebugMessage("trying to find rational representation for given rational values\n");
+   
+   *success = FALSE;
+
+   /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
+   gcd = 1;
+   scm = 1;
+   scalable = TRUE;
+
+   mpz_init(mpznumerator);
+   mpz_init(mpzdenominator);
+
+   /* first value (to initialize gcd) */
+   for( c = 0; c < nvals && scalable; ++c )
+   {
+      if( mpq_sgn(vals[c]) == 0 ) /* zeros are allowed in the vals array */
+         continue;
+
+      mpq_get_num(mpznumerator, vals[c]);
+      numerator = (SCIP_Longint) mpz_get_d(mpznumerator);
+
+      mpq_get_den(mpzdenominator, vals[c]);
+      denominator = (SCIP_Longint) mpz_get_d(mpzdenominator);
+
+      assert(denominator > 0);
+      gcd = ABS(numerator);
+      scm = denominator;
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+#ifdef SCIP_DEBUG
+      gmp_snprintf(s, SCIP_MAXSTRLEN, " -> c=%d first rational: val: %Qd == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", scalable=%d\n",
+         c, vals[c], numerator, denominator, gcd, scm, scalable);
+      SCIPdebugMessage(s);
+#endif
+
+      break;
+   }
+
+   /* remaining values */
+   for( ++c; c < nvals && scalable; ++c )
+   {
+      if( mpq_sgn(vals[c]) == 0 ) /* zeros are allowed in the vals array */
+         continue;
+
+      mpq_get_num(mpznumerator, vals[c]);
+      numerator = (SCIP_Longint) mpz_get_d(mpznumerator);
+
+      mpq_get_den(mpzdenominator, vals[c]);
+      denominator = (SCIP_Longint) mpz_get_d(mpzdenominator);
+
+      assert(denominator > 0);
+
+      gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
+      scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+#ifdef SCIP_DEBUG
+      gmp_snprintf(s, SCIP_MAXSTRLEN, " -> c=%d next rational: val: %Qd == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", scalable=%d\n",
+         c, vals[c], numerator, denominator, gcd, scm, scalable);
+      SCIPdebugMessage(s);
+#endif
+   }
+
+   if( scalable )
+   {
+      /* make values integral by multiplying them with the smallest common multiple of the denominators */
+      assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+      mpq_set_ui(intscalar, scm, gcd);
+      mpq_canonicalize(intscalar);
+      
+      *success = TRUE;
+
+#ifdef SCIP_DEBUG
+      gmp_snprintf(s, SCIP_MAXSTRLEN, " -> integrality can be achieved by scaling with %Qd (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
+           intscalar, scm, gcd);
+      SCIPdebugMessage(s);
+#endif
+   }
+
+   mpz_clear(mpznumerator);
+   mpz_clear(mpzdenominator);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /*
  * Random Numbers
@@ -5473,13 +6779,18 @@ SCIP_Longint SCIPcalcBinomCoef(
    if( m == 1 )
       return n;
 
+   /* simple case m == 2 */
+   if( m == 2 )
+   {
+      if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
+	 return (n*(n-1)/2); /*lint !e647*/
+      else
+	 return -1;
+   }
+
    /* abort on to big numbers */
    if( m > 16 || n > 33 )
       return -1;
-
-   /* simple case m == 2 */
-   if( m == 2 )
-      return (n*(n-1)/2); /*lint !e647*/
 
    /* simple case m == 3 */
    if( m == 3 )
@@ -5763,7 +7074,7 @@ SCIP_Bool SCIPstrToRealValue(
    }
    *endptr = (char*)str;
 
-   SCIPdebugMessage("failed parseing real value <%s>\n", str);
+   SCIPdebugMessage("failed parsing real value <%s>\n", str);
 
    return FALSE;
 }

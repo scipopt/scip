@@ -40,20 +40,14 @@ using namespace std;
 
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
-SCIP_RETCODE EventhdlrNewSol::scip_free(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTFREE(EventhdlrNewSol::scip_free)
 {
    return SCIP_OKAY;
 }
 
 
 /** initialization method of event handler (called after problem was transformed) */
-SCIP_RETCODE EventhdlrNewSol::scip_init(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
 {
 
    int lockwaits = 0;
@@ -88,10 +82,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_init(
 
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
-SCIP_RETCODE EventhdlrNewSol::scip_exit(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTEXIT(EventhdlrNewSol::scip_exit)
 {
    return SCIP_OKAY;
 }
@@ -103,10 +94,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_exit(
  *  The event handler may use this call to initialize its branch and bound specific data.
  *
  */
-SCIP_RETCODE EventhdlrNewSol::scip_initsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTINITSOL(EventhdlrNewSol::scip_initsol)
 {
    SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
    return SCIP_OKAY;
@@ -118,10 +106,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The event handler should use this call to clean up its branch and bound data.
  */
-SCIP_RETCODE EventhdlrNewSol::scip_exitsol(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
-   )
+SCIP_DECL_EVENTEXITSOL(EventhdlrNewSol::scip_exitsol)
 {
    SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
    return SCIP_OKAY;
@@ -129,11 +114,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_exitsol(
 
 
 /** frees specific constraint data */
-SCIP_RETCODE EventhdlrNewSol::scip_delete(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-   SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
-   )
+SCIP_DECL_EVENTDELETE(EventhdlrNewSol::scip_delete)
 {
    return SCIP_OKAY;
 }
@@ -146,12 +127,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_delete(
  *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
  *  given event handler and event data.
  */
-SCIP_RETCODE EventhdlrNewSol::scip_exec(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-   SCIP_EVENT*        event,              /**< event to process */
-   SCIP_EVENTDATA*    eventdata           /**< user data for the event */
-   )
+SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
 {
    SCIP_SOL* sol;
    sol = SCIPgetBestSol(scip);

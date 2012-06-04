@@ -179,9 +179,9 @@ void SCIPprintError(
 
 /** creates and initializes SCIP data structures
  *
- *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() or SCIPsetMessagehdlrFree()
- *        to installed your own message or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
- *        file and turn off/on the display output.
+ *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
+ *        message handler or SCIPsetMessagehdlrLogfile() and SCIPsetMessagehdlrQuiet() to write into a log
+ *        file and turn off/on the display output, respectively.
  */
 extern
 SCIP_RETCODE SCIPcreate(
@@ -234,6 +234,35 @@ SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
+ *  only relevant for solving the problem provably correct 
+ */
+extern
+SCIP_Bool SCIPuseFPRelaxation(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
+ *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
+ *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct 
+ */
+extern
+char SCIPdualBoundMethod(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns if we should try to prove node infeasibility with project and shift by correcting a dual ray */
+extern
+SCIP_Bool SCIPpsInfeasRay(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether pseudo solutions should be ignored for calculating dual bounds */
+extern
+SCIP_Bool SCIPignorePseudosol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
  *  presolving round
  *
@@ -276,23 +305,13 @@ SCIP_Bool SCIPisStopped(
 /**@name Message Output Methods */
 /**@{ */
 
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
+/** Installs the given message handler, such that all messages are passed to this handler. A message handler can be
  *  created via SCIPmessagehdlrCreate().
  *
- *  @note The currently installed messages handler gets not freed. That has to be done by the user using
- *        SCIPmessagehdlrFree() or use SCIPsetMessagehdlrFree().
+ *  @note The currently installed message handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 extern
 SCIP_RETCODE SCIPsetMessagehdlr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
-   );
-
-/** Installs the given message handler, such that all messages are passed to this handler. A messages handler can be
- *  created via SCIPmessagehdlrCreate(). The currently installed messages handler gets freed.
- */
-extern
-SCIP_RETCODE SCIPsetMessagehdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    );
@@ -307,7 +326,7 @@ SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
 extern
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of log file, or NULL (stdout) */
+   const char*           filename            /**< name of log file, or NULL (no log) */
    );
 
 /** sets the currently installed message handler to be quiet (or not) */
@@ -399,6 +418,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
                                               *   handlers which do not need constraints were validly copied */
    );
@@ -754,6 +774,20 @@ SCIP_RETCODE SCIPgetStringParam(
    char**                value               /**< pointer to store the parameter */
    );
 
+/** fixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
+/** unfixes the value of an existing parameter */
+extern
+SCIP_RETCODE SCIPunfixParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** changes the value of an existing parameter */
 extern
 SCIP_RETCODE SCIPsetParam(
@@ -911,6 +945,16 @@ SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
+ */
+extern
+SCIP_RETCODE SCIPsetReducedsolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
 /** sets heuristic parameters values to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
  *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
@@ -932,7 +976,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  */
 extern 
 SCIP_RETCODE SCIPsetPresolving(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -945,7 +989,7 @@ SCIP_RETCODE SCIPsetPresolving(
  */
 extern 
 SCIP_RETCODE SCIPsetSeparating(
-   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
@@ -974,7 +1018,11 @@ int SCIPgetNParams(
 /**@name SCIP User Functionality Methods: Managing Plugins */
 /**@{ */
 
-/** creates a reader and includes it in SCIP */
+/** creates a reader and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -986,6 +1034,54 @@ SCIP_RETCODE SCIPincludeReader(
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
+   );
+
+/** creates a reader and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see
+ *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ */
+extern
+SCIP_RETCODE SCIPincludeReaderBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_READERDATA*      readerdata          /**< reader data */
+   );
+
+/**< set copy method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/**< set deinitialization method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
+   );
+
+/**< set read method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderRead(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERREAD  ((*readerread))     /**< read method of reader */
+   );
+
+/**< set write method of reader */
+extern
+SCIP_RETCODE SCIPsetReaderWrite(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method of reader */
    );
 
 /** returns the reader of the given name, or NULL if not existing */
@@ -1032,6 +1128,79 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   );
+
+/** creates a variable pricer and includes it in SCIP with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetPricerCopy(), SCIPsetPricerFree(),
+ *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), SCIPsetPricerExitsol(),
+ *  SCIPsetPricerFarkas();
+ *
+ *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
+ *  This should be done during the problem creation stage.
+ */
+extern
+SCIP_RETCODE SCIPincludePricerBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round) */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
+   );
+
+/** sets copy method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERCOPY ((*pricercopy))     /**< copy method of pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERFREE ((*pricerfree))      /**< destructor of pricer */
+   );
+
+/** sets initialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit))     /**< initialize pricer */
+   );
+
+/** sets deinitialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit))     /**< deinitialize pricer */
+   );
+
+/** sets solving process initialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICERINITSOL ((*pricerinitsol))/**< solving process initialization method of pricer */
+   );
+
+/** sets solving process deinitialization method of pricer */
+extern
+SCIP_RETCODE SCIPsetPricerExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
    );
 
 /** returns the variable pricer of the given name, or NULL if not existing */
@@ -1132,9 +1301,237 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
-   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
-   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   );
+
+/** creates a constraint handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetConshdlrInit(), SCIPsetConshdlrExit(),
+ *  SCIPsetConshdlrCopy(), SCIPsetConshdlrFree(), SCIPsetConshdlrInitsol(), SCIPsetConshdlrExitsol(),
+ *  SCIPsetConshdlrInitpre(), SCIPsetConshdlrExitpre(), SCIPsetConshdlrPresol(), SCIPsetConshdlrDelete(),
+ *  SCIPsetConshdlrDelvars(), SCIPsetConshdlrInitlp(), SCIPsetConshdlrActive(), SCIPsetConshdlrDeactive(),
+ *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
+ *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ */
+extern
+SCIP_RETCODE SCIPincludeConshdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+   );
+
+/* sets all separation related callbacks/parameters of the constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
+   );
+
+/* sets both the propagation callback and the propagation frequency of the constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+   );
+
+/** sets copy method of both the constraint handler and each associated constraint */
+extern
+SCIP_RETCODE SCIPsetConshdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CONSCOPY    ((*conscopy))       /**< constraint copying method */
+   );
+
+/** sets destructor method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
+   );
+
+/** sets initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   );
+
+/** sets deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
+   );
+
+/** sets solving process initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
+   );
+
+/** sets solving process deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   );
+
+/** sets preprocessing initialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
+   );
+
+/** sets preprocessing deinitialization method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
+   );
+
+/** sets presolving method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
+   );
+
+/** sets method of constraint handler to free specific constraint data */
+extern
+SCIP_RETCODE SCIPsetConshdlrDelete(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
+   );
+
+/** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
+extern
+SCIP_RETCODE SCIPsetConshdlrTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
+   );
+
+/** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
+extern
+SCIP_RETCODE SCIPsetConshdlrInitlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
+   );
+
+/** sets propagation conflict resolving method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
+   );
+
+/** sets activation notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrActive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
+   );
+
+/** sets deactivation notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDeactive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
+   );
+
+/** sets enabling notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrEnable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
+   );
+
+/** sets disabling notification method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDisable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
+   );
+
+/** sets variable deletion method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrDelvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
+   );
+
+/** sets constraint display method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
+   );
+
+/** sets constraint parsing method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrParse(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
+   );
+
+/** sets constraint variable getter method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrGetVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
+   );
+
+/** sets constraint variable number getter method of constraint handler */
+extern
+SCIP_RETCODE SCIPsetConshdlrGetNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -1173,6 +1570,71 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    );
 
+/** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr.
+ */
+extern
+SCIP_RETCODE SCIPincludeConflicthdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR**   conflicthdlrptr,    /**< reference to a conflict handler pointer, or NULL */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   );
+
+/** set copy method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of conflict handler */
+   );
+
+/** set destructor of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   );
+
+/** set initialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialize conflict handler */
+   );
+
+/** set deinitialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialize conflict handler */
+   );
+
+/** set solving process initialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   );
+
+/** set solving process deinitialization method of conflict handler */
+extern
+SCIP_RETCODE SCIPsetConflicthdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   );
+
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
 SCIP_CONFLICTHDLR* SCIPfindConflicthdlr(
@@ -1200,7 +1662,11 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
-/** creates a presolver and includes it in SCIP */
+/** creates a presolver and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludePresolBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1217,6 +1683,73 @@ SCIP_RETCODE SCIPincludePresol(
    SCIP_DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
    SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   );
+
+/** Creates a presolver and includes it in SCIP with its fundamental callback. All non-fundamental (or optional)
+ *  callbacks as, e.g., init and exit callbacks, will be set to NULL. Optional callbacks can be set via specific setter
+ *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
+ *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
+ */
+extern
+SCIP_RETCODE SCIPincludePresolBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL**         presolptr,          /**< reference to presolver, or NULL */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   );
+
+/** sets copy method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE ((*presolfree))      /**< destructor of presolver */
+   );
+
+/** sets initialization method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT ((*presolinit))      /**< initialize presolver */
+   );
+
+/** sets deinitialization method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
+   );
+
+/** sets solving process initialization method of presolver */
+extern
+SCIP_RETCODE SCIPsetPresolInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
+   );
+
+/** sets solving process deinitialization method of presolver */
+SCIP_RETCODE SCIPsetPresolExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
    );
 
 /** returns the presolver of the given name, or NULL if not existing */
@@ -1246,7 +1779,11 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
-/** creates a relaxation handler and includes it in SCIP */
+/** creates a relaxation handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
+ *              callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1262,6 +1799,71 @@ SCIP_RETCODE SCIPincludeRelax(
    SCIP_DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxation handler */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   );
+
+/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ */
+extern
+SCIP_RETCODE SCIPincludeRelaxBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
+   const char*           name,               /**< name of relaxation handler */
+   const char*           desc,               /**< description of relaxation handler */
+   int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
+   int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
+   );
+
+/** sets copy method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy))      /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXFREE   ((*relaxfree))      /**< destructor of relaxation handler */
+   );
+
+/** sets initialization method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINIT   ((*relaxinit))      /**< initialize relaxation handler */
+   );
+
+/** sets deinitialization method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit))      /**< deinitialize relaxation handler */
+   );
+
+/** sets solving process initialization method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol))   /**< solving process initialization method of relaxation handler */
+   );
+
+/** sets solving process deinitialization method of relaxation handler */
+extern
+SCIP_RETCODE SCIPsetRelaxExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxation handler */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol))   /**< solving process deinitialization method of relaxation handler */
    );
 
 /** returns the relaxation handler of the given name, or NULL if not existing */
@@ -1291,7 +1893,11 @@ SCIP_RETCODE SCIPsetRelaxPriority(
    int                   priority            /**< new priority of the relaxation handler */
    );
 
-/** creates a separator and includes it in SCIP */
+/** creates a separator and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeSepaBasic() instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1312,6 +1918,76 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
    SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
+   );
+
+/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPSepaSetInit() in pub_sepa.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa.
+ */
+extern
+SCIP_RETCODE SCIPincludeSepaBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA**           sepa,               /**< reference to a separator, or NULL */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
+   );
+
+/** sets copy method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy))       /**< copy method of separator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree))       /**< destructor of separator */
+   );
+
+/** sets initialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit))       /**< initialize separator */
+   );
+
+/** sets deinitialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit))       /**< deinitialize separator */
+   );
+
+/** sets solving process initialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol))    /**< solving process initialization method of separator */
+   );
+
+/** sets solving process deinitialization method of separator */
+extern
+SCIP_RETCODE SCIPsetSepaExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
 /** returns the separator of the given name, or NULL if not existing */
@@ -1341,7 +2017,11 @@ SCIP_RETCODE SCIPsetSepaPriority(
    int                   priority            /**< new priority of the separator */
    );
 
-/** creates a propagator and includes it in SCIP */
+/** creates a propagator and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludePropBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeProp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1366,6 +2046,103 @@ SCIP_RETCODE SCIPincludeProp(
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
+   );
+
+/** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
+ *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
+ */
+extern
+SCIP_RETCODE SCIPincludePropBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP**           propptr,            /**< reference to a propagator pointer, or NULL */
+   const char*           name,               /**< name of propagator */
+   const char*           desc,               /**< description of propagator */
+   int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling propagator */
+   SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   );
+
+/** sets copy method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy))       /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPFREE    ((*propfree))       /**< destructor of propagator */
+   );
+
+/** sets initialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINIT    ((*propinit))       /**< initialize propagator */
+   );
+
+/** sets deinitialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit))       /**< deinitialize propagator */
+   );
+
+/** sets solving process initialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITSOL((*propinitsol))     /**< solving process initialization method of propagator */
+   );
+
+/** sets solving process deinitialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol))    /**< solving process deinitialization method of propagator */
+   );
+
+/** sets preprocessing initialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropInitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPINITPRE((*propinitpre))     /**< preprocessing initialization method of propagator */
+   );
+
+/** sets preprocessing deinitialization method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropExitpre(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPEXITPRE((*propexitpre))     /**< preprocessing deinitialization method of propagator */
+   );
+
+/** sets presolving method of propagator */
+extern
+SCIP_RETCODE SCIPsetPropPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    );
 
 /** returns the propagator of the given name, or NULL if not existing */
@@ -1404,7 +2181,11 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    );
 
 
-/** creates a primal heuristic and includes it in SCIP */
+/** creates a primal heuristic and includes it in SCIP.
+ *
+ *  @deprecated Please use method <code>SCIPincludeHeurBasic()</code> instead and add
+ *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1426,6 +2207,76 @@ SCIP_RETCODE SCIPincludeHeur(
    SCIP_DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   );
+
+/** Creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental (or optional) callbacks
+ *  as, e. g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeHeur</code>. */
+extern
+SCIP_RETCODE SCIPincludeHeurBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR**           heur,               /**< pointer to the heuristic */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
+   );
+
+/** sets copy method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
+   );
+
+/** sets initialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
+   );
+
+/** sets deinitialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
+   );
+
+/** sets solving process initialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization method of primal heuristic */
+   );
+
+/** sets solving process deinitialization method of primal heuristic */
+extern
+SCIP_RETCODE SCIPsetHeurExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization method of primal heuristic */
    );
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
@@ -1472,6 +2323,78 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    );
 
+/** creates an event handler and includes it in SCIP with all its non-fundamental callbacks set
+ *  to NULL; if needed, non-fundamental callbacks can be set afterwards via setter functions
+ *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
+ *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
+ */
+SCIP_RETCODE SCIPincludeEventhdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
+   const char*           name,               /**< name of event handler */
+   const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   );
+
+/** sets copy callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrCopy(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback of the event handler */
+   );
+
+/** sets deinitialization callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrFree(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTFREE   ((*eventfree))      /**< deinitialization callback of the event handler */
+   );
+
+/** sets initialization callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrInit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialize event handler */
+   );
+
+/** sets deinitialization callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrExit(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialize event handler */
+   );
+
+/** sets solving process initialization callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrInitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
+   );
+
+/** sets solving process deinitialization callback of the event handler */
+extern
+SCIP_RETCODE SCIPsetEventhdlrExitsol(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
+   );
+
+/** sets callback of the event handler to free specific event data */
+extern
+SCIP_RETCODE SCIPsetEventhdlrDelete(
+   SCIP*                 scip,               /**< scip instance */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< free specific event data */
+   );
+
 /** returns the event handler of the given name, or NULL if not existing */
 extern
 SCIP_EVENTHDLR* SCIPfindEventhdlr(
@@ -1491,7 +2414,11 @@ int SCIPgetNEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a node selector and includes it in SCIP */
+/** creates a node selector and includes it in SCIP.
+ *
+ *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1508,6 +2435,72 @@ SCIP_RETCODE SCIPincludeNodesel(
    SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   );
+
+/** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
+ *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ */
+extern
+SCIP_RETCODE SCIPincludeNodeselBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL**        nodesel,            /**< reference to a node selector, or NULL */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
+   );
+
+/** sets copy method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
+   );
+
+/** sets initialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
+   );
+
+/** sets deinitialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
+   );
+
+/** sets solving process initialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
+   );
+
+/** sets solving process deinitialization method of node selector */
+extern
+SCIP_RETCODE SCIPsetNodeselExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
    );
 
 /** returns the node selector of the given name, or NULL if not existing */
@@ -1551,7 +2544,11 @@ SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a branching rule and includes it in SCIP */
+/** creates a branching rule and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
+ *              via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1572,6 +2569,98 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   );
+
+/** creates a branching rule and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
+ *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
+ *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ */
+SCIP_RETCODE SCIPincludeBranchruleBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   );
+
+/** sets copy method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
+   );
+
+/** sets initialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
+   );
+
+/** sets deinitialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
+   );
+
+/** sets solving process initialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
+   );
+
+/** sets solving process deinitialization method of branching rule */
+extern
+SCIP_RETCODE SCIPsetBranchruleExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
+   );
+
+/** sets branching execution method for fractional LP solutions */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecLp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
+   );
+
+/** sets branching execution method for external candidates  */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
+   );
+
+/** sets branching execution method for not completely fixed pseudo solutions */
+extern
+SCIP_RETCODE SCIPsetBranchruleExecPs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
    );
 
 /** returns the branching rule of the given name, or NULL if not existing */
@@ -1855,6 +2944,60 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  all callback methods will be set to NULL and can be set afterwards, if needed, via SCIPsetProbDelorig(),
+ *  SCIPsetProbTrans(), SCIPsetProbDeltrans(), SCIPsetProbInitsol(), SCIPsetProbExitsol(), and
+ *  SCIPsetProbCopy()
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+extern
+SCIP_RETCODE SCIPcreateProbBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< problem name */
+   );
+
+/** sets callback to free user data of original problem */
+SCIP_RETCODE SCIPsetProbDelorig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   );
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+extern
+SCIP_RETCODE SCIPsetProbTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   );
+
+/** sets callback to free user data of transformed problem */
+extern
+SCIP_RETCODE SCIPsetProbDeltrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   );
+
+/** sets solving process initialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
+   );
+
+/** sets solving process deinitialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
+   );
+
+/** sets callback to copy user data to a subscip */
+extern
+SCIP_RETCODE SCIPsetProbCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   );
+
 /** reads problem from file and initializes all solving data structures */
 extern
 SCIP_RETCODE SCIPreadProb(
@@ -1893,13 +3036,13 @@ SCIP_RETCODE SCIPfreeProb(
 /** permutes parts of the problem data structure */
 extern
 SCIP_RETCODE SCIPpermuteProb(
-   SCIP*                 scip,              /**< SCIP data structure */
-   unsigned int          randseed,          /**< seed value for random generator */
-   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
-   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
-   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< seed value for random generator */
+   SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
    );
 
 /** gets user problem data */
@@ -1970,6 +3113,13 @@ SCIP_Real SCIPgetTransObjoffset(
 extern
 SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets objective scale of the tranformed problem */
+extern
+void SCIPsetTransObjscale(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             objscale            /**< new objective scalar */
    );
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
@@ -2531,6 +3681,31 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
+/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
+ *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
+ *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
+ *  if variable is of integral type, fractional bounds are automatically rounded;
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+extern
+SCIP_RETCODE SCIPcreateVarBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype             /**< type of variable */
+   );
+
 /** outputs the variable name to the file stream */
 extern
 SCIP_RETCODE SCIPwriteVarName(
@@ -2853,6 +4028,18 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+extern
+SCIP_RETCODE SCIPgetProbvarSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
 /** return for given variables all their active counterparts; all active variables will be pairwise different
  *  @note It does not hold that the first output variable is the active variable for the first input variable.
  */
@@ -2860,11 +4047,9 @@ extern
 SCIP_RETCODE SCIPgetActiveVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
@@ -4301,15 +5486,17 @@ SCIP_RETCODE SCIPisConflictVarUsed(
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
    );
 
-/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise SCIP_INFINITY */
+/** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
+ *  bound
+ */
 extern
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus
- *  SCIP_INFINITY
+/** returns the conflict upper bound if the variable is present in the current conflict set; otherwise minus global
+ *  upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarUb(
@@ -4317,8 +5504,8 @@ SCIP_Real SCIPgetConflictVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise
- *  SCIP_INFINITY
+/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
+ *  global lower bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedLb(
@@ -4326,8 +5513,8 @@ SCIP_Real SCIPgetConflictVarRelaxedLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  minus SCIP_INFINITY
+/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
+ *  global upper bound
  */
 extern
 SCIP_Real SCIPgetConflictVarRelaxedUb(
@@ -4717,7 +5904,11 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given pseudo solution */
+/** enforces single constraint for a given pseudo solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4727,7 +5918,11 @@ SCIP_RETCODE SCIPenfopsCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** enforces single constraint for a given LP solution */
+/** enforces single constraint for a given LP solution
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4736,14 +5931,21 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls LP initialization method for single constraint */
+/** calls LP initialization method for single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to initialize */
    );
 
-/** calls separation method of single constraint for LP solution */
+/** calls separation method of single constraint for LP solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4751,7 +5953,10 @@ SCIP_RETCODE SCIPsepalpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls separation method of single constraint for given primal solution */
+/** calls separation method of single constraint for given primal solution
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4760,7 +5965,10 @@ SCIP_RETCODE SCIPsepasolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
-/** calls domain propagation method of single constraint */
+/** calls domain propagation method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4769,7 +5977,11 @@ SCIP_RETCODE SCIPpropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** resolves propagation conflict of single constraint */
+/** resolves propagation conflict of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4782,7 +5994,10 @@ SCIP_RETCODE SCIPrespropCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** presolves of single constraint */
+/** presolves a single constraint
+ *
+ *  @note This is an advanced method and should be used with caution.
+ */
 extern
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4811,14 +6026,22 @@ SCIP_RETCODE SCIPpresolCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls constraint activation notification method of single constraint */
+/** calls constraint activation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
    );
 
-/** calls constraint deactivation notification method of single constraint */
+/** calls constraint deactivation notification method of single constraint
+ *
+ *@note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *      added to SCIP beforehand.
+ */
 extern
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5080,6 +6303,27 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   );
+
+/** stores LP state (like basis information) into LP state object */
+extern
+SCIP_RETCODE SCIPgetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   );
+
+/** loads LP state (like basis information) into solver */
+extern
+SCIP_RETCODE SCIPsetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   );
+
+/** frees LP state information */
+extern
+SCIP_RETCODE SCIPfreeLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
@@ -5510,49 +6754,39 @@ SCIP_RETCODE SCIPprintRow(
 /**@name NLP Methods */
 /**@{ */
 
-/** marks that there are constraints that are representable by nonlinear constraints involving continuous variables
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows
- * and that are still nonlinear after fixing all discrete variables in the CIP.
+/** returns whether the NLP relaxation has been enabled
  * 
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ * To check whether an NLP is existing, use SCIPisNLPConstructed().
  * 
- */ 
+ * @see SCIPenableNLP
+ */
 extern
-void SCIPmarkContinuousNonlinearitiesPresent(
+SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** marks that there are constraints that are representable by nonlinear constraints
+/** marks that there are constraints that are representable by nonlinear rows
+ *
  * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
- * 
+ *
  * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
- * 
- * Calling SCIPmarkContinuousNonlinearitiesPresent makes a call to SCIPmarkNonlinearitiesPresent dispensable.
- */ 
-extern
-void SCIPmarkNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present that involve continuous nonlinear variables
- * @see SCIPmarkContinuousNonlinearitiesPresent
  */
 extern
-SCIP_Bool SCIPhasContinuousNonlinearitiesPresent(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether constraints representable as nonlinear rows are present
- * @see SCIPmarkNonlinearitiesPresent
- */
-extern
-SCIP_Bool SCIPhasNonlinearitiesPresent(
+void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns, whether an NLP has been constructed */
 extern
 SCIP_Bool SCIPisNLPConstructed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the NLP has a continuous variable in a nonlinear term
+ */
+extern
+SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -6390,6 +7624,13 @@ SCIP_RETCODE SCIPchgVarUbDive(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
+/** adds a row to the LP in current dive */
+extern
+SCIP_RETCODE SCIPaddRowDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   );
+
 /** gets variable's objective value in current dive */
 extern
 SCIP_Real SCIPgetVarObjDive(
@@ -7096,6 +8337,16 @@ SCIP_Real SCIPgetSolTransObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
+/** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
+ *  has to be called before solution is added to the solution storage
+ */
+extern
+SCIP_RETCODE SCIPsetSolTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_Real             obj                 /**< transformed objective value of given solution */
+   );
+
 /** maps original space objective value into transformed objective value */
 extern
 SCIP_Real SCIPtransformObj(
@@ -7233,8 +8484,8 @@ SCIP_RETCODE SCIPretransformSol(
 /** reads a given solution file, problem has to be transformed in advance */
 extern
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */
-   const char*           filename           /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
    );
 
 /** adds feasible primal solution to solution storage by copying it */
@@ -8942,6 +10193,12 @@ BMS_BLKMEM* SCIPblkmem(
 /** returns the total number of bytes used in block memory */
 extern
 SCIP_Longint SCIPgetMemUsed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the estimated number of bytes used by external software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

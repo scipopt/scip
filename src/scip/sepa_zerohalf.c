@@ -68,6 +68,7 @@
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
 #define SEPA_FREQ                    -1 
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP           TRUE
 #define SEPA_DELAY                FALSE
 
@@ -154,25 +155,6 @@ enum preprocessingmethods
 typedef enum preprocessingmethods PREPROCESSINGMETHODS;  
 #endif
 
-/** description of the ppmethods parameter */
-static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =  
-   "preprocessing methods and ordering:\n\
-   #                      'd' columns with small LP solution,\n \
-   #                      'G' modified Gaussian elimination,\n  \
-   #                      'i' identical columns,\n\
-   #                      'I' identical rows,\n\
-   #                      'L' large slack rows,\n\
-   #                      'M' large slack rows (minslack),\n\
-   #                      's' column singletons,\n\
-   #                      'X' add trivial zerohalf cuts,\n\
-   #                      'z' zero columns,\n\
-   #                      'Z' zero rows,\n\
-   #                      'C' fast {'z','s'},\n\
-   #                      'R' fast {'Z','L','I'}\n\
-   #                      \n                      \
-   #                      '-' no preprocessing\n  \
-   #                     ";
-
 /** separation methods, usable within the sepamethods parameter  */
 enum sepamethods 
    {
@@ -187,20 +169,6 @@ enum sepamethods
 #if 0 /* currently not used */
 typedef enum sepamethods SEPAMETHODS;
 #endif
-
-/** description of the sepamethods parameter */
-static const char sepamethodsdescription[SCIP_MAXSTRLEN] =        
-   "separating methods and ordering:\n\
-   #                      '!' stop further processing if a cut was found,\n\
-   #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),\n\
-   #                      'e' enumeration heuristics (k=1: try all preprocessed rows),\n\
-   #                      'E' enumeration heuristics (k=2: try all combinations of up to two preprocessed rows),\n\
-   #                      'g' Extended Gaussian elimination heuristics,\n\
-   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n\
-   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n\
-   #                      \n\
-   #                      '-' no processing\n\
-   #                     ";
 
 /** statistics: "origin" of separated cut */
 enum cutseparatedby 
@@ -232,7 +200,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
          assert((void*)(source) != NULL);                       \
          memmove((void*)(ptr), (void*)(source), size__);        \
       }                                                         \
-   } /**< moves array at source with size num to ptr */                                                                 
+   } /** moves array at source with size num to ptr */
 #endif
 
 #ifdef  ZEROHALF__PRINT_STATISTICS
@@ -312,39 +280,49 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 
 #define BITARRAYBASETYPE                     unsigned int          /**< base type used for the bitarray data structures */
 #define BITARRAYBITMASKTYPE                  BITARRAYBASETYPE
-static const unsigned int Zerohalf_bitarraybasetypesize = sizeof(BITARRAYBASETYPE);       /**< size of BITARRAYBASETYPE */
-static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYBASETYPE) << 3;     /**< number of bits per
-                                                                                                      BITARRAYBASETYPE */
+
+/** size of BITARRAYBASETYPE */
+static const unsigned int Zerohalf_bitarraybasetypesize = sizeof(BITARRAYBASETYPE);
+
+/** number of bits per BITARRAYBASETYPE */
+static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYBASETYPE) << 3;
+
+
 #define BITARRAY                             BITARRAYBASETYPE*
-#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))            /**< get the bit mask where the pos-th bit is set */
 
-#define BITSET(var, pos)                     (var) |= BITMASK(pos)                       /**< set the pos-th bit of var */
-#define BITISSET(var, pos)                   (var & BITMASK(pos))                    /**< is the pos-th bit of var set? */
+/** get the bit mask where the pos-th bit is set */
+#define BITMASK(pos)                         ((unsigned int)(1 << (pos)))
 
+/** set the pos-th bit of var */
+#define BITSET(var, pos)                     (var) |= BITMASK(pos)
+
+/** is the pos-th bit of var set? */
+#define BITISSET(var, pos)                   (var & BITMASK(pos))
+
+/** set the pos-th bit of bitarray barray */
 #define BITARRAYBITSET(barray, pos)          BITSET(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< set the pos-th bit
-                                                             of bitarray barray */
-#define BITARRAYBITISSET(barray, pos)        BITISSET(barray[DIV(pos,Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< is the pos-th bit of
-                                                             bitarray barray set?*/
-#define BITARRAYCLEAR(barray, barraysize)    BMSclearMemoryArray(barray,barraysize)                 /**< clear bitarray */
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
 
+/** is the pos-th bit of bitarray barray set? */
+#define BITARRAYBITISSET(barray, pos)        BITISSET(barray[DIV(pos,Zerohalf_bitarraybasetypesize_nbits)], \
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** clear bitarray */
+#define BITARRAYCLEAR(barray, barraysize)    BMSclearMemoryArray(barray,barraysize)
+
+/** calculates the number of array elements (w.r.t. the bitarray base type) required to create the bitarray */
 #define GETREQUIREDBITARRAYSIZE(nvalstostore)                           \
    ((((unsigned int)(nvalstostore)) % (Zerohalf_bitarraybasetypesize_nbits) == 0) \
       ? (((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) \
-      : ((((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) + 1))         /**< calculates the number of array elements
-                                                                                                   (w.r.t. the bitarray base type) required
-                                                                                                   to create the bitarray */
+      : ((((unsigned int)(nvalstostore)) / (Zerohalf_bitarraybasetypesize_nbits)) + 1))
 
-#define GETBITARRAYINDEX(pos)                DIV((pos),Zerohalf_bitarraybasetypesize_nbits) /**< get the corresponding
-                                                                                               array element of a bitarray
-                                                                                               position */
-#define GETBITARRAYMASK(pos)                 BITMASK(MOD((pos),Zerohalf_bitarraybasetypesize_nbits)) /**< get the bitmask
-                                                                                                        to mask all bits
-                                                                                                        except the pos-th
-                                                                                                        bit of an array
-                                                                                                        element */
+/** get the corresponding array element of a bitarray position */
+#define GETBITARRAYINDEX(pos)                DIV((pos),Zerohalf_bitarraybasetypesize_nbits)
 
+/** get the bitmask to mask all bits except the pos-th bit of an array element */
+#define GETBITARRAYMASK(pos)                 BITMASK(MOD((pos),Zerohalf_bitarraybasetypesize_nbits))
+
+/** apply operation op for all array elements of bitarray barray1 and barray2 */
 #define BITARRAYSFOREACH(barray1, barray2, size, op)                    \
    {                                                                    \
       int idx__;                                                        \
@@ -352,28 +330,38 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
       {                                                                 \
          barray2[idx__] op barray1[idx__];                              \
       }                                                                 \
-   }                                      /**< apply operation op for all array elements of bitarray barray1 and barray2 */
-#define BITARRAYSXOR(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,^=)           /**< barray2 =
-                                                                                                    barray1 XOR barray2 */
+   }
+
+/** barray2 = barray1 XOR barray2 */
+#define BITARRAYSXOR(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,^=)
+
+/** are barray1 and barray2 equal? */
 #define BITARRAYSAREEQUAL(barray1, barray2, size)                       \
-   (memcmp((void*)(barray1), (void*)(barray2), (size_t)((size) * (Zerohalf_bitarraybasetypesize))) == 0) /**< are barray1
-                                                                                                            and barray2
-                                                                                                            equal? */
+   (memcmp((void*)(barray1), (void*)(barray2), (size_t)((size) * (Zerohalf_bitarraybasetypesize))) == 0)
+
 #if 0 /* currently not used */
-#define BITCLEAR(var, pos)                   (var) &= ~BITMASK(pos)                    /**< clear the pos-th bit of var */
-#define BITFLIP(var, pos)                    (var) ^= BITMASK(pos)                      /**< flip the pos-th bit of var */
+/** clear the pos-th bit of var */
+#define BITCLEAR(var, pos)                   (var) &= ~BITMASK(pos)
+
+/** flip the pos-th bit of var */
+#define BITFLIP(var, pos)                    (var) ^= BITMASK(pos)
+
+/** clear the pos-th bit of bitarray barray */
 #define BITARRAYBITCLEAR(barray, pos)        BITCLEAR(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< clear the pos-th bit
-                                                             of bitarray barray */  
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** flip the pos-th bit of bitarray barray */
 #define BITARRAYBITFLIP(barray, pos)         BITFLIP(barray[DIV((pos),Zerohalf_bitarraybasetypesize_nbits)], \
-      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))       /**< flip the pos-th bit
-                                                             of bitarray barray */
-#define BITARRAYSAND(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,&=)           /**< barray2 =
-                                                                                                    barray1 AND barray2 */
-#define BITARRAYSOR(barray1, barray2, size)  BITARRAYSFOREACH(barray1,barray2,size,|=)           /**< barray2 =
-                                                                                                    barray1 OR barray2 */
-#define BITARRAYSNOT(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,= ~)          /**< barray2 =
-                                                                                                    NOT barray1 */
+      MOD(pos,Zerohalf_bitarraybasetypesize_nbits))
+
+/** barray2 = barray1 AND barray2 */
+#define BITARRAYSAND(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,&=)
+
+/** barray2 = barray1 OR barray2 */
+#define BITARRAYSOR(barray1, barray2, size)  BITARRAYSFOREACH(barray1,barray2,size,|=)
+
+/** barray2 = NOT barray1 */
+#define BITARRAYSNOT(barray1, barray2, size) BITARRAYSFOREACH(barray1,barray2,size,= ~)
 #endif
 
 
@@ -427,18 +415,17 @@ struct SCIP_SepaData
    int*                  origrows;           /**< set of SCIP_ROW->index of all original LP rows */
 
    int                   maxnnonz;           /**< maximal number of nonzeros allowed in a zerohalf cut */
-   int                   maxtestdelta;             /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
+   int                   maxtestdelta;       /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling for cmir? */
 
    /* statistics */
-   int                   totalncutsfound;    /**< total number of separated zerohalf cuts,
-                                                including inefficious ones */
+   int                   totalncutsfound;    /**< total number of separated zerohalf cuts, including inefficious ones */
    int                   totalnsepacuts;     /**< total number of separated zerohalf cuts */
-   SCIP_CLOCK**          pptimers;           /**< timers of preprocessing methods */    
+   SCIP_CLOCK**          pptimers;           /**< timers of preprocessing methods */
    SCIP_CLOCK**          sepatimers;         /**< timers of separation algorithms */
    SCIP_CLOCK*           dtimer;             /**< timer of decomposition method */
    int*                  nsepacutsalgo;      /**< number zerohalf cuts separated by a specific separation algorithm,
-                                                including inefficious cuts */  
+                                              *   including inefficious cuts */
    int*                  nzerohalfcutsalgo;  /**< number zerohalf cuts separated by a specific separation algorithm */
 };
 
@@ -486,14 +473,14 @@ struct Zerohalf_LPData
    int*                  rrowsindexofrightrow;         /**< maps rows index of lhs <= a^Tx <= rhs to rrows index of  a^Tx <=  rhs */
 
    /* col related index sets */
-   int*                  subproblemsindexofcol;        /**< is cols index relevant? value <0: not relevant
-                                                          value >=0: index of subproblem containing the column */
-   int*                  rcolsindexofcol;              /**< maps cols index to rcols index */
+   int*                  subproblemsindexofcol; /**< is cols index relevant? value <0: not relevant
+                                                 *   value >=0: index of subproblem containing the column */
+   int*                  rcolsindexofcol;    /**< maps cols index to rcols index */
 
-   int*                  bestlbidxofcol;               /**< maps cols index of a continuous variable to the index of its
-                                                          best lower bound (-2: undetermined, -1: lb, >=0: index of vlb)*/
-   int*                  bestubidxofcol;               /**< maps cols index of a continuous variable to the index of its
-                                                          best upper bound (-2: undetermined, -1: ub, >=0: index of vub)*/
+   int*                  bestlbidxofcol;     /**< maps cols index of a continuous variable to the index of its
+                                              *   best lower bound (-2: undetermined, -1: lb, >=0: index of vlb)*/
+   int*                  bestubidxofcol;     /**< maps cols index of a continuous variable to the index of its
+                                              *   best upper bound (-2: undetermined, -1: ub, >=0: index of vub)*/
 
    /* statistics */
    int                   ndelvarbounds;      /**< number of deleted variable bounds by basic preprocessing */
@@ -618,15 +605,15 @@ typedef struct Zerohalf_CutData ZEROHALF_CUTDATA;
 /** auxiliary graph node data structure */
 struct Zerohalf_AuxGraph_Node;
 typedef struct Zerohalf_AuxGraph_Node ZEROHALF_AUXGRAPH_NODE;
+
 struct Zerohalf_AuxGraph_Node
 {  
-   ZEROHALF_AUXGRAPH_NODE**  neighbors;      /**< node adjacency list */
-   SCIP_Real*                edgeweights;    /**< weights of outgoing edges */
-   int*                      relatedrows;    /**< label mapping outgoing edges to mod 2 rows */
-   int                       nneighbors;     /**< number of adjacent nodes */
-  
-   SCIP_Real                 distance;       /**< actual distant from start node (used by Dijkstra)*/
-   ZEROHALF_AUXGRAPH_NODE*   previous;       /**< previous node in shortest-path-tree (used by Dijkstra) */
+   ZEROHALF_AUXGRAPH_NODE** neighbors;       /**< node adjacency list */
+   SCIP_Real*            edgeweights;        /**< weights of outgoing edges */
+   int*                  relatedrows;        /**< label mapping outgoing edges to mod 2 rows */
+   int                   nneighbors;         /**< number of adjacent nodes */
+   SCIP_Real             distance;           /**< actual distant from start node (used by Dijkstra)*/
+   ZEROHALF_AUXGRAPH_NODE* previous;         /**< previous node in shortest-path-tree (used by Dijkstra) */
 };
 
 
@@ -635,10 +622,9 @@ struct Zerohalf_AuxGraph_Node
 /** auxiliary graph data structure */
 struct Zerohalf_AuxGraph
 {
-   ZEROHALF_AUXGRAPH_NODE**  nodes;          /**< list of all original nodes */
-   ZEROHALF_AUXGRAPH_NODE**  nodecopies;     /**< list of all copies of original nodes */
-
-   int                       nnodes;         /**< number of original nodes (equals number of copies) */
+   ZEROHALF_AUXGRAPH_NODE** nodes;           /**< list of all original nodes */
+   ZEROHALF_AUXGRAPH_NODE** nodecopies;      /**< list of all copies of original nodes */
+   int                   nnodes;             /**< number of original nodes (equals number of copies) */
 };
 typedef struct Zerohalf_AuxGraph ZEROHALF_AUXGRAPH;
 
@@ -1070,7 +1056,7 @@ SCIP_RETCODE ZerohalfCutDataFree(
 /** creates and initializes auxiliary graph node data structures */
 static
 SCIP_RETCODE ZerohalfAuxGraphNodeCreate(
-   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    ZEROHALF_AUXGRAPH_NODE** node             /**< pointer to store pointer to created data structure */
    )
 {
@@ -1096,7 +1082,7 @@ SCIP_RETCODE ZerohalfAuxGraphNodeCreate(
 /** frees auxiliary graph node data structures */
 static
 SCIP_RETCODE ZerohalfAuxGraphNodeFree(
-   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    ZEROHALF_AUXGRAPH_NODE** node             /**< pointer to pointer of data structure */
    )
 {
@@ -1198,8 +1184,8 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
 /** returns a string containing the name of the symbolic constant (given as int value) */
 static
 char* getconstantname(
-   char* buffer,                             /**< string containing the name */
-   int value                                 /**< symbolic constant given as int value */
+   char*                 buffer,             /**< string containing the name */
+   int                   value               /**< symbolic constant given as int value */
    )
 {
    switch( value )
@@ -1365,14 +1351,14 @@ void debugPrintSubLpData(
    SCIPdebugMessage(" rrows:   (nrrows=%d)\n", sublpdata->nrrows);
    for( i = 0 ; i < sublpdata->nrrows ; ++i)
    {
-      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6lf  slack: %6lf  name: %s\n",
+      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6g  slack: %6g  name: %s\n",
          i, sublpdata->rrows[i], sublpdata->rrowsrhs[i], sublpdata->rrowsslack[i],
          SCIProwGetName(lpdata->rows[sublpdata->rrows[i]]));
    }
    SCIPdebugMessage("\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
    for( j = 0 ; j < sublpdata->nrcols ; ++j)
    {
-      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6lf  ubslack: %6lf\n",
+      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6g  ubslack: %6g\n",
          i, sublpdata->rcols[i], sublpdata->rcolslbslack[i], sublpdata->rcolsubslack[i]);        
    }
 }
@@ -1413,7 +1399,7 @@ void debugPrintMod2Data(
       for( k = 0 ; k < mod2data->ncolsind ; ++k )
          if( mod2data->colsind[k] == j )
             break;
-      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6lf  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
+      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6g  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
          k < mod2data->ncolsind ? k : -1,
          SCIPvarGetName(SCIPcolGetVar(lpdata->cols[mod2data->relatedsubproblem->rcols[j]])));
    }
@@ -1446,7 +1432,7 @@ void debugPrintMod2Data(
          SCIPdebugPrintf("  0");
       }
       SCIPdebugPrintf("  [%4d] ", nnonz);    
-      SCIPdebugPrintf("(%6lf)  ", mod2data->slacks[mod2data->rowsind[i]]);
+      SCIPdebugPrintf("(%6g)  ", mod2data->slacks[mod2data->rowsind[i]]);
 
       if( printaggregations )
       {
@@ -1491,13 +1477,13 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
    ZEROHALF_LPDATA*      lpdata              /**< data of current LP relaxation */
    )
 {
-   assert(scip != NULL);
-   assert(lpdata != NULL);
-
    int                   i;
    int                   j;
    char                  temp[SCIP_MAXSTRLEN];
-  
+
+   assert(scip != NULL);
+   assert(lpdata != NULL);
+
    SCIPdebugMessage("\n\nLP rows:\n");
    for( i = 0 ; i < lpdata->nrows ; ++i)
    {
@@ -3358,7 +3344,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 
 
 
-/**< searches for trivial zerohalf cuts, given as (0,..0) row with rhs=1 and slack <= maxslack */
+/** searches for trivial zerohalf cuts, given as (0,..0) row with rhs=1 and slack <= maxslack */
 static
 SCIP_RETCODE preprocessTrivialZerohalfCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3488,9 +3474,9 @@ SCIP_RETCODE preprocessRows(
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
    int                   firstrowsind,       /**< first mod2data->rows index to be considered */
    int                   lastrowsind,        /**< last mod2data->rows index to be considered */
-   SCIP_Bool             removezerorows,           /**< should zero rows be removed? */
-   SCIP_Bool             removelargeslackrows,     /**< should rows with slack > maxslack be removed? */
-   SCIP_Bool             removeidenticalrows       /**< should identical rows be removed? */
+   SCIP_Bool             removezerorows,     /**< should zero rows be removed? */
+   SCIP_Bool             removelargeslackrows, /**< should rows with slack > maxslack be removed? */
+   SCIP_Bool             removeidenticalrows /**< should identical rows be removed? */
    )
 {
    int                   r1;
@@ -3627,9 +3613,9 @@ SCIP_RETCODE preprocessColumns(
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
    int                   firstcolsind,       /**< first mod2data->rows index to be considered */ 
    int                   lastcolsind,        /**< last mod2data->rows index to be considered */
-   SCIP_Bool             removezerocols,           /**< should zero columns be removed? */
-   SCIP_Bool             removecolsingletons,      /**< should column singletons be removed? */
-   SCIP_Bool             checkresultingrows        /**< should rows whose slack becomes larger than maxslack be removed? */
+   SCIP_Bool             removezerocols,     /**< should zero columns be removed? */
+   SCIP_Bool             removecolsingletons,/**< should column singletons be removed? */
+   SCIP_Bool             checkresultingrows  /**< should rows whose slack becomes larger than maxslack be removed? */
    )
 {
    SCIP_Real             maxslack;
@@ -5005,9 +4991,13 @@ SCIP_RETCODE createSubscip(
    if( !SCIPisInfinity(scip, auxipdata->timelimit) )
       auxipdata->timelimit -= SCIPgetSolvingTime(scip);
 
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &auxipdata->memorylimit) );
    if( !SCIPisInfinity(scip, auxipdata->memorylimit) )
+   {
       auxipdata->memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      auxipdata->memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
    if( setnodelimit == TRUE )
       auxipdata->nodelimit = 3000;
@@ -5018,7 +5008,7 @@ SCIP_RETCODE createSubscip(
    auxipdata->objectivelimit = MIN(1.0, maxslack + feastol);
   
    /* abort if not enough memory available */
-   if( auxipdata->memorylimit <= 0.0 ) 
+   if( auxipdata->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       return SCIP_OKAY;
 
    /* abort if not enough time available */
@@ -5036,10 +5026,10 @@ SCIP_RETCODE createSubscip(
    success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
    SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
   
@@ -6066,14 +6056,12 @@ SCIP_RETCODE addEdgeToAuxGraph(
     cannot be shorter than maxdistance */ 
 static
 SCIP_RETCODE dijkstra(
-   SCIP*                      scip,          /**< SCIP data structure */
-   ZEROHALF_AUXGRAPH*         graph,         /**< auxiliary graph */   
-   ZEROHALF_AUXGRAPH_NODE*    sourcenode,    /**< start node */
-   ZEROHALF_AUXGRAPH_NODE*    targetnode,    /**< end node */
-   SCIP_Real                  maxdistance    /**< calculation will be aborted if
-                                                a proof is found that no shortest
-                                                path with length less than
-                                                maxdistance exists */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ZEROHALF_AUXGRAPH*    graph,              /**< auxiliary graph */
+   ZEROHALF_AUXGRAPH_NODE* sourcenode,       /**< start node */
+   ZEROHALF_AUXGRAPH_NODE* targetnode,       /**< end node */
+   SCIP_Real             maxdistance         /**< calculation will be aborted if a proof is found that no shortest path with
+                                              *   length less than maxdistance exists */
    )
 {
    ZEROHALF_AUXGRAPH_NODE**   unprocessednodes;
@@ -7022,16 +7010,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       /* bubble sort indices (s.t. binary search can be used to find an index) */
       do                                                                  
       {                                                                   
-         issorted = TRUE;                                                  
-         for( i = 0 ; i < sepadata->norigrows - 1 ; ++i )                         
+         issorted = TRUE;
+         for( i = 0 ; i < sepadata->norigrows - 1 ; ++i )
+         {
             if( sepadata->origrows[i] > sepadata->origrows[i+1] )
-            {                                                               
-               temp = sepadata->origrows[i];                                           
-               sepadata->origrows[i] = sepadata->origrows[i+1];                                 
-               sepadata->origrows[i+1] = temp;                                         
-               issorted = FALSE;                                             
-            }                                                               
-      } while( !issorted );    
+            {
+               temp = sepadata->origrows[i];
+               sepadata->origrows[i] = sepadata->origrows[i+1];
+               sepadata->origrows[i+1] = temp;
+               issorted = FALSE;
+            }
+         }
+      }
+      while( !issorted );
    }
 
    /* get the maximal number of cuts allowed in a separation round */
@@ -7149,6 +7140,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
        */
       if( lpdata->subproblems[subproblemindex]->nrrows == 1 && lpdata->subproblems[subproblemindex]->nrcols == 0 )
       {        
+         SCIP_Real* weights;
+
 #ifdef SCIP_DEBUG
          SCIP_CALL( debugPrintLPRowsAndCols(scip, lpdata) );
          SCIPdebugMessage("\n");
@@ -7156,7 +7149,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          SCIPdebugMessage("\n");
 #endif
          /* create weightvector */
-         SCIP_Real* weights;
          weights = NULL;
          SCIP_CALL( getZerohalfWeightvectorForSingleRow(scip, sepadata, lpdata, lpdata->subproblems[subproblemindex]->rrows[0],
                0, &weights) );
@@ -7456,14 +7448,82 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
  * separator specific interface methods 
  * -------------------------------------------------------------------------------------------------------------------- */
 
-
 /** creates the zerohalf separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_SEPADATA*        sepadata;
-  
+   SCIP_SEPA* sepa;
+
+   /* description of the preprocessing methods parameter */
+   char preprocessingmethodsdescription[SCIP_MAXSTRLEN];
+   /* description of the sepamethods parameter */
+   char sepamethodsdescription[SCIP_MAXSTRLEN];
+   /* description of the subscip parameter */
+   char subscipobjectivedescription[SCIP_MAXSTRLEN];
+   int ncharsprinted;
+
+   ncharsprinted = SCIPmemccpy(preprocessingmethodsdescription,
+      "preprocessing methods and ordering:\n"
+      "   #                      'd' columns with small LP solution,\n"
+      "   #                      'G' modified Gaussian elimination,\n"
+      "   #                      'i' identical columns,\n"
+      "   #                      'I' identical rows,\n"
+      "   #                      'L' large slack rows,\n"
+      "   #                      'M' large slack rows (minslack),\n"
+      "   #                      's' column singletons,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(preprocessingmethodsdescription[ncharsprinted - 1]),
+      "   #                      'X' add trivial zerohalf cuts,\n"
+      "   #                      'z' zero columns,\n"
+      "   #                      'Z' zero rows,\n"
+      "   #                      'C' fast {'z','s'},\n"
+      "   #                      'R' fast {'Z','L','I'}\n"
+      "   #                      \n"
+      "   #                      '-' no preprocessing\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted = SCIPmemccpy(sepamethodsdescription,
+      "separating methods and ordering:\n"
+      "   #                      '!' stop further processing if a cut was found,\n"
+      "   #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),\n"
+      "   #                      'e' enumeration heuristics (k=1: try all preprocessed rows),\n"
+      "   #                      'E' enumeration heuristics (k=2: try all combinations of up to two preprocessed rows),\n"
+      "   #                      'g' Extended Gaussian elimination heuristics,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(sepamethodsdescription[ncharsprinted - 1]),
+      "   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)\n"
+      "   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n"
+      "   #                      \n"
+      "   #                      '-' no processing\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted = SCIPmemccpy(subscipobjectivedescription,
+      "auxiliary IP objective:\n"
+      "   #                      'v' maximize cut violation,\n"
+      "   #                      'u' minimize number of aggregated rows in cut,\n"
+      "   #                      'w' minimize number of aggregated rows in cut\n"
+      "   #                          weighted by the number of rows in the aggregation,\n", '\0', SCIP_MAXSTRLEN - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
+   ncharsprinted += SCIPmemccpy(&(subscipobjectivedescription[ncharsprinted - 1]),
+      "   #                      'p' maximize cut violation and penalize a high number\n"
+      "   #                          of aggregated rows in the cut weighted by the number\n"
+      "   #                          of rows in the aggregation and the penalty factor p\n"
+      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+
+   assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
+
    /* create zerohalf separator data */
    SCIP_CALL(SCIPallocMemory(scip, &sepadata));
 
@@ -7486,13 +7546,16 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    sepadata->origrows = NULL;
   
    /* include separator */
-   SCIP_CALL(SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, 0.0 , SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyZerohalf,
-         sepaFreeZerohalf, sepaInitZerohalf, sepaExitZerohalf, 
-         sepaInitsolZerohalf, sepaExitsolZerohalf,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpZerohalf, sepaExecsolZerohalf,
-         sepadata));
+         sepadata) );
 
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyZerohalf) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeZerohalf) );
   
    /* add zerohalf separator parameters */
    SCIP_CALL(SCIPaddIntParam(scip,
@@ -7621,15 +7684,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &(sepadata->subscipuseallsols), FALSE, DEFAULT_SUBSCIPUSEALLSOLS, NULL, NULL));
    SCIP_CALL(SCIPaddCharParam(scip,
          "separating/zerohalf/separating/auxip/objective", 
-         "auxiliary IP objective:\n\
-   #                      'v' maximize cut violation,\n\
-   #                      'u' minimize number of aggregated rows in cut,\n\
-   #                      'w' minimize number of aggregated rows in cut\n\
-   #                          weighted by the number of rows in the aggregation,\n\
-   #                      'p' maximize cut violation and penalize a high number\n\
-   #                          of aggregated rows in the cut weighted by the number\n\
-   #                          of rows in the aggregation and the penalty factor p\n\
-   #                     ",
+	 subscipobjectivedescription,
          &(sepadata->subscipobjective), FALSE, DEFAULT_SUBSCIPOBJECTIVE, "uvwp", NULL, NULL));
 
    return SCIP_OKAY;

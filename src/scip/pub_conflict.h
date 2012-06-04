@@ -38,6 +38,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
+/** comparison method for sorting conflict handler w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName);
+
 /** gets user data of conflict handler */
 extern
 SCIP_CONFLICTHDLRDATA* SCIPconflicthdlrGetData(

@@ -214,6 +214,7 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    )
 {
    SCIP_NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
 
    assert(scip != NULL);
    assert(objnodesel != NULL);
@@ -222,14 +223,21 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    nodeseldata = new SCIP_NODESELDATA;
    nodeseldata->objnodesel = objnodesel;
    nodeseldata->deleteobject = deleteobject;
+   nodesel = NULL;
 
    /* include node selector */
-   SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
+   SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, objnodesel->scip_name_, objnodesel->scip_desc_,
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_,
-         nodeselCopyObj,
-         nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
-         nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
+         nodeselSelectObj, nodeselCompObj,
          nodeseldata) ); /*lint !e429*/
+   assert(nodesel != NULL);
+
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyObj) );
+   SCIP_CALL( SCIPsetNodeselFree(scip, nodesel, nodeselFreeObj) );
+   SCIP_CALL( SCIPsetNodeselInit(scip, nodesel, nodeselInitObj) );
+   SCIP_CALL( SCIPsetNodeselExit(scip, nodesel, nodeselExitObj) );
+   SCIP_CALL( SCIPsetNodeselInitsol(scip, nodesel, nodeselInitsolObj) );
+   SCIP_CALL( SCIPsetNodeselExitsol(scip, nodesel, nodeselExitsolObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

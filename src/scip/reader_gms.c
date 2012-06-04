@@ -169,7 +169,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, len);
+   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)len);
 
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -1879,15 +1879,19 @@ SCIP_RETCODE SCIPincludeReaderGms(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create gms reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include gms reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyGms,
-         readerFreeGms, readerReadGms, readerWriteGms, 
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeGms) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadGms) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,

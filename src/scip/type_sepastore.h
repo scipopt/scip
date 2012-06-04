@@ -27,6 +27,15 @@
 extern "C" {
 #endif
 
+/** possible settings for specifying the solution for which cuts are selected */
+enum SCIP_Efficiacychoice
+{
+   SCIP_EFFICIACYCHOICE_LP    = 0,           /**< use LP solution to base efficacy on */
+   SCIP_EFFICIACYCHOICE_RELAX = 1,           /**< use relaxation solution to base efficacy on */
+   SCIP_EFFICIACYCHOICE_NLP   = 2            /**< use NLP solution to base efficacy on */
+};
+typedef enum SCIP_Efficiacychoice SCIP_EFFICIACYCHOICE;
+
 typedef struct SCIP_SepaStore SCIP_SEPASTORE;     /**< storage for separated variables */
 
 #ifdef __cplusplus

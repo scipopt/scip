@@ -2390,7 +2390,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 /** computes the field width such that the output file is nicely arranged */
 static
 unsigned int computeFieldWidth(
-   unsigned int             width              /**< required width */
+   unsigned int          width               /**< required width */
    )
 {
    width = MAX(8, width);
@@ -4258,15 +4258,18 @@ SCIP_RETCODE SCIPincludeReaderMps(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create mps reader data */
+   /* create reader data */
    readerdata = NULL;
 
-   /* include mps reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyMps,
-         readerFreeMps, readerReadMps, readerWriteMps,
-         readerdata) );
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadMps) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteMps) );
 
    /* add mps reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

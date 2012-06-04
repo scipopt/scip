@@ -37,6 +37,10 @@ extern "C" {
 extern
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
 
+/** comparison method for sorting heuristics w.r.t. to their name */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompName);
+
 /** gets user data of primal heuristic */
 extern
 SCIP_HEURDATA* SCIPheurGetData(

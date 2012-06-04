@@ -389,7 +389,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* only call heuristic, if the best solution comes from transformed problem */
    assert( SCIPgetBestSol(scip) != NULL );
-   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */
@@ -501,9 +501,16 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    /* set limits for the subproblem */
@@ -620,6 +627,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_TOTALNODELIMIT:
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;
@@ -676,16 +684,22 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
 {
    SCIP_HEURDATA* heurdata;
 
-   /* create localbranching primal heuristic data */
+   SCIP_HEUR* heur;
+
+   /* create Localbranching primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyLocalbranching,
-         heurFreeLocalbranching, heurInitLocalbranching, heurExitLocalbranching,
-         heurInitsolLocalbranching, heurExitsolLocalbranching, heurExecLocalbranching,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLocalbranching, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocalbranching) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocalbranching) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLocalbranching) );
 
    /* add localbranching primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
@@ -713,7 +727,7 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
-         "factor by which localbranching should at least improve the incumbent  ",
+         "factor by which localbranching should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",

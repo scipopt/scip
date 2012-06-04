@@ -1079,21 +1079,26 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyLinearOrdering, consFreeLinearOrdering, consInitLinearOrdering, consExitLinearOrdering,
-         consInitpreLinearOrdering, consExitpreLinearOrdering, consInitsolLinearOrdering, consExitsolLinearOrdering,
-         consDeleteLinearOrdering, consTransLinearOrdering, consInitlpLinearOrdering,
-         consSepalpLinearOrdering, consSepasolLinearOrdering, consEnfolpLinearOrdering, consEnfopsLinearOrdering,
-	 consCheckLinearOrdering, consPropLinearOrdering, consPresolLinearOrdering, consRespropLinearOrdering,
-         consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
-         consEnableLinearOrdering, consDisableLinearOrdering, consDelVarsLinearOrdering,
-         consPrintLinearOrdering, consCopyLinearOrdering, consParseLinearOrdering,
-         consGetVarsLinearOrdering, consGetNVarsLinearOrdering, NULL) );
+   conshdlr = NULL;
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpLinearOrdering, consEnfopsLinearOrdering, consCheckLinearOrdering, consLockLinearOrdering,
+         NULL) );
+   assert(conshdlr != NULL);
+
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinearOrdering, consCopyLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinearOrdering, consSepasolLinearOrdering,
+         CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinearOrdering, CONSHDLR_PROPFREQ,
+         CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinearOrdering) );
 
    return SCIP_OKAY;
 }

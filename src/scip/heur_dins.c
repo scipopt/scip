@@ -239,11 +239,11 @@ SCIP_RETCODE createSubproblem(
 /** create the extra constraint of local branching and add it to subscip */
 static
 SCIP_RETCODE addLocalBranchingConstraint(
-   SCIP*                 scip,          /**< SCIP data structure of the original problem */
-   SCIP*                 subscip,       /**< SCIP data structure of the subproblem       */
-   SCIP_VAR**            subvars,       /**< variables of the subproblem                 */
-   SCIP_HEURDATA*        heurdata,      /**< heuristic's data structure                  */
-   SCIP_Bool*            fixed          /**< TRUE --> include variable in LB constraint  */
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem       */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem                 */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic's data structure                  */
+   SCIP_Bool*            fixed               /**< TRUE --> include variable in LB constraint  */
    )
 {
    SCIP_CONS* cons;                     /* local branching constraint to create          */
@@ -623,9 +623,16 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( timelimit <= 0.0 || memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
    /* set limits for the subproblem */
@@ -831,17 +838,23 @@ SCIP_RETCODE SCIPincludeHeurDins(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
-   /* create DINS primal heuristic data */
+   /* create Dins primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyDins,
-         heurFreeDins, heurInitDins, heurExitDins,
-         heurInitsolDins, heurExitsolDins, heurExecDins,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDins, heurdata) );
+
+   assert(heur != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDins) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDins) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolDins) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDins) );
 
    /* add DINS primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
@@ -863,7 +876,7 @@ SCIP_RETCODE SCIPincludeHeurDins(
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes,TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
-         "factor by which "HEUR_NAME" should at least improve the incumbent  ",
+         "factor by which "HEUR_NAME" should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",

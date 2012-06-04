@@ -650,11 +650,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
 
       /* compute maximal clique */
       tcliqueMaxClique(NULL, NULL, NULL, NULL, cgraph, tcliqueNewsolPricer, (TCLIQUE_DATA*)pricerdata, maxstablesetnodes,
-         &(nmaxstablesetnodes), &maxstablesetweight, 0, 
-         (int)getIntegralVal(pricerdata->scalefactor, 1.0, -MINDELTA, MAXDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1, &status);
+         &(nmaxstablesetnodes), &maxstablesetweight, 0,
+         (int)getIntegralVal(pricerdata->scalefactor, 1.0, -MINDELTA, MAXDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1,
+         NULL, &status);
       assert(status == TCLIQUE_OPTIMAL);
 
-      /* if only the best vaiable should be priced per round, take the one which is given as return value from 
+      /* if only the best vaiable should be priced per round, take the one which is given as return value from
          tcliqueMaxClique and put it into improvingstablesets array so that it will be inserted into the LP */
       if ( pricerdata->onlybest && pricerdata->maxvarsround == 1 )
       {
@@ -878,6 +879,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
    )
 {
    SCIP_PRICERDATA* pricerdata;
+   SCIP_PRICER* pricer;
 
    SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
    pricerdata->scip = scip;
@@ -886,13 +888,18 @@ SCIP_RETCODE SCIPincludePricerColoring(
    pricerdata->oldmaxvarsround = 0;
 
 
+   pricer = NULL;
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyColoring, 
-         pricerFreeColoring, pricerInitColoring, pricerExitColoring, 
-         pricerInitsolColoring, pricerExitsolColoring, pricerRedcostColoring, pricerFarkasColoring,
-         pricerdata) );
+   SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerRedcostColoring, pricerFarkasColoring, pricerdata) );
+   assert(pricer != NULL);
    
+   SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyColoring) );
+   SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeColoring) );
+   SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitColoring) );
+   SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitColoring) );
+   SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolColoring) );
+   SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolColoring) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "pricers/coloring/maxvarsround",

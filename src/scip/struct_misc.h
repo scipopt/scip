@@ -24,6 +24,10 @@
 #define __SCIP_STRUCT_MISC_H__
 
 
+#ifdef WITH_GMP
+#include "gmp.h"
+#endif
+
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_misc.h"
@@ -129,11 +133,25 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
-/** stair map */
-struct SCIP_Stairmap
+#ifdef WITH_GMP
+/** dynamic array for storing mpq_t values */
+struct SCIP_MpqArray
+{
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   mpq_t*                vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
+};
+#endif
+
+/** resource profile */
+struct SCIP_Profile
 {
    int*                  timepoints;         /**< time point array */
-   int*                  freecapacities;     /**< array holding corresponding available capacity */
+   int*                  loads;              /**< array holding the load for each time point */
+   int                   capacity;           /**< capacity of the resource profile */
    int                   ntimepoints;        /**< current number of entries */
    int                   arraysize;          /**< current array size */
 };
@@ -141,9 +159,10 @@ struct SCIP_Stairmap
 /** digraph structure to store and handle graphs */
 struct SCIP_Digraph
 {
-   int**                 adjnodes;           /**< adjacency list: for each node (first dimension) list of adjacent nodes */
-   int*                  adjnodessize;       /**< sizes of the adjacency lists for the nodes */
-   int*                  nadjnodes;          /**< number of edges stored in the adjacency lists of the nodes */
+   int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
+   void***               arcdatas;           /**< arc datas corresponding to the arcs to successors given by the successors array  */
+   int*                  successorssize;     /**< sizes of the successor lists for the nodes */
+   int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
    int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
    int                   ncomponents;        /**< number of undirected components stored */

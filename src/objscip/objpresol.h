@@ -50,10 +50,10 @@ public:
 
    /** name of the presolver */
    char* scip_name_;
-   
+
    /** description of the presolver */
    char* scip_desc_;
-   
+
    /** default priority of the presolver */
    const int scip_priority_;
 
@@ -93,47 +93,38 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of presolver to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRESOL*       presol              /**< the presolver itself */
-      )
+   /** destructor of presolver to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_PRESOLFREE(x) in @ref type_prop.h
+    */
+   virtual SCIP_DECL_PRESOLFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** initialization method of presolver (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRESOL*       presol              /**< the presolver itself */
-      )
+
+   /** initialization method of presolver (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_PRESOLINIT(x) in @ref type_prop.h
+    */
+   virtual SCIP_DECL_PRESOLINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** deinitialization method of presolver (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRESOL*       presol              /**< the presolver itself */
-      )
+
+   /** deinitialization method of presolver (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_PRESOLEXIT(x) in @ref type_prop.h
+    */
+   virtual SCIP_DECL_PRESOLEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
    /** presolving initialization method of presolver (called when presolving is about to begin)
     *
-    *  possible return values for *result:
-    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
-    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    *  @see SCIP_DECL_PRESOLINITPRE(x) in @ref type_prop.h
     */
-   virtual SCIP_RETCODE scip_initpre(
-      SCIP*              scip,               /**< SCIP data structure */   
-      SCIP_PRESOL*       presol,             /**< presolver */
-      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
-      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
-      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
-      )
+   virtual SCIP_DECL_PRESOLINITPRE(scip_initpre)
    {  /*lint --e{715}*/
       assert(result != NULL);
 
@@ -141,21 +132,12 @@ public:
 
       return SCIP_OKAY;
    }
-   
+
    /** presolving deinitialization method of presolver (called after presolving has been finished)
     *
-    *  possible return values for *result:
-    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
-    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    *  @see SCIP_DECL_PRESOLEXITPRE(x) in @ref type_prop.h
     */
-   virtual SCIP_RETCODE scip_exitpre(
-      SCIP*              scip,               /**< SCIP data structure */   
-      SCIP_PRESOL*       presol,             /**< presolver */
-      SCIP_Bool          isunbounded,        /**< was unboundedness already detected */
-      SCIP_Bool          isinfeasible,       /**< was infeasibility already detected */
-      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
-      )
+   virtual SCIP_DECL_PRESOLEXITPRE(scip_exitpre)
    {  /*lint --e{715}*/
       assert(result != NULL);
 
@@ -166,52 +148,15 @@ public:
 
    /** execution method of presolver
     *
-    *  The presolver should go through the variables and constraints and tighten the domains or
-    *  constraints. Each tightening should increase the given total numbers of changes.
-    *
-    *  @note the counters state the changes since the last call including the changes of this presolver during its last
-    *        last call
-    *
-    *  possible return values for *result:
-    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
-    *  - SCIP_SUCCESS    : the presolver found a reduction
-    *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
-    *  - SCIP_DIDNOTRUN  : the presolver was skipped
-    *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+    *  @see SCIP_DECL_PRESOLEXEC(x) in @ref type_prop.h
     */
-   virtual SCIP_RETCODE scip_exec(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRESOL*       presol,             /**< the presolver itself */
-      int                nrounds,            /**< no. of presolving rounds already done */
-      int                nnewfixedvars,      /**< no. of variables fixed since last call to presolver */
-      int                nnewaggrvars,       /**< no. of variables aggregated since last call to presolver */
-      int                nnewchgvartypes,    /**< no. of variable type changes since last call to presolver */
-      int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolver */
-      int                nnewholes,          /**< no. of domain holes added since last call to presolver */
-      int                nnewdelconss,       /**< no. of deleted constraints since last call to presolver */
-      int                nnewaddconss,       /**< no. of added constraints since last call to presolver */
-      int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolver */
-      int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolver */
-      int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolver */
-      int*               nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
-      int*               naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
-      int*               nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
-      int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
-      int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
-      int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
-      int*               naddconss,          /**< pointer to count total number of added constraints of all presolvers */
-      int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
-      int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
-      int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
-      SCIP_RESULT*       result              /**< pointer to store the result of the presolving call */
-      ) = 0;
+   virtual SCIP_DECL_PRESOLEXEC(scip_exec) = 0;
 };
 
 } /* namespace scip */
 
 
-   
+
 /** creates the presolver for the given presolver object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

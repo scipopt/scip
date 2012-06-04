@@ -147,6 +147,8 @@
 /* LP */
 
 #define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_LP_ITERLIM            -1LL /**< iteration limit for each single LP solve; -1: no limit */
+#define SCIP_DEFAULT_LP_ROOTITERLIM        -1LL /**< iteration limit for initial root LP solve; -1: no limit */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
 #define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                                  *   barrier with 'c'rossover) */
@@ -187,7 +189,7 @@
 /* NLP */
 
 #define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
-#define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be disabled? */
+#define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be always disabled? */
 
 /* Memory */
 
@@ -207,7 +209,6 @@
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_PERMUTATIONSEED    -1 /**< seed value for permuting the problem after the problem was transformed (-1: no permutation) */
-#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reseted if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of bender decomposition this parameter should be set
@@ -215,6 +216,23 @@
                                                  *   runs) */
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
+#define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
+#define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+
+#ifdef WITH_EXACTSOLVE
+#define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
+#else
+#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#endif
+#define SCIP_DEFAULT_MISC_USEFPRELAX       TRUE /**< if problem is solved exactly, should floating-point problem be
+                                                 *   a relaxation of the original problem (instead of an approximation)? */
+#define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
+                                                 *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift,
+                                                 *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
+#define SCIP_DEFAULT_MISC_PSINFEASRAY     FALSE /**< should project-and-shift method prove node infeasibility by correcting dual ray? */
+#define SCIP_DEFAULT_MISC_REDUCESAFEDB      'n' /**< strategy for reducing safe dual bounding calls
+                                                 *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
+#define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
 
 /* Node Selection */
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -393,7 +411,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 {  /*lint --e{715}*/
-   /* automatically select the now active display columns */
+   /* automatically select the new active display columns */
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;
@@ -659,6 +677,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nactivepricers = 0;
    (*set)->pricerssize = 0;
    (*set)->pricerssorted = FALSE;
+   (*set)->pricersnamesorted = FALSE;
    (*set)->conshdlrs = NULL;
    (*set)->conshdlrs_sepa = NULL;
    (*set)->conshdlrs_enfo = NULL;
@@ -669,27 +688,33 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nconflicthdlrs = 0;
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
+   (*set)->conflicthdlrsnamesorted = FALSE;
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
    (*set)->presolssorted = FALSE;
+   (*set)->presolsnamesorted = FALSE;
    (*set)->relaxs = NULL;
    (*set)->nrelaxs = 0;
    (*set)->relaxssize = 0;
    (*set)->relaxssorted = FALSE;
+   (*set)->relaxsnamesorted = FALSE;
    (*set)->sepas = NULL;
    (*set)->nsepas = 0;
    (*set)->sepassize = 0;
    (*set)->sepassorted = FALSE;
+   (*set)->sepasnamesorted = FALSE;
    (*set)->props = NULL;
    (*set)->nprops = 0;
    (*set)->propssize = 0;
    (*set)->propssorted = FALSE;
    (*set)->propspresolsorted = FALSE;
+   (*set)->propsnamesorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
    (*set)->heurssorted = FALSE;
+   (*set)->heursnamesorted = FALSE;
    (*set)->eventhdlrs = NULL;
    (*set)->neventhdlrs = 0;
    (*set)->eventhdlrssize = 0;
@@ -701,6 +726,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nbranchrules = 0;
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
+   (*set)->branchrulesnamesorted = FALSE;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -712,8 +738,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
-   (*set)->continnonlinpresent = FALSE;
-   (*set)->nonlinearitypresent = FALSE;
+   (*set)->nlpenabled = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -721,6 +746,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->vbc_filename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
+   (*set)->mem_externestim = 0;
 
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -944,6 +970,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_nodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "limits/totalnodes",
+         "maximal number of total nodes (incl. restarts) to process (-1: no limit)",
+         &(*set)->limit_totalnodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/stallnodes",
          "solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)",
          &(*set)->limit_stallnodes, FALSE, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,
@@ -994,6 +1025,16 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/solvefreq",
          "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
          &(*set)->lp_solvefreq, FALSE, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "lp/iterlim",
+         "iteration limit for each single LP solve (-1: no limit)",
+         &(*set)->lp_iterlim, TRUE, SCIP_DEFAULT_LP_ITERLIM, -1LL, SCIP_LONGINT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "lp/rootiterlim",
+         "iteration limit for initial root LP solve (-1: no limit)",
+         &(*set)->lp_rootiterlim, TRUE, SCIP_DEFAULT_LP_ROOTITERLIM, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solvedepth",
@@ -1139,7 +1180,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "nlp/disable",
-         "should the NLP be disabled?",
+         "should the NLP relaxation be always disabled (also for NLPs/MINLPs)?",
          &(*set)->nlp_disable, FALSE, SCIP_DEFAULT_NLP_DISABLE,
          NULL, NULL) );
 
@@ -1202,14 +1243,40 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
+#ifdef WITH_EXACTSOLVE
+   (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
+         "misc/usefprelax",
+         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
+         &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "misc/dbmethod",
+         "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/psinfeasray",
+         "exip: should project-and-shift method prove node infeasibility by correcting dual ray?",
+         &(*set)->misc_psinfeasray, FALSE, SCIP_DEFAULT_MISC_PSINFEASRAY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "misc/reducesafedb",
+         "exip: strategy for reducing safe dual bounding calls ('n'o reduction, 'w'eak reduction, 's'trong reduction)",
+         &(*set)->misc_reducesafedb, FALSE, SCIP_DEFAULT_MISC_REDUCESAFEDB, "nws",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/ignorepssol",
+         "exip: should pseudo solutions be ignored for dual bounds?",
+         &(*set)->misc_ignorepssol, FALSE, SCIP_DEFAULT_MISC_IGNOREPSSOL,
          NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
+   (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
+   (*set)->misc_dbmethod = SCIP_DEFAULT_MISC_DBMETHOD;
+   (*set)->misc_psinfeasray = SCIP_DEFAULT_MISC_PSINFEASRAY;
+   (*set)->misc_reducesafedb = SCIP_DEFAULT_MISC_REDUCESAFEDB;
+   (*set)->misc_ignorepssol = SCIP_DEFAULT_MISC_IGNOREPSSOL;
 #endif
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/permutationseed",
@@ -1233,7 +1300,17 @@ SCIP_RETCODE SCIPsetCreate(
          "should the reason be printed if a given start solution is infeasible",
          &(*set)->misc_printreason, FALSE, SCIP_DEFAULT_MISC_PRINTREASON,
          NULL, NULL) );
-   
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/estimexternmem",
+         "should the usage of external memory be estimated?",
+         &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/transorigsols",
+         "should SCIP try to transfer original solutions to the extended space (after presolving)?",
+         &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
+         NULL, NULL) );
+
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "nodeselection/childsel",
@@ -1691,7 +1768,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
    return SCIP_OKAY;
 }
 
-/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+/** creates an int parameter, sets it to its default value, and adds it to the parameter set */
 SCIP_RETCODE SCIPsetAddIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1892,6 +1969,20 @@ SCIP_RETCODE SCIPsetGetStringParam(
    return SCIP_OKAY;
 }
 
+/** changes the fixing status of an existing parameter */
+SCIP_RETCODE SCIPsetChgParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             fixed               /**< new fixing status of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetFix(set->paramset, name, fixed) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing parameter */
 SCIP_RETCODE SCIPsetSetParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1944,6 +2035,21 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    return SCIP_OKAY;
 }
 
+/**< sets the default value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPsetSetDefaultBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSetDefaultBool(set->paramset, name, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+
 /** changes the value of an existing Int parameter */
 SCIP_RETCODE SCIPsetChgIntParam(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1978,6 +2084,20 @@ SCIP_RETCODE SCIPsetSetIntParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing Int parameter */
+SCIP_RETCODE SCIPsetSetDefaultIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   SCIP_CALL( SCIPparamsetSetDefaultInt(set->paramset, name, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -2025,7 +2145,7 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value              /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    SCIP_RETCODE retcode;
@@ -2048,7 +2168,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
-   SCIP_Real             value              /**< new value of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
@@ -2218,6 +2338,21 @@ SCIP_RETCODE SCIPsetSetSubscipsOff(
    )
 {
    SCIP_CALL( SCIPparamsetSetToSubscipsOff(set->paramset, set, messagehdlr, quiet) );
+
+   return SCIP_OKAY;
+}
+
+/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
+ *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
+ *  (for that the EXACTSOLVE flag has to be set to true as well).
+ */
+SCIP_RETCODE SCIPsetSetReducedsolve(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetReducedsolve(set->paramset, set, messagehdlr, quiet) );
 
    return SCIP_OKAY;
 }
@@ -2392,6 +2527,22 @@ void SCIPsetSortPricers(
    {
       SCIPsortPtr((void**)set->pricers, SCIPpricerComp, set->npricers);
       set->pricerssorted = TRUE;
+      set->pricersnamesorted = FALSE;
+   }
+}
+
+/** sorts pricers by name */
+void SCIPsetSortPricersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->pricersnamesorted )
+   {
+      SCIPsortPtr((void**)set->pricers, SCIPpricerCompName, set->npricers);
+      set->pricerssorted = FALSE;
+      set->pricersnamesorted = TRUE;
    }
 }
 
@@ -2449,6 +2600,91 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
    set->nconshdlrs++;
 
    return SCIP_OKAY;
+}
+
+/** reinserts a constraint handler with modified sepa priority into the sepa priority sorted array */
+void SCIPsetReinsertConshdlrSepaPrio(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler to be reinserted */
+   int                   oldpriority         /**< the old separation priority of constraint handler */
+   )
+{
+   int newpriority;
+   int newpos;
+   int i;
+   assert(set != NULL);
+   assert(conshdlr != NULL);
+
+   newpriority = SCIPconshdlrGetSepaPriority(conshdlr);
+   newpos = -1;
+
+   /* search for the old position of constraint handler; determine its new position at the same time */
+   if( newpriority > oldpriority )
+   {
+      i = 0;
+      while( i < set->nconshdlrs &&
+            strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      {
+         int priorityatpos;
+
+         priorityatpos = SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]);
+         assert(priorityatpos >= oldpriority);
+
+         /* current index is the position to insert the constraint handler */
+         if( newpriority > priorityatpos && newpos == -1 )
+            newpos = i;
+
+         ++i;
+      }
+      assert(i < set->nconshdlrs);
+
+      /* constraint must change its position in array */
+      if( newpos != -1 )
+      {
+         /* shift all constraint handlers between old and new position by one, and insert constraint handler */
+         for( ; i > newpos; --i )
+         {
+            set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i-1];
+         }
+         set->conshdlrs_sepa[newpos] = conshdlr;
+      }
+
+   }
+   else if( newpriority < oldpriority )
+   {
+      i = set->nconshdlrs - 1;
+      while( i >= 0 &&
+                  strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      {
+         int priorityatpos;
+
+         priorityatpos = SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]);
+         assert(priorityatpos <= oldpriority);
+
+         /* current index is the position to insert the constraint handler */
+         if( newpriority < priorityatpos && newpos == -1 )
+            newpos = i;
+
+         --i;
+      }
+      assert(i >= 0);
+
+      /* constraint must change its position in array */
+      if( newpos != -1 )
+      {
+         /* shift all constraint handlers between old and new position by one, and insert constraint handler */
+         for(; i < newpos; ++i )
+         {
+            set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i + 1];
+         }
+         set->conshdlrs_sepa[newpos] = conshdlr;
+      }
+#ifndef NDEBUG
+      for( i = 0; i < set->nconshdlrs - 1; ++i )
+         assert(SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i])
+               >= SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i + 1]));
+#endif
+   }
 }
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -2526,6 +2762,22 @@ void SCIPsetSortConflicthdlrs(
    {
       SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrComp, set->nconflicthdlrs);
       set->conflicthdlrssorted = TRUE;
+      set->conflicthdlrsnamesorted = FALSE;
+   }
+}
+
+/** sorts conflict handlers by name */
+void SCIPsetSortConflicthdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->conflicthdlrsnamesorted )
+   {
+      SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrCompName, set->nconflicthdlrs);
+      set->conflicthdlrssorted = FALSE;
+      set->conflicthdlrsnamesorted = TRUE;
    }
 }
 
@@ -2583,6 +2835,22 @@ void SCIPsetSortPresols(
    {
       SCIPsortPtr((void**)set->presols, SCIPpresolComp, set->npresols);
       set->presolssorted = TRUE;
+      set->presolsnamesorted = FALSE;
+   }
+}
+
+/** sorts presolvers by name */
+void SCIPsetSortPresolsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->presolsnamesorted )
+   {
+      SCIPsortPtr((void**)set->presols, SCIPpresolCompName, set->npresols);
+      set->presolssorted = FALSE;
+      set->presolsnamesorted = TRUE;
    }
 }
 
@@ -2641,6 +2909,22 @@ void SCIPsetSortRelaxs(
    {
       SCIPsortPtr((void**)set->relaxs, SCIPrelaxComp, set->nrelaxs);
       set->relaxssorted = TRUE;
+      set->relaxsnamesorted = FALSE;
+   }
+}
+
+/** sorts relaxators by priorities */
+void SCIPsetSortRelaxsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->relaxsnamesorted )
+   {
+      SCIPsortPtr((void**)set->relaxs, SCIPrelaxCompName, set->nrelaxs);
+      set->relaxssorted = FALSE;
+      set->relaxsnamesorted = TRUE;
    }
 }
 
@@ -2699,6 +2983,22 @@ void SCIPsetSortSepas(
    {
       SCIPsortPtr((void**)set->sepas, SCIPsepaComp, set->nsepas);
       set->sepassorted = TRUE;
+      set->sepasnamesorted = FALSE;
+   }
+}
+
+/** sorts separators by name */
+void SCIPsetSortSepasName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->sepasnamesorted )
+   {
+      SCIPsortPtr((void**)set->sepas, SCIPsepaCompName, set->nsepas);
+      set->sepassorted = FALSE;
+      set->sepasnamesorted = TRUE;
    }
 }
 
@@ -2758,6 +3058,7 @@ void SCIPsetSortProps(
       SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
       set->propspresolsorted = FALSE;
+      set->propsnamesorted = FALSE;
    }
 }
 
@@ -2770,9 +3071,26 @@ void SCIPsetSortPropsPresol(
 
    if( !set->propspresolsorted )
    {
-      SCIPsortPtr((void**)set->props, SCIPpropPresolComp, set->nprops);
+      SCIPsortPtr((void**)set->props, SCIPpropCompPresol, set->nprops);
       set->propspresolsorted = TRUE;
       set->propssorted = FALSE;
+      set->propsnamesorted = FALSE;
+   }
+}
+
+/** sorts propagators w.r.t. names */
+void SCIPsetSortPropsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->propsnamesorted )
+   {
+      SCIPsortPtr((void**)set->props, SCIPpropCompName, set->nprops);
+      set->propssorted = FALSE;
+      set->propspresolsorted = FALSE;
+      set->propsnamesorted = TRUE;
    }
 }
 
@@ -2831,6 +3149,22 @@ void SCIPsetSortHeurs(
    {
       SCIPsortPtr((void**)set->heurs, SCIPheurComp, set->nheurs);
       set->heurssorted = TRUE;
+      set->heursnamesorted = FALSE;
+   }
+}
+
+/** sorts heuristics by names */
+void SCIPsetSortHeursName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->heursnamesorted )
+   {
+      SCIPsortPtr((void**)set->heurs, SCIPheurCompName, set->nheurs);
+      set->heurssorted = FALSE;
+      set->heursnamesorted = TRUE;
    }
 }
 
@@ -3021,6 +3355,22 @@ void SCIPsetSortBranchrules(
    {
       SCIPsortPtr((void**)set->branchrules, SCIPbranchruleComp, set->nbranchrules);
       set->branchrulessorted = TRUE;
+      set->branchrulesnamesorted = FALSE;
+   }
+}
+
+/** sorts branching rules by priorities */
+void SCIPsetSortBranchrulesName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->branchrulesnamesorted )
+   {
+      SCIPsortPtr((void**)set->branchrules, SCIPbranchruleCompName, set->nbranchrules);
+      set->branchrulessorted = FALSE;
+      set->branchrulesnamesorted = TRUE;
    }
 }
 
@@ -3711,6 +4061,14 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+SCIP_Longint SCIPsetGetMemExternEstim(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   return set->mem_externestim;
 }
 
 /** calculate memory size for dynamically allocated arrays */

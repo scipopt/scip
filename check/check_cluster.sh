@@ -41,14 +41,13 @@ THREADS=$8
 FEASTOL=$9
 DISPFREQ=${10}
 CONTINUE=${11}
-VERSION=${12}
-LPS=${13}
-QUEUETYPE=${14}
-QUEUE=${15}
-PPN=${16}
-CLIENTTMPDIR=${17}
-NOWAITCLUSTER=${18}
-EXCLUSIVE=${19}
+QUEUETYPE=${12}
+QUEUE=${13}
+PPN=${14}
+CLIENTTMPDIR=${15}
+NOWAITCLUSTER=${16}
+EXCLUSIVE=${17}
+
 
 # check all variables defined
 if [ -z ${EXCLUSIVE} ]
@@ -124,6 +123,7 @@ else
     MYMINUTES=0
     MYHOURS=0
     MYDAYS=0
+
     #calculate seconds, minutes, hours and days
     MYSECONDS=`expr $HARDTIMELIMIT % 60`
     TMP=`expr $HARDTIMELIMIT / 60`
@@ -245,6 +245,16 @@ do
       export BASENAME=$FILENAME
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
+
+      if test $QUEUE = "low"
+      then
+	  QUEUE="mip-low,gas-low"
+      fi
+
+      if test $QUEUE = "opt"
+      then
+	  QUEUE="mip-low,gas-low,traffic-low"
+      fi
 
       # check queue type
       if test  "$QUEUETYPE" = "srun"

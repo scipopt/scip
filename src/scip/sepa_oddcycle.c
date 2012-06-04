@@ -1265,7 +1265,11 @@ SCIP_RETCODE checkArraySizesHeur(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -1291,8 +1295,12 @@ SCIP_RETCODE checkArraySizesHeur(
    /* if memorylimit is exceeded free all data and exit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if( memorylimit <= 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       *success = FALSE;
       SCIPdebugMessage("...memory limit exceeded\n");
@@ -2959,7 +2967,11 @@ SCIP_RETCODE checkArraySizesGLS(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -2979,9 +2991,13 @@ SCIP_RETCODE checkArraySizesGLS(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
 
    if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
 
-   if( memorylimit <= 0.0 )
+
+   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMessage("...memory limit exceeded - freeing all arrays\n");
       *success = FALSE;
@@ -3988,6 +4004,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create oddcycle separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
@@ -3995,10 +4012,18 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    sepadata->lastnode = -1;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyOddcycle, sepaFreeOddcycle, sepaInitOddcycle, sepaExitOddcycle, sepaInitsolOddcycle,
-         sepaExitsolOddcycle, sepaExeclpOddcycle, sepaExecsolOddcycle, sepadata) );
+         sepaExeclpOddcycle, sepaExecsolOddcycle,
+         sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyOddcycle) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeOddcycle) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitOddcycle) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolOddcycle) );
 
    /* add oddcycle separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/oddcycle/usegls",

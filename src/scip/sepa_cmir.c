@@ -107,8 +107,8 @@ struct SCIP_SepaData
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
-   int                   maxtestdelta;             /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxconts;             /**< maximal number of active continuous variables in aggregated row */
+   int                   maxtestdelta;       /**< maximal number of different deltas to try (-1: unlimited) */
+   int                   maxconts;           /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
@@ -1536,17 +1536,22 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create cmir separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyCmir, sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
-         sepaInitsolCmir, sepaExitsolCmir, 
          sepaExeclpCmir, sepaExecsolCmir,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyCmir) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeCmir) );
 
    /* add cmir separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

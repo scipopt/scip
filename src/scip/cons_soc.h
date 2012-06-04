@@ -104,6 +104,26 @@ SCIP_RETCODE SCIPcreateConsSOC(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
+/** creates and captures a second order cone constraint with all its constraint flags
+ *  set to their default values
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables on left hand side of constraint (n) */
+   SCIP_VAR**            vars,               /**< array with variables on left hand side (x_i) */
+   SCIP_Real*            coefs,              /**< array with coefficients of left hand side variables (alpha_i), or NULL if all 1.0 */
+   SCIP_Real*            offsets,            /**< array with offsets of variables (beta_i), or NULL if all 0.0 */
+   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side of constraint (x_{n+1}) */
+   SCIP_Real             rhscoeff,           /**< coefficient of variable on right hand side (alpha_{n+1}) */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side (beta_{n+1}) */
+   );
+
 /** Gets the SOC constraint as a nonlinear row representation.
  */
 extern

@@ -113,18 +113,25 @@ struct SCIP_Set
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
+   SCIP_Bool             pricersnamesorted;  /**< are the pricers sorted by name? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
+   SCIP_Bool             conflicthdlrsnamesorted;/**< are the conflict handlers sorted by name? */
    SCIP_Bool             presolssorted;      /**< are the presolvers sorted by priority? */
+   SCIP_Bool             presolsnamesorted;  /**< are the presolvers sorted by name? */
    SCIP_Bool             relaxssorted;       /**< are the relaxators sorted by priority? */
+   SCIP_Bool             relaxsnamesorted;   /**< are the relaxators sorted by name? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
+   SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
+   SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
+   SCIP_Bool             heursnamesorted;    /**< are the heuristics sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
+   SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
-   SCIP_Bool             continnonlinpresent;/**< marks whether any constraints with continuous nonlinear variables are present */
-   SCIP_Bool             nonlinearitypresent;/**< marks whether any constraints with discrete nonlinear variables are present */
+   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
@@ -194,6 +201,7 @@ struct SCIP_Set
    SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
                                               *   reaches this value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
+   SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
                                               *   last improvement of the primal solution value (-1: no limit) */
    int                   limit_solutions;    /**< solving stops, if the given number of solutions were found (-1: no limit) */
@@ -205,6 +213,8 @@ struct SCIP_Set
 
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
+   SCIP_Longint          lp_iterlim;         /**< iteration limit for each single LP solve; -1: no limit */
+   SCIP_Longint          lp_rootiterlim;     /**< iteration limit for initial root LP solve; -1: no limit */
    int                   lp_solvedepth;      /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    char                  lp_initalgorithm;   /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                               *   barrier with 'c'rossover) */
@@ -244,10 +254,11 @@ struct SCIP_Set
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
 
    /* NLP settings */
-   SCIP_Bool             nlp_disable;        /**< should the NLP be disabled? */
+   SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */
+   SCIP_Longint          mem_externestim;    /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    SCIP_Real             mem_arraygrowfac;   /**< memory growing factor for dynamically allocated arrays */
    SCIP_Real             mem_treegrowfac;    /**< memory growing factor for tree array */
@@ -270,6 +281,18 @@ struct SCIP_Set
                                               *   therefore can be used to collect statistics over all runs) */
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
+   SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
+   SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+   SCIP_Bool             misc_usefprelax;    /**< if problem is solved exactly, should floating point problem be 
+                                              *   a relaxation of the original problem (instead of an approximation)? */
+   char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
+                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
+                                              *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
+                                              *   e'x'act neumaier and shcherbina, 'a'utomatic) */
+   SCIP_Bool             misc_psinfeasray;   /**< should project and shift method prove node infeasibility by correcting dual ray? */
+   char                  misc_reducesafedb;  /**< strategy for reducing safe dual bounding calls
+                                              *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
+   SCIP_Bool             misc_ignorepssol;   /**< should pseudo solutions be ignored for dual bounds */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -303,7 +326,7 @@ struct SCIP_Set
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
                                                *   an additional restart */
    SCIP_Bool             presol_donotmultaggr;/**< should multi-aggregation of variables be forbidden? */
-   SCIP_Bool             presol_donotaggr;    /**< shouldaggregation of variables be forbidden? */
+   SCIP_Bool             presol_donotaggr;   /**< shouldaggregation of variables be forbidden? */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */

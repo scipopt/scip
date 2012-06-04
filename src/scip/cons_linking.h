@@ -18,6 +18,17 @@
  * @brief  constraint handler for linking binary variables to an integer variable
  * @author Stefan Heinz
  * @author Jens Schulz
+ *
+ * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
+ * a linking constraint has the form:
+ *
+ * intvar = sum_{i=1}^n {(offset+i) * binvars[i]}
+ *
+ * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
+ *
+ * This constraint can be created only with the integer variable. In this case the binary variables are only created on
+ * demand. That is, whenever someone asks for the binary variables. Therefore, such constraints can be used to get a
+ * "binary representation" of the domain of the integer variable which will be dynamically created.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -74,6 +85,25 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures a linking constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinking(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinking() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+extern
+SCIP_RETCODE SCIPcreateConsBasicLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR**            binvars,            /**< binary variables, or NULL */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   offset              /**< offset of the binary variable representation */
    );
 
 

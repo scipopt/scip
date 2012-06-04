@@ -74,7 +74,7 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
 
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreCreate(
-   SCIP_SEPASTORE**           sepastore                /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreFree(
-   SCIP_SEPASTORE**           sepastore                /**< pointer to store separation storage */
+   SCIP_SEPASTORE**      sepastore           /**< pointer to store separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -193,7 +193,7 @@ SCIP_Bool sepastoreIsCutRedundant(
    {
       SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g]\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
-      /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
 
@@ -251,7 +251,8 @@ SCIP_RETCODE sepastoreAddCut(
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
     * again, because now a non redundant cut enters the store
     */
-   if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   if( !set->misc_exactsolve 
+      && sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       /* check, if the row deletions from separation storage events are tracked
        * if so, issue ROWDELETEDSEPA event
@@ -305,7 +306,7 @@ SCIP_RETCODE sepastoreAddCut(
 
    SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d)\n",
       SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut));
-   /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+   /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
 
    /* capture the cut */
    SCIProwCapture(cut);
@@ -775,7 +776,8 @@ SCIP_RETCODE computeScore(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             handlepool,         /**< whether the efficacy of cuts in the pool should be reduced  */
-   int                   pos                 /**< position of cut to handle */
+   int                   pos,                /**< position of cut to handle */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    )
 {
    SCIP_ROW* cut;
@@ -785,8 +787,22 @@ SCIP_RETCODE computeScore(
    cut = sepastore->cuts[pos];
 
    /* calculate cut's efficacy */
-   cutefficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
-   
+   switch ( efficiacychoice )
+   {
+   case SCIP_EFFICIACYCHOICE_LP:
+      cutefficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
+      break;
+   case SCIP_EFFICIACYCHOICE_RELAX:
+      cutefficacy = SCIProwGetRelaxEfficacy(cut, set, stat);
+      break;
+   case SCIP_EFFICIACYCHOICE_NLP:
+      cutefficacy = SCIProwGetNLPEfficacy(cut, set, stat);
+      break;
+   default:
+      SCIPerrorMessage("Invalid efficiacy choice.\n");
+      return SCIP_INVALIDCALL;
+   }
+
    /* If a cut is not member of the cut pool, we slightly decrease its score to prefer identical
     * cuts which are in the cut pool.  This is because the conversion of cuts into linear
     * constraints after a restart looks at the cut pool and cannot find tight non-pool cuts.
@@ -821,6 +837,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
@@ -858,7 +875,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos) );
+      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos, efficiacychoice) );
    }
 
    /* apply all forced cuts */
@@ -870,7 +887,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIPsetIsInfinity(set, sepastore->scores[pos]));
 
       /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->misc_exactsolve )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
          SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cut, cutoff) );
@@ -879,7 +896,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       {
          /* add cut to the LP and update orthogonalities */
          SCIPdebugMessage(" -> applying forced cut <%s>\n", SCIProwGetName(cut));
-         /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+         /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
          SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, &ncutsapplied) );
       }
    }
@@ -902,7 +919,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
          SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
-      /*SCIPdebug(SCIProwPrint(cut, NULL));*/
+      /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
 
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
@@ -986,7 +1003,8 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool             root                /**< are we at the root node? */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
    )
 {
    int cnt;
@@ -1000,7 +1018,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    while( c < sepastore->ncuts )
    {
       assert( sepastore->efficacies[c] == SCIP_INVALID ); /*lint !e777*/
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c) );
+      SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c, efficiacychoice) );
       if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
       {
          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
@@ -1016,7 +1034,7 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
 
 /** get cuts in the separation storage */
 SCIP_ROW** SCIPsepastoreGetCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1026,7 +1044,7 @@ SCIP_ROW** SCIPsepastoreGetCuts(
 
 /** get number of cuts in the separation storage */
 int SCIPsepastoreGetNCuts(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1036,7 +1054,7 @@ int SCIPsepastoreGetNCuts(
 
 /** get total number of cuts found so far */
 int SCIPsepastoreGetNCutsFound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1046,7 +1064,7 @@ int SCIPsepastoreGetNCutsFound(
 
 /** get number of cuts found so far in current separation round */
 int SCIPsepastoreGetNCutsFoundRound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);
@@ -1056,7 +1074,7 @@ int SCIPsepastoreGetNCutsFoundRound(
 
 /** get total number of cuts applied to the LPs */
 int SCIPsepastoreGetNCutsApplied(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
 {
    assert(sepastore != NULL);

@@ -87,6 +87,48 @@ SCIP_RETCODE SCIPprobCreate(
    SCIP_Bool             transformed         /**< is this the transformed problem? */
    );
 
+/** sets callback to free user data of original problem */
+extern
+void SCIPprobSetDelorig(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   );
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+extern
+void SCIPprobSetTrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   );
+
+/** sets callback to free user data of transformed problem */
+extern
+void SCIPprobSetDeltrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   );
+
+/** sets solving process initialization callback of transformed data */
+extern
+void SCIPprobSetInitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization callback of transformed data */
+   );
+
+/** sets solving process deinitialization callback of transformed data */
+extern
+void SCIPprobSetExitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization callback of transformed data */
+   );
+
+/** sets callback to copy user data to copy it to a subscip, or NULL */
+extern
+void SCIPprobSetCopy(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   );
+
 /** frees problem data structure */
 extern
 SCIP_RETCODE SCIPprobFree(
@@ -445,6 +487,7 @@ void SCIPprobPrintPseudoSol(
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );

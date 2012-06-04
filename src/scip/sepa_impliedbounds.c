@@ -422,17 +422,21 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create impliedbounds separator data */
    sepadata = NULL;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyImpliedbounds, sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
-         sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,
          sepadata) );
+
+   assert(sepa != NULL);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyImpliedbounds) );
 
    return SCIP_OKAY;
 }

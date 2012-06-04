@@ -409,21 +409,21 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->mipdata = mipdata;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         -1000000, -1000000, -1000000, -1, -1, 100, 0, FALSE, FALSE, FALSE, FALSE,
-         SCIP_PROPTIMING_BEFORELP,
-         NULL, consFreeViolatedCuts, NULL, NULL,
-         NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL, NULL,
-         consEnfolpViolatedCuts, consEnfopsViolatedCuts, consCheckViolatedCuts,
-         NULL, NULL, NULL, consLockViolatedCuts,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         -1000000, -1000000, 100, FALSE,
+         consEnfolpViolatedCuts, consEnfopsViolatedCuts, consCheckViolatedCuts, consLockViolatedCuts,
          conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeViolatedCuts) );
 
    return SCIP_OKAY;
 }
@@ -1771,11 +1771,18 @@ SCIP_RETCODE solveSubscip(
 
    /* determine memorylimit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if ( sepadata->memorylimit < memorylimit )
+   if( sepadata->memorylimit < memorylimit )
       memorylimit = sepadata->memorylimit;
-   if ( ! SCIPisInfinity(scip, memorylimit) )
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-   if ( memorylimit > 0.0 )
+      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+   }
+
+   /* abort if not enough memory is left to create a copy of SCIP, including external memory usage */
+   if( memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
    }

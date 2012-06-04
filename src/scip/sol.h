@@ -80,6 +80,18 @@ SCIP_RETCODE SCIPsolCopy(
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    );
 
+/** transformes given original solution to the transformed space; a corresponding transformed solution has to be given
+ *  which is copied into the existing solution and freed afterwards
+ */
+extern
+SCIP_RETCODE SCIPsolTransform(
+   SCIP_SOL*             sol,                /**< primal CIP solution to change, living in original space */
+   SCIP_SOL**            transsol,           /**< pointer to corresponding transformed primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal              /**< primal data */
+   );
+
 /** creates primal CIP solution, initialized to the current LP solution */
 extern
 SCIP_RETCODE SCIPsolCreateLPSol(
@@ -291,6 +303,13 @@ SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
+/** sets objective value of primal CIP solution in transformed problem */
+extern
+void SCIPsolSetObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             obj                 /**< transformed objective value */
    );
 
 /** updates primal solutions after a change in a variable's objective value */

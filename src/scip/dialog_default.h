@@ -202,6 +202,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam);
 extern
 SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam);
 
+/** dialog execution method for the fix parameter command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecFixParam);
+
+/** dialog description method for the fix parameter command */
+extern
+SCIP_DECL_DIALOGDESC(SCIPdialogDescFixParam);
+
 /** dialog execution method for the set branching direction command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
@@ -290,6 +298,12 @@ SCIP_RETCODE SCIPincludeDialogDefault(
 /** includes or updates the "set" menu for each available parameter setting */
 extern
 SCIP_RETCODE SCIPincludeDialogDefaultSet(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** includes or updates the "fix" menu for each available parameter setting */
+extern
+SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

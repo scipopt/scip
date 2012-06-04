@@ -199,6 +199,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
    )
 {
    SCIP_RELAXDATA* relaxdata;
+   SCIP_RELAX* relax;
 
    assert(scip != NULL);
    assert(objrelax != NULL);
@@ -207,14 +208,19 @@ SCIP_RETCODE SCIPincludeObjRelax(
    relaxdata = new SCIP_RELAXDATA;
    relaxdata->objrelax = objrelax;
    relaxdata->deleteobject = deleteobject;
+   relax = NULL;
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, objrelax->scip_name_, objrelax->scip_desc_,
          objrelax->scip_priority_, objrelax->scip_freq_,
-         relaxCopyObj,
-         relaxFreeObj, relaxInitObj, relaxExitObj, 
-         relaxInitsolObj, relaxExitsolObj, relaxExecObj,
-         relaxdata) ); /*lint !e429*/
+         relaxExecObj, relaxdata) ); /*lint !e429*/
+
+   SCIP_CALL( SCIPsetRelaxCopy(scip, relax, relaxCopyObj) );
+   SCIP_CALL( SCIPsetRelaxFree(scip, relax, relaxFreeObj) );
+   SCIP_CALL( SCIPsetRelaxInit(scip, relax, relaxInitObj) );
+   SCIP_CALL( SCIPsetRelaxExit(scip, relax, relaxExitObj) );
+   SCIP_CALL( SCIPsetRelaxInitsol(scip, relax, relaxInitsolObj) );
+   SCIP_CALL( SCIPsetRelaxExitsol(scip, relax, relaxExitsolObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

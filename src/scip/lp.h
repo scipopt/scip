@@ -551,6 +551,22 @@ SCIP_Real SCIProwGetLPFeasibility(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** returns the feasibility of a row in the current relaxed solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetRelaxFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** returns the feasibility of a row in the current NLP solution: negative value means infeasibility */
+extern
+SCIP_Real SCIProwGetNLPFeasibility(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** calculates the current pseudo activity of a row */
 extern
 void SCIProwRecalcPseudoActivity(
@@ -680,6 +696,22 @@ SCIP_Bool SCIProwIsSolEfficacious(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
+   );
+
+/** returns row's efficacy with respect to the relaxed solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetRelaxEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** returns row's efficacy with respect to the NLP solution: e = -feasibility/norm */
+extern
+SCIP_Real SCIProwGetNLPEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** gets parallelism of row with objective function: if the returned value is 1, the row is parallel to the objective
@@ -987,7 +1019,7 @@ SCIP_RETCODE SCIPlpFlush(
    SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue         /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** marks the LP to be flushed, even if the LP thinks it is not flushed */
@@ -1043,6 +1075,12 @@ SCIP_Real SCIPlpGetObjval(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets objective value of current LP; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
 /** gets part of objective value of current LP that results from COLUMN variables only */
 extern
 SCIP_Real SCIPlpGetColumnObjval(
@@ -1061,7 +1099,7 @@ SCIP_Real SCIPlpGetLooseObjval(
 extern
 void SCIPlpStoreRootObjval(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
    );
 
@@ -1089,6 +1127,12 @@ SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets current pseudo objective value; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedPseudoObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
@@ -1212,6 +1256,14 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
+   );
+
+/** stores dual LP solution with infinite objective value in the columns and rows if dual LP is unbounded */
+extern
+SCIP_RETCODE SCIPlpGetUnboundedDualSol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** stores LP solution with infinite objective value in the columns and rows */
@@ -1356,6 +1408,8 @@ extern
 SCIP_RETCODE SCIPlpGetProvedLowerbound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            bound               /**< pointer to store proven dual bound */
    );
 
@@ -1364,6 +1418,8 @@ extern
 SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool*            proved              /**< pointer to store whether infeasibility is proven */
    );
 

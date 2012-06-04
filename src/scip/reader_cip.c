@@ -641,13 +641,18 @@ SCIP_RETCODE SCIPincludeReaderCip(
    )
 {
    SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
 
-   /* create cip reader data */
+   /* create reader data */
    readerdata = NULL;
-   
-   /* include cip reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyCip, readerFreeCip, readerReadCip, readerWriteCip, readerdata) );
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCip) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteCip) );
 
    /* add cip reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

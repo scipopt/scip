@@ -45,16 +45,16 @@ class ObjDisp : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
-   
+
    /** SCIP data structure */
    SCIP* scip_;
 
    /** name of the display column */
    char* scip_name_;
-   
+
    /** description of the display column */
    char* scip_desc_;
-   
+
    /** head line of the display column */
    char* scip_header_;
 
@@ -106,72 +106,62 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_header_);
    }
 
-   /** destructor of display column to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp                /**< the display column itself */
-      )
+   /** destructor of display column to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_DISPFREE(x) in @ref type_disp.h
+    */
+   virtual SCIP_DECL_DISPFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** initialization method of display column (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp                /**< the display column itself */
-      )
+
+   /** initialization method of display column (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_DISPINIT(x) in @ref type_disp.h
+    */
+   virtual SCIP_DECL_DISPINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** deinitialization method of display column (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp                /**< the display column itself */
-      )
+
+   /** deinitialization method of display column (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_DISPEXIT(x) in @ref type_disp.h
+    */
+   virtual SCIP_DECL_DISPEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
    /** solving process initialization method of display column (called when branch and bound process is about to begin)
     *
-    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
-    *  The display column may use this call to initialize its branch and bound specific data.
+    *  @see SCIP_DECL_DISPINITSOL(x) in @ref type_disp.h
     */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp                /**< the display column itself */
-      )
+   virtual SCIP_DECL_DISPINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process deinitialization method of display column (called before branch and bound process data is freed)
     *
-    *  This method is called before the branch and bound process is freed.
-    *  The display column should use this call to clean up its branch and bound data.
+    *  @see SCIP_DECL_DISPEXITSOL(x) in @ref type_disp.h
     */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp                /**< the display column itself */
-      )
+   virtual SCIP_DECL_DISPEXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** output method of display column to output file stream 'file'
+    *
+    *  @see SCIP_DECL_DISPOUTPUT(x) in @ref type_disp.h
     */
-   virtual SCIP_RETCODE scip_output(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_DISP*         disp,               /**< the display column itself */
-      FILE*              file                /**< file stream for output */    
-      ) = 0;
+   virtual SCIP_DECL_DISPOUTPUT(scip_output) = 0;
 };
 
 } /* namespace scip */
 
 
-   
+
 /** creates the display column for the given display column object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

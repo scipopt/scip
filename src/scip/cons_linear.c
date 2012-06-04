@@ -49,7 +49,11 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#ifdef WITH_EXACTSOLVE
+#include "gmp.h"
+#endif
 
+#include "scip/intervalarith.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_quadratic.h"
@@ -248,8 +252,8 @@ struct SCIP_ConshdlrData
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be performed? */
-   SCIP_Bool             sortvars;            /**< should binary variables be sorted for faster propagation? */
+   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
 };
 
 /** linear constraint update method */
@@ -2711,6 +2715,109 @@ SCIP_Real consdataGetActivity(
    return activity;
 }
 
+#ifdef WITH_EXACTSOLVE
+/** calculates the exact activity of the linear constraint for given solution */
+static
+void consdataGetActivityExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_SOL*             sol,                /**< solution to get activity for, NULL to current solution */
+   mpq_t                 activity            /**< reference to store the activity */ 
+   )
+{
+   mpq_t scipposinf; 
+   mpq_t scipneginf; 
+   mpq_t solval;
+   mpq_t val;
+   mpq_t prod;
+   int v;
+
+   /* initializes gmp data */
+   mpq_init(solval);
+   mpq_init(val);
+   mpq_init(prod);
+   mpq_init(scipposinf);
+   mpq_init(scipneginf);
+
+   mpq_set_d(scipposinf, SCIPinfinity(scip));
+   mpq_set_d(scipneginf, -SCIPinfinity(scip));
+   mpq_set_d(activity, 0.0);
+
+   /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
+    * solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+    */ 
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      mpq_set_d(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
+      mpq_set_d(val, consdata->vals[v]);
+         
+      mpq_mul(prod, val, solval);
+      mpq_add(activity, activity, prod);
+   }
+
+   if( mpq_cmp(activity, scipposinf) > 0 ) 
+      mpq_set(activity, scipposinf);
+   else if( mpq_cmp(activity, scipneginf) < 0 )
+      mpq_set(activity, scipneginf);
+
+   /* frees gmp data */
+   mpq_clear(scipneginf);
+   mpq_clear(scipposinf);
+   mpq_clear(prod);
+   mpq_clear(val);
+   mpq_clear(solval);
+}
+#endif
+
+#ifdef WITH_EXACTSOLVE
+/** calculates the interval of the activity of the linear constraint for given solution */
+static
+SCIP_INTERVAL consdataGetActivityInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_SOL*             sol                 /**< solution to get interval of activity for, NULL to current solution */
+   )
+{
+   SCIP_INTERVAL activityint;
+   SCIP_INTERVAL solvalint;
+   SCIP_INTERVAL valint;
+   SCIP_INTERVAL prod;
+   SCIP_Real solval;
+   SCIP_Real val;
+
+   SCIP_Real scipinf;
+   int v;
+ 
+   /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
+    * solution values/bounds of aggregated variables are calculated in floating point arithmetic) 
+    */ 
+   SCIPintervalSet(&activityint, 0.0);
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+      val = consdata->vals[v];
+
+      SCIPintervalSet(&solvalint, solval);
+      SCIPintervalSet(&valint, val);
+      
+      SCIPintervalMul(SCIPinfinity(scip), &prod, valint, solvalint);
+      SCIPintervalAdd(SCIPinfinity(scip), &activityint, activityint, prod);
+   }
+   
+   scipinf = SCIPinfinity(scip);
+   SCIPintervalSetBounds(&activityint, 
+      MAX(SCIPintervalGetInf(activityint), -scipinf), MAX(SCIPintervalGetSup(activityint), -scipinf));
+   SCIPintervalSetBounds(&activityint, 
+      MIN(SCIPintervalGetInf(activityint), +scipinf), MIN(SCIPintervalGetSup(activityint), +scipinf));
+   assert(SCIPintervalGetInf(activityint) <= SCIPintervalGetSup(activityint));
+
+   SCIPdebugMessage("activity of linear constraint: [%g, %g]\n", SCIPintervalGetInf(activityint),
+      SCIPintervalGetSup(activityint));
+   
+   return activityint;
+}
+#endif
+
 /** calculates the feasibility of the linear constraint for given solution */
 static
 SCIP_Real consdataGetFeasibility(
@@ -4110,7 +4217,7 @@ SCIP_RETCODE applyFixings(
 	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
 	    assert(activevar != NULL);
-	    SCIPvarGetProbvarSum(&activevar, &activescalar, &activeconstant);
+	    SCIP_CALL( SCIPgetProbvarSum(scip, &activevar, &activescalar, &activeconstant) );
 	    assert(activevar != NULL);
 
 	    if( !SCIPisZero(scip, activescalar) )
@@ -4585,8 +4692,8 @@ SCIP_RETCODE tightenVarBounds(
 
          newub = (rhs - minresactivity)/val;
 
-         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
-            || SCIPisUbBetter(scip, newub, lb, ub) )
+         if( !SCIPisInfinity(scip, newub) &&
+            ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
             SCIP_Bool activityunreliable;
             activityunreliable = SCIPisUpdateUnreliable(scip, minresactivity, consdata->lastminactivity);
@@ -4637,8 +4744,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (lhs - maxresactivity)/val;
-         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
-            || SCIPisLbBetter(scip, newlb, lb, ub) )
+         if( !SCIPisInfinity(scip, -newlb) &&
+            ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
             /* check maxresactivities for reliability */
             if( SCIPisUpdateUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
@@ -4687,8 +4794,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         if( (force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
-            || SCIPisLbBetter(scip, newlb, lb, ub) )
+         if( !SCIPisInfinity(scip, -newlb) &&
+            ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
             SCIP_Bool activityunreliable;
             activityunreliable = SCIPisUpdateUnreliable(scip, minresactivity, consdata->lastminactivity);
@@ -4738,8 +4845,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         if( (force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
-            || SCIPisUbBetter(scip, newub, lb, ub) )
+         if(  !SCIPisInfinity(scip, newub) &&
+            ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
             /* check maxresactivities for reliability */
             if( SCIPisUpdateUnreliable(scip, maxresactivity, consdata->lastmaxactivity) )
@@ -4929,6 +5036,150 @@ SCIP_RETCODE checkCons(
 
    return SCIP_OKAY;
 }
+
+#ifdef WITH_EXACTSOLVE
+/** checks linear constraint for exact feasibility of given solution or current solution */
+static
+SCIP_RETCODE checkConsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
+   SCIP_Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
+   SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_INTERVAL activityint;
+
+
+   assert(violated != NULL);
+
+   SCIPdebugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *violated = FALSE;
+
+   /* constraints which are in the current LP and should not be checked are not checked indeed, even if we want to solve 
+    * the MIP exactly, since for each primal solution an exact LP feasibility check is performed before it is added to the 
+    * solution storage
+    */    
+   if( consdata->row != NULL && !checklprows && SCIProwIsInLP(consdata->row) )
+         return SCIP_OKAY;
+
+   /* gets interval of activity of constraint */
+   activityint = consdataGetActivityInterval(scip, consdata, sol);
+   assert(SCIPintervalGetInf(activityint) >= -SCIPinfinity(scip) 
+      && SCIPintervalGetSup(activityint) <= SCIPinfinity(scip)
+      && SCIPintervalGetInf(activityint) <= SCIPintervalGetSup(activityint));
+   
+   /* try to prove (in)feasibility by using interval arithmetic */
+   if( SCIPintervalGetSup(activityint) <  consdata->lhs || consdata->rhs < SCIPintervalGetInf(activityint) ) 
+   {
+      *violated = TRUE;
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+#ifndef NDEBUG
+      {
+         mpq_t activityexact;
+         mpq_t lhsexact;
+         mpq_t rhsexact;
+
+         mpq_init(activityexact);
+         mpq_init(lhsexact);
+         mpq_init(rhsexact);
+
+         consdataGetActivityExact(scip, consdata, sol, activityexact);
+         mpq_set_d(lhsexact, consdata->lhs);
+         mpq_set_d(rhsexact, consdata->rhs);
+         assert(mpq_cmp(activityexact, lhsexact) < 0 || mpq_cmp(activityexact, rhsexact) > 0);
+
+         mpq_clear(rhsexact);
+         mpq_clear(lhsexact);
+         mpq_clear(activityexact);
+      }
+#endif
+   }
+   else if( consdata->lhs <= SCIPintervalGetInf(activityint) && SCIPintervalGetSup(activityint) <= consdata->rhs ) 
+   {
+      *violated = FALSE;
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+
+#ifndef NDEBUG
+      {
+         mpq_t activityexact;
+         mpq_t lhsexact;
+         mpq_t rhsexact;
+         
+         mpq_init(activityexact);
+         mpq_init(lhsexact);
+         mpq_init(rhsexact);
+         
+         consdataGetActivityExact(scip, consdata, sol, activityexact);
+         mpq_set_d(lhsexact, consdata->lhs);
+         mpq_set_d(rhsexact, consdata->rhs);
+         assert(mpq_cmp(activityexact, lhsexact) >= 0 || mpq_cmp(activityexact, rhsexact) <= 0);
+         
+         mpq_clear(rhsexact);
+         mpq_clear(lhsexact);
+         mpq_clear(activityexact);
+      }
+#endif
+   }
+   /* prove (in)feasibility by using exact arithmetic */
+   else
+   {   
+      mpq_t activityexact;
+      mpq_t lhsexact;
+      mpq_t rhsexact;
+
+      /* initializes gmp data */
+      mpq_init(activityexact);
+      mpq_init(lhsexact);
+      mpq_init(rhsexact);
+      
+      /* gets exact activity of constraint */
+      consdataGetActivityExact(scip, consdata, sol, activityexact);
+      mpq_set_d(lhsexact, consdata->lhs);
+      mpq_set_d(rhsexact, consdata->rhs);
+
+#ifndef NDEBUG
+      {
+         mpq_t scipposinf; 
+         mpq_t scipneginf; 
+
+         mpq_init(scipposinf);
+         mpq_init(scipneginf);
+         mpq_set_d(scipposinf, SCIPinfinity(scip));
+         mpq_set_d(scipneginf, -SCIPinfinity(scip));
+         
+         assert(mpq_cmp(activityexact, scipneginf) >= 0); 
+         assert(mpq_cmp(activityexact, scipposinf) <= 0); 
+      }
+#endif      
+      
+      if( mpq_cmp(activityexact, lhsexact) < 0 || mpq_cmp(activityexact, rhsexact) > 0 )
+      {
+         *violated = TRUE;
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      }
+      else
+      {
+         *violated = FALSE;
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
+      
+      /* frees gmp data */
+      mpq_clear(rhsexact);
+      mpq_clear(lhsexact);
+      mpq_clear(activityexact);
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** creates an LP row in a linear constraint data */
 static
@@ -6436,7 +6687,7 @@ SCIP_Bool checkEqualObjective(
 }
 
 /** check if the linear equality constraint is equal to a subset of the objective function; if so we can remove the
- *  objective coefficient and add an objective offset
+ *  objective coefficients and add an objective offset
  */
 static
 SCIP_RETCODE checkPartialObjective(
@@ -6918,7 +7169,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->lhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip, minval, maxval));
-            if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -6977,7 +7229,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->rhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip,minval,maxval));
-            if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
+            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
+               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -9806,8 +10059,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
-         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
-          * correctly 
+         /* an extra blank line should be printed separately since the buffer message handler only handles up to one
+          * line correctly
           */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
@@ -10133,7 +10386,13 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
+#ifdef WITH_EXACTSOLVE
+      assert(SCIPisExactSolve(scip));
+      SCIP_CALL( checkConsExact(scip, conss[c], sol, checklprows, &violated) );
+#else
+      assert(!SCIPisExactSolve(scip));
       SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, &violated) );
+#endif
    }
 
    if( violated )
@@ -11281,36 +11540,52 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONFLICTHDLR* conflicthdlr;
 
    assert(scip != NULL);
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecLinear, NULL) );
 
    /* create conflict handler for linear constraints */
-   SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, NULL, conflictExecLinear, NULL) );
+   SCIP_CALL( SCIPincludeConflicthdlrBasic(scip, &conflicthdlr, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         conflictExecLinear, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* include constraint handler in SCIP */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
-         conshdlrCopyLinear,
-         consFreeLinear, consInitLinear, consExitLinear,
-         consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
-         consDeleteLinear, consTransLinear, consInitlpLinear,
-         consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear,
-         consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
-         consActiveLinear, consDeactiveLinear,
-         consEnableLinear, consDisableLinear, consDelvarsLinear,
-         consPrintLinear, consCopyLinear, consParseLinear,
-         consGetVarsLinear, consGetNVarsLinear, conshdlrdata) );
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpLinear, consEnfopsLinear, consCheckLinear, consLockLinear,
+         conshdlrdata) );
+
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLinear) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinear) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinear) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitLinear) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinear) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinear) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinear) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinear) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
@@ -11505,6 +11780,33 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a linear constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsLinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsLinear() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of nonzeros in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, vals, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }
