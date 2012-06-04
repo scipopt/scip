@@ -10953,11 +10953,16 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
          if( SCIPsetIsInfinity(set, (*var)->glbdom.lb) || SCIPsetIsInfinity(set, -((*var)->glbdom.lb)) )
          {
             assert(*scalar != 0.0);
-            assert(!SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)));
             if(*scalar * (*var)->glbdom.lb > 0.0 )
+            {
+               assert(!SCIPsetIsInfinity(set, -(*constant)));
                (*constant) = SCIPsetInfinity(set);
+            }
             else
+            {
+               assert(!SCIPsetIsInfinity(set, *constant));
                (*constant) = -SCIPsetInfinity(set);
+            }
          }
          else
             (*constant) += *scalar * (*var)->glbdom.lb;
