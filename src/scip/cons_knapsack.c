@@ -3896,7 +3896,6 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    SCIP_Longint min;
    int minweightssize;
    int minweightslen;
-   int ngubconss;
    int nvars;
    int varidx;
    int liftgubconsidx;
@@ -3909,15 +3908,18 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    int right;
    int middle;
    int nliftgubvars;
-   int nliftgubC1;
    int tmplen;
    int tmpsize;
    int j;
    int k;
    int w;
    int z;
+#ifndef NDEBUG
+   int ngubconss;
+   int nliftgubC1;
 
    ngubconss = gubset->ngubconss;
+#endif
    nvars = gubset->nvars;
 
    assert(scip != NULL);
@@ -4179,7 +4181,9 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
       else
 	 assert(gubset->gubconsstatus[liftgubconsidx] == GUBCONSSTATUS_BELONGSTOSET_GF);
 
+#ifndef NDEBUG
       nliftgubC1 = k;
+#endif
       nliftgubvars = k;
       sumliftcoef = 0;
 
@@ -5646,6 +5650,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool noknapsackconshdlr;
+   SCIP_Bool usegubs;
 
    assert(nknapvars > 0);
    assert(knapvars != NULL);
@@ -5675,6 +5680,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    if( conshdlr == NULL )
    {
       noknapsackconshdlr = TRUE;
+      usegubs = DEFAULT_USEGUBS;
+
       SCIP_CALL( SCIPallocBufferArray(scip, &binvals, nbinvars) );
       BMSclearMemoryArray(binvals, nbinvars);
    }
@@ -5683,6 +5690,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       noknapsackconshdlr = FALSE;
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
+      usegubs = conshdlrdata->usegubs;
+
       SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, nknapvars) );
 
       assert(conshdlrdata->reals1size > 0);
@@ -5999,8 +6008,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       if( maxact > capacity )
       {
          /* separate lifted cut from relaxed knapsack constraint */
-         SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, consvars, nconsvars, consvals, capacity, sol,
-               conshdlrdata->usegubs, ncuts) );
+         SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, consvars, nconsvars, consvals, capacity, sol, usegubs, ncuts) );
       }
    }
 
