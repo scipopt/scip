@@ -27,8 +27,10 @@
 /** @todo exiptodo: mpfr library is needed to control the rounding mode in the gmp-double conversion. these methods might
  *   move to another file. delete library inclusion then.
  */
+#ifdef WITH_EXACTSOLVE
 #include "mpfr.h" /* mpfr.h has to be included before gmp.h */
 #include "gmp.h"
+#endif
 
 #include "scip/type_cons.h"
 #include "scip/type_lpiex.h"
@@ -40,6 +42,7 @@ extern "C" {
 #endif
 
 
+#ifdef WITH_EXACTSOLVE
 /** returns value treated as negative infinite in exactlp constraint handler */
 extern
 const mpq_t* negInfinity(
@@ -498,6 +501,7 @@ extern
 SCIP_Bool SCIPhasDualboundDiff(
    SCIP*                 scip                /**< SCIP data structure */
    );
+#endif
 
 
 #ifdef __cplusplus

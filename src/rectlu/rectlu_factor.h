@@ -30,6 +30,7 @@
 #define __RECTLU_FACTOR_H
 
 
+#ifdef WITH_GMP
 void QSnum_svector_init (qsnum_svector * s),
      QSnum_svector_free (qsnum_svector * s);
 
@@ -128,6 +129,6 @@ void
          fprintf (stderr, "Out of memory\n"); \
          goto CLEANUP;  \
       }}
-
+#endif
 
 #endif /* __CG_UTIL_H */

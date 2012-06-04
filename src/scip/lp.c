@@ -17417,6 +17417,7 @@ SCIP_RETCODE provedBound(
    printf("   resulting ytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb));
 #endif
 
+#ifdef WITH_GMP
 #ifndef NDEBUG
    {
       mpq_t tmpscalprod;
@@ -17507,7 +17508,7 @@ SCIP_RETCODE provedBound(
       mpq_clear(tmpposinfty);
    }
 #endif
-
+#endif
 
 #ifndef NDEBUG
    for( j = 0; j < lp->nrows; ++j )
@@ -17607,6 +17608,7 @@ SCIP_RETCODE provedBound(
    SCIPintervalAddVectors(SCIPsetInfinity(set), atyinter, lp->ncols, atyinter, cinter);
    SCIPintervalScalprod(SCIPsetInfinity(set), &minprod, lp->ncols, atyinter, xinter);
 
+#ifdef WITH_GMP
 #ifndef NDEBUG
    {
       mpq_t tmpscalprod;
@@ -17726,6 +17728,7 @@ SCIP_RETCODE provedBound(
       mpq_clear(tmpneginfty);
       mpq_clear(tmpposinfty);
    }
+#endif
 #endif
 
    /* add y^Tb */

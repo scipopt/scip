@@ -56,11 +56,13 @@ void errorMessage(
 /**@name Miscellaneous Methods */
 /**@{ */
 
+#endif
 /** gets name and version of LP solver */
 const char* SCIPlpiexGetSolverName(void)
 {
-   return "NONE";
+   return "none";
 }
+#ifdef WITH_GMP
 
 /** gets pointer for LP solver - use only with great care */
 void* SCIPlpiexGetSolverPointer(

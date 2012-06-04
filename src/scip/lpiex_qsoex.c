@@ -30,15 +30,18 @@
 #include <string.h>
 #ifdef WITH_GMP
 #include "gmp.h"
+#endif
 #include "EGlib.h"
 #include "QSopt_ex.h"
-#endif
 
 #include "scip/lpiex.h"
 #include "scip/bitencode.h"
 #include "scip/message.h"
 #include "scip/misc.h"
 
+
+/** solver name */
+static char __qsstr[1024];
 
 #ifdef WITH_GMP
 
@@ -68,9 +71,6 @@ struct SCIP_LPiEx
    int pricing;	    /**< SCIP pricing option */
    mpq_factor_work* factor;  /**< factorized matrix  */
 };
-
-/** solver name */
-static char __qsstr[1024];
 
 
 
@@ -349,6 +349,7 @@ SCIP_RETCODE convertSides(
 /**@{ */
 
 
+#endif
 /** gets name and version of LP solver */
 const char* SCIPlpiexGetSolverName(void)
 {
@@ -357,6 +358,7 @@ const char* SCIPlpiexGetSolverName(void)
    mpq_QSfree(vname);
    return __qsstr;
 }
+#ifdef WITH_GMP
 
 /** gets pointer for LP solver - use only with great care */
 void* SCIPlpiexGetSolverPointer(

@@ -411,6 +411,9 @@ LPSEXOPTIONS	=
 
 LPSEXOPTIONS	+=	qsoex
 ifeq ($(LPSEX),qsoex)
+ifeq ($(GMP),false)
+$(error LPSEX=qsoex requires GMP. Use either LPSEX=none or GMP=true)
+endif
 FLAGS         	+=      -I$(LIBDIR)/qsexinc
 FLAGS         	+=      -I$(LIBDIR)/EGlibinc
 LPSEXLDFLAGS   	=       $(LINKCC_l)qsoptex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
@@ -507,6 +510,9 @@ ifeq ($(ZIMPL),true)
 GMP		=	true
 endif
 ifeq ($(EXACTSOLVE),true)
+GMP		=	true
+endif
+ifeq ($(LPSEX),qsoex)
 GMP		=	true
 endif
 endif

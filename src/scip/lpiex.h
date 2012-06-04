@@ -43,11 +43,13 @@ extern "C" {
 /**@name Miscellaneous Methods */
 /**@{ */
 
+#endif
 /** gets name and version of LP solver */
 extern
 const char* SCIPlpiexGetSolverName(
    void
    );
+#ifdef WITH_GMP
 
 /** gets pointer for LP solver - use only with great care
  *

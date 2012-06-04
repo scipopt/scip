@@ -24,7 +24,9 @@
 #define __SCIP_MISC_H__
 
 
-#include <gmp.h> 
+#ifdef WITH_GMP
+#include <gmp.h>
+#endif
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -41,6 +43,7 @@ extern "C" {
  * Numerical methods for rational numbers
  */
 
+#ifdef WITH_GMP
 /** tries to find a value, such that all given values, if scaled with this value become integral */
 extern
 SCIP_RETCODE SCIPmpqCalcIntegralScalar(
@@ -50,6 +53,7 @@ SCIP_RETCODE SCIPmpqCalcIntegralScalar(
    mpq_t                 intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
+#endif
 
 /*
  * Dynamic Arrays
@@ -329,6 +333,7 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+#ifdef WITH_GMP
 /** creates a dynamic array of mpq_t values */
 extern
 SCIP_RETCODE SCIPmpqarrayCreate(
@@ -370,7 +375,7 @@ extern
 void SCIPmpqarrayGetVal(
    SCIP_MPQARRAY*        mpqarray,           /**< dynamic mpq array */
    int                   idx,                /**< array index to get value for */
-   mpq_t                 val                 /**< pointer to store value of entry */   
+   mpq_t                 val                 /**< pointer to store value of entry */
    );
 
 /** sets value of entry in dynamic array */
@@ -402,6 +407,7 @@ extern
 int SCIPmpqarrayGetMaxIdx(
    SCIP_MPQARRAY*        mpqarray            /**< dynamic mpq array */
    );
+#endif
 
 /*
   local methods

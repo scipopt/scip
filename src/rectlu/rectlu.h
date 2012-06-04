@@ -30,6 +30,7 @@
 #ifndef __RECTLU_H
 #define __RECTLU_H
 
+#ifdef WITH_GMP
 typedef struct qsnum_svector {
 	int nzcnt;
 	int *indx;
@@ -184,5 +185,6 @@ int RECTLUsolveSystem(
 void RECTLUfreeFactorization(
    qsnum_factor_work* f                 /**< pointer to store factor work*/
    );
+#endif
 
 #endif	/*  __RECTLU_H */

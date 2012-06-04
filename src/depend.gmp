@@ -1,1 +1,1 @@
-src/scip/lpiex_none.c src/scip/lpiex_qsoex.c src/scip/cons_countsols.c src/scip/misc.c
+src/scip/lpiex_none.c src/scip/lpiex_qsoex.c src/scip/cons_countsols.c src/scip/lp.c src/scip/misc.c src/rectlu/rectlu_factor.c

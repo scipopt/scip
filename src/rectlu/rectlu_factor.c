@@ -28,12 +28,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#ifdef WITH_GMP
 #include <gmp.h>
+#endif
 #include <assert.h>
 
 #include "rectlu_factor.h"
 #include "rectlu.h"
 
+#ifdef WITH_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
 static QSnum_type __t__;
@@ -2930,3 +2933,4 @@ void RECTLUfreeFactorization(
    QSnum_factor_clear ();
    if (f) free (f);
 }
+#endif
