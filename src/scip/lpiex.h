@@ -31,6 +31,7 @@
 #include "scip/type_lpiex.h"
 
 #ifdef WITH_GMP
+#include "gmp.h"
 
 #ifdef __cplusplus
 extern "C" {
