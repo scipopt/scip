@@ -5243,6 +5243,8 @@ SCIP_RETCODE getPSdualbound(
    {
       /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
       rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
+      if( rval )
+         *success = FALSE;
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
@@ -5693,6 +5695,8 @@ SCIP_RETCODE PScorrectdualray(
    {
       /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
       rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
+      if( rval )
+         *success = FALSE;
 
 #ifdef PS_OUT
       printf("correction of ray: \n");
@@ -9026,10 +9030,8 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpExactlp, consEnfopsExactlp, consCheckExactlp, consLockExactlp,
          conshdlrdata) );
 
@@ -9042,9 +9044,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactlp(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExactlp) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpExactlp) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreExactlp) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExactlp) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExactlp,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExactlp) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExactlp, consSepasolExactlp, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExactlp,
+         consSepasolExactlp, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExactlp) );
 
 #ifdef LINCONSUPGD_PRIORITY
