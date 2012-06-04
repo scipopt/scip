@@ -2219,16 +2219,8 @@ SCIP_RETCODE replaceQuadVarTermPos(
    SCIP_CALL( lockQuadraticVariable(scip, cons, var) );
 
    consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
-   if( consdata->nquadvars == 1 )
-   {
-      consdata->quadvarssorted = TRUE;
-      consdata->quadvarsmerged = TRUE;
-   }
-   else
-   {
-      consdata->quadvarssorted = FALSE;
-      consdata->quadvarsmerged = FALSE;
-   }
+   consdata->quadvarssorted = (consdata->nquadvars == 1);
+   consdata->quadvarsmerged = FALSE;
    consdata->bilinmerged &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
 
    consdata->ispropagated  = FALSE;
