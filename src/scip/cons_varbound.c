@@ -18,6 +18,19 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Michael Winkler
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
+ *
+ * This constraint handler handles a special type of linear constraints, namely variable bound constraints.
+ * A variable bound constraint has the form
+ * \f[
+ *   lhs \leq x + c y \leq rhs
+ * \f]
+ * with coefficient \f$c \in Q\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x\f$ (non-binary) and \f$y\f$ (binary or integer).
+ *
+ * @note: Although x must be non-binary when the constraint is created, it can happen that x is upgraded to a binary
+ *        variable, e.g. due to aggregations or bound changes in presolving.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,7 +45,6 @@
 
 
 /* constraint handler properties */
-/* @note: despite the description due to aggregations x can be upgraded to a binary variable */
 #define CONSHDLR_NAME          "varbound"
 #define CONSHDLR_DESC          "variable bounds  lhs <= x + c*y <= rhs, x non-binary, y non-continuous"
 #define CONSHDLR_SEPAPRIORITY   +900000 /**< priority of the constraint handler for separation */
@@ -72,7 +84,7 @@ struct SCIP_ConsData
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
-   unsigned int          addvarbounds:1;     /**< are the globally valid variable bound are added? */
+   unsigned int          varboundsadded:1;   /**< are the globally valid variable bounds added? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          tightened:1;        /**< were the vbdcoef and all sides already tightened? */
 };
@@ -105,12 +117,15 @@ typedef enum Proprule PROPRULE;
  * Local methods
  */
 
-/** compares the index of both variables in a constraint,
+/** compares two varbound constraints   cons1: lhs1 \le x1 + c1 y1 \le rhs1   and   cons2: lhs2 \le x2 + c2 y2 \le rhs2
+ *  w.r.t. the indices of the contained variables
  *
- *  returns -1 if index of first consdata->var is smaller than the index of the second consdata->var or both indices are
- *  equal and the index of the first consdata->vbdvar is smaller than the index of the second consdata->vbdvar,
+ *  returns -1 if:
+ *  - the index of x1 is smaller than the index of x2 or
+ *  - x1 = x2 and the index of y1 is smaller than the index of y2 or
+ *  - x1 = x2 and y1 = y2 and cons2 was recently changed, but cons1 not
  *
- *  returns 0 if the indices are pairwise equal,
+ *  returns 0 if x1 = x2, y1 = y2, and the changed status of both constraints is the same
  *
  *  and returns +1 otherwise
  */
@@ -274,7 +289,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->row = NULL;
    (*consdata)->propagated = FALSE;
    (*consdata)->presolved = FALSE;
-   (*consdata)->addvarbounds = FALSE;
+   (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->tightened = FALSE;
 
@@ -642,7 +657,7 @@ SCIP_RETCODE chgLhs(
    if( SCIPisLT(scip, consdata->lhs, lhs) )
    {
       consdata->propagated = FALSE;
-      consdata->addvarbounds = FALSE;
+      consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
 
@@ -724,7 +739,7 @@ SCIP_RETCODE chgRhs(
    if( SCIPisGT(scip, consdata->rhs, rhs) )
    {
       consdata->propagated = FALSE;
-      consdata->addvarbounds = FALSE;
+      consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
 
@@ -1257,7 +1272,7 @@ void checkRedundancySide(
       }
       else
       {
-         /* if both constraints are weaker than the other on one value, we have no redundancy */
+         /* if both constraints are weaker than the other one on one value, we have no redundancy */
          if( (*redundant1 && SCIPisLT(scip, valuey1, valuey2)) || (*redundant0 && SCIPisGT(scip, valuey1, valuey2)) )
          {
             *sideequal = FALSE;
@@ -1281,7 +1296,7 @@ void checkRedundancySide(
       }
       assert(*sideequal || *redundant0 || *redundant1);
 
-      /* calculate feasability domain values for variable y concerning these both constraints */
+      /* calculate feasibility domain values for variable y concerning these both constraints */
       if( SCIPisPositive(scip, coef0) )
       {
 	 if( islhs )
@@ -1387,7 +1402,7 @@ void checkRedundancySide(
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
  *
- *  we will order all constraint to have constraints with same variables next to each other and fasten presolving
+ *  we will order all constraint to have constraints with same variables next to each other to speed up presolving
  *
  *  consider two constraints like lhs1 <= x + b1*y <= rhs1 and lhs2 <= x + b2*y <= rhs2
  *  we are doing the following presolving steps:
@@ -1753,7 +1768,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             ++(*nchgcoefs);
 
             /* mark to add new varbound information */
-            consdata0->addvarbounds = FALSE;
+            consdata0->varboundsadded = FALSE;
 	    consdata0->tightened = FALSE;
 	    consdata0->propagated = FALSE;
 	    consdata0->presolved = FALSE;
@@ -1798,7 +1813,7 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
-/* for varbound constraint with two integer variables make coefficients integral */
+/* for all varbound constraints with two integer variables make the coefficients integral */
 static
 SCIP_RETCODE prettifyConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1817,7 +1832,7 @@ SCIP_RETCODE prettifyConss(
    assert(nchgsides != NULL);
 
    /* if we cannot find any constraint for prettifying, stop */
-   if( SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip) < 2 )
+   if( SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip) < 1 )
       return SCIP_OKAY;
 
    for( c = nconss - 1; c >= 0; --c )
@@ -1941,7 +1956,7 @@ SCIP_RETCODE prettifyConss(
                ++(*nchgcoefs);
 
                /* mark to add new varbound information */
-               consdata->addvarbounds = FALSE;
+               consdata->varboundsadded = FALSE;
 	       consdata->tightened = FALSE;
 
                /* print constraint after scaling */
@@ -2669,7 +2684,7 @@ SCIP_RETCODE tightenCoefs(
     */
    if( *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
    {
-      consdata->addvarbounds = FALSE;
+      consdata->varboundsadded = FALSE;
       consdata->changed = TRUE;
    }
 
@@ -3125,7 +3140,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          continue;
 
       /** informs once variable x about a globally valid variable lower or upper bound */
-      if( !consdata->addvarbounds )
+      if( !consdata->varboundsadded )
       {
          SCIP_Bool infeasible;
          int nlocalchgbds;
@@ -3144,9 +3159,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
             
             *nchgbds += nlocalchgbds;
 
-            /* if lhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
-	     * too small
-	     */
+            /* if x is not continuous we add a variable bound for y; do not add it if cofficient would be too small */
             if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef >= 0.0 )
@@ -3192,9 +3205,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
             *nchgbds += nlocalchgbds;
 
-            /* if rhs is finite, and x is not continuous we can add more variable bounds, do not add if cofficient is
-	     * too small
-	     */
+            /* if x is not continuous we add a variable bound for y; do not add it if cofficient would be too small */
             if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
             {
                if( consdata->vbdcoef > 0.0 )
@@ -3227,7 +3238,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
                }
             }
          }
-         consdata->addvarbounds = TRUE;
+         consdata->varboundsadded = TRUE;
       }
    }
 
@@ -3580,8 +3591,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
