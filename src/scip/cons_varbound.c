@@ -3150,93 +3150,31 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIPdebugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
-               SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
+            SCIPdebugMessage("adding variable lower bound <%s> >= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
+               SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
+               SCIPvarGetName(consdata->vbdvar), (consdata->vbdcoef > 0 ? ">=" : "<="), 1.0/-consdata->vbdcoef,
+               SCIPvarGetName(consdata->var), consdata->lhs/consdata->vbdcoef);
 
             SCIP_CALL( SCIPaddVarVlb(scip, consdata->var, consdata->vbdvar, -consdata->vbdcoef, consdata->lhs,
                   &infeasible, &nlocalchgbds) );
             assert(!infeasible);
-            
+
             *nchgbds += nlocalchgbds;
-
-            /* if x is not continuous we add a variable bound for y; do not add it if cofficient would be too small */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
-            {
-               if( consdata->vbdcoef >= 0.0 )
-               {
-                  assert(consdata->vbdcoef != 0.0);
-
-                  SCIPdebugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), -1.0/consdata->vbdcoef, SCIPvarGetName(consdata->var), 
-                     consdata->lhs/consdata->vbdcoef);
-
-                  /* if c > 0, we have a variable lower bound: lhs <= x + c*y  =>  y >= (lhs-x)/c */
-                  SCIP_CALL( SCIPaddVarVlb(scip, consdata->vbdvar, consdata->var, 
-                        -1.0/consdata->vbdcoef, consdata->lhs/consdata->vbdcoef, &infeasible, &nlocalchgbds) );
-                  assert(!infeasible);
-
-                  *nchgbds += nlocalchgbds;
-               }
-               else
-               {
-                  SCIPdebugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), -1.0/consdata->vbdcoef, SCIPvarGetName(consdata->var), 
-                     consdata->lhs/consdata->vbdcoef);
-
-                  /* if c < 0, we have a variable upper bound: lhs <= x + c*y  =>  y <= (lhs-x)/c */
-                  SCIP_CALL( SCIPaddVarVub(scip, consdata->vbdvar, consdata->var, 
-                        -1.0/consdata->vbdcoef, consdata->lhs/consdata->vbdcoef, &infeasible, &nlocalchgbds) );
-                  assert(!infeasible);
-
-                  *nchgbds += nlocalchgbds;
-               }
-            }
          }
-         
+
          /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIPdebugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
-               SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
+            SCIPdebugMessage("adding variable upper bound <%s> <= %g<%s> + %g (and potentially also <%s> %s %g<%s> + %g)\n",
+               SCIPvarGetName(consdata->var), -consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+               SCIPvarGetName(consdata->vbdvar), (consdata->vbdcoef > 0 ? "<=" : ">="), 1.0/-consdata->vbdcoef,
+               SCIPvarGetName(consdata->var), consdata->rhs/consdata->vbdcoef);
 
             SCIP_CALL( SCIPaddVarVub(scip, consdata->var, consdata->vbdvar, -consdata->vbdcoef, consdata->rhs,
                   &infeasible, &nlocalchgbds) );
             assert(!infeasible);
 
             *nchgbds += nlocalchgbds;
-
-            /* if x is not continuous we add a variable bound for y; do not add it if cofficient would be too small */
-            if( SCIPvarGetType(consdata->var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/consdata->vbdcoef) )
-            {
-               if( consdata->vbdcoef > 0.0 )
-               {
-                  assert(consdata->vbdcoef != 0.0);
-
-                  SCIPdebugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), -1.0/consdata->vbdcoef, SCIPvarGetName(consdata->var), 
-                     consdata->rhs/consdata->vbdcoef);
-
-                  /* if c > 0 we have a variable upper bound: x + c*y <= rhs  =>  y <= (rhs-x)/c */
-                  SCIP_CALL( SCIPaddVarVub(scip, consdata->vbdvar, consdata->var, 
-                        -1.0/consdata->vbdcoef, consdata->rhs/consdata->vbdcoef, &infeasible, &nlocalchgbds) );
-                  assert(!infeasible);
-
-                  *nchgbds += nlocalchgbds;
-               }
-               else
-               {
-                  SCIPdebugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), -1.0/consdata->vbdcoef, SCIPvarGetName(consdata->var), 
-                     consdata->rhs/consdata->vbdcoef);
-                  
-                  /* if c < 0 we have a variable lower bound: x + c*y <= rhs  =>  y >= (rhs-x)/c */
-                  SCIP_CALL( SCIPaddVarVlb(scip, consdata->vbdvar, consdata->var, 
-                        -1.0/consdata->vbdcoef, consdata->rhs/consdata->vbdcoef, &infeasible, &nlocalchgbds) );
-                  assert(!infeasible);
-
-                  *nchgbds += nlocalchgbds;
-               }
-            }
          }
          consdata->varboundsadded = TRUE;
       }

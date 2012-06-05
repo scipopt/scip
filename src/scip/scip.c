@@ -14745,6 +14745,8 @@ SCIP_RETCODE SCIPgetVarClosestVub(
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  if z is non-continuous and 1/b not too small, the corresponding valid upper/lower bound
+ *  z <= (x-d)/b or z >= (x-d)/b (depending on the sign of of b) is added, too;
  *  improves the global bounds of the variable and the vlb variable if possible
  */
 SCIP_RETCODE SCIPaddVarVlb(
@@ -14762,11 +14764,32 @@ SCIP_RETCODE SCIPaddVarVlb(
    SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
          scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, nbdchgs) );
 
+   /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
+    * detected infeasibility
+    */
+   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vlbcoef) )
+   {
+      if( vlbcoef > 0.0 )
+      {
+         /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+      }
+      else
+      {
+         /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  if z is non-continuous and 1/b not too small, the corresponding valid lower/upper bound
+ *  z >= (x-d)/b or z <= (x-d)/b (depending on the sign of of b) is added, too;
  *  improves the global bounds of the variable and the vlb variable if possible
  */
 SCIP_RETCODE SCIPaddVarVub(
@@ -14783,6 +14806,25 @@ SCIP_RETCODE SCIPaddVarVub(
 
    SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
          scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, nbdchgs) );
+
+   /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
+    * detected infeasibility
+    */
+   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vubcoef) )
+   {
+      if( vubcoef > 0.0 )
+      {
+         /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+      }
+      else
+      {
+         /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+      }
+   }
 
    return SCIP_OKAY;
 }
