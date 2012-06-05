@@ -14707,7 +14707,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
 }
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal
- *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is
+ *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable lower bound is
  *  available
  */
 SCIP_RETCODE SCIPgetVarClosestVlb(
