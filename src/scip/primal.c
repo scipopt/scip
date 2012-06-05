@@ -895,9 +895,9 @@ SCIP_Bool solOfInterest(
    obj = SCIPsolGetObj(sol, set, transprob);
 
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
-    * current cutoff bound
+    * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   if( !set->misc_improvingsols || obj < primal->cutoffbound )
+   if( (!set->misc_improvingsols || obj < primal->cutoffbound) && !SCIPsetIsInfinity(set, obj) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, sol);

@@ -184,7 +184,7 @@ fixed bugs:
 - fixed bug in diving heuristics with variables being fixed to values outside their domain
 - method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
   variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
-
+- primal solutions with infinite objective value are now automatically discarded
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
