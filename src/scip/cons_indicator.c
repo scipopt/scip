@@ -172,7 +172,7 @@
  * corresponding slack variable is still present and its setting to 0 might influence other
  * (linear) constraints. Thus, we have to rely on the dual presolving of the linear constraints to
  * detect this case: If the linear constraint is really redundant, i.e., is always fulfilled, it is
- * deleted and the slack variable can is fixed to 0. In this case, the indicator constraint can be
+ * deleted and the slack variable can be fixed to 0. In this case, the indicator constraint can be
  * deleted as well.
  *
  * @todo Accept arbitrary ranged linear constraints as input (in particular: equations). Internally
