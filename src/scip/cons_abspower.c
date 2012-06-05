@@ -6036,6 +6036,89 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          continue;
       }
 
+      /* another check for upgrading to a varbound constraint */
+      if( SCIPvarIsBinary(consdata->x) )
+      {
+         SCIP_CONS* lincons;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Real zcoef;
+
+         /* for binary variable x,
+          * sign(x+offset)|x+offset|^n = sign(offset)|offset|^n * (1-x) + sign(offset+1) |offset+1|^n x
+          *                            = sign(offset)|offset|^n + (sign(offset+1) |offset+1|^n - sign(offset)|offset|^n) * x
+          * => constraint is lhs <= sign(offset)|offset|^n + (sign(offset+1) |offset+1|^n - sign(offset)|offset|^n) * x + c*z <= rhs
+          * upgrade to varbound constraint if z is not continuous, otherwise linear
+          */
+         if( consdata->xoffset != 0.0 )
+         {
+            SCIP_Real xcoef;
+
+            xcoef = SIGN(consdata->xoffset + 1.0) * consdata->pow(ABS(consdata->xoffset + 1.0), consdata->exponent)
+                   -SIGN(consdata->xoffset)       * consdata->pow(ABS(consdata->xoffset),       consdata->exponent);
+
+            if( xcoef < 0.0 )
+            {
+               if( SCIPisInfinity(scip, consdata->rhs) )
+                  lhs = -SCIPinfinity(scip);
+               else
+                  lhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+               if( -SCIPisInfinity(scip, consdata->lhs) )
+                  rhs =  SCIPinfinity(scip);
+               else
+                  rhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+            }
+            else
+            {
+               if( SCIPisInfinity(scip, -consdata->lhs) )
+                  lhs = -SCIPinfinity(scip);
+               else
+                  lhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+               if( SCIPisInfinity(scip,  consdata->rhs) )
+                  rhs =  SCIPinfinity(scip);
+               else
+                  rhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
+            }
+            zcoef = consdata->zcoef / xcoef;
+         }
+         else
+         {
+            lhs = consdata->lhs;
+            rhs = consdata->rhs;
+            zcoef = consdata->zcoef;
+         }
+
+         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS )
+         {
+            SCIP_CALL( SCIPcreateConsVarbound(scip, &lincons, SCIPconsGetName(conss[c]),
+                  consdata->x, consdata->z, zcoef, lhs, rhs,
+                  SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+                  SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  SCIPconsIsLocal(conss[c]),
+                  SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+                  SCIPconsIsStickingAtNode(conss[c])) );  /*lint !e613*/
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(conss[c]),
+                  1, &consdata->z, &zcoef, lhs, rhs,
+                  SCIPconsIsInitial(conss[c]), SCIPconsIsSeparated(conss[c]), SCIPconsIsEnforced(conss[c]),
+                  SCIPconsIsChecked(conss[c]), SCIPconsIsPropagated(conss[c]),  SCIPconsIsLocal(conss[c]),
+                  SCIPconsIsModifiable(conss[c]), SCIPconsIsDynamic(conss[c]), SCIPconsIsRemovable(conss[c]),
+                  SCIPconsIsStickingAtNode(conss[c])) );  /*lint !e613*/
+            SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->x, 1.0) );
+         }
+         SCIP_CALL( SCIPaddCons(scip, lincons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+         SCIPdebugMessage("upgraded constraint <%s> to linear constraint due to binary x-variable\n", SCIPconsGetName(conss[c]));
+         SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+         SCIPdebug( SCIPprintCons(scip, lincons, NULL) );
+
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
+         ++*nupgdconss;
+         continue;
+      }
+
       /* run domain propagation, also checks for redundancy */
       localnchgbds = 0;
       localnaddconss = 0;
