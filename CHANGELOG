@@ -182,6 +182,9 @@ plugins:
 - added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
 - added zeroobj heuristic that solves a copy of the problem without an objective function and with quite strict limits
   on the number of nodes and LP iterations
+- complete reworking of the vbounds propagator: it now takes into account variable bounds, cliques, and implications,
+  stores bounds of variables which were changed, and performs a forward propagation from these bounds, i.e., tries to
+  derive new bounds for other variables; during propagation, bound changes are propagated in an (almost) topological order
 
 fixed bugs:
 - fixed potential bugs in shiftandpropagate heuristic concerning the transformation update of a variable with free status
@@ -687,8 +690,6 @@ features:
   search
 - new method SCIPvarGetHashkey(), SCIPvarIsHashkeyEq(), SCIPvarGetHashkeyVal() in pub_var.h which can be used for
   SCIP_HASHTABLE of variables
-- new dialog "write vboundgraph" which can be used to write the variable lower or upper bound graph to a file from the
-  interactive shell
 - the xor constraint handler can now parse its constraints
 - the bounddisjunction constraint handler can now parse its constraints
 - SCIP-CPX is now threadsafe
@@ -1345,7 +1346,7 @@ plugins:
 - added heuristic zirounding (heur_zirounding.{c,h})
 - new separator rapid learning (sepa_rapidlearning.{c,h}) that produces conflicts, global bound changes, primal
   solutions and initializes inference values for branching
-- added propagator for variable lower and upper bounds (prop_vbound.{c,h}); adjusted cons_varbound.c, var.c, and,
+- added propagator for variable lower and upper bounds (prop_vbounds.{c,h}); adjusted cons_varbound.c, var.c, and,
   implics.c to work correctly with the new propagator
 - added heuristic twoopt (heur_twoopt.{c,h})
 - added Chvatal-Gomory cuts separated with a sub-MIP (sepa_cgmip.{c|h})
