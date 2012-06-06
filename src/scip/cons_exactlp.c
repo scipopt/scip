@@ -5244,7 +5244,10 @@ SCIP_RETCODE getPSdualbound(
       /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
       rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
       if( rval )
+      {
          *success = FALSE;
+         goto TERMINATE;
+      }
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
@@ -5696,7 +5699,10 @@ SCIP_RETCODE PScorrectdualray(
       /* compute [z] with Dz=r (D depends on conshdlrdata->psdualcolselection) */
       rval = RECTLUsolveSystem( conshdlrdata->rectfactor, nvars, nextendedconss, violation, correction);
       if( rval )
+      {
          *success = FALSE;
+         goto TERMINATE;
+      }
 
 #ifdef PS_OUT
       printf("correction of ray: \n");
