@@ -116,6 +116,14 @@ interface
 - method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead;
   also method SCIPexprtreeRemoveFixedVars() is not public anymore
 - all objscip *.h file now use the default SCIP interface macros (this should avoid errors when changing the interface)
+- added "basic" inclusion methods which have only fundamental data of the plug-ins as arguments; added setter functions
+  for all non-fundamental callbacks of the plug-ins; the plug-in types with basic inclusion functions are:
+  readers, constraint handlers, conflict handlers, presolvers, propagators, heuristics, separators, relaxation handlers,
+  branching rules, node selectors, and pricers
+- added basic creation methods for all constraint handlers
+- added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions for
+  non-fundamental callbacks of variables and problems.
+
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -164,6 +172,7 @@ plugins:
   on the number of nodes and LP iterations
 
 fixed bugs:
+- fixed potential bugs in shiftandpropagate heuristic concerning the transformation update of a variable with free status
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities

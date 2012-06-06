@@ -4014,7 +4014,9 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
 
 /** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
+ *  Optional callbacks can be set via specific setter functions SCIPsetConflicthdlrCopy(), SCIPsetConflicthdlrFree(),
+ *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
+ *  and SCIPsetConflicthdlrExitsol()
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
  */
@@ -4235,11 +4237,12 @@ SCIP_RETCODE SCIPincludePresol(
    return SCIP_OKAY;
 }
 
-/** creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
+/** creates a presolver and includes it in SCIP with its fundamental callback. All non-fundamental (or optional)
+ *  callbacks as, e.g., init and exit callbacks, will be set to NULL. Optional callbacks can be set via specific setter
+ *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
+ *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol.
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
  */
 SCIP_RETCODE SCIPincludePresolBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4461,8 +4464,10 @@ SCIP_RETCODE SCIPincludeRelax(
    return SCIP_OKAY;
 }
 
-/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+/** creates a relaxation handler and includes it in SCIP. All non fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), SCIPsetRelaxExit(),
+ *  SCIPsetRelaxCopy(), SCIPsetRelaxFree(), SCIPsetRelaxInitsol(), and SCIPsetRelaxExitsol()
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
  */
@@ -4691,10 +4696,10 @@ SCIP_RETCODE SCIPincludeSepa(
    return SCIP_OKAY;
 }
 
-/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+/** creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaInit(), SCIPsetSepaFree(),
- *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy, SCIPsetExit().
+ *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy(), SCIPsetExit().
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
  */
@@ -5252,10 +5257,13 @@ SCIP_RETCODE SCIPincludeHeur(
    return SCIP_OKAY;
 }
 
-/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurInit() in pub_heur.h, for example.
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks.
+ *  All non-fundamental (or optional) callbacks
+ *  as, e. g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurCopy(), SCIPsetHeurFree(),
+ *  SCIPsetHeurInit(), SCIPsetHeurExit(), SCIPsetHeurInitsol(), and SCIPsetHeurExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
  */
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5448,7 +5456,8 @@ SCIP_RETCODE SCIPsetHeurPriority(
 
 /** creates an event handler and includes it in SCIP
  *
- *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead */
+ *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
+ */
 SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
@@ -5697,8 +5706,10 @@ SCIP_RETCODE SCIPincludeNodesel(
 
 /** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetNodeselCopy(), SCIPsetNodeselFree(),
+ *  SCIPsetNodeselInit(), SCIPsetNodeselExit(), SCIPsetNodeselInitsol(), and SCIPsetNodeselExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeNodesel().
  */
 SCIP_RETCODE SCIPincludeNodeselBasic(
    SCIP*                 scip,               /**< SCIP data structure */
