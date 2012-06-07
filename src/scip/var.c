@@ -4198,8 +4198,9 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_MULTAGGR )
       return SCIP_OKAY;
 
-   /**@todo currently we don't perform the aggregation if the aggregation variable has a none
-    *  empty hole list; this should be changed in the future  */
+   /**@todo currently we don't perform the aggregation if the aggregation variable has a non-empty hole list; this
+    *  should be changed in the future
+    */
    if( SCIPvarGetHolelistGlobal(var) != NULL )
       return SCIP_OKAY;
 
@@ -4724,9 +4725,9 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    /* check if it is an easy aggregation that means:
     *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinty
+    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinity
     */
-   if( !SCIPsetIsZero(set, scalary/scalarx)  && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx)) )
+   if( !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx)) )
    {
       if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
          easyaggr = TRUE;
@@ -4738,7 +4739,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    /* check if we have easy aggregation if we flip the variables x and y that means:
     *
-    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinty
+    *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinity
     */
    if( !easyaggr  && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
       && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
