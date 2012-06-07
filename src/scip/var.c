@@ -4438,7 +4438,7 @@ SCIP_RETCODE SCIPvarAggregate(
 }
 
 /** Tries to aggregate an equality a*x + b*y == c consisting of two (implicit) integral active problem variables x and
- *  y.  An integer aggregation (i.e. integral coefficients a' and b', such that a'*x + b'*y == c') is searched.
+ *  y. An integer aggregation (i.e. integral coefficients a' and b', such that a'*x + b'*y == c') is searched.
  *
  *  This can lead to the detection of infeasibility (e.g. if c' is fractional), or to a rejection of the aggregation
  *  (denoted by aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
@@ -4733,15 +4733,13 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
          easyaggr = TRUE;
       else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
          easyaggr = TRUE;
-      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-         easyaggr = TRUE;
    }
 
    /* check if we have easy aggregation if we flip the variables x and y that means:
     *
     *   a*x + b*y == c -> y == -a/b * x + c/b  iff a/b != 0 and abs(a/b) < infinity
     */
-   if( !easyaggr  && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
+   if( !easyaggr && !SCIPsetIsZero(set, scalarx/scalary) && !SCIPsetIsInfinity(set, REALABS(scalarx/scalary))
       && SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx))
    {
       SCIP_VAR* var;
@@ -4754,6 +4752,17 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalar = scalary;
       scalary = scalarx;
       scalarx = scalar;
+      easyaggr = TRUE;
+   }
+
+   /* if we did not find an easy aggregation so far, the aggregation is still easy if both variables are continuous
+    *
+    *   a*x + b*y == c -> x == -b/a * y + c/a iff b/a != 0 and abs(b/a) < infinty
+    */
+   if( !easyaggr && !SCIPsetIsZero(set, scalary/scalarx) && !SCIPsetIsInfinity(set, REALABS(scalary/scalarx))
+      && SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS);
       easyaggr = TRUE;
    }
 
@@ -4781,6 +4790,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 #if 0
       /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
        * since then we would loose the corresponding divisibility property
+       * @todo analyze the possible values of x and y and try to derive fixings, infeasibility, bound changes or domain holes
        */
       if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(set, scalar) )
       {
@@ -4796,7 +4806,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       assert(*aggregated || *infeasible);
    }
    else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
-      && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
+      && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
    {
       /* the variables are both integral: we have to try to find an integer aggregation */
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, prob, primal, tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
