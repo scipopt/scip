@@ -2505,7 +2505,9 @@ SCIP_RETCODE includeConshdlrCountsols(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCountsols, consCopyCountsols) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitCountsols) );
+#ifndef NDEBUG
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCountsols) );
+#endif
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCountsols) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitCountsols) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolCountsols) );
