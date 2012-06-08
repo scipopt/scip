@@ -310,13 +310,13 @@ SCIP_RETCODE SCIPapplyZeroobj(
    if( SCIPgetDepth(scip) <= 0 && SCIPheurGetNCalls(heur) > 0 )
       return SCIP_OKAY;
 
-   /* only call the heuristic if we do not have an incumbent  */
-   if( SCIPgetNSolsFound(scip) >  0 && heurdata->onlywithoutsol )
-      return SCIP_OKAY;
-
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* only call the heuristic if we do not have an incumbent  */
+   if( SCIPgetNSolsFound(scip) > 0 && heurdata->onlywithoutsol )
+      return SCIP_OKAY;
 
    /* check whether there is enough time and memory left */
    timelimit = 0.0;
