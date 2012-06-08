@@ -54,24 +54,14 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplics)
 }
 
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-#define presolFreeImplics NULL
 
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitImplics NULL
 
 
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitImplics NULL
 
 
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreImplics NULL
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreImplics NULL
 
 
 /** execution method of presolver */

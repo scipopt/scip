@@ -2890,24 +2890,14 @@ SCIP_DECL_CONSFREE(consFreeSetppc)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSetppc NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitSetppc NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreSetppc NULL
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreSetppc NULL
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolSetppc NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -4162,7 +4152,6 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
    return SCIP_OKAY;
 }
 #else
-#define consActiveSetppc NULL
 #endif
 
 
@@ -4183,16 +4172,11 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveSetppc NULL
 #endif
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableSetppc NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableSetppc NULL
 
 
 /** variable deletion method of constraint handler */

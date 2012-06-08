@@ -347,11 +347,7 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
    return SCIP_OKAY;
 }
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeCcg NULL
 
-/** problem reading method of reader */
-#define readerReadCcg NULL
 
 /** problem writing method of reader */
 static

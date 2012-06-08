@@ -3073,7 +3073,6 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreSOC NULL
 #endif
 
 
@@ -3329,7 +3328,6 @@ SCIP_DECL_CONSINITLP(consInitlpSOC)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpSOC NULL
 #endif
 
 
@@ -3823,7 +3821,6 @@ SCIP_DECL_CONSRESPROP(consRespropSOC)
    return SCIP_OKAY;
 }
 #else
-#define consRespropSOC NULL
 #endif
 
 
@@ -3870,7 +3867,6 @@ SCIP_DECL_CONSACTIVE(consActiveSOC)
    return SCIP_OKAY;
 }
 #else
-#define consActiveSOC NULL
 #endif
 
 
@@ -3885,7 +3881,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSOC)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveSOC NULL
 #endif
 
 
@@ -3900,7 +3895,6 @@ SCIP_DECL_CONSENABLE(consEnableSOC)
    return SCIP_OKAY;
 }
 #else
-#define consEnableSOC NULL
 #endif
 
 
@@ -3915,12 +3909,9 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
    return SCIP_OKAY;
 }
 #else
-#define consDisableSOC NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsSOC NULL
 
 
 /** constraint display method of constraint handler */

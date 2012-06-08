@@ -3318,8 +3318,6 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeMps NULL
 
 
 /** problem reading method of reader */

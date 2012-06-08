@@ -1169,8 +1169,6 @@ SCIP_DECL_READERCOPY(readerCopyZpl)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeZpl NULL
 
 
 /** problem reading method of reader */
@@ -1404,8 +1402,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteZpl NULL
 
 #endif
 #endif

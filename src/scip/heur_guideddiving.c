@@ -166,12 +166,8 @@ SCIP_DECL_HEUREXIT(heurExitGuideddiving) /*lint --e{715}*/
 }
 
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolGuideddiving NULL
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolGuideddiving NULL
 
 
 /** execution method of primal heuristic */

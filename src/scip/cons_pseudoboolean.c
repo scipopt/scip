@@ -2862,7 +2862,6 @@ SCIP_DECL_CONSEXITPRE(consExitprePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consExitprePseudoboolean NULL
 #endif
 
 
@@ -2877,7 +2876,6 @@ SCIP_DECL_CONSINITSOL(consInitsolPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consInitsolPseudoboolean NULL
 #endif
 
 
@@ -2892,7 +2890,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolPseudoboolean NULL
 #endif
 
 
@@ -2955,7 +2952,6 @@ SCIP_DECL_CONSINITLP(consInitlpPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpPseudoboolean NULL
 #endif
 
 
@@ -2970,7 +2966,6 @@ SCIP_DECL_CONSSEPALP(consSepalpPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consSepalpPseudoboolean NULL
 #endif
 
 
@@ -2985,7 +2980,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consSepasolPseudoboolean NULL
 #endif
 
 
@@ -3100,7 +3094,6 @@ SCIP_DECL_CONSPROP(consPropPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consPropPseudoboolean NULL
 #endif
 
 
@@ -3204,7 +3197,6 @@ SCIP_DECL_CONSRESPROP(consRespropPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consRespropPseudoboolean NULL
 #endif
 
 
@@ -3311,7 +3303,6 @@ SCIP_DECL_CONSACTIVE(consActivePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consActivePseudoboolean NULL
 #endif
 
 
@@ -3326,7 +3317,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactivePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consDeactivePseudoboolean NULL
 #endif
 
 
@@ -3341,7 +3331,6 @@ SCIP_DECL_CONSENABLE(consEnablePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consEnablePseudoboolean NULL
 #endif
 
 
@@ -3356,7 +3345,6 @@ SCIP_DECL_CONSDISABLE(consDisablePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consDisablePseudoboolean NULL
 #endif
 
 
@@ -3371,7 +3359,6 @@ SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consPrintPseudoboolean NULL
 #endif
 
 
@@ -3408,17 +3395,10 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    return SCIP_OKAY;
 }
 #else
-#define consParsePseudoboolean NULL
 #endif
 
-/** variable deletion method of constraint handler */
-#define consDelvarsPseudoboolean NULL
 
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsPseudoboolean NULL
 
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsPseudoboolean NULL
 
 
 /*

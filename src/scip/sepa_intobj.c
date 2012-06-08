@@ -279,8 +279,6 @@ SCIP_DECL_SEPAFREE(sepaFreeIntobj)
 }
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitIntobj NULL
 
 
 /** deinitialization method of separator (called before transformed problem is freed) */
@@ -302,8 +300,6 @@ SCIP_DECL_SEPAEXIT(sepaExitIntobj)
 }
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolIntobj NULL
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -369,8 +365,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
  * event handler for objective changes
  */
 
-/** destructor of event handler to free user data (called when SCIP is exiting) */
-#define eventFreeIntobj NULL
 
 /** initialization method of event handler (called after problem was transformed) */
 static
@@ -390,14 +384,8 @@ SCIP_DECL_EVENTEXIT(eventExitIntobj)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolIntobj NULL
 
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolIntobj NULL
 
-/** frees specific event data */
-#define eventDeleteIntobj NULL
 
 /** execution method of objective change event handler */
 static

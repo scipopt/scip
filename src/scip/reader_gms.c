@@ -1851,11 +1851,7 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeGms NULL
 
-/** problem reading method of reader */
-#define readerReadGms NULL
 
 /** problem writing method of reader */
 static
@@ -1889,8 +1885,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeGms) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadGms) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/

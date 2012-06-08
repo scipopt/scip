@@ -1308,31 +1308,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
    return SCIP_OKAY;
 }
 
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeOrbitope NULL
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitOrbitope NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitOrbitope NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreOrbitope NULL
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolOrbitope NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolOrbitope NULL
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
@@ -1344,7 +1319,6 @@ SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 
    return SCIP_OKAY;
 }
-
 
 /** transforms constraint data into data belonging to the transformed problem */
 static
@@ -1375,11 +1349,6 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 
    return SCIP_OKAY;
 }
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpOrbitope NULL
-
 
 /** separation method of constraint handler for LP solutions */
 static
@@ -1432,7 +1401,6 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 
    return SCIP_OKAY;
 }
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
 static
@@ -1866,8 +1834,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 }
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreOrbitope NULL
 
 
 /** propagation conflict resolving method of constraint handler */
@@ -1925,24 +1891,14 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveOrbitope NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveOrbitope NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableOrbitope NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableOrbitope NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsOrbitope NULL
 
 
 /** constraint display method of constraint handler */
@@ -2261,12 +2217,8 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbitope, consCopyOrbitope) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbitope) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitOrbitope) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbitope) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbitope) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOrbitope) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitope) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitope) );

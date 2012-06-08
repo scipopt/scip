@@ -798,20 +798,12 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 }
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitRelpscost NULL
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRelpscost NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRelpscost NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRelpscost NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -841,12 +833,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 }
 
 
-/** branching execution method for relaxation solutions */
-#define branchExecextRelpscost NULL
 
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsRelpscost NULL
 
 
 

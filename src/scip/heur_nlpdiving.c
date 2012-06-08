@@ -1419,8 +1419,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
    return SCIP_OKAY;
 }
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolNlpdiving NULL
 
 
 /** execution method of primal heuristic */
@@ -2447,19 +2445,22 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
+   heur = NULL;
    /* include heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyNlpdiving,
-         heurFreeNlpdiving, heurInitNlpdiving, heurExitNlpdiving,
-         heurInitsolNlpdiving, heurExitsolNlpdiving, heurExecNlpdiving,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecNlpdiving, heurdata) );
 
-
+   assert(heur != NULL);
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyNlpdiving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeNlpdiving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitNlpdiving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitNlpdiving) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolNlpdiving) );
 
    /* get event handler for bound change events */
    heurdata->eventhdlr = NULL;

@@ -88,20 +88,12 @@ SCIP_DECL_PRESOLFREE(presolFreeConvertinttobin)
 }
 
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitConvertinttobin NULL
 
 
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitConvertinttobin NULL
 
 
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreConvertinttobin NULL
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreConvertinttobin NULL
 
 
 /** presolving execution method */

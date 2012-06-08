@@ -7079,11 +7079,7 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    return SCIP_OKAY;
 }
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitCumulative NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitCumulative NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -7131,12 +7127,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreCumulative NULL
 #endif
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolCumulative NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -7754,17 +7747,9 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-#define consActiveCumulative NULL
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveCumulative NULL
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableCumulative NULL
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableCumulative NULL
 
 /** constraint display method of constraint handler */
 static
@@ -7844,8 +7829,6 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    return SCIP_OKAY;
 }
 
-/** variable deletion method of constraint handler */
-#define consDelvarsCumulative NULL
 
 
 /** constraint parsing method of constraint handler */

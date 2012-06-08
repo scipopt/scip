@@ -5535,20 +5535,10 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 }
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsIndicator NULL
 
-/** constraint activation notification method of constraint handler */
-#define consActiveIndicator NULL
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveIndicator NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitIndicator NULL
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreIndicator NULL
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
@@ -5732,7 +5722,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsIndicator) );

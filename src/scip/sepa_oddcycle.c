@@ -3868,8 +3868,6 @@ SCIP_DECL_SEPAINIT(sepaInitOddcycle)
 }
 
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitOddcycle NULL
 
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
@@ -3890,8 +3888,6 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 }
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolOddcycle NULL
 
 
 /** LP solution separation method of separator */
@@ -3990,8 +3986,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    return SCIP_OKAY;
 }
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolOddcycle NULL
 
 
 /*
@@ -4014,7 +4008,7 @@ SCIP_RETCODE SCIPincludeSepaOddcycle(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpOddcycle, sepaExecsolOddcycle,
+         sepaExeclpOddcycle, NULL,
          sepadata) );
 
    assert(sepa != NULL);

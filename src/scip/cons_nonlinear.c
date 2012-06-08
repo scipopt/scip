@@ -7506,8 +7506,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** propagation conflict resolving method of constraint handler */
-#define consRespropNonlinear NULL
 
 /** variable rounding lock method of constraint handler */
 static
@@ -7727,8 +7725,6 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
    return SCIP_OKAY;
 }
 
-/** variable deletion method of constraint handler */
-#define consDelvarsNonlinear NULL
 
 /** constraint display method of constraint handler */
 static

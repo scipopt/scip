@@ -49,8 +49,6 @@ SCIP_DECL_READERCOPY(readerCopyRlp)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeRlp NULL
 
 
 /** problem reading method of reader */

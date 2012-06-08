@@ -1891,8 +1891,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
-/** copy method for propagator plugins (called when SCIP copies plugins) */
-#define propCopyGenvbounds NULL
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -1938,14 +1936,8 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitGenvbounds NULL
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreGenvbounds NULL
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreGenvbounds NULL
 
 /** presolving method of propagator */
 static
@@ -1978,8 +1970,6 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-#define propInitsolGenvbounds NULL
 
 /** execution method of propagator */
 static
@@ -2242,15 +2232,20 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create genvbounds propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY, propCopyGenvbounds, propFreeGenvbounds,
-         propInitGenvbounds, propExitGenvbounds, propInitpreGenvbounds, propExitpreGenvbounds, propInitsolGenvbounds,
-         propExitsolGenvbounds, propPresolGenvbounds, propExecGenvbounds, propRespropGenvbounds, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecGenvbounds, propRespropGenvbounds, propdata) );
+
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
+         PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );

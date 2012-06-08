@@ -1285,11 +1285,7 @@ SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of primal heuristic(called when branch and bound process is about to begin) */
-#define heurInitsolShiftandpropagate NULL
 
-/** solving process deinitialization method of primal heuristic(called before branch and bound process data is freed) */
-#define heurExitsolShiftandpropagate NULL
 
 /** copy method for primal heuristic plugins(called when SCIP copies plugins) */
 static

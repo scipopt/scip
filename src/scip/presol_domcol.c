@@ -1519,12 +1519,6 @@ SCIP_RETCODE findDominancePairs(
  * Callback methods of presolver
  */
 
-#define presolCopyDomcol NULL
-#define presolFreeDomcol NULL
-#define presolInitDomcol NULL
-#define presolExitDomcol NULL
-#define presolInitpreDomcol NULL
-#define presolExitpreDomcol NULL
 
 
 /** execution method of presolver */
@@ -1846,25 +1840,9 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
-
-   presoldata = NULL;
-
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip,
-         PRESOL_NAME,
-         PRESOL_DESC,
-         PRESOL_PRIORITY,
-         PRESOL_MAXROUNDS,
-         PRESOL_DELAY,
-         presolCopyDomcol,
-         presolFreeDomcol,
-         presolInitDomcol,
-         presolExitDomcol,
-         presolInitpreDomcol,
-         presolExitpreDomcol,
-         presolExecDomcol,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, NULL, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+         PRESOL_DELAY, presolExecDomcol, NULL) );
 
    return SCIP_OKAY;
 }

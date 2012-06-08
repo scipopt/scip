@@ -2232,12 +2232,8 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLogicor NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLogicor NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -2300,8 +2296,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLogicor NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -3114,16 +3108,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 }
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableLogicor NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableLogicor NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsLogicor NULL
 
 
 /** constraint display method of constraint handler */

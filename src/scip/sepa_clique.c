@@ -1360,16 +1360,10 @@ SCIP_DECL_SEPAFREE(sepaFreeClique)
 }
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitClique NULL
 
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitClique NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolClique NULL
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */

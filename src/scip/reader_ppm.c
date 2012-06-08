@@ -450,8 +450,6 @@ SCIP_DECL_READERFREE(readerFreePpm)
    return SCIP_OKAY;
 }
 
-/** problem reading method of reader */
-#define readerReadPpm NULL
 
 /** problem writing method of reader */
 static

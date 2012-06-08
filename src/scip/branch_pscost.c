@@ -467,20 +467,12 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    return SCIP_OKAY;
 }
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitPscost NULL
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitPscost NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolPscost NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolPscost NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -619,8 +611,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    return SCIP_OKAY;
 }
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsPscost NULL
 
 
 

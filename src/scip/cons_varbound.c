@@ -32,7 +32,6 @@
  * @note: Although x must be non-binary when the constraint is created, it can happen that x is upgraded to a binary
  *        variable, e.g. due to aggregations or bound changes in presolving.
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -99,7 +98,6 @@ struct SCIP_ConshdlrData
 /*
  * Propagation rules
  */
-
 enum Proprule
 {
    PROPRULE_1,                          /**< left hand side and bounds on y -> lower bound on x */
@@ -2694,7 +2692,6 @@ SCIP_RETCODE tightenCoefs(
 /*
  * Linear constraint upgrading
  */
-
 /** tries to upgrade a linear constraint into a variable bound constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
@@ -2805,27 +2802,6 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
 
    return SCIP_OKAY;
 }
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitVarbound NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitVarbound NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreVarbound NULL
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreVarbound NULL
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolVarbound NULL
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -3254,30 +3230,6 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#define consActiveVarbound NULL
-
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveVarbound NULL
-
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableVarbound NULL
-
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableVarbound NULL
-
-
-/** variable deletion method of constraint handler:
- *  varbound constraints are not modifiable and must have exactly two variables,
- *  so is is also not allowed to delete variables from them
- */
-#define consDelvarsVarbound NULL
-
 
 /** constraint display method of constraint handler */
 static

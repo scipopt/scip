@@ -2650,20 +2650,12 @@ SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
 }
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitFlowcover NULL
 
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitFlowcover NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolFlowcover NULL
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolFlowcover NULL
 
 
 /** LP solution separation method of separator */

@@ -211,16 +211,10 @@ SCIP_DECL_HEURINIT(heurInitHailmary)
 }
 
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitHailmary NULL
 
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolHailmary NULL
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolHailmary NULL
 
 
 /** execution method of primal heuristic */
@@ -522,17 +516,20 @@ SCIP_RETCODE SCIPincludeHeurHailmary(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
+   heur = NULL;
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyHailmary,
-         heurFreeHailmary, heurInitHailmary, heurExitHailmary,
-         heurInitsolHailmary, heurExitsolHailmary, heurExecHailmary,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecHailmary, heurdata) );
+
+   assert(heur != NULL);
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyHailmary) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeHailmary) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitHailmary) );
 
    /* add hailmary primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",

@@ -66,54 +66,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
    return SCIP_OKAY;
 }
 
+#define consCopyIntegral NULL
 
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeIntegral NULL
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitIntegral NULL
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitIntegral NULL
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreIntegral NULL
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreIntegral NULL
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolIntegral NULL
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolIntegral NULL
-
-
-/** frees specific constraint data */
-#define consDeleteIntegral NULL
-
-
-/** transforms constraint data into data belonging to the transformed problem */ 
-#define consTransIntegral NULL
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpIntegral NULL
-
-
-/** separation method of constraint handler for LP solutions */
-#define consSepalpIntegral NULL
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolIntegral NULL
-
+#define consEnfopsIntegral NULL
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -151,8 +106,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 }
 
 
-/** constraint enforcing method of constraint handler for pseudo solutions */
-#define consEnfopsIntegral NULL
 
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -211,62 +164,12 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    return SCIP_OKAY;
 }
 
-
-/** domain propagation method of constraint handler */
-#define consPropIntegral NULL
-
-
-/** presolving method of constraint handler */
-#define consPresolIntegral NULL
-
-
-/** propagation conflict resolving method of constraint handler */
-#define consRespropIntegral NULL
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockIntegral)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#define consActiveIntegral NULL
-
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveIntegral NULL
-
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableIntegral NULL
-
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableIntegral NULL
-
-
-/** variable deletion method of constraint handler */
-#define consDelvarsIntegral NULL
-
-
-/** constraint display method of constraint handler */
-#define consPrintIntegral NULL
-
-/** constraint copying method of constraint handler */
-#define consCopyIntegral NULL
-
-/** constraint parsing method of constraint handler */
-#define consParseIntegral NULL
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsIntegral NULL
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsIntegral NULL
-
 
 /*
  * constraint specific interface methods

@@ -1421,20 +1421,12 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitVbounds NULL
 
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitVbounds NULL
 
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreVbounds NULL
 
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreVbounds NULL
 
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
@@ -1536,8 +1528,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
 }
 
 
-/** presolving method of propagator */
-#define propPresolVbounds NULL
 
 
 /** execution method of propagator */

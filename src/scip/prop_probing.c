@@ -921,8 +921,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    return SCIP_OKAY;
 }
 
-/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
-#define propExitsolProbing NULL
 
 
 /** presolve method of propagator */
@@ -1253,7 +1251,6 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitProbing) );
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitProbing) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolProbing) );
-   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolProbing) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,

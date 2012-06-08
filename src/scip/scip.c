@@ -4175,7 +4175,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
          NULL, NULL, NULL, NULL, NULL, presolexec, presoldata) );
    SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
 
-   if( presol != NULL )
+   if( presolptr != NULL )
       *presolptr = presol;
 
    return SCIP_OKAY;

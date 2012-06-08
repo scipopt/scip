@@ -505,14 +505,8 @@ SCIP_DECL_HEURINIT(heurInitClique)
 }
 
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitClique NULL
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolClique NULL
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolClique NULL
 
 /** execution method of primal heuristic */
 static

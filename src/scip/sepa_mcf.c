@@ -6782,7 +6782,6 @@ SCIP_DECL_SEPAINIT(sepaInitMcf)
    return SCIP_OKAY;
 }
 #else
-#define sepaInitMcf NULL
 #endif
 
 
@@ -6798,7 +6797,6 @@ SCIP_DECL_SEPAEXIT(sepaExitMcf)
    return SCIP_OKAY;
 }
 #else
-#define sepaExitMcf NULL
 #endif
 
 

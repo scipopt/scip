@@ -50,8 +50,6 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeWbo NULL
 
 
 /** problem reading method of reader */

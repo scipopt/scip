@@ -9165,7 +9165,6 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreQuadratic NULL
 #endif
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -10333,7 +10332,6 @@ SCIP_DECL_CONSRESPROP(consRespropQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consRespropQuadratic NULL
 #endif
 
 /** variable rounding lock method of constraint handler */
@@ -10401,7 +10399,6 @@ SCIP_DECL_CONSACTIVE(consActiveQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consActiveQuadratic NULL
 #endif
 
 
@@ -10416,7 +10413,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveQuadratic NULL
 #endif
 
 
@@ -10431,7 +10427,6 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consEnableQuadratic NULL
 #endif
 
 
@@ -10446,12 +10441,9 @@ SCIP_DECL_CONSDISABLE(consDisableQuadratic)
    return SCIP_OKAY;
 }
 #else
-#define consDisableQuadratic NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsQuadratic NULL
 
 
 /** constraint display method of constraint handler */

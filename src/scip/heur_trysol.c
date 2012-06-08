@@ -203,9 +203,6 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 }
 
 
-#define heurInitTrySol NULL
-#define heurExitsolTrySol NULL
-#define heurInitsolTrySol NULL
 
 
 /*

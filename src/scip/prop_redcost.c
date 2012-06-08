@@ -87,32 +87,18 @@ SCIP_DECL_PROPFREE(propFreeRedcost)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitRedcost NULL
 
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitRedcost NULL
 
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreRedcost NULL
 
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreRedcost NULL
 
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-#define propInitsolRedcost NULL
 
 
-/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
-#define propExitsolRedcost NULL
 
 
-/** presolving method of propagator */
-#define propPresolRedcost NULL
 
 
 /** reduced cost propagation method for an LP solution */

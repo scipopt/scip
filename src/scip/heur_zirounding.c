@@ -439,8 +439,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolZirounding)
    return SCIP_OKAY;
 }
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolZirounding NULL
 
 /** execution method of primal heuristic */
 static

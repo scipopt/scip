@@ -267,36 +267,21 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopyConjunction NULL
 #endif
 
 
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeConjunction NULL
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitConjunction NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitConjunction NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreConjunction NULL
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreConjunction NULL
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolConjunction NULL
 
 
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolConjunction NULL
 
 
 /** frees specific constraint data */
@@ -351,16 +336,10 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 }
 
 
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpConjunction NULL
 
 
-/** separation method of constraint handler for LP solutions */
-#define consSepalpConjunction NULL
 
 
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolConjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -402,8 +381,6 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
 }
 
 
-/** domain propagation method of constraint handler */
-#define consPropConjunction NULL
 
 
 /** presolving method of constraint handler */
@@ -460,8 +437,6 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
 }
 
 
-/** propagation conflict resolving method of constraint handler */
-#define consRespropConjunction NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -484,24 +459,14 @@ SCIP_DECL_CONSLOCK(consLockConjunction)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveConjunction NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveConjunction NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableConjunction NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableConjunction NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsConjunction NULL
 
 
 /** constraint display method of constraint handler */
@@ -531,17 +496,9 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
    return SCIP_OKAY;
 }
 
-/** constraint copying method of constraint handler */
-#define consCopyConjunction NULL
 
-/** constraint parsing method of constraint handler */
-#define consParseConjunction NULL
 
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsConjunction NULL
 
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#define consGetNVarsConjunction NULL
 
 
 /*

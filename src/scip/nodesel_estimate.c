@@ -99,20 +99,12 @@ SCIP_DECL_NODESELFREE(nodeselFreeEstimate)
    return SCIP_OKAY;
 }
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitEstimate NULL
 
 
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitEstimate NULL
 
 
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolEstimate NULL
 
 
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolEstimate NULL
 
 
 /** node selection method of node selector */

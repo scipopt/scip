@@ -2049,35 +2049,15 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS2)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveSOS2 NULL
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveSOS2 NULL
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableSOS2 NULL
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableSOS2 NULL
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSOS2 NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitSOS2 NULL
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreSOS2 NULL
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreSOS2 NULL
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolSOS2 NULL
 
-/** variable deletion method of constraint handler */
-#define consDelvarsSOS2 NULL
 
 
 
@@ -2178,12 +2158,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS2, consCopySOS2) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS2) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOS2) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS2) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS2) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOS2) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS2) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS2) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS2) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS2) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS2, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );

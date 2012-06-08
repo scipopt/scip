@@ -1633,11 +1633,7 @@ SCIP_DECL_CONSFREE(consFreeLinking)
    return SCIP_OKAY;
 }
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLinking NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLinking NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -1673,11 +1669,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    return SCIP_OKAY;
 }
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLinking NULL
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLinking NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -2646,12 +2638,8 @@ SCIP_DECL_CONSLOCK(consLockLinking)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveLinking NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveLinking NULL
 
 
 /** constraint enabling notification method of constraint handler */
@@ -2682,12 +2670,8 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
    return SCIP_OKAY;
 }
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableLinking NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsLinking NULL
 
 
 /** constraint display method of constraint handler */

@@ -10503,8 +10503,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 }
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolKnapsack NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -11153,20 +11151,12 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveKnapsack NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveKnapsack NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableKnapsack NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableKnapsack NULL
 
 /** variable deletion method of constraint handler */
 static

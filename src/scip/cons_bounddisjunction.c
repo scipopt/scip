@@ -1735,16 +1735,10 @@ SCIP_DECL_CONSFREE(consFreeBounddisjunction)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitBounddisjunction NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitBounddisjunction NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreBounddisjunction NULL
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -1804,12 +1798,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolBounddisjunction NULL
 
 
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolBounddisjunction NULL
 
 
 /** frees specific constraint data */
@@ -1861,16 +1851,10 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 }
 
 
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpBounddisjunction NULL
 
 
-/** separation method of constraint handler for LP solutions */
-#define consSepalpBounddisjunction NULL
 
 
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolBounddisjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -2415,16 +2399,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 }
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableBounddisjunction NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableBounddisjunction NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsBounddisjunction NULL
 
 
 /** constraint display method of constraint handler */

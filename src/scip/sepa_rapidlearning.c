@@ -170,17 +170,9 @@ SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
 }
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitRapidlearning NULL
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitRapidlearning NULL
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolRapidlearning NULL
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolRapidlearning NULL
 
 /** LP solution separation method of separator */
 static
@@ -657,8 +649,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    return SCIP_OKAY;
 }
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolRapidlearning NULL
 
 /*
  * separator specific interface methods
@@ -678,7 +668,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpRapidlearning, sepaExecsolRapidlearning,
+         sepaExeclpRapidlearning, NULL,
          sepadata) );
 
    assert(sepa != NULL);

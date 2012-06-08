@@ -225,20 +225,12 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
    return SCIP_OKAY;
 }
 
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitStrongcg NULL
 
 
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitStrongcg NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolStrongcg NULL
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolStrongcg NULL
 
 
 /** LP solution separation method of separator */
@@ -579,8 +571,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 }
 
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolStrongcg NULL /* strong CG cuts need a basic LP solution */
 
 
 
@@ -604,7 +594,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpStrongcg, sepaExecsolStrongcg,
+         sepaExeclpStrongcg, NULL,
          sepadata) );
 
    assert(sepa != NULL);

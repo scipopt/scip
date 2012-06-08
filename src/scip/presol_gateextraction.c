@@ -1165,8 +1165,6 @@ SCIP_DECL_PRESOLFREE(presolFreeGateextraction)
    return SCIP_OKAY;
 }
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitGateextraction NULL
 
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
@@ -1772,6 +1770,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    /* alloc presolve data object */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
@@ -1780,11 +1779,14 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    presoldataInit(presoldata);
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyGateextraction,
-         presolFreeGateextraction, presolInitGateextraction, presolExitGateextraction,
-         presolInitpreGateextraction, presolExitpreGateextraction, presolExecGateextraction,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+         PRESOL_DELAY, presolExecGateextraction, presoldata) );
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyGateextraction) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeGateextraction) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitGateextraction) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreGateextraction) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreGateextraction) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

@@ -671,14 +671,8 @@ SCIP_DECL_HEURFREE(heurFreeVbounds)
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitVbounds NULL
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitVbounds NULL
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolVbounds NULL
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static

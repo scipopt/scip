@@ -3103,20 +3103,12 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitPseudoobj NULL
 
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitPseudoobj NULL
 
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitprePseudoobj NULL
 
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitprePseudoobj NULL
 
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */

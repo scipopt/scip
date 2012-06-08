@@ -329,14 +329,8 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
 }
 
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitLocalbranching NULL
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolLocalbranching NULL
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolLocalbranching NULL
 
 
 

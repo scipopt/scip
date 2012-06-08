@@ -1324,6 +1324,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
    return SCIP_OKAY;
 }
 
+#define consCopyCountsols NULL
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeCountsols)
@@ -1475,11 +1477,7 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    return SCIP_OKAY;
 }
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreCountsols NULL
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreCountsols NULL
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
@@ -1553,23 +1551,12 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolCountsols NULL
 #endif
 
-/** frees specific constraint data */
-#define consDeleteCountsols NULL
 
-/** transforms constraint data into data belonging to the transformed problem */
-#define consTransCountsols NULL
 
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpCountsols NULL
 
-/** separation method of constraint handler for LP solutions */
-#define consSepalpCountsols NULL
 
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolCountsols NULL
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1677,14 +1664,8 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
    return SCIP_OKAY;
 }
 
-/** domain propagation method of constraint handler */
-#define consPropCountsols NULL
 
-/** presolving method of constraint handler */
-#define consPresolCountsols NULL
 
-/** propagation conflict resolving method of constraint handler */
-#define consRespropCountsols NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -1694,35 +1675,15 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-#define consActiveCountsols NULL
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveCountsols NULL
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableCountsols NULL
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableCountsols NULL
 
-/** variable deletion method of constraint handler */
-#define consDelvarsCountsols NULL
 
-/** constraint display method of constraint handler */
-#define consPrintCountsols NULL
 
-/** constraint copying method of constraint handler */
-#define consCopyCountsols NULL
 
-/** constraint parsing method of constraint handler */
-#define consParseCountsols NULL
 
-/** constraint method of constraint handler which returns the variables (if possible) */
-#define consGetVarsCountsols NULL
 
-/** constraint method of constraint handler which returns the number of variable (if possible) */
-#define consGetNVarsCountsols NULL
 
 /*
  * Callback methods and local method for dialogs

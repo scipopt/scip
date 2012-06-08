@@ -9768,8 +9768,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 }
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLinear NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -10692,20 +10690,12 @@ SCIP_DECL_CONSLOCK(consLockLinear)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveLinear NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveLinear NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableLinear NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableLinear NULL
 
 /** variable deletion method of constraint handler */
 static

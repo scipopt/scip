@@ -134,20 +134,12 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 }
 
 
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitGomory NULL
 
 
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitGomory NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolGomory NULL
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolGomory NULL
 
 
 /** LP solution separation method of separator */
@@ -460,8 +452,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 }
 
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolGomory NULL /* gomory cuts need a basic LP solution */
 
 
 
@@ -485,7 +475,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpGomory, sepaExecsolGomory,
+         sepaExeclpGomory, NULL,
          sepadata) );
 
    assert(sepa != NULL);

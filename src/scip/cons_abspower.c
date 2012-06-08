@@ -4923,7 +4923,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAbspower)
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopyAbspower NULL
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
@@ -4944,7 +4943,6 @@ SCIP_DECL_CONSFREE(consFreeAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consFreeAbspower NULL
 #endif
 
 
@@ -4968,7 +4966,6 @@ SCIP_DECL_CONSINIT(consInitAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consInitAbspower NULL
 #endif
 
 
@@ -4992,7 +4989,6 @@ SCIP_DECL_CONSEXIT(consExitAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consExitAbspower NULL
 #endif
 
 
@@ -5014,7 +5010,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreAbspower NULL
 #endif
 
 
@@ -5046,7 +5041,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreAbspower NULL
 #endif
 
 
@@ -5165,7 +5159,6 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consInitsolAbspower NULL
 #endif
 
 
@@ -5212,7 +5205,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolAbspower NULL
 #endif
 
 
@@ -5240,7 +5232,6 @@ SCIP_DECL_CONSDELETE(consDeleteAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consDeleteAbspower NULL
 #endif
 
 
@@ -5280,7 +5271,6 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consTransAbspower NULL
 #endif
 
 
@@ -5445,7 +5435,6 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpAbspower NULL
 #endif
 
 
@@ -5595,7 +5584,6 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consSepalpAbspower NULL
 #endif
 
 
@@ -5630,7 +5618,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consSepasolAbspower NULL
 #endif
 
 
@@ -5922,7 +5909,6 @@ SCIP_DECL_CONSPROP(consPropAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consPropAbspower NULL
 #endif
 
 /** presolving method of constraint handler */
@@ -6203,7 +6189,6 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consPresolAbspower NULL
 #endif
 
 
@@ -6227,7 +6212,6 @@ SCIP_DECL_CONSRESPROP(consRespropAbspower)
    return SCIP_OKAY;
 }  /*lint !e715*/
 #else
-#define consRespropAbspower NULL
 #endif
 
 
@@ -6308,7 +6292,6 @@ SCIP_DECL_CONSACTIVE(consActiveAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consActiveAbspower NULL
 #endif
 
 
@@ -6323,7 +6306,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveAbspower NULL
 #endif
 
 
@@ -6347,7 +6329,6 @@ SCIP_DECL_CONSENABLE(consEnableAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consEnableAbspower NULL
 #endif
 
 
@@ -6371,12 +6352,9 @@ SCIP_DECL_CONSDISABLE(consDisableAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consDisableAbspower NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsAbspower NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -6426,7 +6404,6 @@ SCIP_DECL_CONSPRINT(consPrintAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consPrintAbspower NULL
 #endif
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -6532,7 +6509,6 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
    return SCIP_OKAY;
 }
 #else
-#define consCopyAbspower NULL
 #endif
 
 
@@ -6699,7 +6675,6 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
    return SCIP_OKAY;
 }  /*lint !e715*/
 #else
-#define consParseAbspower NULL
 #endif
 
 /** constraint method of constraint handler which returns the variables (if possible) */

@@ -1472,20 +1472,12 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
 }
 
 
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitCmir NULL
 
 
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitCmir NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolCmir NULL
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolCmir NULL
 
 
 /** LP solution separation method of separator */

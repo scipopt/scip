@@ -86,20 +86,12 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitRootredcost NULL
 
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitRootredcost NULL
 
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreRootredcost NULL
 
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreRootredcost NULL
 
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
@@ -117,12 +109,8 @@ SCIP_DECL_PROPINITSOL(propInitsolRootredcost)
 }
 
 
-/** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
-#define propExitsolRootredcost NULL
 
 
-/** presolving method of propagator */
-#define propPresolRootredcost NULL
 
 
 /** execution method of propagator */

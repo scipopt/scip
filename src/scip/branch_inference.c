@@ -210,20 +210,12 @@ SCIP_DECL_BRANCHFREE(branchFreeInference)
 }
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitInference NULL
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitInference NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolInference NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolInference NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -261,8 +253,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-/** branching execution method for relaxation solutions */
-#define branchExecextInference NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */

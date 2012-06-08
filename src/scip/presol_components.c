@@ -1017,21 +1017,6 @@ SCIP_RETCODE presolComponents(
  * Callback methods of presolver
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_PRESOLCOPY(presolCopyComponents)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of components presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolCopyComponents NULL
-#endif
-
-
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeComponents)
@@ -1083,12 +1068,8 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    return SCIP_OKAY;
 }
 #else
-#define presolExitComponents NULL
 #endif
 
-/* define unused callbacks as NULL */
-#define presolInitpreComponents NULL
-#define presolExitpreComponents NULL
 
 
 /** execution method of presolver */
@@ -1112,25 +1093,20 @@ SCIP_RETCODE SCIPincludePresolComponents(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    /* create components presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip,
-         PRESOL_NAME,
-         PRESOL_DESC,
-         PRESOL_PRIORITY,
-         PRESOL_MAXROUNDS,
-         PRESOL_DELAY,
-         presolCopyComponents,
-         presolFreeComponents,
-         presolInitComponents,
-         presolExitComponents,
-         presolInitpreComponents,
-         presolExitpreComponents,
-         presolExecComponents,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+         PRESOL_DELAY, presolExecComponents, presoldata) );
+
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeComponents) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitComponents) );
+#ifdef WITH_STATISTICS
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitComponents) );
+#endif
 
    /* add presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

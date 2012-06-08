@@ -3244,20 +3244,12 @@ SCIP_DECL_SEPAFREE(sepaFreeCGMIP)
 }
 
 
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitCGMIP NULL
 
 
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitCGMIP NULL
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolCGMIP NULL
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolCGMIP NULL
 
 
 /** LP solution separation method of separator */
@@ -3423,8 +3415,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    return SCIP_OKAY;
 }
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolCGMIP NULL
 
 
 
@@ -3439,17 +3429,20 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->firstlptime = SCIP_INVALID;
 
+   sepa = NULL;
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, 
-         SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaCopyCGMIP, sepaFreeCGMIP, sepaInitCGMIP, sepaExitCGMIP,
-         sepaInitsolCGMIP, sepaExitsolCGMIP, sepaExeclpCGMIP, sepaExecsolCGMIP,
-         sepadata) );
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpCGMIP, NULL, sepadata) );
+   assert(sepa != NULL);
+
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyCGMIP) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeCGMIP) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

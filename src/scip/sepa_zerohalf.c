@@ -6896,26 +6896,18 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
 
 
 
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitZerohalf NULL
 
 
 
 
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitZerohalf NULL
 
 
 
 
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolZerohalf NULL
 
 
 
 
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolZerohalf NULL
 
 
 
@@ -7438,8 +7430,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
 
 
-/** arbitrary primal solution separation method of separator */
-#define sepaExecsolZerohalf NULL
 
 
 
@@ -7548,7 +7538,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpZerohalf, sepaExecsolZerohalf,
+         sepaExeclpZerohalf, NULL,
          sepadata) );
 
    assert(sepa != NULL);

@@ -360,8 +360,6 @@ SCIP_DECL_READERCOPY(readerCopySol)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeSol NULL
 
 
 /** problem reading method of reader 
@@ -438,8 +436,6 @@ SCIP_DECL_READERREAD(readerReadSol)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteSol NULL
 
 
 /*

@@ -1107,15 +1107,6 @@ SCIP_RETCODE generateRowSOS1(
    return SCIP_OKAY;
 }
 
-
-
-
-
-
-
-
-
-
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -2006,40 +1997,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-#define consActiveSOS1 NULL
-
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveSOS1 NULL
-
-/** constraint enabling notification method of constraint handler */
-#define consEnableSOS1 NULL
-
-/** constraint disabling notification method of constraint handler */
-#define consDisableSOS1 NULL
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSOS1 NULL
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitSOS1 NULL
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreSOS1 NULL
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreSOS1 NULL
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolSOS1 NULL
-
-/** variable deletion method of constraint handler */
-#define consDelvarsSOS1 NULL
-
-
-
-
-
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -2136,12 +2093,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSOS1) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS1) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS1) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS1) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS1, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );

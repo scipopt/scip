@@ -1491,23 +1491,11 @@ SCIP_DECL_PROPFREE(propFreeObbt)
    return SCIP_OKAY;
 }
 
-/** copy method for propagator plugins (called when SCIP copies plugins) */
-#define propCopyObbt NULL
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitObbt NULL
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitObbt NULL
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreObbt NULL
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreObbt NULL
 
-/** presolving method of propagator */
-#define propPresolObbt NULL
 
 
 
@@ -1521,15 +1509,18 @@ SCIP_RETCODE SCIPincludePropObbt(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create obbt propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY, propCopyObbt, propFreeObbt, propInitObbt,
-         propExitObbt, propInitpreObbt, propExitpreObbt, propInitsolObbt, propExitsolObbt, propPresolObbt,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecObbt, propRespropObbt, propdata) );
+
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObbt) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObbt) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/creategenvbounds",
          "should obbt try to provide genvbounds if possible?",

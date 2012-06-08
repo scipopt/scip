@@ -5495,7 +5495,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopyBivariate NULL
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
@@ -5527,7 +5526,6 @@ SCIP_DECL_CONSFREE(consFreeBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consFreeBivariate NULL
 #endif
 
 
@@ -5550,7 +5548,6 @@ SCIP_DECL_CONSINIT(consInitBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitBivariate NULL
 #endif
 
 
@@ -5573,7 +5570,6 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitBivariate NULL
 #endif
 
 
@@ -5601,7 +5597,6 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreBivariate NULL
 #endif
 
 
@@ -5659,7 +5654,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreBivariate NULL
 #endif
 
 
@@ -5794,7 +5788,6 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitsolBivariate NULL
 #endif
 
 
@@ -5834,7 +5827,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolBivariate NULL
 #endif
 
 
@@ -5870,7 +5862,6 @@ SCIP_DECL_CONSDELETE(consDeleteBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDeleteBivariate NULL
 #endif
 
 
@@ -5909,7 +5900,6 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consTransBivariate NULL
 #endif
 
 
@@ -6134,7 +6124,6 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpBivariate NULL
 #endif
 
 
@@ -6167,7 +6156,6 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consSepalpBivariate NULL
 #endif
 
 
@@ -6199,7 +6187,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consSepasolBivariate NULL
 #endif
 
 
@@ -6550,7 +6537,6 @@ SCIP_DECL_CONSPROP(consPropBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPropBivariate NULL
 #endif
 
 
@@ -6636,7 +6622,6 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPresolBivariate NULL
 #endif
 
 
@@ -6651,7 +6636,6 @@ SCIP_DECL_CONSRESPROP(consRespropBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consRespropBivariate NULL
 #endif
 
 
@@ -6742,7 +6726,6 @@ SCIP_DECL_CONSACTIVE(consActiveBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consActiveBivariate NULL
 #endif
 
 
@@ -6774,7 +6757,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveBivariate NULL
 #endif
 
 
@@ -6811,7 +6793,6 @@ SCIP_DECL_CONSENABLE(consEnableBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consEnableBivariate NULL
 #endif
 
 
@@ -6846,12 +6827,9 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDisableBivariate NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsBivariate NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -6917,7 +6895,6 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPrintBivariate NULL
 #endif
 
 /** constraint copying method of constraint handler */
@@ -6987,7 +6964,6 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consCopyBivariate NULL
 #endif
 
 
@@ -7002,7 +6978,6 @@ SCIP_DECL_CONSPARSE(consParseBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consParseBivariate NULL
 #endif
 
 
