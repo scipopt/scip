@@ -74,7 +74,7 @@
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
 #include "scip/heur_guideddiving.h"
-#include "scip/heur_hailmary.h"
+#include "scip/heur_zeroobj.h"
 #include "scip/heur_intdiving.h"
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"

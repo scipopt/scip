@@ -530,7 +530,7 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/scip/cons_cu
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -1428,7 +1428,7 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -1514,7 +1514,7 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -1600,7 +1600,7 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_fixandinfer.h \
  src/scip/heur_fracdiving.h src/scip/heur_guideddiving.h \
- src/scip/heur_hailmary.h src/scip/heur_intdiving.h \
+ src/scip/heur_zeroobj.h src/scip/heur_intdiving.h \
  src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
  src/scip/heur_localbranching.h src/scip/heur_mutation.h \
  src/scip/heur_nlpdiving.h src/scip/heur_objpscostdiving.h \
@@ -1735,7 +1735,7 @@ $(LIBOBJDIR)/scip/heur_guideddiving.o: src/scip/heur_guideddiving.c \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
  src/scip/event.h src/scip/struct_event.h
-$(LIBOBJDIR)/scip/heur_hailmary.o: src/scip/heur_hailmary.c src/scip/heur_hailmary.h \
+$(LIBOBJDIR)/scip/heur_zeroobj.o: src/scip/heur_zeroobj.c src/scip/heur_zeroobj.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -1767,7 +1767,7 @@ $(LIBOBJDIR)/scip/heur_hailmary.o: src/scip/heur_hailmary.c src/scip/heur_hailma
  src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
  src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
  src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h
+ src/scip/event.h src/scip/struct_event.h src/scip/cons_linear.h
 $(LIBOBJDIR)/scip/heur_intdiving.o: src/scip/heur_intdiving.c src/scip/heur_intdiving.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1921,7 +1921,7 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -2007,7 +2007,7 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -2261,7 +2261,7 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -2347,7 +2347,7 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -2736,7 +2736,7 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -2822,7 +2822,7 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -4273,7 +4273,7 @@ $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -4657,7 +4657,7 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -4775,7 +4775,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -5641,7 +5641,7 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \
@@ -5729,7 +5729,7 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
  src/scip/heur_dins.h src/scip/heur_feaspump.h \
  src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
- src/scip/heur_guideddiving.h src/scip/heur_hailmary.h \
+ src/scip/heur_guideddiving.h src/scip/heur_zeroobj.h \
  src/scip/heur_intdiving.h src/scip/heur_intshifting.h \
  src/scip/heur_linesearchdiving.h src/scip/heur_localbranching.h \
  src/scip/heur_mutation.h src/scip/heur_nlpdiving.h \

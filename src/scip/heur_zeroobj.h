@@ -13,18 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_hailmary.h
+/**@file   heur_zeroobj.h
  * @ingroup PRIMALHEURISTICS
- * @brief  hailmary primal heuristic
+ * @brief  heuristic that tries to solve the problem without objective. In Gurobi, this heuristic is known as "Hail Mary"
  * @author Timo Berthold
- *
- * template file for primal heuristic plugins
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_HAILMARY_H__
-#define __SCIP_HEUR_HAILMARY_H__
+#ifndef __SCIP_HEUR_ZEROOBJ_H__
+#define __SCIP_HEUR_ZEROOBJ_H__
 
 
 #include "scip/scip.h"
@@ -33,19 +31,19 @@
 extern "C" {
 #endif
 
-/** main procedure of the hailmary heuristic, creates and solves a sub-SCIP */
+/** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
 extern
-SCIP_RETCODE SCIPapplyHailmary(
+SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             minimprove,         /**< factor by which hailmary should at least improve the incumbent          */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent          */
    SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
    );
 
-/** creates the hailmary primal heuristic and includes it in SCIP */
+/** creates the zeroobj primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurHailmary(
+SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

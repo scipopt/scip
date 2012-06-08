@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_hailmary.c
- * @brief  hailmary primal heuristic
+/**@file   heur_zeroobj.c
+ * @brief  heuristic that tries to solve the problem without objective. In Gurobi, this heuristic is known as "Hail Mary"
  * @author Timo Berthold
  */
 
@@ -23,12 +23,12 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/heur_hailmary.h"
+#include "scip/heur_zeroobj.h"
+#include "scip/cons_linear.h"
 
-
-#define HEUR_NAME             "hailmary"
+#define HEUR_NAME             "zeroobj"
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
-#define HEUR_DISPCHAR         'H'
+#define HEUR_DISPCHAR         'Z'
 #define HEUR_PRIORITY         -1000000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -37,17 +37,18 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* event handler properties */
-#define EVENTHDLR_NAME         "Hailmary"
+#define EVENTHDLR_NAME         "Zeroobj"
 #define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
 
-/* default values for hailmary-specific plugins */
-#define DEFAULT_MAXNODES      1000LL    /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01      /* factor by which hailmary should at least improve the incumbent          */
-#define DEFAULT_MINNODES      100LL     /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MAXLPITERS    5000LL   /* maximum number of LP iterations to be performed in the subproblem */
-#define DEFAULT_NODESOFS      100LL     /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_ADDALLSOLS   FALSE      /* should all subproblem solutions be added to the original SCIP?       */
+/* default values for zeroobj-specific plugins */
+#define DEFAULT_MAXNODES      1000LL    /* maximum number of nodes to regard in the subproblem                       */
+#define DEFAULT_MINIMPROVE    0.01      /* factor by which zeroobj should at least improve the incumbent             */
+#define DEFAULT_MINNODES      100LL     /* minimum number of nodes to regard in the subproblem                       */
+#define DEFAULT_MAXLPITERS    5000LL    /* maximum number of LP iterations to be performed in the subproblem         */
+#define DEFAULT_NODESOFS      100LL     /* number of nodes added to the contingent of the total nodes                */
+#define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem             */
+#define DEFAULT_ADDALLSOLS    FALSE     /* should all subproblem solutions be added to the original SCIP?            */
+#define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
 
 /*
  * Data structures
@@ -60,10 +61,11 @@ struct SCIP_HeurData
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
    SCIP_Longint          maxlpiters;         /**< maximum number of LP iterations to be performed in the subproblem   */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
-   SCIP_Longint          usednodes;          /**< nodes already used by hailmary in earlier calls                     */
-   SCIP_Real             minimprove;         /**< factor by which hailmary should at least improve the incumbent      */
+   SCIP_Longint          usednodes;          /**< nodes already used by zeroobj in earlier calls                      */
+   SCIP_Real             minimprove;         /**< factor by which zeroobj should at least improve the incumbent       */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
+   SCIP_Bool             onlywithoutsol;     /**< Should heuristic only be executed if no primal solution was found, yet? */
 };
 
 
@@ -79,7 +81,7 @@ SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< hailmary heuristic structure                            */
+   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                            */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
@@ -126,7 +128,7 @@ SCIP_RETCODE createNewSol(
  * we interrupt the solution process
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecHailmary)
+SCIP_DECL_EVENTEXEC(eventExecZeroobj)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -150,29 +152,25 @@ SCIP_DECL_EVENTEXEC(eventExecHailmary)
 
 
 
-/*
- * Callback methods of primal heuristic
- */
-
-/* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
+/* ---------------- Callback methods of primal heuristic ---------------- */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyHailmary)
+SCIP_DECL_HEURCOPY(heurCopyZeroobj)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurHailmary(scip) );
+   SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeHailmary)
+SCIP_DECL_HEURFREE(heurFreeZeroobj)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -193,7 +191,7 @@ SCIP_DECL_HEURFREE(heurFreeHailmary)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitHailmary)
+SCIP_DECL_HEURINIT(heurInitZeroobj)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -211,17 +209,10 @@ SCIP_DECL_HEURINIT(heurInitHailmary)
 }
 
 
-
-
-
-
-
-
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecHailmary)
+SCIP_DECL_HEUREXEC(heurExecZeroobj)
 {  /*lint --e{715}*/
-  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nnodes;                 /* number of stalling nodes for the subproblem */
@@ -237,7 +228,7 @@ SCIP_DECL_HEUREXEC(heurExecHailmary)
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
-   /* reward hailmary if it succeeded often */
+   /* reward zeroobj if it succeeded often */
    nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    nnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-SCIP as 100 nodes */
    nnodes += heurdata->nodesofs;
@@ -249,21 +240,21 @@ SCIP_DECL_HEUREXEC(heurExecHailmary)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping hailmary: nnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping zeroobj: nnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
-   /* do not run hailmary, if the problem does not have an objective function anyway */
+   /* do not run zeroobj, if the problem does not have an objective function anyway */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      SCIPdebugMessage("skipping hailmary: pure feasibility problem anyway\n");
+      SCIPdebugMessage("skipping zeroobj: pure feasibility problem anyway\n");
       return SCIP_OKAY;
    }
 
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPapplyHailmary(scip, heur, result, heurdata->minimprove, nnodes) );
+   SCIP_CALL( SCIPapplyZeroobj(scip, heur, result, heurdata->minimprove, nnodes) );
 
    return SCIP_OKAY;
 }
@@ -277,16 +268,16 @@ SCIP_DECL_HEUREXEC(heurExecHailmary)
  */
 
 
-/** main procedure of the hailmary heuristic, creates and solves a sub-SCIP */
-SCIP_RETCODE SCIPapplyHailmary(
+/** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
+SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             minimprove,         /**< factor by which hailmary should at least improve the incumbent      */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent      */
    SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
    )
 {
-   SCIP*                 subscip;            /* the subproblem created by hailmary              */
+   SCIP*                 subscip;            /* the subproblem created by zeroobj              */
    SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR**            vars;               /* original problem's variables                    */
    SCIP_VAR**            subvars;            /* subproblem's variables                          */
@@ -294,8 +285,8 @@ SCIP_RETCODE SCIPapplyHailmary(
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real timelimit;                      /* time limit for hailmary subproblem              */
-   SCIP_Real memorylimit;                    /* memory limit for hailmary subproblem            */
+   SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
+   SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
 
    int nvars;                                /* number of original problem's variables          */
    int i;
@@ -315,12 +306,12 @@ SCIP_RETCODE SCIPapplyHailmary(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call feaspump once at the root */
+   /* only call heuristic once at the root */
    if( SCIPgetDepth(scip) <= 0 && SCIPheurGetNCalls(heur) > 0 )
       return SCIP_OKAY;
 
    /* only call the heuristic if we do not have an incumbent  */
-   if( SCIPgetNSolsFound(scip) >  0 )
+   if( SCIPgetNSolsFound(scip) >  0 && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
    /* get heuristic data */
@@ -362,12 +353,12 @@ SCIP_RETCODE SCIPapplyHailmary(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "hailmary", TRUE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, &valid) );
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
    eventhdlr = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecHailmary, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecZeroobj, NULL) );
    if( eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
@@ -429,7 +420,7 @@ SCIP_RETCODE SCIPapplyHailmary(
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/rootiterlim", heurdata->maxlpiters) );
 
 #ifdef SCIP_DEBUG
-   /* for debugging hailmary, enable MIP output */
+   /* for debugging zeroobj, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #endif
@@ -438,6 +429,12 @@ SCIP_RETCODE SCIPapplyHailmary(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
+      SCIP_CONS* origobjcons;
+#ifndef NDEBUG
+      int nobjvars;
+      nobjvars = 0;
+#endif
+
       cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
@@ -449,13 +446,28 @@ SCIP_RETCODE SCIPapplyHailmary(
       }
       else
       {
-         if( SCIPgetUpperbound ( scip ) >= 0 )
+         if( SCIPgetUpperbound(scip) >= 0 )
             cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
          else
             cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
       }
       cutoff = MIN(upperbound, cutoff);
-      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+
+      SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), cutoff,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      for( i = 0; i < nvars; ++i)
+      {
+         if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
+#ifndef NDEBUG
+            nobjvars++;
+#endif
+         }
+      }
+      SCIP_CALL( SCIPaddCons(subscip, origobjcons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &origobjcons) );
+      assert(nobjvars == SCIPgetNObjVars(scip));
    }
 
    /* catch LP events of sub-SCIP */
@@ -476,7 +488,7 @@ SCIP_RETCODE SCIPapplyHailmary(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in hailmary heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in zeroobj heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    /* check, whether a solution was found;
@@ -497,7 +509,7 @@ SCIP_RETCODE SCIPapplyHailmary(
 #endif
 
    SCIPstatistic(
-      SCIPstatisticMessage("hailmary statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %"SCIP_LONGINT_FORMAT" nodes, solution %10.4f found at node %"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticMessage("zeroobj statistic: fixed %6.3f integer variables, %6.3f all variables, needed %6.1f seconds, %"SCIP_LONGINT_FORMAT" nodes, solution %10.4f found at node %"SCIP_LONGINT_FORMAT"\n",
          intfixingrate, allfixingrate, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
          nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 )
       );
@@ -510,8 +522,8 @@ SCIP_RETCODE SCIPapplyHailmary(
 }
 
 
-/** creates the hailmary primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurHailmary(
+/** creates the zeroobj primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -521,17 +533,19 @@ SCIP_RETCODE SCIPincludeHeurHailmary(
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   heur = NULL;
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecHailmary, heurdata) );
-
+   heur = NULL;
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZeroobj, heurdata) );
    assert(heur != NULL);
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyHailmary) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeHailmary) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitHailmary) );
 
-   /* add hailmary primal heuristic parameters */
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZeroobj) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeZeroobj) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitZeroobj) );
+
+   /* add zeroobj primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
@@ -553,12 +567,15 @@ SCIP_RETCODE SCIPincludeHeurHailmary(
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
-         "factor by which hailmary should at least improve the incumbent",
+         "factor by which zeroobj should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/addallsols",
          "should all subproblem solutions be added to the original SCIP?",
          &heurdata->addallsols, TRUE, DEFAULT_ADDALLSOLS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlywithoutsol",
+         "Should heuristic only be executed if no primal solution was found, yet?",
+         &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    return SCIP_OKAY;
 }
