@@ -478,6 +478,46 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeFreetransproblem)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the changing the objective sense */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeObjSense)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
+   else if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "cannot call method before problem was created\n");
+   else
+   {
+      SCIP_Bool endoffile;
+      char* objsense;
+
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "new objective sense {min,max}: ", &objsense, &endoffile) );
+
+      /* if we get a return or we reached the end of the file, then we stop */
+      if( objsense[0] != '\0' && !endoffile )
+      {
+         if( strncmp(objsense, "max", 3) == 0 )
+         {
+            SCIP_CALL( SCIPsetObjsense(scip,  SCIP_OBJSENSE_MAXIMIZE) );
+         }
+         else if( strncmp(objsense , "min", 3) == 0 )
+         {
+            SCIP_CALL( SCIPsetObjsense(scip,  SCIP_OBJSENSE_MINIMIZE) );
+         }
+         else
+         {
+            SCIPdialogMessage(scip, NULL, "invalid argument <%s>\n", objsense);
+         }
+      }
+   }
+
+   /* set root dialog as next dialog */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the checksol command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 {  /*lint --e{715}*/
@@ -2793,6 +2833,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecChangeFreetransproblem, NULL, NULL,
             "freetransproblem", "free transformed problem", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* change objective sense */
+   if( !SCIPdialogHasEntry(submenu, "objsense") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecChangeObjSense, NULL, NULL,
+            "objsense", "change objective sense", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
