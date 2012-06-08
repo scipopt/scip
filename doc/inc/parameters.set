@@ -1,4 +1,4 @@
-# SCIP version 2.1.1
+# SCIP version 2.1.2
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -300,9 +300,9 @@ lp/lexdualbasic = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/lexdualstalling = TRUE
 
-# simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value
-# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
-lp/rowrepswitch = 1e+20
+# simplex algorithm shall use row representation of the basis if number of rows divided by number of columns exceeds this value (-1.0 to disable row representation)
+# [type: real, range: [-1,1.79769313486232e+308], default: -1]
+lp/rowrepswitch = -1
 
 # number of threads used for solving the LP (0: automatic)
 # [type: int, range: [0,64], default: 0]
