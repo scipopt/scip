@@ -24,10 +24,6 @@
 #define __SCIP_STRUCT_MISC_H__
 
 
-#ifdef WITH_GMP
-#include "gmp.h"
-#endif
-
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_misc.h"
@@ -132,19 +128,6 @@ struct SCIP_PtrArray
    int                   minusedidx;         /**< index of first non zero element in vals array */
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
-
-#ifdef WITH_GMP
-/** dynamic array for storing mpq_t values */
-struct SCIP_MpqArray
-{
-   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
-   mpq_t*                vals;               /**< array values */
-   int                   valssize;           /**< size of vals array */
-   int                   firstidx;           /**< index of first element in vals array */
-   int                   minusedidx;         /**< index of first non zero element in vals array */
-   int                   maxusedidx;         /**< index of last non zero element in vals array */
-};
-#endif
 
 /** resource profile */
 struct SCIP_Profile

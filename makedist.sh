@@ -48,10 +48,8 @@ $NAME/check/check_mosek.sh $NAME/check/evalcheck_mosek.sh $NAME/check/check_mose
 $NAME/check/check_symphony.sh $NAME/check/evalcheck_symphony.sh $NAME/check/check_symphony.awk \
 $NAME/check/check_count.sh $NAME/check/evalcheck_count.sh $NAME/check/check_count.awk \
 $NAME/check/testset/short.test $NAME/check/testset/short.solu \
-$NAME/check/shortmiplibex.test \
 $NAME/check/cmpres.awk $NAME/check/allcmpres.sh \
 $NAME/check/getlastprob.awk \
-$NAME/mps2zpl.sh $NAME/mps2zpl.awk \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
@@ -60,7 +58,6 @@ $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
-$NAME/src/rectlu/*.c $NAME/src/rectlu/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/src/cppad/* $NAME/src/cppad/local/* \

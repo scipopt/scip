@@ -64,12 +64,6 @@ struct SCIP_Stat
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
    SCIP_Longint          ndeactivatednodes;  /**< number of times, a node got deactivated in current run */
-   SCIP_Longint          nprovedfeaslp;      /**< number of times, safe dual bound computation for feasible LPs was called */
-   SCIP_Longint          nprovedinfeaslp;    /**< number of times, safe verification for infeasible LPs was called */
-   SCIP_Longint          nfailprovedfeaslp;  /**< number of times, safe dual bound computation for feasible LPs failed */
-   SCIP_Longint          nfailprovedinfeaslp;/**< number of times, safe verification for infeasible LPs failed */
-   SCIP_Longint          nabortprovedinfeaslp;/**< number of times, safe verification for infeasible LPs was aborted 
-                                               *  because no approximate certificate was given */
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
@@ -110,8 +104,6 @@ struct SCIP_Stat
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
-   SCIP_CLOCK*           provedfeaslptime;   /**< time needed for safe dual bound computation for feasible LPs */
-   SCIP_CLOCK*           provedinfeaslptime; /**< time needed for safe verification for infeasible LPs */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */

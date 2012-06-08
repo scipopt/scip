@@ -1075,12 +1075,6 @@ SCIP_Real SCIPlpGetObjval(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** gets objective value of current LP; performs calculations with interval arithmetic to get an exact upper bound */
-SCIP_Real SCIPlpGetPrimalprovedObjval(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
-   );
-
 /** gets part of objective value of current LP that results from COLUMN variables only */
 extern
 SCIP_Real SCIPlpGetColumnObjval(
@@ -1127,12 +1121,6 @@ SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
-   );
-
-/** gets current pseudo objective value; performs calculations with interval arithmetic to get an exact upper bound */
-SCIP_Real SCIPlpGetPrimalprovedPseudoObjval(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
@@ -1256,14 +1244,6 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
-   );
-
-/** stores dual LP solution with infinite objective value in the columns and rows if dual LP is unbounded */
-extern
-SCIP_RETCODE SCIPlpGetUnboundedDualSol(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** stores LP solution with infinite objective value in the columns and rows */
@@ -1408,8 +1388,6 @@ extern
 SCIP_RETCODE SCIPlpGetProvedLowerbound(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            bound               /**< pointer to store proven dual bound */
    );
 
@@ -1418,8 +1396,6 @@ extern
 SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool*            proved              /**< pointer to store whether infeasibility is proven */
    );
 

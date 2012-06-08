@@ -19,7 +19,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define NODESEL_OUT /** uncomment to get more debug msgs (define SCIP_DEBUG) for node selection; same as in tree.c */
 
 #include <assert.h>
 #include <string.h>
@@ -196,13 +195,6 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
        * prefer using nodes with higher node selection priority assigned by the branching rule
        */
       node = SCIPgetPrioChild(scip);
-#ifdef NODESEL_OUT
-      if( node != NULL )
-      {
-         SCIPdebugMessage("priochild node<%lld>: lb<%.20f> < maxbound<%.20f>?\n", SCIPnodeGetNumber(node), SCIPnodeGetLowerbound(node),
-            maxbound);
-      }
-#endif
       if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
       {
          *selnode = node;
@@ -211,13 +203,6 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
       else
       {
          node = SCIPgetBestChild(scip);
-#ifdef NODESEL_OUT
-         if( node != NULL )
-         {
-            SCIPdebugMessage("bestchild node<%lld>: lb<%.20f> < maxbound<%.20f>?\n", SCIPnodeGetNumber(node), SCIPnodeGetLowerbound(node),
-               maxbound);
-         }
-#endif
          if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
          {
             *selnode = node;
@@ -226,13 +211,6 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          else
          {
             node = SCIPgetPrioSibling(scip);
-#ifdef NODESEL_OUT
-            if( node != NULL )
-            {
-               SCIPdebugMessage("priosibl node<%lld>: lb<%.20f> < maxbound<%.20f>?\n", SCIPnodeGetNumber(node), SCIPnodeGetLowerbound(node),
-                  maxbound);
-            }
-#endif
             if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
             {
                *selnode = node;
@@ -241,13 +219,6 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
             else
             {
                node = SCIPgetBestSibling(scip);
-#ifdef NODESEL_OUT
-               if( node != NULL )
-               {
-                  SCIPdebugMessage("bestsibl node<%lld>: lb<%.20f> < maxbound<%.20f>?\n", SCIPnodeGetNumber(node), 
-                     SCIPnodeGetLowerbound(node), maxbound);
-               }
-#endif
                if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
                {
                   *selnode = node;
@@ -282,23 +253,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
    lowerbound1 = SCIPnodeGetLowerbound(node1);
    lowerbound2 = SCIPnodeGetLowerbound(node2);
    if( SCIPisLT(scip, lowerbound1, lowerbound2) )
-   {
-#ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by lb\n",
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2,
-         SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node1));
-#endif
       return -1;
-   }
    else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
-   {
-#ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by lb\n",
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2), lowerbound2,
-         SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node2));
-#endif
       return +1;
-   }
    else
    {
       SCIP_Real estimate1;
@@ -315,12 +272,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 
          nodetype1 = SCIPnodeGetType(node1);
          nodetype2 = SCIPnodeGetType(node2);
-
-#ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node xxx by child/sibl\n",
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
-         lowerbound2, SCIPnodeGetEstimate(node2));
-#endif
          if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
             return -1;
          else if( nodetype1 != SCIP_NODETYPE_CHILD && nodetype2 == SCIP_NODETYPE_CHILD )
@@ -333,7 +284,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
          {
             int depth1;
             int depth2;
-
+         
             depth1 = SCIPnodeGetDepth(node1);
             depth2 = SCIPnodeGetDepth(node2);
             if( depth1 < depth2 )
@@ -346,21 +297,9 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
       }
 
       if( SCIPisLT(scip, estimate1, estimate2) )
-      {
-#ifdef NODESEL_OUT
-         SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n",
-            SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
-            lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node1));
-#endif
          return -1;
-      }
 
       assert(SCIPisGT(scip, estimate1, estimate2));
-#ifdef NODESEL_OUT
-      SCIPdebugMessage("node1<%lld>: lb<%f> est<%f>, node2<%lld>: lb<%f> est<%f> --> choose node<%lld> by est\n",
-         SCIPnodeGetNumber(node1), lowerbound1, SCIPnodeGetEstimate(node1), SCIPnodeGetNumber(node2),
-         lowerbound2, SCIPnodeGetEstimate(node2), SCIPnodeGetNumber(node2));
-#endif
       return +1;
    }
 }

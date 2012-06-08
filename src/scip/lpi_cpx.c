@@ -24,7 +24,6 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define DUALFARKASPROOF_OUT /** uncomment to get info about dual farkas proof value as computed by cplex */
 
 #include <assert.h>
 
@@ -3105,16 +3104,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling CPLEX dual Farkas: %d cols, %d rows\n",
       CPXgetnumcols(lpi->cpxenv, lpi->cpxlp), CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
 
-#ifdef DUALFARKASPROOF_OUT
-   {
-      SCIP_Real proof;
-      proof = 0.0;
-      CHECK_ZERO( CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, &proof) );
-      printf("cpxsolstat<%d>(3=infeas): cpx dual farkas proof <%f> should be pos for infeas LP\n", lpi->solstat, proof);
-   }
-#else
    CHECK_ZERO( lpi->messagehdlr, CPXdualfarkas(lpi->cpxenv, lpi->cpxlp, dualfarkas, NULL) );
-#endif
 
    return SCIP_OKAY;
 }

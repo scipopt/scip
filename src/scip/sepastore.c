@@ -251,8 +251,7 @@ SCIP_RETCODE sepastoreAddCut(
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
     * again, because now a non redundant cut enters the store
     */
-   if( !set->misc_exactsolve 
-      && sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       /* check, if the row deletions from separation storage events are tracked
        * if so, issue ROWDELETEDSEPA event
@@ -887,7 +886,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIPsetIsInfinity(set, sepastore->scores[pos]));
 
       /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->misc_exactsolve )
+      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
          SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue, cut, cutoff) );

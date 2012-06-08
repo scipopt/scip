@@ -25,7 +25,6 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/intervalarith.h"
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
@@ -204,7 +203,7 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
-      if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
+      if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -228,7 +227,7 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       solval = SCIPvarGetPseudoSol(var);
-      if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
+      if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -594,38 +593,33 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
 
-   if( set->misc_exactsolve )
-      sol->obj = SCIPlpGetPrimalprovedObjval(set, prob);
-   else
+   /* link solution to LP solution */
+   if( SCIPlpDivingObjChanged(lp) )
    {
-      /* link solution to LP solution */
-      if( SCIPlpDivingObjChanged(lp) )
+      /* the objective value has to be calculated manually, because the LP's value is invalid;
+       * use objective values of variables, because columns objective values are changed to dive values
+       */
+      sol->obj = SCIPlpGetLooseObjval(lp, set, prob);
+      if( !SCIPsetIsInfinity(set, -sol->obj) )
       {
-         /* the objective value has to be calculated manually, because the LP's value is invalid;
-          * use objective values of variables, because columns objective values are changed to dive values
-          */
-         sol->obj = SCIPlpGetLooseObjval(lp, set, prob);
-         if( !SCIPsetIsInfinity(set, -sol->obj) )
+         SCIP_VAR* var;
+         SCIP_COL** cols;
+         int ncols;
+         int c;
+         
+         cols = SCIPlpGetCols(lp);
+         ncols = SCIPlpGetNCols(lp);
+         for( c = 0; c < ncols; ++c )
          {
-            SCIP_VAR* var;
-            SCIP_COL** cols;
-            int ncols;
-            int c;
-
-            cols = SCIPlpGetCols(lp);
-            ncols = SCIPlpGetNCols(lp);
-            for( c = 0; c < ncols; ++c )
-            {
-               var = SCIPcolGetVar(cols[c]);
-               sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
-            }
+            var = SCIPcolGetVar(cols[c]);
+            sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
          }
       }
-      else
-      {
-         /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-         sol->obj = SCIPlpGetObjval(lp, set, prob);
-      }
+   }
+   else
+   {
+      /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+      sol->obj = SCIPlpGetObjval(lp, set, prob);
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    solStamp(sol, stat, tree, TRUE);
@@ -736,11 +730,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_CALL( solClearArrays(sol) );
 
    /* link solution to pseudo solution */
-   if( set->misc_exactsolve )
-      sol->obj = SCIPlpGetPrimalprovedPseudoObjval(set, prob);
-   else
-      sol->obj = SCIPlpGetPseudoObjval(lp, set, prob);
-
+   sol->obj = SCIPlpGetPseudoObjval(lp, set, prob);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    solStamp(sol, stat, tree, TRUE);
 
@@ -869,50 +859,17 @@ SCIP_RETCODE SCIPsolSetVal(
          oldval = solGetArrayVal(sol, var);
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
+            SCIP_Real obj;
+
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            if( set->misc_exactsolve )
-            {
-               SCIP_INTERVAL deltaval;
-               SCIP_INTERVAL obj;
-               SCIP_INTERVAL solval;
-               SCIP_INTERVAL prod;
-               SCIP_INTERVAL objval;
+            /* update objective: an unknown solution value does not count towards the objective */
+            obj = SCIPvarGetObj(var);
+            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+               sol->obj -= obj * oldval;
+            if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               sol->obj += obj * val;
 
-               /* update objective: an unknown solution value does not count towards the objective;
-                * objective value is calculated with interval arithmetics to get a proved upper bound 
-                */
-               SCIPintervalSet(&deltaval, 0.0);
-
-               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               {               
-                  SCIPintervalSet(&obj, SCIPvarGetObj(var));
-                  SCIPintervalSet(&solval, oldval);
-                  SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
-                  SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
-               }
-               if( val != SCIP_UNKNOWN ) /*lint !e777*/
-               {
-                  SCIPintervalSet(&obj, SCIPvarGetObj(var));
-                  SCIPintervalSet(&solval, val);
-                  SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
-                  SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newval * obj; */
-               }
-               SCIPintervalSet(&objval, sol->obj);
-               SCIPintervalAdd(SCIPsetInfinity(set), &objval, objval, deltaval);
-               sol->obj = SCIPintervalGetSup(objval);
-            }
-            else
-            {
-               SCIP_Real obj;
-               
-               /* update objective: an unknown solution value does not count towards the objective */
-               obj = SCIPvarGetObj(var);
-               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-                  sol->obj -= obj * oldval;
-               if( val != SCIP_UNKNOWN ) /*lint !e777*/
-                  sol->obj += obj * val;
-            }
             solStamp(sol, stat, tree, FALSE);
          }
          return SCIP_OKAY;
@@ -926,51 +883,17 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = solGetArrayVal(sol, var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
+         SCIP_Real obj;
+
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
-         
-         if( set->misc_exactsolve )
-         {
-            SCIP_INTERVAL deltaval;
-            SCIP_INTERVAL obj;
-            SCIP_INTERVAL solval;
-            SCIP_INTERVAL prod;
-            SCIP_INTERVAL objval;
-            
-            /* update objective: an unknown solution value does not count towards the objective;
-             * objective value is calculated with interval arithmetics to get a proved upper bound 
-             */
-            SCIPintervalSet(&deltaval, 0.0);
-            
-            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-            {               
-               SCIPintervalSet(&obj, SCIPvarGetObj(var));
-               SCIPintervalSet(&solval, oldval);
-               SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
-               SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
-            }
-            if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            {
-               SCIPintervalSet(&obj, SCIPvarGetObj(var));
-               SCIPintervalSet(&solval, val);
-               SCIPintervalMul(SCIPsetInfinity(set), &prod, solval, obj);
-               SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newval * obj; */
-            }
-            SCIPintervalSet(&objval, sol->obj);
-            SCIPintervalAdd(SCIPsetInfinity(set), &objval, objval, deltaval);
-            sol->obj = SCIPintervalGetSup(objval);
-         }
-         else
-         {
-            SCIP_Real obj;
-               
-            /* update objective: an unknown solution value does not count towards the objective */
-            obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj -= obj * oldval;
-            if( val != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj += obj * val;
-         }
-            
+
+         /* update objective: an unknown solution value does not count towards the objective */
+         obj = SCIPvarGetObj(var);
+         if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+            sol->obj -= obj * oldval;
+         if( val != SCIP_UNKNOWN ) /*lint !e777*/
+            sol->obj += obj * val;
+
          solStamp(sol, stat, tree, FALSE);
       }
       return SCIP_OKAY;
@@ -1249,24 +1172,6 @@ SCIP_Real SCIPsolGetObj(
       return sol->obj;
 }
 
-/** @todo  
- *  - setting the upperbound in SCIP via the FP-solution using SCIPsetSolTransObj() is more a workaround
- *  - maybe it is better to set the upperbound directly via the exact solution. this way the code also works
- *    when we do not store a FP-solution for every exact solution.
- *  - remove SCIPsetSolTransObj() if it is not needed anymore
- */
-/** sets objective value of primal CIP solution in transformed problem */
-void SCIPsolSetObj(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real             obj                 /**< transformed objective value */
-   )
-{
-   assert(sol != NULL);
-   assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-   
-   sol->obj = obj;
-}
-
 /** updates primal solutions after a change in a variable's objective value */
 void SCIPsolUpdateVarObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1334,10 +1239,7 @@ SCIP_RETCODE SCIPsolCheck(
 
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
-            if( set->misc_exactsolve)
-               *feasible = *feasible && (solval >= lb) && (solval <= ub);
-            else
-               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+            *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
             
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
@@ -1574,7 +1476,7 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_Real obj1;
    SCIP_Real obj2;
    int v;
-
+   
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
@@ -1593,8 +1495,7 @@ SCIP_Bool SCIPsolsAreEqual(
    }
 
    /* solutions with different objective values cannot be the same */
-   if( (set->misc_exactsolve && obj1 != obj2)
-      || (!set->misc_exactsolve && !SCIPsetIsEQ(set, obj1, obj2)) )
+   if( !SCIPsetIsEQ(set, obj1, obj2) )
       return FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -1613,7 +1514,7 @@ SCIP_Bool SCIPsolsAreEqual(
 
       val1 = SCIPsolGetVal(sol1, set, stat, prob->vars[v]);
       val2 = SCIPsolGetVal(sol2, set, stat, prob->vars[v]);
-      if( (set->misc_exactsolve && val1 != val2) || (!set->misc_exactsolve && !SCIPsetIsEQ(set, val1, val2)) )
+      if( !SCIPsetIsEQ(set, val1, val2) )
          return FALSE;
    }
 

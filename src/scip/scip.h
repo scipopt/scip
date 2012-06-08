@@ -234,35 +234,6 @@ SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
- *  only relevant for solving the problem provably correct 
- */
-extern
-SCIP_Bool SCIPuseFPRelaxation(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
- *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
- *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct 
- */
-extern
-char SCIPdualBoundMethod(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns if we should try to prove node infeasibility with project and shift by correcting a dual ray */
-extern
-SCIP_Bool SCIPpsInfeasRay(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns whether pseudo solutions should be ignored for calculating dual bounds */
-extern
-SCIP_Bool SCIPignorePseudosol(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
  *  presolving round
  *
@@ -942,16 +913,6 @@ SCIP_RETCODE SCIPsetEmphasis(
  */
 SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP*                 scip,               /**< (auxiliary) SCIP data structure */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
-/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
- *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
- *  (for that the EXACTSOLVE flag has to be set to true as well).
- */
-extern
-SCIP_RETCODE SCIPsetReducedsolve(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -3138,13 +3099,6 @@ SCIP_Real SCIPgetTransObjoffset(
 extern
 SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets objective scale of the tranformed problem */
-extern
-void SCIPsetTransObjscale(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             objscale            /**< new objective scalar */
    );
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
@@ -6330,27 +6284,6 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    );
 
-/** stores LP state (like basis information) into LP state object */
-extern
-SCIP_RETCODE SCIPgetLPState(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
-   );
-
-/** loads LP state (like basis information) into solver */
-extern
-SCIP_RETCODE SCIPsetLPState(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
-   );
-
-/** frees LP state information */
-extern
-SCIP_RETCODE SCIPfreeLPState(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
-   );
-
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  */
@@ -8360,16 +8293,6 @@ extern
 SCIP_Real SCIPgetSolTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
-   );
-
-/** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
- *  has to be called before solution is added to the solution storage
- */
-extern
-SCIP_RETCODE SCIPsetSolTransObj(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution */
-   SCIP_Real             obj                 /**< transformed objective value of given solution */
    );
 
 /** maps original space objective value into transformed objective value */

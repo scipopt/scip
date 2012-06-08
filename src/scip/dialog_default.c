@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include "scip/dialog_default.h"
-#include "scip/cons_exactlp.h"
 #include "nlpi/nlpi.h"
 
 
@@ -488,36 +487,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-
-#ifdef WITH_EXACTSOLVE
-   {
-      SCIP_CONS** conss;
-      int c;
-
-      assert(SCIPisExactSolve(scip));
-
-      conss = SCIPgetOrigConss(scip);
-      
-      for( c = 0; c < SCIPgetNOrigConss(scip); ++c )
-      {
-         if( SCIPconsIsChecked(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
-         {
-            SCIP_CALL( SCIPcheckBestSolex(scip, conss[c], &feasible, TRUE) );
-         }
-      }
-      if( feasible )
-         SCIPdialogMessage(scip, NULL, "exact solution is feasible in original problem\n");
-      
-      SCIPdialogMessage(scip, NULL, "\n");
-
-      *nextdialog = SCIPdialogGetParent(dialog);
-      
-      return SCIP_OKAY;
-   }
-#endif
-
-   assert(!SCIPisExactSolve(scip));
-
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
@@ -1130,30 +1099,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-
-#ifdef WITH_EXACTSOLVE
-   {
-      SCIP_CONS** conss;
-
-      assert(SCIPisExactSolve(scip));
-
-      conss = SCIPgetConss(scip);
-      assert(conss != NULL);
-
-      SCIP_CALL( SCIPprintBestSolex(scip, conss[0], NULL, FALSE) );
-
-      SCIPdialogMessage(scip, NULL, "\n");
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-      return SCIP_OKAY;
-   }
-#endif
-
-   assert(!SCIPisExactSolve(scip));
-
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-
    SCIPdialogMessage(scip, NULL, "\n");
+
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
@@ -1204,36 +1152,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-#ifdef WITH_EXACTSOLVE
-   assert(SCIPisExactSolve(scip));
-   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
-   if( endoffile )
-   {
-      *nextdialog = NULL;
-      return SCIP_OKAY;
-   }
-
-   if( varname[0] != '\0' )
-   {
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname, TRUE) );
-
-      var = SCIPfindVar(scip, varname);
-      if( var == NULL )
-         SCIPdialogMessage(scip, NULL, "variable <%s> not found\n", varname);
-      else
-      {
-         SCIP_CALL( SCIPprintBestSolexVar(scip, var, NULL) );
-      }      
-   }
-   SCIPdialogMessage(scip, NULL, "\n");
-      
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      
-   return SCIP_OKAY;
-#endif
-
-   assert(!SCIPisExactSolve(scip));
-      
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
@@ -1329,24 +1247,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-
-#ifdef WITH_EXACTSOLVE
-   assert(SCIPisExactSolve(scip));
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( SCIPprintBestTransSolex(scip, NULL, FALSE) );
-   }
-   else
-      SCIPdialogMessage(scip, NULL, "no exact solution available\n");
-   SCIPdialogMessage(scip, NULL, "\n");
-      
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      
-   return SCIP_OKAY;
-#endif
-
-   assert(!SCIPisExactSolve(scip));
-   
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
@@ -2703,28 +2603,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          else
          {
             SCIPinfoMessage(scip, file, "\n");
-#ifdef WITH_EXACTSOLVE
-            {
-               SCIP_CONS** conss;
-
-               assert(SCIPisExactSolve(scip));
-               conss = SCIPgetConss(scip);
-               assert(conss != NULL);
-               retcode = SCIPprintBestSolex(scip, conss[0], file, FALSE);
-               if( retcode != SCIP_OKAY )
-               {
-                  fclose(file);
-                  SCIP_CALL( retcode );
-               }
-               else
-               {
-                  SCIPdialogMessage(scip, NULL, "written exact solution information to file <%s>\n", filename);
-                  fclose(file);
-               }
-
-            }
-#else
-            assert(!SCIPisExactSolve(scip));
             retcode = SCIPprintBestSol(scip, file, FALSE);
             if( retcode != SCIP_OKAY )
             {
@@ -2736,7 +2614,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
                SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
                fclose(file);
             }
-#endif
          }
       }
    }

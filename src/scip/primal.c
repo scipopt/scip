@@ -35,7 +35,6 @@
 #include "scip/tree.h"
 #include "scip/disp.h"
 #include "scip/pub_message.h"
-#include "scip/cons_exactlp.h"
 
 
 
@@ -242,57 +241,11 @@ SCIP_RETCODE primalSetUpperbound(
    {
       SCIP_Real delta;
 
-      if( !set->misc_exactsolve )
-      {
-         delta = SCIPsetCutoffbounddelta(set);
+      delta = SCIPsetCutoffbounddelta(set);
 
-         cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
-         cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
-                                                      * and very large upperbound value */
-      }
-      else
-      {
-#ifdef WITH_EXACTSOLVE
-         mpq_t safecutoffbound;
-         mpq_t change;
-
-         assert(set->misc_exactsolve);
-         mpq_init(safecutoffbound);
-         mpq_init(change);
-
-         delta = SCIPsetCutoffbounddelta(set);
-         assert(delta > 0);
-
-         mpq_set_d(safecutoffbound, ceil(upperbound));
-         mpq_set_d(change, 1.0 - delta);
-
-         mpq_sub(safecutoffbound, safecutoffbound, change);
-         cutoffbound = mpqGetRealRelax(set->scip, safecutoffbound, GMP_RNDU);
-
-#ifndef NDEBUG
-         {
-            mpq_t tmp;
-            mpq_t tmpcutoffbound;
-
-            mpq_init(tmp);
-            mpq_init(tmpcutoffbound);
-
-            mpq_set_d(tmp, ceil(upperbound) - 1.0);
-            mpq_set_d(tmpcutoffbound, cutoffbound);
-            assert(mpqIsIntegral(tmp));
-            assert(mpq_cmp(tmp, tmpcutoffbound) < 0);
-
-            mpq_clear(tmpcutoffbound);
-            mpq_clear(tmp);
-         }
-#endif
-
-         mpq_clear(change);
-         mpq_clear(safecutoffbound);
-#else /* to avoid compiler warning about uninitialized cutoffbound */
-         cutoffbound = upperbound;
-#endif
-      }
+      cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
+      cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
+                                                   * and very large upperbound value */
    }
    else
       cutoffbound = upperbound;
@@ -783,11 +736,11 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob);
-      assert((set->misc_exactsolve && solobj <= obj) || (!set->misc_exactsolve && SCIPsetIsLE(set, solobj, obj)));
-
-      if( (set->misc_exactsolve && solobj < obj) || (!set->misc_exactsolve && SCIPsetIsLT(set, solobj, obj)) )
+      assert( SCIPsetIsLE(set, solobj, obj) );
+     
+      if( SCIPsetIsLT(set, solobj, obj) )
          break;
-
+   
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
          if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
@@ -805,9 +758,9 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, transprob);
-      assert((set->misc_exactsolve && solobj >= obj) || (!set->misc_exactsolve && SCIPsetIsGE(set, solobj, obj)));
+      assert( SCIPsetIsGE(set, solobj, obj) );
 
-      if( (set->misc_exactsolve && solobj > obj) || (!set->misc_exactsolve && SCIPsetIsGT(set, solobj, obj)) )
+      if( SCIPsetIsGT(set, solobj, obj) )
          break;
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
@@ -849,9 +802,9 @@ SCIP_Bool primalExistsOrigSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetOrigObj(primal->sols[i]);
-      assert((set->misc_exactsolve && solobj <= obj) || (!set->misc_exactsolve && SCIPsetIsLE(set, solobj, obj)));
+      assert( SCIPsetIsLE(set, solobj, obj) );
 
-      if( (set->misc_exactsolve && solobj < obj) || (!set->misc_exactsolve && SCIPsetIsLT(set, solobj, obj)) )
+      if( SCIPsetIsLT(set, solobj, obj) )
          break;
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )
@@ -864,9 +817,9 @@ SCIP_Bool primalExistsOrigSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetOrigObj(primal->sols[i]);
-      assert((set->misc_exactsolve && solobj >= obj) || (!set->misc_exactsolve && SCIPsetIsGE(set, solobj, obj)));
+      assert( SCIPsetIsGE(set, solobj, obj) );
 
-      if( (set->misc_exactsolve && solobj > obj) || (!set->misc_exactsolve && SCIPsetIsGT(set, solobj, obj)) )
+      if( SCIPsetIsGT(set, solobj, obj) )
          break;
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob, NULL) )

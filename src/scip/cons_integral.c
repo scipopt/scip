@@ -23,12 +23,8 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
-#ifdef WITH_EXACTSOLVE
-#include "gmp.h"
-#endif
 
 #include "scip/cons_integral.h"
-#include "scip/cons_exactlp.h"
 
 
 #define CONSHDLR_NAME          "integral"
@@ -39,7 +35,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -47,6 +43,7 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+
 
 
 /*
@@ -131,19 +128,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
-#ifdef WITH_EXACTSOLVE
-   /* in exactip mode with pure rational approach, the branching is based on the exact LP solution 
-    * (computed in enfolp method of exactlp constraint handler) and unbounded root LPs are also handled
-    * in exactlp constraint handler  
-    */
-   assert(SCIPisExactSolve(scip));
-   if( SCIPselectDualBoundMethod(scip, FALSE) == 'e' )
-   {
-      *result = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-#endif
-
    /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
     * depending on whether we are able to construct an integral solution; in any case we do not want to branch
     */
@@ -200,39 +184,6 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-
-#ifdef WITH_EXACTSOLVE
-         {
-            mpq_t solvalexact;
-         
-            assert(SCIPisExactSolve(scip));
-
-            mpq_init(solvalexact);
-
-            /**@todo exiptodo: presolving extension 
-             * - this only works if presolving is disabled (solval may already be an approximation since 
-             *   solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
-             */ 
-            mpq_set_d(solvalexact, solval);
-            if( mpz_get_si(mpq_denref(solvalexact)) != 1 ) 
-            {
-               *result = SCIP_INFEASIBLE;
-
-               if( printreason )
-               {
-                  char s[SCIP_MAXSTRLEN];
-
-                  gmp_snprintf(s, SCIP_MAXSTRLEN, "violation: integrality condition of variable <%s> = %Qd\n", 
-                     SCIPvarGetName(vars[v]), solvalexact);
-                  SCIPinfoMessage(scip, NULL, s);
-               }
-            }
-
-            mpq_clear(solvalexact);
-         }
-#else
-         assert(!SCIPisExactSolve(scip));
-
          if( !SCIPisFeasIntegral(scip, solval) )
          {
             *result = SCIP_INFEASIBLE;
@@ -244,7 +195,6 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             }
             break;
          }
-#endif
       }
    }
 #ifndef NDEBUG
@@ -253,21 +203,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisExactSolve(scip) )
-            assert(SCIPisFeasIntegral(scip, solval));
-         else
-         {
-#ifdef WITH_EXACTSOLVE
-            mpq_t solvalexact;
-            
-            mpq_init(solvalexact);
-            mpq_set_d(solvalexact, solval);
-
-            assert(mpz_get_si(mpq_denref(solvalexact)) == 1); 
-
-            mpq_clear(solvalexact);
-#endif
-         }
+         assert(SCIPisFeasIntegral(scip, solval));
       }
    }
 #endif

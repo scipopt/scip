@@ -283,16 +283,6 @@ struct SCIP_Set
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
-   SCIP_Bool             misc_usefprelax;    /**< if problem is solved exactly, should floating point problem be 
-                                              *   a relaxation of the original problem (instead of an approximation)? */
-   char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
-                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
-                                              *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
-                                              *   e'x'act neumaier and shcherbina, 'a'utomatic) */
-   SCIP_Bool             misc_psinfeasray;   /**< should project and shift method prove node infeasibility by correcting dual ray? */
-   char                  misc_reducesafedb;  /**< strategy for reducing safe dual bounding calls
-                                              *   ('n'o reduction, 'w'eak reduction, 's'trong reduction) */
-   SCIP_Bool             misc_ignorepssol;   /**< should pseudo solutions be ignored for dual bounds */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

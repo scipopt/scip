@@ -305,13 +305,6 @@ SCIP_Real SCIPsolGetObj(
    SCIP_PROB*            prob                /**< transformed problem data */
    );
 
-/** sets objective value of primal CIP solution in transformed problem */
-extern
-void SCIPsolSetObj(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real             obj                 /**< transformed objective value */
-   );
-
 /** updates primal solutions after a change in a variable's objective value */
 extern
 void SCIPsolUpdateVarObj(

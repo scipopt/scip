@@ -66,9 +66,6 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
 
-/** dynamic array for storing mpq_t values */
-typedef struct SCIP_MpqArray SCIP_MPQARRAY;
-
 /** Resource profile data structure
  *
  *  - \ref ResourceProfile "List of all available methods"

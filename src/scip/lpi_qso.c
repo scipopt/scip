@@ -2597,7 +2597,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
 
    /* set the basis */
-   rval = QSload_basis_array(lpi->prob, icstat, irstat);
+   rval = QSget_basis_array(lpi->prob, icstat, irstat);
    QS_RETURN(rval);
 }
 

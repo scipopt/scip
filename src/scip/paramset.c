@@ -3574,58 +3574,6 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    return SCIP_OKAY;
 }
 
-/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
- *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
- *  (for that the EXACTSOLVE flag has to be set to true as well).
- */
-SCIP_RETCODE SCIPparamsetSetReducedsolve(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   )
-{
-   /* reset all parameter to default */
-   SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
-
-   /* turn off restarts */
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrestarts", 0, quiet) );
-
-   /* turn off presolving, except for exactlp constraint handler where trivial presolving steps are implemented */
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/integral/maxprerounds", 0, quiet) );
-#ifdef WITH_EXACTSOLVE
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/exactlp/maxprerounds", -1, quiet) );
-#else
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/linear/maxprerounds", 0, quiet) );
-#endif
-
-   /* turn off domain propagation */
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/maxrounds", 0, quiet) );
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/maxroundsroot", 0, quiet) );
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/integral/propfreq", -1, quiet) );
-#ifdef WITH_EXACTSOLVE
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/exactlp/propfreq", -1, quiet) );
-#else
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/linear/propfreq", -1, quiet) );
-#endif
-
-   /* turn off conflict analysis */
-   SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/enable", FALSE, quiet) );
-
-   /* turn off separation of LP solution, except for exactlp constraint handler where dual bound computation
-    * takes place at every node
-    */
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxstallrounds", -1, quiet) );
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/integral/sepafreq", -1, quiet) );
-#ifdef WITH_EXACTSOLVE
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/exactlp/sepafreq", 1, quiet) );
-#else
-   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/linear/sepafreq", -1, quiet) );
-#endif
-
-   return SCIP_OKAY;
-}
-
 /** sets heuristic parameters values to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
  *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased

@@ -351,18 +351,6 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
-/** sets parameters such that we obtain a reduced version of SCIP, which is currently a pure branch-and-bound algorithm.
- *  the method is called when the user sets the REDUCEDSOLVE flag to true. note that it does not enable exact MIP solving
- *  (for that the EXACTSOLVE flag has to be set to true as well).
- */
-extern
-SCIP_RETCODE SCIPparamsetSetReducedsolve(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
-   );
-
 /** sets heuristic parameters values to 
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
  *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased

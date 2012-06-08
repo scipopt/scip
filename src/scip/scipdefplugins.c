@@ -28,44 +28,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef WITH_REDUCEDSOLVE
-
-   /**@todo exiptodo: modify other plugins such that they can be used for exact mip solving */
-   /* include plugins for reduced version of SCIP and distiguish between exact and inexact MIP solving. */
-#ifdef WITH_EXACTSOLVE
-   SCIP_CALL( SCIPincludeConshdlrExactlp(scip) );
-#else
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
-#endif
-   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
-   SCIP_CALL( SCIPincludeReaderZpl(scip) );
-
-   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
-   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
-
-#ifdef WITH_BRANCHPLGS
-   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
-   SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
-   SCIP_CALL( SCIPincludeBranchruleInference(scip) );
-   SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
-   SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
-   SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
-   SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
-   SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
-#endif
-
-   SCIP_CALL( SCIPincludeDispDefault(scip) );
-
-   /** @todo exiptodo:
-    *  - the parameters changed in SCIPsetReducedsolve() refer to a pure branch-and-bound alorithm. they have to be
-    *    adapted when other solving techniques, like presolving, are incorporated into the reduced version of SCIP.
-    */
-   /* load parameter settings needed to obtain reduced version of SCIP and to support EXACTSOLVE flag if activated */
-   SCIP_CALL( SCIPsetReducedsolve(scip, TRUE) );
-#else
    SCIP_NLPI* nlpi;
 
-   /* include all default plugins into SCIP */
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear must be before linear, quadratic, abspower, and and due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
@@ -170,7 +134,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
-   SCIP_CALL( SCIPincludePropRedcost(scip) );
+   SCIP_CALL( SCIPincludePropRedcost(scip) );   
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
@@ -197,7 +161,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    }
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
-#endif
 
    return SCIP_OKAY;
 }

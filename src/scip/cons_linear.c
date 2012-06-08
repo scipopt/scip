@@ -49,11 +49,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#ifdef WITH_EXACTSOLVE
-#include "gmp.h"
-#endif
 
-#include "scip/intervalarith.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_quadratic.h"
@@ -2715,109 +2711,6 @@ SCIP_Real consdataGetActivity(
    return activity;
 }
 
-#ifdef WITH_EXACTSOLVE
-/** calculates the exact activity of the linear constraint for given solution */
-static
-void consdataGetActivityExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_SOL*             sol,                /**< solution to get activity for, NULL to current solution */
-   mpq_t                 activity            /**< reference to store the activity */ 
-   )
-{
-   mpq_t scipposinf; 
-   mpq_t scipneginf; 
-   mpq_t solval;
-   mpq_t val;
-   mpq_t prod;
-   int v;
-
-   /* initializes gmp data */
-   mpq_init(solval);
-   mpq_init(val);
-   mpq_init(prod);
-   mpq_init(scipposinf);
-   mpq_init(scipneginf);
-
-   mpq_set_d(scipposinf, SCIPinfinity(scip));
-   mpq_set_d(scipneginf, -SCIPinfinity(scip));
-   mpq_set_d(activity, 0.0);
-
-   /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
-    * solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
-    */ 
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      mpq_set_d(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
-      mpq_set_d(val, consdata->vals[v]);
-         
-      mpq_mul(prod, val, solval);
-      mpq_add(activity, activity, prod);
-   }
-
-   if( mpq_cmp(activity, scipposinf) > 0 ) 
-      mpq_set(activity, scipposinf);
-   else if( mpq_cmp(activity, scipneginf) < 0 )
-      mpq_set(activity, scipneginf);
-
-   /* frees gmp data */
-   mpq_clear(scipneginf);
-   mpq_clear(scipposinf);
-   mpq_clear(prod);
-   mpq_clear(val);
-   mpq_clear(solval);
-}
-#endif
-
-#ifdef WITH_EXACTSOLVE
-/** calculates the interval of the activity of the linear constraint for given solution */
-static
-SCIP_INTERVAL consdataGetActivityInterval(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_SOL*             sol                 /**< solution to get interval of activity for, NULL to current solution */
-   )
-{
-   SCIP_INTERVAL activityint;
-   SCIP_INTERVAL solvalint;
-   SCIP_INTERVAL valint;
-   SCIP_INTERVAL prod;
-   SCIP_Real solval;
-   SCIP_Real val;
-
-   SCIP_Real scipinf;
-   int v;
- 
-   /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
-    * solution values/bounds of aggregated variables are calculated in floating point arithmetic) 
-    */ 
-   SCIPintervalSet(&activityint, 0.0);
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
-      val = consdata->vals[v];
-
-      SCIPintervalSet(&solvalint, solval);
-      SCIPintervalSet(&valint, val);
-      
-      SCIPintervalMul(SCIPinfinity(scip), &prod, valint, solvalint);
-      SCIPintervalAdd(SCIPinfinity(scip), &activityint, activityint, prod);
-   }
-   
-   scipinf = SCIPinfinity(scip);
-   SCIPintervalSetBounds(&activityint, 
-      MAX(SCIPintervalGetInf(activityint), -scipinf), MAX(SCIPintervalGetSup(activityint), -scipinf));
-   SCIPintervalSetBounds(&activityint, 
-      MIN(SCIPintervalGetInf(activityint), +scipinf), MIN(SCIPintervalGetSup(activityint), +scipinf));
-   assert(SCIPintervalGetInf(activityint) <= SCIPintervalGetSup(activityint));
-
-   SCIPdebugMessage("activity of linear constraint: [%g, %g]\n", SCIPintervalGetInf(activityint),
-      SCIPintervalGetSup(activityint));
-   
-   return activityint;
-}
-#endif
-
 /** calculates the feasibility of the linear constraint for given solution */
 static
 SCIP_Real consdataGetFeasibility(
@@ -5036,150 +4929,6 @@ SCIP_RETCODE checkCons(
 
    return SCIP_OKAY;
 }
-
-#ifdef WITH_EXACTSOLVE
-/** checks linear constraint for exact feasibility of given solution or current solution */
-static
-SCIP_RETCODE checkConsExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
-   SCIP_Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
-   SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_INTERVAL activityint;
-
-
-   assert(violated != NULL);
-
-   SCIPdebugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   *violated = FALSE;
-
-   /* constraints which are in the current LP and should not be checked are not checked indeed, even if we want to solve 
-    * the MIP exactly, since for each primal solution an exact LP feasibility check is performed before it is added to the 
-    * solution storage
-    */    
-   if( consdata->row != NULL && !checklprows && SCIProwIsInLP(consdata->row) )
-         return SCIP_OKAY;
-
-   /* gets interval of activity of constraint */
-   activityint = consdataGetActivityInterval(scip, consdata, sol);
-   assert(SCIPintervalGetInf(activityint) >= -SCIPinfinity(scip) 
-      && SCIPintervalGetSup(activityint) <= SCIPinfinity(scip)
-      && SCIPintervalGetInf(activityint) <= SCIPintervalGetSup(activityint));
-   
-   /* try to prove (in)feasibility by using interval arithmetic */
-   if( SCIPintervalGetSup(activityint) <  consdata->lhs || consdata->rhs < SCIPintervalGetInf(activityint) ) 
-   {
-      *violated = TRUE;
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-
-#ifndef NDEBUG
-      {
-         mpq_t activityexact;
-         mpq_t lhsexact;
-         mpq_t rhsexact;
-
-         mpq_init(activityexact);
-         mpq_init(lhsexact);
-         mpq_init(rhsexact);
-
-         consdataGetActivityExact(scip, consdata, sol, activityexact);
-         mpq_set_d(lhsexact, consdata->lhs);
-         mpq_set_d(rhsexact, consdata->rhs);
-         assert(mpq_cmp(activityexact, lhsexact) < 0 || mpq_cmp(activityexact, rhsexact) > 0);
-
-         mpq_clear(rhsexact);
-         mpq_clear(lhsexact);
-         mpq_clear(activityexact);
-      }
-#endif
-   }
-   else if( consdata->lhs <= SCIPintervalGetInf(activityint) && SCIPintervalGetSup(activityint) <= consdata->rhs ) 
-   {
-      *violated = FALSE;
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
-
-#ifndef NDEBUG
-      {
-         mpq_t activityexact;
-         mpq_t lhsexact;
-         mpq_t rhsexact;
-         
-         mpq_init(activityexact);
-         mpq_init(lhsexact);
-         mpq_init(rhsexact);
-         
-         consdataGetActivityExact(scip, consdata, sol, activityexact);
-         mpq_set_d(lhsexact, consdata->lhs);
-         mpq_set_d(rhsexact, consdata->rhs);
-         assert(mpq_cmp(activityexact, lhsexact) >= 0 || mpq_cmp(activityexact, rhsexact) <= 0);
-         
-         mpq_clear(rhsexact);
-         mpq_clear(lhsexact);
-         mpq_clear(activityexact);
-      }
-#endif
-   }
-   /* prove (in)feasibility by using exact arithmetic */
-   else
-   {   
-      mpq_t activityexact;
-      mpq_t lhsexact;
-      mpq_t rhsexact;
-
-      /* initializes gmp data */
-      mpq_init(activityexact);
-      mpq_init(lhsexact);
-      mpq_init(rhsexact);
-      
-      /* gets exact activity of constraint */
-      consdataGetActivityExact(scip, consdata, sol, activityexact);
-      mpq_set_d(lhsexact, consdata->lhs);
-      mpq_set_d(rhsexact, consdata->rhs);
-
-#ifndef NDEBUG
-      {
-         mpq_t scipposinf; 
-         mpq_t scipneginf; 
-
-         mpq_init(scipposinf);
-         mpq_init(scipneginf);
-         mpq_set_d(scipposinf, SCIPinfinity(scip));
-         mpq_set_d(scipneginf, -SCIPinfinity(scip));
-         
-         assert(mpq_cmp(activityexact, scipneginf) >= 0); 
-         assert(mpq_cmp(activityexact, scipposinf) <= 0); 
-      }
-#endif      
-      
-      if( mpq_cmp(activityexact, lhsexact) < 0 || mpq_cmp(activityexact, rhsexact) > 0 )
-      {
-         *violated = TRUE;
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      }
-      else
-      {
-         *violated = FALSE;
-         SCIP_CALL( SCIPincConsAge(scip, cons) );
-      }
-      
-      /* frees gmp data */
-      mpq_clear(rhsexact);
-      mpq_clear(lhsexact);
-      mpq_clear(activityexact);
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** creates an LP row in a linear constraint data */
 static
@@ -10386,13 +10135,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-#ifdef WITH_EXACTSOLVE
-      assert(SCIPisExactSolve(scip));
-      SCIP_CALL( checkConsExact(scip, conss[c], sol, checklprows, &violated) );
-#else
-      assert(!SCIPisExactSolve(scip));
       SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, &violated) );
-#endif
    }
 
    if( violated )

@@ -456,12 +456,6 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** force enforcement of constaint handler for LP and pseudo solution */
-extern
-void SCIPconshdlrForceEnforcement(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 
 
 /*

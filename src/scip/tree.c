@@ -21,8 +21,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define NODESEL_OUT /** uncomment to get more debug msgs (define SCIP_DEBUG) for node selection; 
-//                     *  same as in nodesel_bfs.c */
 
 #include <assert.h>
 
@@ -769,9 +767,6 @@ SCIP_RETCODE nodeAssignParent(
    }
    SCIPdebugMessage("assigning parent #%"SCIP_LONGINT_FORMAT" to node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
       parent != NULL ? SCIPnodeGetNumber(parent) : -1, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
-#ifdef NODESEL_OUT
-   SCIPdebugMessage("   node<%lld>: lb<%.20f> est<%.20f>\n", SCIPnodeGetNumber(node), node->lowerbound, node->estimate);
-#endif
 
    /* register node in the childlist of the focus (the parent) node */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
@@ -810,7 +805,7 @@ SCIP_RETCODE nodeReleaseParent(
    {
       SCIP_Bool freeParent;
       SCIP_Bool singleChild;
-      
+
       freeParent = FALSE;
       singleChild = FALSE;
       switch( SCIPnodeGetType(parent) )
@@ -1812,19 +1807,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       
       /* update the child's lower bound */
       if( set->misc_exactsolve )
-      {
-         if( set->misc_usefprelax )
-            newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-         else
-            newpseudoobjval = -SCIPsetInfinity(set);
-      }
+         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
-#ifdef NODESEL_OUT
-      SCIPdebugMessage(" -> node<%lld>: newpseudoobjval<%.14f> -> lb<%.14f>\n", SCIPnodeGetNumber(node), newpseudoobjval,
-         SCIPnodeGetLowerbound(node));
-#endif
    }
    else
    {
@@ -2145,8 +2131,6 @@ void SCIPnodeUpdateLowerbound(
 /** updates lower bound of node using lower bound of LP */
 SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
-   char                  lowerboundtype,     /**< type of lower bound to be generated from LP
-                                              *   ('i'gnore bound, 's'afe bound, 'u'nsafe bound) */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
@@ -2157,41 +2141,18 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    assert(set != NULL);
 
-   switch( lowerboundtype )
+   if( set->misc_exactsolve )
    {
-   case 'i':
-      lpobjval = -SCIPsetInfinity(set); /* lower bound of node does not change */
-      break;
-   case 's':
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
-      {
-         SCIP_Bool proved;
-
-         /* checks whether an exact certificate for infeasibility exists */
-         SCIP_CALL( SCIPlpIsInfeasibilityProved(lp, set, stat, prob, &proved) );
-         if( proved )
-            lpobjval = SCIPsetInfinity(set);  /* node will be cut off */
-         else
-            lpobjval = -SCIPsetInfinity(set); /* lower bound of node does not change */
-      }
-      else
-      {
-         SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, stat, prob, &lpobjval) );
-      }
-      break;
-   case 'u':
-      lpobjval = SCIPlpGetObjval(lp, set, prob);
-      break;
-   default:
-      SCIPerrorMessage("invalid type of lower bound to be generated from LP '%c'\n", lowerboundtype);
-      SCIPABORT();
-      lpobjval = -SCIPsetInfinity(set);
+      SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }
+   else
+      lpobjval = SCIPlpGetObjval(lp, set, prob);
 
    SCIPnodeUpdateLowerbound(node, stat, lpobjval);
 
    return SCIP_OKAY;
 }
+
 
 /** change the node selection priority of the given child */
 void SCIPchildChgNodeselPrio(
@@ -2222,10 +2183,6 @@ void SCIPnodeSetEstimate(
    assert(set != NULL);
    assert(SCIPsetIsRelGE(set, newestimate, node->lowerbound));
          
-#ifdef NODESEL_OUT
-   SCIPdebugMessage("set estimate of node<%lld>: old<%f> -> new<%f>\n", SCIPnodeGetNumber(node), node->estimate, 
-      newestimate);
-#endif
    node->estimate = newestimate;
 }
 
@@ -3386,8 +3343,7 @@ SCIP_RETCODE nodeToLeaf(
 #endif
 
    /* if node is good enough to keep, put it on the node queue */
-   if( (set->misc_exactsolve && (*node)->lowerbound < cutoffbound)
-      || (!set->misc_exactsolve && SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound)) )
+   if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
    {
       /* insert leaf in node queue */
       SCIP_CALL( SCIPnodepqInsert(tree->leaves, set, *node) );
@@ -4176,7 +4132,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
       /* move children to the queue, make them LEAFs */
       SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, childrenlpstatefork,
-           primal->cutoffbound) );
+            primal->cutoffbound) );
    }
    else
    {
@@ -4248,7 +4204,7 @@ SCIP_RETCODE SCIPnodeFocus(
       (*node)->nodetype = SCIP_NODETYPE_FOCUSNODE; /*lint !e641*/
    }
    assert(tree->nchildren == 0);
-
+   
    /* set new focus node, LP fork, LP state fork, and subroot */
    assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
    assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));
@@ -4659,8 +4615,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( (set->misc_exactsolve && node->lowerbound >= cutoffbound)
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, node->lowerbound, cutoffbound)) )
+      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -4673,8 +4628,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( (set->misc_exactsolve && node->lowerbound >= cutoffbound)
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, node->lowerbound, cutoffbound)) )
+      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -6117,17 +6071,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) )
          {
-            char lowerboundtype;
-            
-            if( set->misc_exactsolve )
-               if( set->misc_usefprelax && ( set->misc_dbmethod == 'n' || set->misc_dbmethod == 'a' ) )
-                  lowerboundtype = 's';
-               else 
-                  lowerboundtype = 'i';
-            else
-               lowerboundtype = 'u';
-            
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, lowerboundtype, set, stat, prob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, prob, lp) );
          }
       }
    }
@@ -6294,13 +6238,6 @@ SCIP_NODE* SCIPtreeGetBestNode(
    bestsibling = SCIPtreeGetBestSibling(tree, set);
    bestleaf = SCIPtreeGetBestLeaf(tree);
 
-#ifdef NODESEL_OUT
-   SCIPdebugMessage("select bestnode: bestchild<%lld>, bestsib<%lld>, bestleaf<%lld>\n", 
-      bestchild == NULL ? -1: SCIPnodeGetNumber(bestchild), 
-      bestsibling == NULL ? -1 : SCIPnodeGetNumber(bestsibling), 
-      bestleaf == NULL ? -1 : SCIPnodeGetNumber(bestleaf));
-#endif
-
    /* return the best of the three */
    bestnode = bestchild;
    if( bestsibling != NULL && (bestnode == NULL || SCIPnodeselCompare(nodesel, set, bestsibling, bestnode) < 0) )
@@ -6309,11 +6246,6 @@ SCIP_NODE* SCIPtreeGetBestNode(
       bestnode = bestleaf;
 
    assert(SCIPtreeGetNLeaves(tree) == 0 || bestnode != NULL);
-
-#ifdef NODESEL_OUT
-   SCIPdebugMessage("---> bestnode<%lld>\n", 
-      bestnode == NULL ? -1 : SCIPnodeGetNumber(bestnode));
-#endif
 
    return bestnode;
 }

@@ -20,8 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define USESBGAIN /** uncomment to test gain of additional strong branching conclusions in inexact mode;
-                   *  same as in scip.c */
 
 #include <assert.h>
 #include <string.h>
@@ -237,11 +235,7 @@ SCIP_RETCODE execRelpscost(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
-#ifdef USESBGAIN
    exactsolve = SCIPisExactSolve(scip);
-#else
-   exactsolve = TRUE;
-#endif
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -538,16 +532,9 @@ SCIP_RETCODE execRelpscost(
          {
             if( !SCIPisStopped(scip) )
             {
-#ifdef WITH_EXACTSOLVE
-               /* happens very often on numerically difficult instances. increase the verblevel to avoid huge logfiles */
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                  "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
-                  SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
-#else
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
-#endif
             }
             break;
          }
@@ -735,7 +722,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(exactsolve || SCIPisLT(scip, provedbound, cutoffbound));
+      assert(SCIPisLT(scip, provedbound, cutoffbound));
 
       var = branchcands[bestcand];
 

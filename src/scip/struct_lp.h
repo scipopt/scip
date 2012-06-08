@@ -325,7 +325,6 @@ struct SCIP_Lp
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
-   SCIP_Bool             hasprovedbound;     /**< was finite safe dual bound computed for current LP? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
                                               *   solution value a valid local lower bound? */

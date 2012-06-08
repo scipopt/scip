@@ -4391,20 +4391,6 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
    return conshdlr->timingmask;
 }
 
-/** force enforcement of constaint handler for LP and pseudo solution */
-void SCIPconshdlrForceEnforcement(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   conshdlr->lastenfolplpcount = -1;
-   conshdlr->lastenfolpdomchgcount = -1;
-   conshdlr->lastenfopsdomchgcount = -1;
-   conshdlr->lastenfolpnode = -1;
-   conshdlr->lastenfopsnode = -1;
-}
-
 
 
 /*

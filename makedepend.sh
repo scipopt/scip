@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-#
-# This scripts generates the dependences for SCIP
+# 
+# This scripts generates the dependences for SCIP 
 #
 
 LPSS=(cpx spx spx132 xprs msk clp grb qso none)
-LPSEXS=(qsoex none)
 OPTS=(opt dbg prf opt-gccold)
 EXPRINTS=(none cppad)
 
@@ -12,12 +11,11 @@ for OPT in ${OPTS[@]}
 do
     # dependencies of main SCIP source and objscip library
     # with ZIMPL disabled
-    # with EXACTSOLVE, REDUCEDSOLVE, BRANCHPLGS disabled
-    make OPT=$OPT ZIMPL=false LPS=none LPSEX=none REDUCEDSOLVE=false EXACTSOLVE=false BRANCHPLGS=false scipdepend
+    make OPT=$OPT ZIMPL=false LPS=none scipdepend
 
     # dependencies of cmain and cppmain
-    make OPT=$OPT ZIMPL=false LPS=none LPSEX=none REDUCEDSOLVE=false EXACTSOLVE=false BRANCHPLGS=false LINKER=C   maindepend
-    make OPT=$OPT ZIMPL=false LPS=none LPSEX=none REDUCEDSOLVE=false EXACTSOLVE=false BRANCHPLGS=false LINKER=CPP maindepend
+    make OPT=$OPT ZIMPL=false LPS=none LINKER=C   maindepend
+    make OPT=$OPT ZIMPL=false LPS=none LINKER=CPP maindepend
 
     for LPS in ${LPSS[@]}
     do
@@ -29,17 +27,6 @@ do
              make LPS=$LPS OPT=$OPT lpidepend
         fi
 
-    done
-
-    for LPSEX in ${LPSEXS[@]}
-    do
-        # check if the header for the exact LP solver are available,
-        # or we are in the special case "none"
-        # in the case "qsoex", the include directory is called qsexinc
-        if [ -e lib/$LPSEX"inc" ] || [ "$LPSEX" == "none" ] || [ "$LPSEX" == "qsoex" -a -e lib/qsexinc ]
-        then
-             make LPSEX=$LPSEX OPT=$OPT lpiexdepend
-        fi
     done
 
     # dependencies of nlpi libraries
@@ -58,4 +45,5 @@ do
             fi
         fi
     done
+
 done
