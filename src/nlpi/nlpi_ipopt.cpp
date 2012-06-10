@@ -22,8 +22,8 @@
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  *
  * This file can only be compiled if Ipopt is available.
- * Otherwise, to resolve public functions, use nlpi_ipopt.c, which also can be compiled by a C compiler.
- * The latter is the reason why it has been moved into a separate file.
+ * Otherwise, to resolve public functions, use nlpi_ipopt_dummy.c.
+ * Since the dummy code is C instead of C++, it has been moved into a separate file.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,6 +37,7 @@
 #include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
+#include <sstream>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -108,9 +109,20 @@ class ScipNLP;
 
 struct SCIP_NlpiData
 {
+public:
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
+   std::string                 defoptions;   /**< modified default options for Ipopt */
+
+   /** constructor */
+   SCIP_NlpiData(
+      BMS_BLKMEM* blkmem_                    /**< block memory */
+      )
+     : blkmem(blkmem_),
+       messagehdlr(NULL),
+       infinity(SCIP_DEFAULT_INFINITY)
+   { }
 };
 
 struct SCIP_NlpiProblem
@@ -137,6 +149,7 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
+   /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL),
         storeintermediate(false), fastfail(false),
@@ -440,6 +453,7 @@ static
 SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
 {
    SCIP_NLPIDATA* sourcedata;
+   SCIP_NLPIDATA* targetdata;
 
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
@@ -450,7 +464,13 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    SCIP_CALL( SCIPcreateNlpSolverIpopt(blkmem, targetnlpi) );
    assert(*targetnlpi != NULL);
 
-   SCIP_CALL( SCIPnlpiSetRealPar((*targetnlpi), NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
+   SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(*targetnlpi, sourcedata->messagehdlr) );
+
+   targetdata = SCIPnlpiGetData(*targetnlpi);
+   assert(targetdata != NULL);
+
+   targetdata->defoptions = sourcedata->defoptions;
 
    return SCIP_OKAY;
 }
@@ -470,9 +490,7 @@ SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   BMSfreeMemory(&data);
-
-   assert(data == NULL);
+   delete data;
 
    return SCIP_OKAY;
 }
@@ -548,6 +566,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
 
+   /* modify Ipopt's default settings to what we believe is appropriate */
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
@@ -564,11 +583,25 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
 
+   /* apply user's given modifications to Ipopt's default settings */
+   if( data->defoptions.length() > 0 )
+   {
+      std::istringstream is(data->defoptions);
+
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+      {
+         SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
+         return SCIP_ERROR;
+      }
+   }
+
+   /* apply user's given options file (this one is NLPI problem specific) */
    if( (*problem)->ipopt->Initialize((*problem)->optfile) != Solve_Succeeded )
    {
       SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", (*problem)->optfile.c_str());
       return SCIP_ERROR;
    }
+
 
    return SCIP_OKAY;
 }
@@ -1916,12 +1949,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
 
-   nlpidata = NULL;
-   if( BMSallocMemory(&nlpidata) == NULL )
-      return SCIP_NOMEMORY;
-   nlpidata->blkmem = blkmem;
-   nlpidata->messagehdlr = NULL;
-   nlpidata->infinity = SCIP_DEFAULT_INFINITY;
+   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA(blkmem) );
 
    SCIP_CALL( SCIPnlpiCreate(nlpi,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
@@ -1980,6 +2008,27 @@ void* SCIPgetNlpiOracleIpopt(
    assert(nlpiproblem != NULL);
 
    return nlpiproblem->oracle;
+}
+
+/** sets modified default settings that are used when setting up an Ipopt problem
+ *
+ * Do not forget to add a newline after the last option in optionsstring.
+ */
+SCIP_RETCODE SCIPsetModifiedDefaultSettingsIpopt(
+   SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
+   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   )
+{
+   SCIP_NLPIDATA* data;
+
+   assert(nlpi != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   data->defoptions = optionsstring;
+
+   return SCIP_OKAY;
 }
 
 /** Method to return some info about the nlp */
