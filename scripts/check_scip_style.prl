@@ -31,8 +31,8 @@ if ( $narg < 1 || $ARGV[0] eq "-h" )
 }
 
 # determine which part to check
-my $checktabs = 1;
-my $checkbrackets = 1;
+my $checktabs = 0;
+my $checkbrackets = 0;
 my $checkindent = 1;
 
 # parse command line arguments (including switches and files)
@@ -41,14 +41,14 @@ for (my $i = 0; $i < $narg; ++$i)
    # check for tab option
    if ( $ARGV[$i] eq "-t" )
    {
-      $checktabs = 0;
+      $checktabs = 1;
       next;
    }
 
    # check for tab option
    if ( $ARGV[$i] eq "-b" )
    {
-      $checkbrackets = 0;
+      $checkbrackets = 1;
       next;
    }
 
