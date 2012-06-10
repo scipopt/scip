@@ -4887,7 +4887,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->local = local;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
-   (*row)->origintype = origintype;
+   (*row)->origintype = origintype; /*lint !e641*/
    (*row)->removable = removable;
    (*row)->inglobalcutpool = FALSE;
    (*row)->storedsolvals = NULL;
@@ -17203,7 +17203,7 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
 {
    assert( row != NULL );
 
-   return row->origintype;
+   return (SCIP_ROWORIGINTYPE) row->origintype;
 }
 
 /** returns origin that created the row

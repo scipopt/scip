@@ -206,7 +206,7 @@ enum GUBVarstatus
    GUBVARSTATUS_BELONGSTOSET_R   =  1,       /** variable in noncovervars R */
    GUBVARSTATUS_BELONGSTOSET_F   =  2,       /** variable in noncovervars F */
    GUBVARSTATUS_BELONGSTOSET_C2  =  3,       /** variable in covervars C2 */
-   GUBVARSTATUS_BELONGSTOSET_C1  =  4,       /** variable in covervars C1 */
+   GUBVARSTATUS_BELONGSTOSET_C1  =  4        /** variable in covervars C1 */
 };
 typedef enum GUBVarstatus GUBVARSTATUS;
 
@@ -218,7 +218,7 @@ enum GUBConsstatus
    GUBCONSSTATUS_BELONGSTOSET_GF   =  1,     /** all GUB variables are in noncovervars F (and noncovervars R) */
    GUBCONSSTATUS_BELONGSTOSET_GC2  =  2,     /** all GUB variables are in covervars C2 */
    GUBCONSSTATUS_BELONGSTOSET_GNC1 =  3,     /** some GUB variables are in covervars C1, others in noncovervars R or F */
-   GUBCONSSTATUS_BELONGSTOSET_GOC1 =  4,     /** all GUB variables are in covervars C1 */
+   GUBCONSSTATUS_BELONGSTOSET_GOC1 =  4      /** all GUB variables are in covervars C1 */
 };
 typedef enum GUBConsstatus GUBCONSSTATUS;
 
