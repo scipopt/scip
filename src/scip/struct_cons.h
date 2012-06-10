@@ -117,6 +117,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          nrespropcalls;      /**< number of times, the resolve propagation was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
    SCIP_Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
+   SCIP_Longint          ncutsapplied;       /**< number of cuts found by this constraint handler applied to lp */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */

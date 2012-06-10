@@ -173,6 +173,7 @@ SCIP_RETCODE storeCutInArrays(
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< solution values of active variables */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
@@ -189,7 +190,7 @@ SCIP_RETCODE addCut(
    SCIP_Real cutact;
    int nvars;
    int cutlen;
-   
+
    assert(scip != NULL);
    assert(varsolvals != NULL);
    assert(cutcoefs != NULL);
@@ -202,7 +203,7 @@ SCIP_RETCODE addCut(
    /* get temporary memory for storing the cut as sparse row */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
-   
+
    /* store the cut as sparse row, calculate activity and norm of cut */
    SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals,
          cutvars, cutvals, &cutlen, &cutact) );
@@ -220,7 +221,7 @@ SCIP_RETCODE addCut(
          
          /* create the cut */
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, 
                cutislocal, FALSE, cutremovable) );
          SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
    
@@ -256,7 +257,7 @@ SCIP_RETCODE addCut(
             }
             (*ncuts)++;
          }
-         
+
          /* release the row */
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
       }
@@ -413,6 +414,7 @@ SCIP_RETCODE tryDelta(
  */
 SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    int                   maxtestdelta,       /**< maximal number of different deltas to try (-1: unlimited) */
@@ -588,7 +590,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
          assert(success); 
          
          /* add the cut to the separation storage */
-         SCIP_CALL( addCut(scip, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutclassname, ncuts) );
+         SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutclassname, ncuts) );
       }
       else
       {
@@ -664,6 +666,7 @@ SCIP_Real getBounddist(
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
@@ -843,7 +846,7 @@ SCIP_RETCODE aggregation(
        * try to generate a MIR cut out of the current aggregation 
        */
       oldncuts = *ncuts;
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH, 
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH, 
             USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC, 
             sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", ncuts, NULL, NULL) );
 
@@ -1402,7 +1405,7 @@ SCIP_RETCODE separateCuts(
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, sepadata, sol, varsolvals, bestcontlbs, bestcontubs, contvarscorebounds,
+      SCIP_CALL( aggregation(scip, sepa, sepadata, sol, varsolvals, bestcontlbs, bestcontubs, contvarscorebounds,
             rowlhsscores, rowrhsscores, roworder[r], maxaggrs, maxslack, maxconts, &wastried, &ncuts) );
       if( !wastried )
          continue;

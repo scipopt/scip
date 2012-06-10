@@ -133,6 +133,12 @@ SCIP_Longint SCIPsepaGetNCutsFound(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** gets the total number of cutting planes applied to lp */
+extern
+SCIP_Longint SCIPsepaGetNCutsApplied(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 /** gets the number of cutting planes found by this separator at the current node */
 extern
 SCIP_Longint SCIPsepaGetNCutsFoundAtNode(

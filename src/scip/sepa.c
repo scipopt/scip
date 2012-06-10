@@ -141,6 +141,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->ncalls = 0;
    (*sepa)->ncutoffs = 0;
    (*sepa)->ncutsfound = 0;
+   (*sepa)->ncutsapplied = 0;
    (*sepa)->nconssfound = 0;
    (*sepa)->ndomredsfound = 0;
    (*sepa)->ncallsatnode = 0;
@@ -225,6 +226,7 @@ SCIP_RETCODE SCIPsepaInit(
       sepa->ncalls = 0;
       sepa->ncutoffs = 0;
       sepa->ncutsfound = 0;
+      sepa->ncutsapplied = 0;
       sepa->nconssfound = 0;
       sepa->ndomredsfound = 0;
       sepa->ncallsatnode = 0;
@@ -770,6 +772,27 @@ SCIP_Longint SCIPsepaGetNCutsFound(
    assert(sepa != NULL);
 
    return sepa->ncutsfound;
+}
+
+/** gets the total number of cutting planes applied to lp */
+SCIP_Longint SCIPsepaGetNCutsApplied(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutsapplied;
+}
+
+/** increase count of applied cuts */
+extern
+void SCIPsepaIncNAppliedCuts(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert( sepa != NULL );
+
+   ++sepa->ncutsapplied;
 }
 
 /** gets the number of cutting planes found by this separator at the current node */

@@ -3188,6 +3188,7 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
 static
 SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    SCIP*                 scip,               /**< SCIP data structure */              
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    SCIP_Real*            weights,            /**< weightvector */
@@ -3261,9 +3262,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 #endif
       }
       assert(*varsolvals != NULL);
-   
+
       /* find best value of delta */
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, NULL, *varsolvals, sepadata->maxtestdelta, weights, BOUNDSWITCH, 
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, NULL, *varsolvals, sepadata->maxtestdelta, weights, BOUNDSWITCH, 
             USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC, 
             sepadata->trynegscaling, TRUE, "zerohalf", &ncuts, &bestdelta, &bestdeltavalid) );  
       assert(ncuts == 0);
@@ -3317,7 +3318,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
             {    
                /* create cut */
                (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN,"zerohalf%d_%d", SCIPgetNLPs(scip), nzerohalfcuts);
-               SCIP_CALL(SCIPcreateEmptyRow(scip, &(cutdata->cut), cutname, -SCIPinfinity(scip), cutdata->rhs, 
+               SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &(cutdata->cut), sepa, cutname, -SCIPinfinity(scip), cutdata->rhs, 
                      cutdata->islocal, FALSE, sepadata->dynamiccuts));
                SCIP_CALL(SCIPaddVarsToRow(scip, cutdata->cut, cutdata->nnonz, cutvars, cutvals));
             }
@@ -3348,6 +3349,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 static
 SCIP_RETCODE preprocessTrivialZerohalfCuts(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */        
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -3423,7 +3425,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
                /* create zerohalf cut */
                SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                      mod2data->relatedsubproblem, mod2data, 1, nrowsincut, cutseparatedby));
-               SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+               SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                      lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
                     
                /* add cut */
@@ -4645,6 +4647,7 @@ SCIP_RETCODE preprocessIdenticalColums(
 static
 SCIP_RETCODE preprocess(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */   
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -4784,7 +4787,7 @@ SCIP_RETCODE preprocess(
          strncpy(ppname,"col singletons",SCIP_MAXSTRLEN);
          break;
       case ADDTRIVIALCUTS:
-         SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepadata, lpdata, mod2data,
+         SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepa, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, normtype, maxsepacuts, maxcuts, nsepacuts,
                nzerohalfcuts, zerohalfcuts, varsolvals, PPZEROONEROW, result));      
          strncpy(ppname,"trivial cuts",SCIP_MAXSTRLEN);
@@ -5483,6 +5486,7 @@ SCIP_RETCODE getBitarrayOfSelectedRows(
 static
 SCIP_RETCODE separateBySolvingAuxIP(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */        
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -5595,7 +5599,7 @@ SCIP_RETCODE separateBySolvingAuxIP(
       /* create zerohalf cut */
       SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
             mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXIP));
-      SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+      SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
             lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
 
     
@@ -5669,6 +5673,7 @@ SCIP_RETCODE calcInnerProductOfRowAndFracsol(
 static
 SCIP_RETCODE separateByEnumerationHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */        
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -5811,7 +5816,7 @@ SCIP_RETCODE separateByEnumerationHeuristics(
                   /* create zerohalf cut */
                   SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                         mod2data->relatedsubproblem, mod2data, 2, nrowsincut, HEURISTICSENUM));
-                  SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+                  SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                         lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
             
                   /* add cut */
@@ -5878,16 +5883,16 @@ SCIP_RETCODE separateByEnumerationHeuristics(
                      /* create zerohalf cut */
                      SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                            mod2data->relatedsubproblem, mod2data, 2, nrowsincut, HEURISTICSENUM));
-                     SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+                     SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                            lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
-              
+
                      /* add cut */
                      SCIP_CALL( addZerohalfCutToLP(scip, sepadata, zerohalfcuts[*nzerohalfcuts], nsepacuts, result) );
                      (*nzerohalfcuts)++;
-              
+
                      /* free temporary memory */
                      SCIPfreeMemoryArray(scip, &weights);
-                  }                 
+                  }
                }
             }
             break;
@@ -6157,6 +6162,7 @@ SCIP_RETCODE dijkstra(
 static
 SCIP_RETCODE separateByAuxGraph(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */        
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -6219,7 +6225,7 @@ SCIP_RETCODE separateByAuxGraph(
    /* check if only one row exists */
    if( mod2data->nrowsind == 1 )
    {
-      SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data,
+      SCIP_CALL(separateByEnumerationHeuristics(scip, sepa, sepadata, lpdata, mod2data,
             normtype, maxsepacuts, maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts,
             varsolvals, result, 1));
       return SCIP_OKAY;
@@ -6272,7 +6278,7 @@ SCIP_RETCODE separateByAuxGraph(
                /* create zerohalf cut */         
                SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                      mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXGRAPH));
-               SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+               SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                      lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
                     
                /* add cut */
@@ -6363,7 +6369,7 @@ SCIP_RETCODE separateByAuxGraph(
          /* create zerohalf cut */
          SCIP_CALL(ZerohalfCutDataCreate(scip, &(zerohalfcuts[*nzerohalfcuts]),
                mod2data->relatedsubproblem, mod2data, nrrowsincut, nrowsincut, AUXGRAPH));
-         SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+         SCIP_CALL(createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                lpdata, weights, normtype, *nzerohalfcuts, varsolvals, zerohalfcuts[*nzerohalfcuts]));
 
          /* add cut */
@@ -6396,6 +6402,7 @@ SCIP_RETCODE separateByAuxGraph(
 static
 SCIP_RETCODE separateByGaussHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */        
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -6441,7 +6448,7 @@ SCIP_RETCODE separateByGaussHeuristics(
 
    if( mod2data->nrowsind == 1 )
    {
-      SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data,
+      SCIP_CALL(separateByEnumerationHeuristics(scip, sepa, sepadata, lpdata, mod2data,
             normtype, maxsepacuts, maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts,
             varsolvals, result, 1));
       return SCIP_OKAY;
@@ -6520,7 +6527,7 @@ SCIP_RETCODE separateByGaussHeuristics(
          0, mod2data->nrowsind, TRUE, TRUE, FALSE));
 
    /* search for zerohalf cuts */ 
-   SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepadata, lpdata, mod2data,
+   SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepa, sepadata, lpdata, mod2data,
          0, mod2data->nrowsind, normtype, maxsepacuts, maxcuts, nsepacuts,
          nzerohalfcuts, zerohalfcuts, varsolvals, HEURISTICSGAUSS, result));
   
@@ -6534,6 +6541,7 @@ SCIP_RETCODE separateByGaussHeuristics(
 static
 SCIP_RETCODE process(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */    
    ZEROHALF_LPDATA*      lpdata,             /**< data of current LP relaxation */
    ZEROHALF_MOD2DATA*    mod2data,           /**< considered (preprocessed) subproblem mod 2 */
@@ -6670,7 +6678,7 @@ SCIP_RETCODE process(
       case SOLVEAUXSCIP: 
       case SOLVEAUXSCIPEXACT:
          ncutsfoundbefore = *nzerohalfcuts;
-         SCIP_CALL(separateBySolvingAuxIP(scip, sepadata, lpdata, mod2data, normtype,
+         SCIP_CALL(separateBySolvingAuxIP(scip, sepa, sepadata, lpdata, mod2data, normtype,
                maxsepacuts, maxcuts, (sepamethod == SOLVEAUXSCIP),
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));/*lint !e641*/
          strncpy(sepaname,"auxiliary ip",SCIP_MAXSTRLEN);
@@ -6681,23 +6689,23 @@ SCIP_RETCODE process(
          }        
          break;
       case ENUMHEURNMAX1:
-         SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts,
+         SCIP_CALL(separateByEnumerationHeuristics(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts,
                maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, 1));
          strncpy(sepaname,"enum k=1",SCIP_MAXSTRLEN);
          break;
       case ENUMHEURNMAX2:
-         SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts,
+         SCIP_CALL(separateByEnumerationHeuristics(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts,
                maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, 2));
          strncpy(sepaname,"enum k=1..2",SCIP_MAXSTRLEN);
          break;
       case GAUSSHEUR:
-         SCIP_CALL(separateByGaussHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
+         SCIP_CALL(separateByGaussHeuristics(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));
          strncpy(sepaname,"Gauss heur",SCIP_MAXSTRLEN);
          break;
       case MAX2ODDENTRIESPERROW:
          ncutsfoundbefore = *nzerohalfcuts;
-         SCIP_CALL(separateByAuxGraph(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
+         SCIP_CALL(separateByAuxGraph(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, &wrongstructure));
          strncpy(sepaname,"auxgraph",SCIP_MAXSTRLEN);
          if( ! wrongstructure )
@@ -7150,7 +7158,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          /* create zerohalf cut */
          SCIP_CALL( ZerohalfCutDataCreate(scip, &(zerohalfcuts[nzerohalfcuts]),
                lpdata->subproblems[subproblemindex], NULL, 1, 1, DECOMPOSITION) );
-         SCIP_CALL( createZerohalfCutFromZerohalfWeightvector(scip, sepadata,
+         SCIP_CALL( createZerohalfCutFromZerohalfWeightvector(scip, sepa, sepadata,
                lpdata, weights, normtype, nzerohalfcuts, &varsolvals, zerohalfcuts[nzerohalfcuts]) );
       
          /* add cut to LP */
@@ -7182,13 +7190,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       SCIP_CALL( storeMod2Data(scip, sepadata, lpdata, subproblemindex, mod2data) );  
      
       /* preprocess subproblem: reduce problem size and/or separate 'easy' zerohalf cuts */
-      SCIP_CALL( preprocess(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
+      SCIP_CALL( preprocess(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
             &nsepacuts, &nzerohalfcuts, zerohalfcuts, &varsolvals, result) );
 
       if( nsepacuts < maxsepacuts || nzerohalfcuts < maxcuts )
       {
-         /* process subproblem: separate violated zerohalf cuts */ 
-         SCIP_CALL( process(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,          
+         /* process subproblem: separate violated zerohalf cuts */
+         SCIP_CALL( process(scip, sepa, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                &nsepacuts, &nzerohalfcuts, zerohalfcuts, &varsolvals, result) );
       }
 

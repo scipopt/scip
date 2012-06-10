@@ -3203,6 +3203,7 @@ SCIP_RETCODE propagateVarbounds(
 static
 SCIP_RETCODE addVarboundsToCutPool(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             var                 /**< variable */
    )
 {
@@ -3235,7 +3236,7 @@ SCIP_RETCODE addVarboundsToCutPool(
       rowcoef[1] = -SCIPvarGetVlbCoefs(var)[i];
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_varlb", SCIPvarGetName(rowvars[0]), SCIPvarGetName(rowvars[1]));
 
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, SCIPvarGetVlbConstants(var)[i] - constant, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, SCIPvarGetVlbConstants(var)[i] - constant, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, row, 2, rowvars, rowcoef) );
 
       SCIP_CALL( SCIPaddPoolCut(scip, row) );
@@ -3249,7 +3250,7 @@ SCIP_RETCODE addVarboundsToCutPool(
       rowcoef[1] = -SCIPvarGetVubCoefs(var)[i];
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_varub", SCIPvarGetName(rowvars[0]), SCIPvarGetName(rowvars[1]));
 
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), SCIPvarGetVubConstants(var)[i] - constant, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), SCIPvarGetVubConstants(var)[i] - constant, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, row, 2, rowvars, rowcoef) );
 
       SCIP_CALL( SCIPaddPoolCut(scip, row) );
@@ -3267,6 +3268,7 @@ static
 SCIP_RETCODE generateLinearizationCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_Real             refpoint,           /**< base point for linearization */
    SCIP_Real             exponent,           /**< exponent n in sign(x)abs(x)^n */
    SCIP_Real             xoffset,            /**< offset of x */
@@ -3295,7 +3297,8 @@ SCIP_RETCODE generateLinearizationCut(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "signpowlinearizecut", -SCIPinfinity(scip), SCIPinfinity(scip), islocal, FALSE /* modifiable */, TRUE /* removable */ ) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowlinearizecut", -SCIPinfinity(scip), SCIPinfinity(scip), islocal,
+         FALSE /* modifiable */, TRUE /* removable */ ) );
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
@@ -3319,6 +3322,7 @@ static
 SCIP_RETCODE generateLinearizationCutProject(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_Real             xref,               /**< reference point for x */
    SCIP_Real             zref,               /**< reference point for z */
    SCIP_Real             xmin,               /**< minimal value x is allowed to take */
@@ -3377,7 +3381,7 @@ SCIP_RETCODE generateLinearizationCutProject(
    if( xproj < xmin )
       xproj = xmin;
 
-   SCIP_CALL( generateLinearizationCut(scip, row, xproj, exponent, xoffset, xmult, zcoef, rhs, x, z, islocal) );
+   SCIP_CALL( generateLinearizationCut(scip, row, conshdlr, xproj, exponent, xoffset, xmult, zcoef, rhs, x, z, islocal) );
 
    return SCIP_OKAY;
 }
@@ -3393,6 +3397,7 @@ static
 SCIP_RETCODE generateSecantCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol,                /**< point we want to cut off, or NULL for LP solution */
    SCIP_Real             xlb,                /**< lower bound of x */
    SCIP_Real             xub,                /**< upper bound of x */
@@ -3431,7 +3436,7 @@ SCIP_RETCODE generateSecantCut(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "signpowsecantcut", -SCIPinfinity(scip), SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowsecantcut", -SCIPinfinity(scip), SCIPinfinity(scip),
          SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 /* local */, FALSE /* modifiable */, TRUE /* removable */ ) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*slope) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
@@ -3449,6 +3454,7 @@ static
 SCIP_RETCODE generateSecantCutNoCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_Real             xlb,                /**< lower bound of x */
    SCIP_Real             xub,                /**< upper bound of x */
    SCIP_Real             exponent,           /**< exponent n in sign(x)abs(x)^n */
@@ -3478,7 +3484,7 @@ SCIP_RETCODE generateSecantCutNoCheck(
    slope  = SIGN(xub+xoffset) * mypow(ABS(xub+xoffset), exponent) + tmp;
    slope /= xub - xlb;
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "signpowcut", -SCIPinfinity(scip), SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, "signpowcut", -SCIPinfinity(scip), SCIPinfinity(scip),
          SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 /* local */, FALSE /* modifiable */, TRUE /* removable */ ) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*slope) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
@@ -3567,42 +3573,54 @@ SCIP_RETCODE generateCut(
 
       islocal = (!SCIPconsIsGlobal(cons) || SCIPisNegative(scip, xglb+xoffset)) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0;
       if( conshdlrdata->projectrefpoint && !onlyinbounds )
-         SCIP_CALL( generateLinearizationCutProject(scip, row, xval, SCIPgetSolVal(scip, sol, consdata->z), -xoffset, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, islocal) );
+      {
+         SCIP_CALL( generateLinearizationCutProject(scip, row, SCIPconsGetHdlr(cons), xval, SCIPgetSolVal(scip, sol, consdata->z), -xoffset, consdata->exponent,
+               xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, islocal) );
+      }
       else if( !onlyinbounds )
-         SCIP_CALL( generateLinearizationCut(scip, row, xval, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, islocal) );
+      {
+         SCIP_CALL( generateLinearizationCut(scip, row, SCIPconsGetHdlr(cons), xval, consdata->exponent, xoffset, xmult, zcoef, rhs,
+               consdata->x, consdata->z, islocal) );
+      }
       else
-         SCIP_CALL( generateLinearizationCut(scip, row, 2.0*xval > xlb + xub ? xub : xlb, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, islocal) );
+      {
+         SCIP_CALL( generateLinearizationCut(scip, row, SCIPconsGetHdlr(cons), 2.0*xval > xlb + xub ? xub : xlb, consdata->exponent, xoffset, xmult, zcoef, rhs,
+               consdata->x, consdata->z, islocal) );
+      }
    }
    else if( !SCIPisPositive(scip, xub+xoffset) )
    {
       /* [xlb, xub] completely in negative orthant -> function is concave on whole domain */
       if( SCIPisInfinity(scip, -xlb) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
    else if( (c = - consdata->root * (xlb+xoffset) - xoffset) > xub )
    {
       /* c is right of xub -> use secant */
       if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, xub, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
    else if( xval >= c )
    {
       /* xval is right of c -> use linearization */
       if( conshdlrdata->projectrefpoint && !onlyinbounds )
-         SCIP_CALL( generateLinearizationCutProject(scip, row, xval, SCIPgetSolVal(scip, sol, consdata->z), c, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+         SCIP_CALL( generateLinearizationCutProject(scip, row, SCIPconsGetHdlr(cons), xval, SCIPgetSolVal(scip, sol, consdata->z), c, consdata->exponent,
+               xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
       else if( !onlyinbounds )
-         SCIP_CALL( generateLinearizationCut(scip, row, xval, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+         SCIP_CALL( generateLinearizationCut(scip, row, SCIPconsGetHdlr(cons), xval, consdata->exponent, xoffset, xmult, zcoef, rhs,
+               consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
       else
-         SCIP_CALL( generateLinearizationCut(scip, row, xub, consdata->exponent, xoffset, xmult, zcoef, rhs, consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+         SCIP_CALL( generateLinearizationCut(scip, row, SCIPconsGetHdlr(cons), xub, consdata->exponent, xoffset, xmult, zcoef, rhs,
+               consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
    }
    else
    {
       /* xval between xlb and c -> use secant */
       if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, c) )
          return SCIP_OKAY;
-      SCIP_CALL( generateSecantCut(scip, row, sol, xlb, c, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
+      SCIP_CALL( generateSecantCut(scip, row, SCIPconsGetHdlr(cons), sol, xlb, c, consdata->exponent, xoffset, consdata->pow, xmult, zcoef, rhs, consdata->x, consdata->z) );
    }
 
    /* check numerics */
@@ -5124,8 +5142,8 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 
       if( conshdlrdata->addvarbounds )
       {
-         SCIP_CALL( addVarboundsToCutPool(scip, consdata->x) );
-         SCIP_CALL( addVarboundsToCutPool(scip, consdata->z) );
+         SCIP_CALL( addVarboundsToCutPool(scip, conshdlr, consdata->x) );
+         SCIP_CALL( addVarboundsToCutPool(scip, conshdlr, consdata->z) );
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
@@ -5316,7 +5334,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             if( SCIPisNegative(scip, xlb + consdata->xoffset) )
             {
                /* generate secant between xlb and right changepoint */
-               SCIP_CALL( generateSecantCutNoCheck(scip, &row, xlb, MIN(-consdata->root * (xlb+consdata->xoffset) - consdata->xoffset, xub), consdata->exponent, consdata->xoffset, consdata->pow, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
+               SCIP_CALL( generateSecantCutNoCheck(scip, &row, conshdlr, xlb, MIN(-consdata->root * (xlb+consdata->xoffset) - consdata->xoffset, xub),
+                     consdata->exponent, consdata->xoffset, consdata->pow, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
                if( row != NULL )
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
@@ -5334,7 +5353,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             else if( xlb < INITLPMAXVARVAL )
             {
                /* generate tangent in lower bound */
-               SCIP_CALL( generateLinearizationCut(scip, &row, xlb, consdata->exponent, consdata->xoffset, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z, FALSE) );
+               SCIP_CALL( generateLinearizationCut(scip, &row, conshdlr, xlb, consdata->exponent, consdata->xoffset, 1.0, consdata->zcoef, consdata->rhs,
+                     consdata->x, consdata->z, FALSE) );
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
@@ -5354,7 +5374,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             /* generate tangent in upper bound */
             if( -consdata->root * (xlb+consdata->xoffset) - consdata->xoffset < xub && xub <= INITLPMAXVARVAL )
             {
-               SCIP_CALL( generateLinearizationCut(scip, &row, xub, consdata->exponent, consdata->xoffset, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z, FALSE) );
+               SCIP_CALL( generateLinearizationCut(scip, &row, conshdlr, xub, consdata->exponent, consdata->xoffset, 1.0, consdata->zcoef, consdata->rhs,
+                     consdata->x, consdata->z, FALSE) );
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
@@ -5377,7 +5398,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             if( SCIPisPositive(scip, xub + consdata->xoffset) )
             {
                /* generate secant between left change point and upper bound */
-               SCIP_CALL( generateSecantCutNoCheck(scip, &row, -xub, MIN(consdata->root * (xub+consdata->xoffset) + consdata->xoffset, -xlb), consdata->exponent, -consdata->xoffset, consdata->pow, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
+               SCIP_CALL( generateSecantCutNoCheck(scip, &row, conshdlr, -xub, MIN(consdata->root * (xub+consdata->xoffset) + consdata->xoffset, -xlb),
+                     consdata->exponent, -consdata->xoffset, consdata->pow, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
                if( row != NULL )
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
@@ -5395,7 +5417,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             else if( xub >= -INITLPMAXVARVAL )
             {
                /* generate tangent in upper bound */
-               SCIP_CALL( generateLinearizationCut(scip, &row, -xub, consdata->exponent, -consdata->xoffset, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z, FALSE) );
+               SCIP_CALL( generateLinearizationCut(scip, &row, conshdlr, -xub, consdata->exponent, -consdata->xoffset, -1.0, -consdata->zcoef, -consdata->lhs,
+                     consdata->x, consdata->z, FALSE) );
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
@@ -5415,7 +5438,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             /* generate tangent in lower bound */
             if( -consdata->root * (xub+consdata->xoffset) - consdata->xoffset > xlb && xlb >= -INITLPMAXVARVAL )
             {
-               SCIP_CALL( generateLinearizationCut(scip, &row, -xlb, consdata->exponent, -consdata->xoffset, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z, FALSE) );
+               SCIP_CALL( generateLinearizationCut(scip, &row, conshdlr, -xlb, consdata->exponent, -consdata->xoffset, -1.0, -consdata->zcoef, -consdata->lhs,
+                     consdata->x, consdata->z, FALSE) );
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {

@@ -774,7 +774,7 @@ SCIP_RETCODE createRelaxation(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
@@ -4860,14 +4860,20 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
 
       /* creates LP row */
       if( cons != NULL )
+      {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcseq%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
             SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-      else
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%"SCIP_LONGINT_FORMAT"", *ncuts);
-
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
             cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
             cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+      }
+      else
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%"SCIP_LONGINT_FORMAT"", *ncuts);
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+               cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+               cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+      }
 
       /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -5010,24 +5016,30 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    {
       SCIP_ROW* row;
       char name[SCIP_MAXSTRLEN];
-            
+
       /* creates LP row */
       if( cons != NULL )
+      {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ewseq%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
             SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+               cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+               cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+      }
       else
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%"SCIP_LONGINT_FORMAT"", *ncuts); 
-      
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
-            cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
-            cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
-            
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%"SCIP_LONGINT_FORMAT"", *ncuts);
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+               cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+               cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+      }
+
       /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
       assert(nvarsT1 + nvarsT2 + nvarsF + nvarsR == nvars - ntightened);
       for( j = 0; j < nvarsT1; j++ )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsT1[j]], 1.0) ); 
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsT1[j]], 1.0) );
       }
       for( j = 0; j < nvarsT2; j++ )
       {
@@ -5128,23 +5140,23 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcsup%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
             SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
       else
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%"SCIP_LONGINT_FORMAT"", *ncuts); 
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%"SCIP_LONGINT_FORMAT"", *ncuts);
 
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
             cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
             cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
-            
+
       /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
       assert(nmincovervars + nnonmincovervars == nvars - ntightened);
       for( j = 0; j < nmincovervars; j++ )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[mincovervars[j]], 1.0) ); 
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[mincovervars[j]], 1.0) );
       }
       for( j = 0; j < nnonmincovervars; j++ )
       {
          assert(SCIPisFeasGE(scip, realliftcoefs[nonmincovervars[j]], 0.0));
-         if( SCIPisFeasGT(scip, realliftcoefs[nonmincovervars[j]], 0.0) ) 
+         if( SCIPisFeasGT(scip, realliftcoefs[nonmincovervars[j]], 0.0) )
          {
             SCIP_CALL( SCIPaddVarToRow(scip, row, vars[nonmincovervars[j]], realliftcoefs[nonmincovervars[j]]) );
          }

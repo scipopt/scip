@@ -1887,6 +1887,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nrespropcalls = 0;
    (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
+   (*conshdlr)->ncutsapplied = 0;
    (*conshdlr)->nconssfound = 0;
    (*conshdlr)->ndomredsfound = 0;
    (*conshdlr)->nchildren = 0;
@@ -2039,7 +2040,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIPclockReset(conshdlr->proptime);
       SCIPclockReset(conshdlr->checktime);
       SCIPclockReset(conshdlr->resproptime);
-      
+
       conshdlr->nsepacalls = 0;
       conshdlr->nenfolpcalls = 0;
       conshdlr->nenfopscalls = 0;
@@ -2048,6 +2049,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nrespropcalls = 0;
       conshdlr->ncutoffs = 0;
       conshdlr->ncutsfound = 0;
+      conshdlr->ncutsapplied = 0;
       conshdlr->nconssfound = 0;
       conshdlr->ndomredsfound = 0;
       conshdlr->nchildren = 0;
@@ -2576,7 +2578,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
-            
+
             /* update domain reductions; therefore remove the domain
              * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
@@ -4049,6 +4051,27 @@ SCIP_Longint SCIPconshdlrGetNCutsFound(
    assert(conshdlr != NULL);
 
    return conshdlr->ncutsfound;
+}
+
+/** gets total number of cuts found by this constraint handler applied to lp */
+SCIP_Longint SCIPconshdlrGetNCutsApplied(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncutsapplied;
+}
+
+/** increase count of applied cuts */
+extern
+void SCIPconshdlrIncNAppliedCuts(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   ++conshdlr->ncutsapplied;
 }
 
 /** gets total number of additional constraints added by this constraint handler */

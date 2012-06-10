@@ -4781,6 +4781,8 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real*            vals,               /**< array with coefficients of row entries */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   void*                 origin,             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
@@ -4791,11 +4793,11 @@ SCIP_RETCODE SCIProwCreate(
    assert(stat != NULL);
    assert(len >= 0);
    assert(len == 0 || (cols != NULL && vals != NULL));
-   /* note, that the assert tries to avoid numerical troubles in the LP solver. 
-    * in case, for example, lhs > rhs but they are equal with tolerances, one could pass lhs=rhs=lhs+rhs/2 to 
+   /* note, that the assert tries to avoid numerical troubles in the LP solver.
+    * in case, for example, lhs > rhs but they are equal with tolerances, one could pass lhs=rhs=lhs+rhs/2 to
     * SCIProwCreate() (see cons_linear.c: detectRedundantConstraints())
     */
-   assert(lhs <= rhs); 
+   assert(lhs <= rhs);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, row) );
 
@@ -4836,7 +4838,7 @@ SCIP_RETCODE SCIProwCreate(
       (*row)->vals = NULL;
       (*row)->linkpos = NULL;
    }
-   
+
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*row)->name, name, strlen(name)+1) );
    (*row)->constant = 0.0;
    (*row)->lhs = lhs;
@@ -4854,6 +4856,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->pseudoactivity = SCIP_INVALID;
    (*row)->minactivity = SCIP_INVALID;
    (*row)->maxactivity = SCIP_INVALID;
+   (*row)->origin = origin;
    (*row)->eventfilter = NULL;
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
@@ -4884,6 +4887,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->local = local;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
+   (*row)->origintype = origintype;
    (*row)->removable = removable;
    (*row)->inglobalcutpool = FALSE;
    (*row)->storedsolvals = NULL;
@@ -4893,7 +4897,7 @@ SCIP_RETCODE SCIProwCreate(
 
    /* capture the row */
    SCIProwCapture(*row);
-   
+
    /* create event filter */
    SCIP_CALL( SCIPeventfilterCreate(&(*row)->eventfilter, blkmem) );
 
@@ -16723,6 +16727,8 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
 #undef SCIProwIsRemovable
+#undef SCIProwGetOrigintype
+#undef SCIProwGetOrigin
 #undef SCIProwIsInGlobalCutpool
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
@@ -17188,6 +17194,29 @@ SCIP_Bool SCIProwIsRemovable(
    assert(row != NULL);
 
    return row->removable;
+}
+
+/** returns type of origin that created the row */
+SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert( row != NULL );
+
+   return row->origintype;
+}
+
+/** returns origin that created the row
+ *
+ *  Needs to be casted to constraint handler or separator depending on SCIProwGetOrigintype().
+ */
+void* SCIProwGetOrigin(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert( row != NULL );
+
+   return row->origin;
 }
 
 /** returns TRUE iff row is member of the global cut pool */

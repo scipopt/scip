@@ -31,6 +31,8 @@
 #include "scip/tree.h"
 #include "scip/sepastore.h"
 #include "scip/event.h"
+#include "scip/sepa.h"
+#include "scip/cons.h"
 #include "scip/debug.h"
 
 #include "scip/struct_sepastore.h"
@@ -728,8 +730,31 @@ SCIP_RETCODE sepastoreApplyCut(
    {
       /* add cut to the LP and capture it */
       SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, cut, depth) );
+
+      /* update statistics -> only if we are not in the initial lp (cuts are only counted if added during run) */
       if( !sepastore->initiallp )
+      {
          sepastore->ncutsapplied++;
+
+         /* increase count of applied cuts for origins of row */
+         switch ( cut->origintype )
+         {
+         case SCIP_ROWORIGINTYPE_CONS:
+            assert( cut->origin != NULL );
+            SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
+            break;
+         case SCIP_ROWORIGINTYPE_SEPA:
+            assert( cut->origin != NULL );
+            SCIPsepaIncNAppliedCuts((SCIP_SEPA*) cut->origin);
+            break;
+         case SCIP_ROWORIGINTYPE_UNKOWN:
+            /* do nothing - cannot update statistics */
+            break;
+         default:
+            SCIPerrorMessage("unkown type of row origin.\n");
+            return SCIP_INVALIDDATA;
+         }
+      }
 
       /* update the orthogonalities */
       SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality) );

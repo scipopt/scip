@@ -359,7 +359,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
 
             /* create empty cut */
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs,
+            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                   cutislocal, FALSE, sepadata->dynamiccuts) );
 
             /* cache the row extension and only flush them if the cut gets added */

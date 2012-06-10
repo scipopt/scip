@@ -182,6 +182,12 @@ void SCIPsepaSetExitsol(
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
+/** increase count of applied cuts */
+extern
+void SCIPsepaIncNAppliedCuts(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 #ifdef __cplusplus
 }
 #endif

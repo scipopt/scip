@@ -481,7 +481,8 @@ void computeSCTable(
 static
 SCIP_RETCODE separateSCIs(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< the constraint data     */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSDATA*        consdata,           /**< the constraint data */
    int*                  ncuts               /**< pointer to store number of separated SCIs */
    )
 {
@@ -593,9 +594,9 @@ SCIP_RETCODE separateSCIs(
             /* generate cut */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sci_%d_%d", i, j);
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
             SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
             /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
@@ -1385,7 +1386,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
          SCIPdebugMessage("Separating SCIs for orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* separate */
-         SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+         SCIP_CALL( separateSCIs(scip, conshdlr, consdata, &ncuts) );
       }
 
       if ( ncuts > 0 )
@@ -1431,7 +1432,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
       SCIPdebugMessage("Separating SCIs (solution) for orbitope constraint <%s> \n", SCIPconsGetName(conss[c]));
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+      SCIP_CALL( separateSCIs(scip, conshdlr, consdata, &ncuts) );
    }
 
    if ( ncuts > 0 )
@@ -1481,7 +1482,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
       SCIPdebugMessage("Enforcing for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, consdata, &ncuts) );
+      SCIP_CALL( separateSCIs(scip, conshdlr, consdata, &ncuts) );
    }
 
    if ( ncuts > 0 )

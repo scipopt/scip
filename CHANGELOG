@@ -123,7 +123,12 @@ interface
 - added basic creation methods for all constraint handlers
 - added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions for
   non-fundamental callbacks of variables and problems.
-
+- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), SCIPcreateRowSepa() that allow
+  to set the originating constraint handler or separator of a row respectively; this is, for instance, needed for
+  statistics on the number of applied cuts.
+- new functions SCIProwGetOrigintype and SCIProwGetOrigin to obtain the originator that created a row
+- new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
+- new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -271,6 +276,8 @@ features:
   adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
 - new constraint handler "superindicator" for indicator constraints with slack constraints of arbitrary type
 - added possibility to use GUBs for lifting knapsack cuts (disabled)
+- added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
+  use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

@@ -336,6 +336,8 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real*            vals,               /**< array with coefficients of row entries */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   void*                 origin,             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */

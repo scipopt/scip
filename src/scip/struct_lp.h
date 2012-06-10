@@ -180,9 +180,9 @@ struct SCIP_Col
 
 /** LP row
  *  The column vector of the LP row is partitioned into two parts: The first row->nlpcols columns in the cols array
- *  are the ones that belong to the current LP (row->cols[j]->lppos >= 0) and that are linked to the row   
+ *  are the ones that belong to the current LP (row->cols[j]->lppos >= 0) and that are linked to the row
  *  (row->linkpos[j] >= 0). The remaining row->len - row->nlpcols columns in the cols array are the ones that
- *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row   
+ *  don't belong to the current LP (row->cols[j]->lppos == -1) or that are not linked to the row
  *  (row->linkpos[j] == -1).
  */
 struct SCIP_Row
@@ -207,6 +207,7 @@ struct SCIP_Row
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
+   void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    char*                 name;               /**< name of the row */
    SCIP_COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
@@ -241,7 +242,8 @@ struct SCIP_Row
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
-   unsigned int          nlocks:18;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          nlocks:16;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
 };
 
 /** current LP data */

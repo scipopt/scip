@@ -252,6 +252,12 @@ SCIP_Longint SCIPconshdlrGetNCutsFound(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets total number of cuts found by this constraint handler applied to lp */
+extern
+SCIP_Longint SCIPconshdlrGetNCutsApplied(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets total number of additional constraints added by this constraint handler */
 extern
 SCIP_Longint SCIPconshdlrGetNConssFound(

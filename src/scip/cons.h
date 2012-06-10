@@ -554,6 +554,11 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** increase count of applied cuts */
+extern
+void SCIPconshdlrIncNAppliedCuts(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
 
 
 

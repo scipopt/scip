@@ -1349,7 +1349,7 @@ SCIP_RETCODE generateLinearizationCut(
    /* setup SCIP row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), fgrad) );
 
@@ -1672,7 +1672,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      SCIP_CALL( SCIPcreateRow(scip, row, "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
       if( consdata->z != NULL )
@@ -3103,7 +3103,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3135,7 +3135,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = -cutcoeff[1] / cutcoeff[2];
             coefs[1] = -cutcoeff[0] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveoverest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip), TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3160,7 +3161,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3189,7 +3190,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = cutcoeff[0] / cutcoeff[2];
             coefs[1] = cutcoeff[1] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveunderest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2], TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3933,7 +3935,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    rhs = consdata->rhs + cutcoeff[3]/cutcoeff[2];
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "1ConvexUnderest", -SCIPinfinity(scip), rhs, TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), "1ConvexUnderest", -SCIPinfinity(scip), rhs,
+         TRUE, FALSE /* modifiable */, TRUE /* removable */) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
    if( consdata->z != NULL )

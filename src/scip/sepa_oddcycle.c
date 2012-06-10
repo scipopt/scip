@@ -879,6 +879,7 @@ SCIP_RETCODE liftOddCycleCut(
 static
 SCIP_RETCODE generateOddCycleCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_VAR**            vars,               /**< problem variables */
    unsigned int          nbinvars,           /**< number of binary problem variables */
@@ -961,7 +962,7 @@ SCIP_RETCODE generateOddCycleCut(
 
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "oddcycle_%d", sepadata->ncuts);
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), (ncyclevars-1)/2.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), (ncyclevars-1)/2.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
    negatedcount = 0;
 
@@ -2471,6 +2472,7 @@ SCIP_RETCODE createNextLevel(
 static
 SCIP_RETCODE separateHeur(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -2855,7 +2857,7 @@ SCIP_RETCODE separateHeur(
                   unsigned int oldncuts = sepadata->ncuts;
 
                   sepadata->levelgraph = &graph;
-                  SCIP_CALL( generateOddCycleCut(scip, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
+                  SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
                         incut, vals, sepadata, result) );
 #ifndef NDEBUG
                   sepadata->levelgraph = NULL;
@@ -3318,6 +3320,7 @@ SCIP_RETCODE addGLSCliques(
 static
 SCIP_RETCODE separateGLS(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_SOL*             sol,                /**< given primal solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -3765,7 +3768,7 @@ SCIP_RETCODE separateGLS(
       {
          /* generate cut */
          sepadata->dijkstragraph = &graph;
-         SCIP_CALL( generateOddCycleCut(scip, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, result) );
+         SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, result) );
 #ifndef NDEBUG
          sepadata->dijkstragraph = NULL;
 #endif
@@ -3962,12 +3965,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    if( sepadata->usegls )
    {
       SCIPdebugMessage("using GLS method for finding odd cycles\n");
-      SCIP_CALL( separateGLS(scip, sepadata, NULL, result) );
+      SCIP_CALL( separateGLS(scip, sepa, sepadata, NULL, result) );
    }
    else
    {
       SCIPdebugMessage("using level graph heuristic for finding odd cycles\n");
-      SCIP_CALL( separateHeur(scip, sepadata, NULL, result) );
+      SCIP_CALL( separateHeur(scip, sepa, sepadata, NULL, result) );
    }
 
    if( sepadata->ncuts - sepadata->oldncuts > 0 )

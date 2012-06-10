@@ -1893,6 +1893,7 @@ SCIP_RETCODE storeCutInArrays(
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of problem variables */
@@ -1911,7 +1912,7 @@ SCIP_RETCODE addCut(
    SCIP_Real cutnorm;
    int cutlen;
    SCIP_Bool success;
-   
+
    assert(scip != NULL);
    assert(varsolvals != NULL);
    assert(cutcoefs != NULL);
@@ -1923,26 +1924,26 @@ SCIP_RETCODE addCut(
    /* gets temporary memory for storing the cut as sparse row */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
-   
+
    /* stores the cut as sparse row, calculates activity and norm of cut */
    SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
          cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
-   
+
    if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
    {
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
-      
+
       /* creates the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
             cutislocal, FALSE, sepadata->dynamiccuts) );
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-      
+
 #if 0 /* tries to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
@@ -2009,6 +2010,7 @@ SCIP_Real calcEfficacy(
 static
 SCIP_RETCODE cutGenerationHeuristic(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_VAR**            vars,               /**< active problem variables */
    int                   nvars,              /**< number of active problem variables */
@@ -2272,9 +2274,9 @@ SCIP_RETCODE cutGenerationHeuristic(
          cutcoefs[i] = lambda * cutcoefs[i];
       cutrhs = lambda * cutrhs;
       cutact = lambda * cutact;
-      
-      assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact))); 
-      SCIP_CALL( addCut(scip, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
+
+      assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact)));
+      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
    }
 
    /* free data structures */
@@ -2564,10 +2566,10 @@ SCIP_RETCODE separateCuts(
          assert(SCIPisFeasGT(scip, lambda, 0.0)); 
 
          /* generate most violated c-MIRFCI for different sets L1 and L2 and different values of delta and add it to the LP */
-         SCIP_CALL( cutGenerationHeuristic(scip, sepadata, vars, nvars, sol, varsolvals, rowweights, mult, boundsfortrans, 
-               boundtypesfortrans, assoctransvars, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals, 
+         SCIP_CALL( cutGenerationHeuristic(scip, sepa, sepadata, vars, nvars, sol, varsolvals, rowweights, mult, boundsfortrans,
+               boundtypesfortrans, assoctransvars, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals,
                transvarvubcoefs, transvarflowcoverstatus, lambda, normtype, &ncuts) );
-         
+
          wastried = TRUE;
          mult *= -1.0;
       }

@@ -418,6 +418,21 @@ SCIP_Bool SCIProwIsRemovable(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns type of origin that created the row */
+extern
+SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** returns origin that created the row
+ *
+ *  Needs to be casted to constraint handler or separator depending on SCIProwGetOrigintype().
+ */
+extern
+void* SCIProwGetOrigin(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff row is member of the global cut pool */
 extern
 SCIP_Bool SCIProwIsInGlobalCutpool(
@@ -467,6 +482,8 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
 #define SCIProwIsRemovable(row)         (row)->removable
+#define SCIProwGetOrigintype(row)       (row)->origintype
+#define SCIProwGetOrigin(row)           (row)->origin
 #define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth

@@ -1346,7 +1346,7 @@ SCIP_RETCODE createRows(
    SCIP_CONSDATA* consdata;
    char rowname[SCIP_MAXSTRLEN];
    int b;
-   
+
    assert( cons != NULL);
 
    /* get constraint data */
@@ -1359,9 +1359,9 @@ SCIP_RETCODE createRows(
    /* create the LP row which captures the linking between the integer and binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row1, rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row1, SCIPconsGetHdlr(cons), rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   
+
    /* add integer variable to the row */
    assert(consdata->intvar != NULL);
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->row1, consdata->intvar, -1.0) );
@@ -1372,14 +1372,14 @@ SCIP_RETCODE createRows(
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row1, consdata->binvars[b], (SCIP_Real)b) );
    }
-   
+
    /* create the LP row which captures the set partitioning condition of the binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[setppc]", SCIPconsGetName(cons));
-   assert( consdata->nbinvars > 0 );   
+   assert( consdata->nbinvars > 0 );
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row2, rowname, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row2, SCIPconsGetHdlr(cons), rowname, 1.0, 1.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   
+
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row2, consdata->nbinvars, consdata->binvars, 1.0) );
 
    return SCIP_OKAY;

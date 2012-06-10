@@ -44,9 +44,10 @@
  */
 
 /* adds given cut with two variables, if it is violated */
-static 
+static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             val1,               /**< given coefficient of first variable */
    SCIP_VAR*             var1,               /**< given first variable */
@@ -75,12 +76,12 @@ SCIP_RETCODE addCut(
 
       /* create cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var2, val2) );
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-      
+
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);
       SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
@@ -90,11 +91,11 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       (*ncuts)++;
-      
+
       /* release cut */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -102,6 +103,7 @@ SCIP_RETCODE addCut(
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            solvals,            /**< array with solution values of all problem variables */
    SCIP_VAR**            fracvars,           /**< array of fractional variables */
@@ -174,7 +176,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
                      ub, ncuts) );
             }
          }
@@ -185,12 +187,12 @@ SCIP_RETCODE separateCuts(
             /* implication x == 1 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
- 
+
             /* consider only nonredundant and numerical harmless implications */
             if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
                      -lb, ncuts) );
             }
          }
@@ -221,7 +223,7 @@ SCIP_RETCODE separateCuts(
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
             SCIP_Real ub;
-         
+
             /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
 
@@ -229,7 +231,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
                      implbounds[j], ncuts) );
             }
          }
@@ -240,12 +242,12 @@ SCIP_RETCODE separateCuts(
             /* implication x == 0 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-            
+
             /* consider only nonredundant and numerical harmless implications */
             if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
-            { 
+            {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
                      -implbounds[j], ncuts) );
             }
          }
@@ -321,7 +323,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
    SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
 
    /* call the cut separation */
-   SCIP_CALL( separateCuts(scip, NULL, solvals, fracvars, fracvals, nfracs, &ncuts) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, solvals, fracvars, fracvals, nfracs, &ncuts) );
 
    /* adjust result code */
    if( ncuts > 0 )
@@ -382,7 +384,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
    ncuts = 0;
    if( nfracs > 0 )
    {
-      SCIP_CALL( separateCuts(scip, sol, solvals, fracvars, fracvals, nfracs, &ncuts) );
+      SCIP_CALL( separateCuts(scip, sepa, sol, solvals, fracvars, fracvals, nfracs, &ncuts) );
    }
 
    /* adjust result code */

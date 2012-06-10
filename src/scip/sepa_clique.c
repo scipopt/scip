@@ -56,6 +56,7 @@ struct SCIP_SepaData
 {
    TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
    SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_SEPA*            sepa;               /**< separator */
    SCIP_SOL*             sol;                /**< primal solution that is currently separated */
    SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
@@ -1135,6 +1136,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    sepadata = (SCIP_SEPADATA*)tcliquedata;
    assert(sepadata != NULL);
    assert(sepadata->scip != NULL);
+   assert(sepadata->sepa != NULL);
    assert(sepadata->tcliquegraph != NULL);
    assert(sepadata->ncuts >= 0);
 
@@ -1151,11 +1153,13 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    if( cliqueweight > sepadata->scaleval )
    {
       SCIP* scip;
+      SCIP_SEPA* sepa;
       SCIP_Real* varsolvals;
       SCIP_Real unscaledweight;
       int i;
 
       scip = sepadata->scip;
+      sepa = sepadata->sepa;
       varsolvals = sepadata->varsolvals;
       assert(varsolvals != NULL);
 
@@ -1182,7 +1186,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 
          /* create the cut */
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
-         SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL_ABORT( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
          assert(ncliquenodes <= nvars);
@@ -1460,6 +1464,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
          sepadata) );
 
    assert(sepa != NULL);
+   sepadata->sepa = sepa;
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyClique) );

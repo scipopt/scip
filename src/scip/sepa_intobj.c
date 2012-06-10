@@ -97,8 +97,9 @@ SCIP_RETCODE sepadataFree(
 static
 SCIP_RETCODE createObjRow(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
-    )
+   )
 {
    assert(sepadata != NULL);
 
@@ -110,7 +111,7 @@ SCIP_RETCODE createObjRow(
       int nvars;
       int v;
       SCIP_Bool attendobjvarbound;
-      
+
       attendobjvarbound = FALSE;
       /* create and add objective value variable */
       if( sepadata->objvar == NULL )
@@ -122,7 +123,7 @@ SCIP_RETCODE createObjRow(
       }
       else
          attendobjvarbound = TRUE;
-      
+
       /* get problem variables */
       vars = SCIPgetOrigVars(scip);
       nvars = SCIPgetNOrigVars(scip);
@@ -134,7 +135,7 @@ SCIP_RETCODE createObjRow(
             intobjval = SCIPceil(scip, SCIPgetDualbound(scip)) - SCIPvarGetLbGlobal(sepadata->objvar);
          else
             intobjval = SCIPceil(scip, SCIPgetDualbound(scip));
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", intobjval, SCIPinfinity(scip),
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &sepadata->objrow, sepa, "objrow", intobjval, SCIPinfinity(scip),
                FALSE, !SCIPallVarsInProb(scip), TRUE) );
          sepadata->setoff = intobjval;
       }
@@ -144,10 +145,10 @@ SCIP_RETCODE createObjRow(
             intobjval = SCIPceil(scip, SCIPgetDualbound(scip)) - SCIPvarGetUbGlobal(sepadata->objvar);
          else
             intobjval = SCIPfloor(scip, SCIPgetDualbound(scip));
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", -SCIPinfinity(scip), intobjval,
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &sepadata->objrow, sepa, "objrow", -SCIPinfinity(scip), intobjval,
                FALSE, !SCIPallVarsInProb(scip), TRUE) );
          sepadata->setoff = intobjval;
-      }         
+      }
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, sepadata->objrow) );
       for( v = 0; v < nvars; ++v )
@@ -204,21 +205,21 @@ SCIP_RETCODE separateCuts(
    assert(sepadata != NULL);
 
    /* the objective value is fractional: create the objective value inequality, if not yet existing */
-   SCIP_CALL( createObjRow(scip, sepadata) );
+   SCIP_CALL( createObjRow(scip, sepa, sepadata) );
 
    /* adjust the bounds of the objective value variable */
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
    {
       intbound = SCIPceil(scip, objval) - sepadata->setoff;
       SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
+      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n",
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
    else
    {
       intbound = SCIPfloor(scip, objval) - sepadata->setoff;
       SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
+      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n",
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
 
