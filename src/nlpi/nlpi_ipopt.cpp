@@ -2014,7 +2014,7 @@ void* SCIPgetNlpiOracleIpopt(
  *
  * Do not forget to add a newline after the last option in optionsstring.
  */
-SCIP_RETCODE SCIPsetModifiedDefaultSettingsIpopt(
+void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
    const char*           optionsstring       /**< string with options as in Ipopt options file */
    )
@@ -2027,8 +2027,6 @@ SCIP_RETCODE SCIPsetModifiedDefaultSettingsIpopt(
    assert(data != NULL);
 
    data->defoptions = optionsstring;
-
-   return SCIP_OKAY;
 }
 
 /** Method to return some info about the nlp */

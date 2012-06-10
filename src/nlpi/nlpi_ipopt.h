@@ -68,7 +68,7 @@ void* SCIPgetNlpiOracleIpopt(
  * Do not forget to add a newline after the last option in optionsstring.
  */
 extern
-SCIP_RETCODE SCIPsetModifiedDefaultSettingsIpopt(
+void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
    const char*           optionsstring       /**< string with options as in Ipopt options file */
    );
