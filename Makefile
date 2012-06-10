@@ -414,9 +414,12 @@ GMPDEP		:=	$(SRCDIR)/depend.gmp
 GMPSRC		:=	$(shell cat $(GMPDEP))
 ifeq ($(GMP),auto)
 GMP		=	$(ZIMPL)
+ifeq ($(LPS),spx)
+GMP		=	true
 endif
 ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
+endif
 endif
 
 READLINEDEP	:=	$(SRCDIR)/depend.readline
