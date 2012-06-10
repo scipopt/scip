@@ -242,13 +242,13 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    branchruledata = new SCIP_BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
    branchruledata->deleteobject = deleteobject;
-   branchrule = NULL;
+   branchrule = 0;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, objbranchrule->scip_name_, objbranchrule->scip_desc_,
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchruledata) ); /*lint !e429*/
-   assert(branchrule != NULL);
+   assert(branchrule != 0);
 
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyObj) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeObj) );
