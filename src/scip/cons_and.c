@@ -3503,10 +3503,11 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 }
 
 
+#ifdef GMLGATEPRINTING
+
 #define HASHTABLESIZE_FACTOR 5
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#ifdef GMLGATEPRINTING
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 {  /*lint --e{715}*/
