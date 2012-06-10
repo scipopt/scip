@@ -126,7 +126,7 @@ interface
 - new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), SCIPcreateRowSepa() that allow
   to set the originating constraint handler or separator of a row respectively; this is, for instance, needed for
   statistics on the number of applied cuts.
-- new functions SCIProwGetOrigintype and SCIProwGetOrigin to obtain the originator that created a row
+- new functions SCIProwGetOrigintype and SCIProwGetOriginCons SCIProwGetOriginSepa to obtain the originator that created a row
 - new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
 

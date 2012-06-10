@@ -16728,7 +16728,8 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwIsModifiable
 #undef SCIProwIsRemovable
 #undef SCIProwGetOrigintype
-#undef SCIProwGetOrigin
+#undef SCIProwGetOriginCons
+#undef SCIProwGetOriginSepa
 #undef SCIProwIsInGlobalCutpool
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
@@ -17206,17 +17207,34 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
    return (SCIP_ROWORIGINTYPE) row->origintype;
 }
 
-/** returns origin that created the row
- *
- *  Needs to be casted to constraint handler or separator depending on SCIProwGetOrigintype().
- */
-void* SCIProwGetOrigin(
+/** returns origin constraint handler that created the row (NULL if not available) */
+SCIP_CONSHDLR* SCIProwGetOriginCons(
    SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert( row != NULL );
 
-   return row->origin;
+   if ( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS )
+   {
+      assert( row->origin != NULL );
+      return (SCIP_CONSHDLR*) row->origin;
+   }
+   return NULL;
+}
+
+/** returns origin separator that created the row (NULL if not available) */
+SCIP_SEPA* SCIProwGetOriginSepa(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert( row != NULL );
+
+   if ( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA )
+   {
+      assert( row->origin != NULL );
+      return (SCIP_SEPA*) row->origin;
+   }
+   return NULL;
 }
 
 /** returns TRUE iff row is member of the global cut pool */

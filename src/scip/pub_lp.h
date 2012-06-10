@@ -424,12 +424,15 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns origin that created the row
- *
- *  Needs to be casted to constraint handler or separator depending on SCIProwGetOrigintype().
- */
+/** returns origin constraint handler that created the row (NULL if not available) */
 extern
-void* SCIProwGetOrigin(
+SCIP_CONSHDLR* SCIProwGetOriginCons(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** returns origin separator that created the row (NULL if not available) */
+extern
+SCIP_SEPA* SCIProwGetOriginSepa(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -477,13 +480,14 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetBasisStatus(row)      (row)->basisstatus
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
-#define SCIProwGetAge(row)            (row)->age
+#define SCIProwGetAge(row)              (row)->age
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
 #define SCIProwIsRemovable(row)         (row)->removable
 #define SCIProwGetOrigintype(row)       (row)->origintype
-#define SCIProwGetOrigin(row)           (row)->origin
+#define SCIProwGetOriginCons(row)       ((SCIP_CONSHDLR*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
+#define SCIProwGetOriginSepa(row)       ((SCIP_SEPA*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA ? (row)->origin : NULL))
 #define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
