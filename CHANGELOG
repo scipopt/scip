@@ -129,6 +129,7 @@ interface
 - new functions SCIProwGetOrigintype and SCIProwGetOriginCons SCIProwGetOriginSepa to obtain the originator that created a row
 - new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
+- new LPI method SCIPlpiGetObjsen() to query objective sense
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

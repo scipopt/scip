@@ -1880,6 +1880,23 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    return SCIP_OKAY;
 }
 
+/** gets objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   assert(lpi != NULL);
+   assert(objsen != NULL);
+   assert(CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN || CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MAX);
+
+   SCIPdebugMessage("getting objective sense\n");
+
+   *objsen = (CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
+
+   return SCIP_OKAY;
+}
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
