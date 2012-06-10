@@ -8707,6 +8707,43 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
    return SCIP_OKAY;
 }
 
+/** gets the curvature of the expression trees (multiplied by their coefficient) of a nonlinear constraint */
+SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
+   SCIP_EXPRCURV**       curvatures          /**< buffer to store curvatures of exprtrees */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(curvatures != NULL);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   assert(SCIPconsGetData(cons) != NULL);
+
+   if( checkcurv && !consdata->iscurvchecked )
+   {
+      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+   }
+
+   *curvatures = consdata->curvatures;
+
+   return SCIP_OKAY;
+}
+
 /** computes the violation of a nonlinear constraint by a solution */
 SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
