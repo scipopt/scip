@@ -237,7 +237,8 @@ parameters:
   solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
 - new parameters lp/{rootiterlim,iterlim} to set a limit on the LP iterations spend in the initial root LP and each
   LP resolve, respectively
-- remove superfluous parameter <separating/closecuts/separootonly>
+- removed superfluous parameter <separating/closecuts/separootonly>
+- removed <constraints/quadratic/defaultbound>
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to

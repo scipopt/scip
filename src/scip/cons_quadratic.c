@@ -170,7 +170,6 @@ struct SCIP_ConshdlrData
    SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Bool             doscaling;          /**< should constraints be scaled in the feasibility check ? */
-   SCIP_Real             defaultbound;       /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
    SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
@@ -4378,57 +4377,6 @@ SCIP_RETCODE checkCurvature(
 
    SCIPhashmapFree(&var2index);
    SCIPfreeBufferArray(scip, &matrix);
-
-   return SCIP_OKAY;
-}
-
-/** sets bounds for variables in not evidently convex terms to some predefined value */
-static
-SCIP_RETCODE boundUnboundedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Real             bound,              /**< value to use for bound */
-   int*                  nchgbnds            /**< buffer where to add the number of bound changes, or NULL */
-   )
-{
-   SCIP_Bool      infeasible;
-   SCIP_CONSDATA* consdata;
-   int            i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-
-   if( SCIPisInfinity(scip, bound) )
-      return SCIP_OKAY;
-
-   consdata =  SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   for( i = 0; i < consdata->nquadvars; ++i )
-   {
-      if( consdata->quadvarterms[i].nadjbilin == 0 &&
-         (SCIPisInfinity(scip,  consdata->rhs) || consdata->quadvarterms[i].sqrcoef > 0) &&
-         (SCIPisInfinity(scip, -consdata->lhs) || consdata->quadvarterms[i].sqrcoef < 0) )
-         continue; /* skip evidently convex terms */
-
-      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "set lower bound of %s to %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), -bound);
-         SCIP_CALL( SCIPtightenVarLb(scip, consdata->quadvarterms[i].var, -bound, FALSE, &infeasible, NULL) );
-         assert(!infeasible);
-         if( nchgbnds != NULL )
-            ++*nchgbnds;
-      }
-
-      if( SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "set upper bound of %s to %g\n", SCIPvarGetName(consdata->quadvarterms[i].var),  bound);
-         SCIP_CALL( SCIPtightenVarUb(scip, consdata->quadvarterms[i].var,  bound, FALSE, &infeasible, NULL) );
-         assert(!infeasible);
-         if( nchgbnds != NULL ) 
-            ++*nchgbnds;
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -10229,20 +10177,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             continue;
       }
 
-      if( doreformulations && !SCIPisInfinity(scip, conshdlrdata->defaultbound) )
-      {
-         int nboundchanges;
-
-         nboundchanges = 0;
-         SCIP_CALL( boundUnboundedVars(scip, conss[c], conshdlrdata->defaultbound, &nboundchanges) );
-         if( nboundchanges != 0 )
-         {
-            *nchgbds += nboundchanges;
-            *result   = SCIP_SUCCESS;
-            havechange = TRUE;
-         }
-      }
-
       /* check if we have a single linear continuous variable that we can make implicit integer */
       if( (nnewchgvartypes != 0 || havechange || !consdata->ispresolved)
          && (SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)) )
@@ -11101,10 +11035,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling", 
          "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",
          &conshdlrdata->doscaling, TRUE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/defaultbound",
-         "a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)",
-         &conshdlrdata->defaultbound, TRUE, SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
