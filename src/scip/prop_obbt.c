@@ -1092,6 +1092,7 @@ SCIP_DECL_SORTPTRCOMP(compBounds)
 #ifdef SCIP_DEBUG
 static
 void printGroups(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< data of the obbt propagator */
    )
 {
@@ -1100,22 +1101,22 @@ void printGroups(
    assert(propdata != NULL);
    assert(propdata->nbounds > 0);
 
-   printf("groups={\n");
+   SCIPinfoMessage(scip, NULL, "groups={\n");
 
    for( i = 0; i < propdata->nboundgroups; i++ )
    {
       int j;
-      printf("  {\n");
+      SCIPinfoMessage(scip, NULL, "  {\n");
       for( j = 0; j < propdata->boundgroups[i].nbounds; j++ )
       {
          BOUND* bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
-         printf("      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
+         SCIPinfoMessage(scip, NULL, "      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
             SCIPvarGetName(bound->var), bound->score);
       }
-      printf("  }\n");
+      SCIPinfoMessage(scip, NULL, "  }\n");
    }
 
-   printf("}\n");
+   SCIPinfoMessage(scip, NULL, "}\n");
 }
 #endif
 
@@ -1293,7 +1294,7 @@ SCIP_RETCODE initBounds(
 
       /* create groups */
       SCIP_CALL( createGroups(propdata) );
-      SCIPdebug( printGroups(propdata) );
+      SCIPdebug( printGroups(scip, propdata) );
    }
 
    return SCIP_OKAY;
