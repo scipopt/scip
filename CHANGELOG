@@ -205,6 +205,7 @@ fixed bugs:
 - method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
   variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
 - primal solutions with infinite objective value are now automatically discarded
+- fixed bug that disabled multi-aggregation of two integer or implicit integer variables
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
