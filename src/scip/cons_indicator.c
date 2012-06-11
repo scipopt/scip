@@ -2813,7 +2813,7 @@ SCIP_RETCODE extendToCover(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 #ifdef SCIP_OUTPUT
-            SCIProwPrint(row, NULL);
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
 
@@ -3917,7 +3917,7 @@ SCIP_RETCODE separateIndicators(
 
                SCIPdebugMessage("Separated coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 #ifdef SCIP_OUTPUT
-               SCIProwPrint(row, NULL);
+               SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
                SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
                SCIP_CALL( SCIPreleaseRow(scip, &row));
@@ -4776,7 +4776,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 
             SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
 #ifdef SCIP_OUTPUT
-            SCIProwPrint(row, NULL);
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
 
