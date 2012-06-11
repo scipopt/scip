@@ -825,7 +825,7 @@ Var* xlp_addvar(
       /* if the number is unknown we have no valid primal solution candidate */
       if( numb_equal(startval, numb_unknown()) )
       {
-         SCIPdebugMessage("primal solution candidate conatians a unknown value for variable <%s>(%g)\n", 
+         SCIPdebugMessage("primal solution candidate contains an unknown value for variable <%s>(%g)\n",
             SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
          readerdata->valid = FALSE;
       }
