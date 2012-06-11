@@ -4542,7 +4542,7 @@ SCIP_RETCODE tryAggregateIntVars(
    c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( a == 1 || a == -1 )
+   if( (a == 1 || a == -1) && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -4551,7 +4551,7 @@ SCIP_RETCODE tryAggregateIntVars(
       assert(*aggregated);
       return SCIP_OKAY;
    }
-   if( b == 1 || b == -1 )
+   if( (b == 1 || b == -1) && SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -4596,7 +4596,7 @@ SCIP_RETCODE tryAggregateIntVars(
 
    if( classstep < 0 )
       classstep += a;
-   assert(0 < classstep && classstep < a);
+   assert(0 <= classstep && classstep < a);
 
    while( currentclass != 0 )
    {
