@@ -1494,7 +1494,7 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
-                                              *   defines in the original problem space */
+                                              *   defined in the original problem space */
    )
 {
    SCIP_PROB* prob;
