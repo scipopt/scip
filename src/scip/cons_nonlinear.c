@@ -5810,7 +5810,7 @@ SCIP_RETCODE propagateConstraintSides(
    {
       FILE* file;
       file = fopen("exprgraph_propconss1.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), file, NULL) );
       fclose(file);
    }
 #endif
@@ -5861,7 +5861,7 @@ SCIP_RETCODE propagateConstraintSides(
    {
       FILE* file;
       file = fopen("exprgraph_propconss2.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), file, NULL) );
       fclose(file);
    }
 #endif
@@ -5955,7 +5955,7 @@ SCIP_RETCODE propagateBounds(
       {
          FILE* file;
          file = fopen("exprgraph_propvars.dot", "w");
-         SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, file, NULL) );
+         SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), file, NULL) );
          fclose(file);
       }
 #endif
@@ -6308,7 +6308,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    {
       FILE* file;
       file = fopen("exprgraph_init.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), file, NULL) );
       fclose(file);
    }
 #endif
