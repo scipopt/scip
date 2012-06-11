@@ -1504,7 +1504,7 @@ SCIP_RETCODE createAnds(
       SCIP_Bool propagate;
       SCIP_Bool removable;
       SCIP_Bool created;
-      
+
       /* here we only allow terms with non zero coefficients */
       assert(!SCIPisZero(scip, consdata->nonlincoefs[t]));
 
@@ -1516,12 +1516,12 @@ SCIP_RETCODE createAnds(
       /* sort variables in non-linear term */
       sortTerm(term);
       assert(term->sorted);
-        
+
       assert(conshdlrdata->hashtable != NULL);
-      
+
       /* get constraint from current hash table with same variables as cons0 */
       tmpterm = (TERM*)(SCIPhashtableRetrieve(conshdlrdata->hashtable, (void*)term));
-      
+
       /* if there is already the same and constraint created use this resultant */
       if( tmpterm != NULL )
       {
@@ -1532,7 +1532,7 @@ SCIP_RETCODE createAnds(
          var = NULL;
 
       created = FALSE;
-      
+
       /* create new and-resultant variable */
       if( var == NULL )
       {
@@ -1545,11 +1545,11 @@ SCIP_RETCODE createAnds(
             conshdlrdata->sallnonlinterms = SCIPcalcMemGrowSize(scip, conshdlrdata->sallnonlinterms + 1);
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(conshdlrdata->allnonlinterms), oldsize, conshdlrdata->sallnonlinterms) );
          }
-         
+
          conshdlrdata->allnonlinterms[conshdlrdata->nallnonlinterms] = term;
          ++(conshdlrdata->nallnonlinterms);
 
-         /* no such non-linear term in current hash table: insert the term into hash table */  
+         /* no such non-linear term in current hash table: insert the term into hash table */
          SCIP_CALL( SCIPhashtableInsert(conshdlrdata->hashtable, (void*) term) );
 
          /* create auxiliary variable */
@@ -1559,7 +1559,7 @@ SCIP_RETCODE createAnds(
 
          /* change branching priority of artificial variable to -1 */
          SCIP_CALL( SCIPchgVarBranchPriority(scip, var, -1) );
-         
+
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
          created = TRUE;
@@ -1567,19 +1567,20 @@ SCIP_RETCODE createAnds(
          SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcseparate", &separate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcpropagate", &propagate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcremovable", &removable) );
-         
-         /* create, add, and release "and" constraint for the multiplication of the binary variables */ 
+
+         /* create, add, and release "and" constraint for the multiplication of the binary variables */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_andcons_%d", SCIPconsGetName(cons), conshdlrdata->nallnonlinterms - 1);
          SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, name, var, term->nvars, term->vars,
                SCIPconsIsInitial(cons), separate, SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), propagate, 
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), removable, SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, andcons) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, andcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
       }
       assert(var != NULL);
       term->resultant = var;
-            
+
       (*andvars)[*nandvars] = var;
       ++(*nandvars);
 
@@ -1613,6 +1614,7 @@ SCIP_RETCODE checkCons(
 
    SCIPdebugMessage("checking pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1943,7 +1945,8 @@ SCIP_RETCODE applyFixingsLinear(
       rhssubtrahend = 0.0;
 
       SCIPdebugMessage("applying fixings linear:\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       assert(consdata->linvars != NULL);
       assert(consdata->lincoefs != NULL);
@@ -2064,11 +2067,13 @@ SCIP_RETCODE applyFixingsLinear(
             SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
          }
       }
-      
+
       consdata->removedfixings = TRUE;
 
       SCIPdebugMessage("after fixings:\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
    }
    assert(consdata->removedfixings || consdata->nlinvars == 0);
 
@@ -2565,7 +2570,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 #if USEINDICATOR == FALSE
             maxact = 0.0;
             minact = 0.0;
-            
+
             coefs = consdata->lincoefs;
 
             /* adding all linear coefficients up */
@@ -2583,7 +2588,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                   maxact += coefs[v];
                else
                   minact += coefs[v];
-         
+
             if( SCIPisInfinity(scip, maxact) )
             {
                SCIPwarningMessage(scip, "maxactivity = %g exceed infinity value.\n", maxact);
@@ -2604,7 +2609,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                ub = lhs - minact;
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lhs_part1", SCIPconsGetName(cons));
-               
+
                SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, consdata->nlinvars, consdata->linvars, 
                      consdata->lincoefs, lhs, SCIPinfinity(scip),
                      initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -2616,7 +2621,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                assert(nandvars == 0 || andvars != NULL);
                assert(nandvars == consdata->nnonlinterms);
                gotandress = TRUE;
-            
+
                /* add all and-resultants */
                for( t = 0; t < nandvars; ++t )
                {
@@ -2625,16 +2630,17 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
                /* add artificial indicator variable */
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->indvar, ub) );
-      
+
                SCIP_CALL( SCIPaddCons(scip, lincons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      
+
                /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
                 * is disabled, so only the cost arise if the slack variable is necessary */
                /* indvar == 1 => (a^T*x (+ ub * negindvar) <= lhs - 1) */
                ub = lhs - maxact - 1;
-      
+
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lhs_part2", SCIPconsGetName(cons));
 
                SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, consdata->nlinvars, consdata->linvars, 
@@ -2642,7 +2648,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                      initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-               
+
                /* add all and-resultants */
                for( t = 0; t < nandvars; ++t )
                {
@@ -2651,19 +2657,20 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
                /* add artificial indicator variable */
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, negindvar , ub) );
-            
+
                SCIP_CALL( SCIPaddCons(scip, lincons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
-   
+
             /* second soft constraints for rhs */
             if( !SCIPisInfinity(scip, rhs) )
             {
                /* first we are modelling the feasibility of the soft-constraint by adding a slack variable */
                /* indvar == 1 => (a^T*x + lb * indvar <= rhs) */
                lb = rhs - maxact;
-               
+
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rhs_part1", SCIPconsGetName(cons));
 
                SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, consdata->nlinvars, consdata->linvars,
@@ -2679,7 +2686,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
                assert(nandvars == 0 || andvars != NULL);
                assert(nandvars == consdata->nnonlinterms);
-               
+
                /* add all and-resultants */
                for( t = 0; t < nandvars; ++t )
                {
@@ -2688,16 +2695,17 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
                /* add artificial indicator variable */
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->indvar, lb) );
-      
+
                SCIP_CALL( SCIPaddCons(scip, lincons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-            
+
                /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
                 * is disabled, so only the cost arise if the slack variable is necessary */
                /* indvar == 1 => (a^T*x (+ lb * negindvar) >= rhs + 1) */
                lb = rhs - minact + 1;
-      
+
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rhs_part2", SCIPconsGetName(cons));
 
                SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, consdata->nlinvars, consdata->linvars,
@@ -2714,9 +2722,10 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
                /* add artificial indicator variable */
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, negindvar, lb) );
-      
+
                SCIP_CALL( SCIPaddCons(scip, lincons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
 #else /* with indicator */
@@ -2756,9 +2765,10 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
                SCIP_CALL( SCIPaddCons(scip, indcons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, indcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
             }
-   
+
             if( !SCIPisInfinity(scip, -lhs) )
             {
                /* second we are modelling the implication that if the negation of the indicator variable is on, the constraint
@@ -2800,6 +2810,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
                SCIP_CALL( SCIPaddCons(scip, indcons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, indcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
 
                /* free temporary memory */
@@ -2817,7 +2828,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                   consdata->nlinvars, consdata->linvars, consdata->lincoefs, consdata->lhs, consdata->rhs, 
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         
+
             /* create all and-constraints and get all and-resultants */
             SCIP_CALL( createAnds(scip, cons, conshdlr, &andvars, &nandvars) );
             assert(nandvars == 0 || andvars != NULL);
@@ -2837,6 +2848,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
             SCIP_CALL( SCIPaddCons(scip, lincons) );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
             /* free temporary memory */
@@ -2846,7 +2858,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
          SCIP_CALL( SCIPdelCons(scip, cons) );
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3166,7 +3178,8 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       SCIP_CALL( mergeMultiples(scip, cons, ndelconss, nchgcoefs, &cutoff) );
 
       SCIPdebugMessage("after merging:\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* we can only presolve pseudoboolean constraints, that are not modifiable */
       if( SCIPconsIsModifiable(cons) )

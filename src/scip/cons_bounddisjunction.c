@@ -1327,6 +1327,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
       return SCIP_OKAY;
@@ -1447,6 +1448,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraint:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          return SCIP_OKAY;
       }
@@ -1479,7 +1481,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else if( SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) || SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
       {
@@ -1510,7 +1514,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else
       {
@@ -1564,9 +1570,13 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[2], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[3], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
 
       return SCIP_OKAY;
@@ -1625,7 +1635,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       *nupgdconss = 2;
 
@@ -1685,7 +1697,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       *nupgdconss = 2;
    }
@@ -2024,6 +2038,8 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
             int v;
 
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             SCIPinfoMessage(scip, NULL, "violation: ");
             for( v = 0; v < consdata->nvars; ++v )
             {

@@ -3728,7 +3728,8 @@ SCIP_RETCODE normalizeCons(
       if( abscoefsequ )
       {
 	 SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value the same\n", maxabsval);
-	 SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
 
 	 if( consdata->validmaxabsval )
@@ -3862,7 +3863,8 @@ SCIP_RETCODE normalizeCons(
    {
       /* scale the constraint with -1 */
       SCIPdebugMessage("multiply linear constraint with -1.0\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( scaleCons(scip, cons, -1.0) );
 
       /* scalecons() can delete variables, but scaling with -1 should not do that */
@@ -3890,7 +3892,8 @@ SCIP_RETCODE normalizeCons(
    {
       /* scale the constraint with the smallest common multiple of all denominators */
       SCIPdebugMessage("scale linear constraint with %"SCIP_LONGINT_FORMAT" to make coefficients integral\n", scm);
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
 
       if( consdata->validmaxabsval )
@@ -3923,7 +3926,8 @@ SCIP_RETCODE normalizeCons(
       {
          /* divide the constraint by the greatest common divisor of the coefficients */
          SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
 
 	 if( consdata->validmaxabsval )
@@ -3937,7 +3941,8 @@ SCIP_RETCODE normalizeCons(
    consdata->normalized = TRUE;
 
    SCIPdebugMessage("normalized constraint:\n");
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }
@@ -4041,7 +4046,8 @@ SCIP_RETCODE applyFixings(
       rhssubtrahend = 0.0;
 
       SCIPdebugMessage("applying fixings:\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       v = 0;
       while( v < consdata->nvars )
@@ -4184,11 +4190,11 @@ SCIP_RETCODE applyFixings(
       }
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-       
+
          /** for large numbers that are relatively equal, substraction can lead to cancellation,
           *  causing wrong fixings of other variables --> better use a real zero here;
           *  for small numbers, polishing the difference might lead to wrong results -->
-          *  better use the exact difference in this case 
+          *  better use the exact difference in this case
           */
          if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
          {
@@ -4199,11 +4205,12 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
          }
       }
-      
+
       consdata->removedfixings = TRUE;
 
       SCIPdebugMessage("after fixings:\n");
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
        * to clean up the constraint
@@ -4482,6 +4489,7 @@ SCIP_RETCODE resolvePropagation(
          inferInfoGetProprule(inferinfo), SCIPconsGetName(cons), inferInfoGetPos(inferinfo),
          boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, ";\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -4892,7 +4900,8 @@ SCIP_RETCODE checkCons(
    assert(violated != NULL);
 
    SCIPdebugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4910,7 +4919,7 @@ SCIP_RETCODE checkCons(
    }
    else
       activity = consdataGetActivity(scip, consdata, sol);
-   
+
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
       activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
@@ -6183,14 +6192,15 @@ SCIP_RETCODE convertLongEquality(
    if( coefsintegral && varsintegral && !SCIPisFeasIntegral(scip, consdata->rhs) )
    {
       SCIPdebugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
    supinf = FALSE;
    infinf = FALSE;
-   
+
    /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -7053,9 +7063,10 @@ SCIP_RETCODE dualPresolve(
       /* allocate temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, consdata->nvars-1) );
-            
+
       /* set up the multi-aggregation */
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
       supinf = FALSE;
@@ -7074,7 +7085,7 @@ SCIP_RETCODE dualPresolve(
                assert(SCIPisIntegral(scip, aggrcoefs[naggrs]));
                aggrcoefs[naggrs] = SCIPfloor(scip, aggrcoefs[naggrs]+0.5);
             }
-     
+
             if( SCIPisGT(scip, aggrcoefs[naggrs], 0.0) )
             {
                supinf = supinf || SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j]));
@@ -7766,8 +7777,10 @@ SCIP_RETCODE aggregateConstraints(
       SCIPdebugMessage("aggregate linear constraints <%s> := %.15g*<%s> + %.15g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
          consdata0->nvars, bestnvars, commonidxweight + diffidx0minus1weight, bestvarweight);
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* get temporary memory for creating the new linear constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &newvars, bestnvars) );
@@ -7869,7 +7882,8 @@ SCIP_RETCODE aggregateConstraints(
       if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          SCIPdebugMessage(" -> aggregated to <%s>\n", SCIPconsGetName(newcons));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* update the statistics: we changed all coefficients */
          if( !consdata0->upgraded )
@@ -8105,16 +8119,16 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
-         /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
+
+         /* constraint found: create a new constraint with same coefficients and best left and right hand side;
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
          consdata1 = SCIPconsGetData(cons1);
-         
+
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
@@ -8124,8 +8138,10 @@ SCIP_RETCODE detectRedundantConstraints(
             assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], consdata1->vals[1]));
             SCIPdebugMessage("aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-            SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             lhs = MAX(consdata1->lhs, consdata0->lhs);
             rhs = MIN(consdata1->rhs, consdata0->rhs);
@@ -8137,8 +8153,10 @@ SCIP_RETCODE detectRedundantConstraints(
             assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], -(consdata1->vals[1])));
             SCIPdebugMessage("aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-            SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             lhs = MAX(consdata1->lhs, -consdata0->rhs);
             rhs = MIN(consdata1->rhs, -consdata0->lhs);
@@ -8524,15 +8542,17 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_Real lhs;
          SCIP_Real rhs;
          int consinddel;
-         
+
 
          /* the coefficients in both rows are either equal or negated: create a new constraint with same coefficients and
           * best left and right hand sides; delete the old constraints afterwards
           */
          SCIPdebugMessage("aggregate linear constraints <%s> and <%s> with %s coefficients into single ranged row\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1), coefsequal ? "equal" : "negated");
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          if( coefsequal )
          {
@@ -8609,8 +8629,10 @@ SCIP_RETCODE preprocessConstraintPairs(
          /* left hand side is dominated by consdata1: delete left hand side of consdata0 */
          SCIPdebugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata1->lhs, consdata0->rhs) )
@@ -8640,8 +8662,10 @@ SCIP_RETCODE preprocessConstraintPairs(
          /* left hand side is dominated by consdata0: delete left hand side of consdata1 */
          SCIPdebugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata0->lhs, consdata1->rhs) )
@@ -8670,8 +8694,10 @@ SCIP_RETCODE preprocessConstraintPairs(
          /* right hand side is dominated by consdata1: delete right hand side of consdata0 */
          SCIPdebugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata1->rhs, consdata0->lhs) )
@@ -8701,8 +8727,10 @@ SCIP_RETCODE preprocessConstraintPairs(
          /* right hand side is dominated by consdata0: delete right hand side of consdata1 */
          SCIPdebugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata0->rhs, consdata1->lhs) )
@@ -9450,6 +9478,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMessage("classified as EMPTY: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          counter[SCIP_CONSTYPE_EMPTY]++;
          continue;
       }
@@ -9459,6 +9488,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMessage("classified as FREE: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          counter[SCIP_CONSTYPE_FREE]++;
          continue;
       }
@@ -9468,6 +9498,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMessage("classified as SINGLETON: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          counter[SCIP_CONSTYPE_SINGLETON] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -9477,6 +9508,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMessage("classified as AGGREGATION: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          counter[SCIP_CONSTYPE_AGGREGATION]++;
          continue;
       }
@@ -9486,6 +9518,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMessage("classified as VARBOUND: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          counter[SCIP_CONSTYPE_VARBOUND] += isRangedRow(scip, cons) ? 2 : 1;
          continue;
       }
@@ -9521,6 +9554,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                {
                   SCIPdebugMessage("classified as SETPARTITION: ");
                   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                   counter[SCIP_CONSTYPE_SETPARTITION]++;
                   continue;
                }
@@ -9528,6 +9562,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
                {
                   SCIPdebugMessage("classified as CARDINALITY: ");
                   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                   counter[SCIP_CONSTYPE_CARDINALITY]++;
                   continue;
                }
@@ -9538,6 +9573,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             {
                SCIPdebugMessage("classified as SETPACKING: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                counter[SCIP_CONSTYPE_SETPACKING]++;
                consdata->rhs = SCIPinfinity(scip);
             }
@@ -9545,6 +9581,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             {
                SCIPdebugMessage("classified as INVKNAPSACK: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                counter[SCIP_CONSTYPE_INVKNAPSACK]++;
                consdata->rhs = SCIPinfinity(scip);
             }
@@ -9554,6 +9591,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             {
                SCIPdebugMessage("classified as SETCOVERING: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                counter[SCIP_CONSTYPE_SETCOVERING]++;
                consdata->lhs = -SCIPinfinity(scip);
             }
@@ -9591,6 +9629,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
             {
                SCIPdebugMessage("classified as EQKNAPSACK: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                counter[SCIP_CONSTYPE_EQKNAPSACK]++;
                continue;
             }
@@ -9606,6 +9645,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
                SCIPdebugMessage("classified as %s: ", matched ? "BINPACKING" : "KNAPSACK");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                counter[matched ? SCIP_CONSTYPE_BINPACKING : SCIP_CONSTYPE_KNAPSACK]++;
             }
 
@@ -9638,6 +9678,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          {
             SCIPdebugMessage("classified as INTKNAPSACK: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             counter[SCIP_CONSTYPE_INTKNAPSACK]++;
 
             if( SCIPisInfinity(scip, -consdata->lhs) )
@@ -9664,6 +9705,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          {
             SCIPdebugMessage("classified as MIXEDBINARY (%d): ", isRangedRow(scip, cons) ? 2 : 1);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             counter[SCIP_CONSTYPE_MIXEDBINARY] += isRangedRow(scip, cons) ? 2 : 1;
             continue;
          }
@@ -9672,6 +9714,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* no special structure detected */
       SCIPdebugMessage("classified as GENERAL: ");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       counter[SCIP_CONSTYPE_GENERAL] += isRangedRow(scip, cons) ? 2 : 1;
    }
 
@@ -10144,13 +10187,15 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
       {
          SCIP_Real activity;
          SCIP_CONSDATA* consdata;
-         
+
          consdata = SCIPconsGetData(conss[c-1]);
          assert( consdata != NULL);
 
          activity = consdataGetActivity(scip, consdata, sol);
 
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
+         SCIPinfoMessage(scip, NULL, ";\n")
+;
          if( SCIPisFeasLT(scip, activity, consdata->lhs) )
             SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
 
@@ -10321,7 +10366,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
 
       SCIPdebugMessage("presolving linear constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* apply presolving as long as possible on the single constraint (however, abort after a certain number of rounds
        * to avoid nearly infinite cycling due to very small bound changes)
@@ -11198,6 +11244,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    if( SCIPgetNQuadVarTermsQuadratic(scip, cons) > 0 )
       return SCIP_OKAY;
@@ -11223,6 +11270,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsStickingAtNode(cons)) );
    SCIPdebugMessage("created linear constraint:\n");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }
@@ -12181,8 +12229,10 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( *upgdcons != NULL )
    {
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, ";\n");
       SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdcons)));
       SCIP_CALL( SCIPprintCons(scip, *upgdcons, NULL) );
+      SCIPinfoMessage(scip, NULL, ";\n");
    }
 #endif
 

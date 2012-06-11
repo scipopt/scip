@@ -1942,10 +1942,10 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          SCIP_VAR** vars;
          int ncols;
          int i;
-         
+
          cols = SCIProwGetCols(row);
          ncols = SCIProwGetNNonz(row);
-         
+
          /* get all variables of the row */
          SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
          for( i = 0; i < ncols; ++i )
@@ -1963,14 +1963,14 @@ SCIP_RETCODE SCIPconvertCutsToConss(
                if( !success )
                {
                   SCIPdebugMessage("Converting cuts to constraints failed.\n");
-                  
+
                   /* free temporary memory */
                   SCIPfreeBufferArray(targetscip, &vars);
                   return SCIP_OKAY;
                }
             }
          }
-         
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(sourcescip));
          SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, ncols, vars, SCIProwGetVals(row),
                SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
@@ -1979,6 +1979,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 
          SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(targetscip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(targetscip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
          /* free temporary memory */

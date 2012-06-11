@@ -1921,6 +1921,7 @@ SCIP_RETCODE checkCumulativeCondition(
 
             /* first state the violated constraints */
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 
             /* second state the reason */
             SCIPinfoMessage(scip, NULL,
@@ -2847,6 +2848,7 @@ SCIP_RETCODE solveIndependentCons(
 
    SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -5761,6 +5763,7 @@ SCIP_RETCODE adjustOversizedJobBounds(
             TRUE, FALSE, TRUE, TRUE /*check*/, TRUE/*prop*/, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       (*naddconss)++;

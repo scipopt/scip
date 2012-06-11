@@ -705,6 +705,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, ";\n");
 #endif
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -2773,6 +2774,7 @@ SCIP_RETCODE extendToCover(
 
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 #endif
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2939,6 +2941,7 @@ SCIP_RETCODE consdataCreate(
          SCIPdebugMessage("Adding column for <%s> to alternative LP ...\n", consname);
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, lincons, NULL) );
+         SCIPinfoMessage(scip, NULL, ";\n");
 #endif
          SCIP_CALL( addAltLPConstraint(scip, conshdlr, lincons, var, 1.0, &(*consdata)->colindex) );
          SCIPdebugMessage("Colum index for <%s>: %d\n", consname, (*consdata)->colindex);
@@ -4100,6 +4103,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
             SCIPdebugMessage("Column index for <%s>: %d\n", SCIPconsGetName(conss[c]), consdata->colindex);
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintCons(scip, consdata->lincons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 #endif
          }
       }
@@ -4159,6 +4163,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, ";\n");
 #endif
       }
 #ifndef NDEBUG
@@ -4943,6 +4948,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          if ( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
             SCIPinfoMessage(scip, NULL, "violation:  <%s> = %g and <%s> = %.15g\n",
                SCIPvarGetName(consdata->binvar), SCIPgetSolVal(scip, sol, consdata->binvar),
                SCIPvarGetName(consdata->slackvar), SCIPgetSolVal(scip, sol, consdata->slackvar));

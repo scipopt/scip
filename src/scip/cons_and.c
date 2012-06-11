@@ -1083,6 +1083,7 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 
             SCIPinfoMessage(scip, NULL, "violation:");
             if( i == consdata->nvars )
@@ -2359,6 +2360,7 @@ SCIP_RETCODE cliquePresolve(
 		  SCIPconsIsStickingAtNode(cons)) );
 	    SCIPdebugMessage(" -> adding clique constraint: ");
 	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	    ++(*naddconss);
@@ -2510,6 +2512,7 @@ SCIP_RETCODE cliquePresolve(
                         SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
                   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                   SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
@@ -2771,6 +2774,7 @@ SCIP_RETCODE cliquePresolve(
 	       SCIPconsIsStickingAtNode(cons)) );
 	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	 ++(*naddconss);
@@ -3305,6 +3309,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 

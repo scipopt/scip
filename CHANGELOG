@@ -134,6 +134,7 @@ interface
 - new methods SCIPvarGetBestRootSol(), SCIPvarGetBestRootRedcost(), SCIPvarGetBestRootLPobjval() which return the best
   combination for a variable w.r.t. root solution value, root LP objective value, and root reduced cost
 - removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
+- SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

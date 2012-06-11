@@ -1177,7 +1177,7 @@ SCIP_RETCODE setObjective(
             nvars = ntermvars[t];
             assert(vars != NULL);
             assert(nvars > 1);
-         
+
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andresultant_obj_%d", t);
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY, 
@@ -1188,7 +1188,7 @@ SCIP_RETCODE setObjective(
             /* change branching priority of artificial variable to -1 */
             SCIP_CALL( SCIPchgVarBranchPriority(scip, var, -1) );
 #endif
-    
+
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -1200,6 +1200,7 @@ SCIP_RETCODE setObjective(
                   FALSE, FALSE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, andcons) );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, andcons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -1208,10 +1209,10 @@ SCIP_RETCODE setObjective(
          SCIP_CONS* pseudocons;
          SCIP_Real lb;
          SCIP_Real ub;
-         
+
          lb = 0.0;
          ub = 0.0;
-         
+
          /* add all non linear coefficients up */
          for( v = 0; v < ntermcoefs; ++v )
          {
@@ -1234,7 +1235,7 @@ SCIP_RETCODE setObjective(
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_int_obj");
          SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 1.0, SCIP_VARTYPE_INTEGER, 
                TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-         
+
          /* @todo: check if it is better to change the branching priority for the artificial variables */
 #if 1
          /* change branching priority of artificial variable to -1 */
@@ -1242,18 +1243,19 @@ SCIP_RETCODE setObjective(
 #endif
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
-         
+
          /* create artificial objection function constraint containing the artificial integer variable */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");
          SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &pseudocons, name, linvars, ncoefs, coefs, terms, ntermcoefs,
                ntermvars, termcoefs, NULL, 0.0, FALSE, var, 0.0, 0.0, 
                TRUE, TRUE, TRUE, TRUE, TRUE,  
                FALSE, FALSE, FALSE, FALSE, FALSE) );
-         
+
          SCIP_CALL( SCIPaddCons(scip, pseudocons) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, pseudocons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(scip, &pseudocons) );
-         
+
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
          return SCIP_OKAY;
@@ -1447,8 +1449,9 @@ SCIP_RETCODE readConstraints(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
+
    if( isNonlinear )
       ++(*nNonlinearConss);
 
@@ -1628,6 +1631,7 @@ SCIP_RETCODE readOPBFile(
             (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, topcostcons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
 
       SCIPfreeBufferArray(scip, &topcosts);
@@ -3344,6 +3348,7 @@ SCIP_RETCODE writeOpbConstraints(
                      SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has more than one non-binary variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
                      SCIPinfoMessage(scip, file, "* ");
                      SCIP_CALL( SCIPprintCons(scip, cons, file) );
+                     SCIPinfoMessage(scip, file, ";\n");
                      cont = TRUE;
                      break;
                   }
@@ -3356,6 +3361,7 @@ SCIP_RETCODE writeOpbConstraints(
                SCIPwarningMessage(scip, "cannot print linear constraint <%s> of indicator constraint <%s> because it has no slack variable\n", SCIPconsGetName(lincons), SCIPconsGetName(cons) );
                SCIPinfoMessage(scip, file, "* ");
                SCIP_CALL( SCIPprintCons(scip, cons, file) );
+               SCIPinfoMessage(scip, file, ";\n");
 
                /* free temporary memory */
                SCIPfreeBufferArray(scip, &consvals);
@@ -3402,6 +3408,7 @@ SCIP_RETCODE writeOpbConstraints(
             SCIPwarningMessage(scip, "indicator constraint <%s> will not be printed because the indicator variable has no objective value(= weight of this soft constraint)\n", SCIPconsGetName(cons) );
             SCIPinfoMessage(scip, file, "* ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
          }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
@@ -3415,9 +3422,10 @@ SCIP_RETCODE writeOpbConstraints(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
-   
+
    if( linconssofindicatorsmap != NULL )
    {
       /* free hash map */

@@ -2137,24 +2137,26 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
          /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
          consdata1 = SCIPconsGetData(cons1);
-         
+
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
-         
+
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-         
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
          /* if necessary change type of setppc constraint */
          if( consdata1->setppctype != SCIP_SETPPCTYPE_PARTITIONING && consdata0->setppctype != consdata1->setppctype ) /*lint !e641*/
          {
@@ -2203,7 +2205,9 @@ SCIP_RETCODE removeRedundantCons(
    SCIPdebugMessage(" -> removing setppc constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* update flags of cons0 */
    SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
@@ -2519,7 +2523,9 @@ SCIP_RETCODE removeRedundantConstraints(
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* both constraints consists of the same variables */
          if( consdata0->setppctype == consdata1->setppctype )
@@ -2556,7 +2562,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* cons0 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( processContainedCons(scip, cons0, cons1, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
       else if( cons1iscontained )
@@ -2564,7 +2572,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* cons1 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons1), SCIPconsGetName(cons0));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( processContainedCons(scip, cons1, cons0, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
    }
@@ -3529,14 +3539,15 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
             /* constraint is violated */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
                int v;
                SCIP_Real sum = 0.0;
-               
+
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                for( v = 0; v < consdata->nvars; ++v )
                {
                   assert(SCIPvarIsBinary(consdata->vars[v]));

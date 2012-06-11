@@ -2932,6 +2932,7 @@ SCIP_RETCODE removeFixedVariables(
 
    SCIPdebugMessage("removed fixations from <%s>\n  -> ", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 #ifndef NDEBUG
    for( i = 0; i < consdata->nlinvars; ++i )
@@ -3160,6 +3161,7 @@ SCIP_RETCODE presolveTryAddAND(
       SCIP_CALL( SCIPaddCons(scip, andcons) );
       SCIPdebugMessage("added AND constraint: ");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, andcons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
       ++*naddconss;
 
@@ -3468,6 +3470,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added AND constraint: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
@@ -3576,6 +3579,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebugMessage("added varbound constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
@@ -3591,6 +3595,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebugMessage("added varbound constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
             }
@@ -3610,6 +3615,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added linear constraint: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
@@ -3625,6 +3631,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
             SCIPdebugMessage("added linear constraint: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
@@ -3804,6 +3811,7 @@ SCIP_RETCODE presolveUpgrade(
    SCIPdebugMessage(" binlin=%d binquad=%d intlin=%d intquad=%d impllin=%d implquad=%d contlin=%d contquad=%d integral=%u\n",
       nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
@@ -3833,6 +3841,7 @@ SCIP_RETCODE presolveUpgrade(
       {
          /* got upgrade */
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebugMessage(" -> upgraded to %d constraints:\n", nupgdconss_);
 
          /* add the upgraded constraints to the problem and forget them */
@@ -3840,6 +3849,7 @@ SCIP_RETCODE presolveUpgrade(
          {
             SCIPdebugPrintf("\t");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[j], NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
             SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[j]) ); /*lint !e613*/
@@ -4056,6 +4066,7 @@ SCIP_RETCODE presolveDisaggregate(
 
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxconss[comp], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
 
@@ -4065,6 +4076,7 @@ SCIP_RETCODE presolveDisaggregate(
    *naddconss += ncomponents;
 
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    SCIPfreeBufferArray(scip, &auxconss);
    SCIPfreeBufferArray(scip, &auxvars);
@@ -7447,6 +7459,7 @@ SCIP_RETCODE replaceByLinearConstraints(
 
       SCIPdebugMessage("replace quadratic constraint <%s> by linear constraint after all quadratic vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -9385,6 +9398,7 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
 
    SCIPdebugMessage("created transformed quadratic constraint ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *targetcons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }
@@ -10036,6 +10050,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
@@ -10551,6 +10566,8 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
@@ -11336,6 +11353,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
 
    SCIPdebugMessage("created quadratic constraint ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }

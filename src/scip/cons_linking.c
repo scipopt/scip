@@ -1979,7 +1979,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    int c;
-   
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
@@ -2000,14 +2000,14 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
                int pos;
                int b;
 
                pos = -1;
-               
+
 #ifndef NDEBUG
                for( b = 0; b < consdata->nbinvars; ++b )
                {
@@ -2017,12 +2017,13 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 #endif
 
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                /* check that at most one binary variable is fixed */
                for( b = 0; b < consdata->nbinvars; ++b )
                {
                   assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvars[b])) );
-                  
+
                   /* check if binary variable is fixed */
                   if( SCIPgetSolVal(scip, sol, consdata->binvars[b]) > 0.5 )
                   {
@@ -2034,7 +2035,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      pos = b ;
                   }
                }
-               
+
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
@@ -2048,12 +2049,12 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      SCIPvarGetName(consdata->binvars[pos]) );
                }
             }
-            
+
             return SCIP_OKAY;
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 

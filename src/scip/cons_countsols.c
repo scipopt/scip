@@ -834,6 +834,7 @@ SCIP_RETCODE checkLogicor(
       {
          SCIPdebugMessage("constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          (*satisfied) = FALSE;
       }
 
@@ -929,6 +930,7 @@ SCIP_RETCODE checkKnapsack(
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          (*satisfied) = FALSE;
       }
 
@@ -1005,7 +1007,8 @@ SCIP_RETCODE checkBounddisjunction(
       if( !satisfiedbound )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          (*satisfied) = FALSE;
       }
 
@@ -1076,7 +1079,8 @@ SCIP_RETCODE checkVarbound(
          || !SCIPisGE(scip, SCIPvarGetLbLocal(var), lhs - SCIPvarGetLbLocal(vbdvar) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
@@ -1180,6 +1184,7 @@ SCIP_RETCODE checkFeasSubtree(
          {
             SCIPdebugMessage("sparse solution is infeasible since the following constraint (and maybe more) is(/are) enabled\n");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             return SCIP_OKAY;
          }
       }

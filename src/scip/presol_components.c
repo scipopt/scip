@@ -782,6 +782,7 @@ SCIP_RETCODE splitProblem(
          {
             SCIPwarningMessage(scip, "presol component detected component with a single constraint:\n");
             SCIP_CALL( SCIPprintCons(scip, compconss[0], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
          }
 #endif
 

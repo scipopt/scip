@@ -823,6 +823,8 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             SCIPinfoMessage(scip, NULL, "violation:\n");
             if( i == consdata->nvars )
             {

@@ -1735,7 +1735,9 @@ SCIP_RETCODE removeRedundantCons(
    SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* update flags of cons0 */
    SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
@@ -1860,7 +1862,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* delete consdel */
          SCIPdebugMessage("logicor constraint <%s> is contained in <%s>\n", SCIPconsGetName(consdel), SCIPconsGetName(consstay));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consstay, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consdel, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( removeRedundantCons(scip, consstay, consdel, ndelconss) );
 
          /* update the first changed constraint to begin the next aggregation round with */
@@ -2054,6 +2058,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -2639,7 +2644,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
 #ifndef NDEBUG
@@ -2652,14 +2657,16 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                }
 #endif
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
-            
+
             return SCIP_OKAY;
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 

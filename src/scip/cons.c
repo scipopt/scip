@@ -5379,17 +5379,16 @@ SCIP_RETCODE SCIPconsPrint(
 
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
-   
+
    SCIPmessageFPrintInfo(messagehdlr, file, "  [%s] <%s>: ", conshdlr->name, cons->name);
-   
+
    if( conshdlr->consprint != NULL )
    {
       SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
-      SCIPmessageFPrintInfo(messagehdlr, file, ";\n");
    }
-   else 
+   else
       SCIPmessageFPrintInfo(messagehdlr, file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
-   
+
    return SCIP_OKAY;
 }
 

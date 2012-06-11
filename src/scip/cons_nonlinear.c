@@ -1650,6 +1650,7 @@ SCIP_RETCODE removeFixedLinearVariables(
 
    SCIPdebugMessage("removed fixations of linear variables from <%s>\n  -> ", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 #ifndef NDEBUG
    for( i = 0; i < consdata->nlinvars; ++i )
@@ -1919,6 +1920,7 @@ SCIP_RETCODE presolveUpgrade(
    SCIPdebugMessage("upgrading nonlinear constraint <%s> (up to %d upgrade methods):\n",
       SCIPconsGetName(cons), conshdlrdata->nnlconsupgrades);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
@@ -1954,6 +1956,7 @@ SCIP_RETCODE presolveUpgrade(
          {
             SCIPdebugPrintf("\t");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[j], NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
             SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[j]) ); /*lint !e613*/
@@ -3347,6 +3350,7 @@ SCIP_RETCODE reformulate(
          SCIPdebugMessage("replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
             (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );  /*lint !e613*/
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
       }
    }
@@ -5368,7 +5372,9 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -6646,6 +6652,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 
    SCIPdebugMessage("created transformed nonlinear constraint ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *targetcons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }
@@ -7246,6 +7253,8 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
@@ -7394,6 +7403,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       havechange = FALSE;
 
@@ -8290,6 +8300,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
 
    SCIPdebugMessage("created nonlinear constraint ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }
@@ -8416,6 +8427,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
 
    SCIPdebugMessage("created nonlinear constraint ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    return SCIP_OKAY;
 }

@@ -1576,8 +1576,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                SCIPdebugMessage("constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIPdebugMessage("is redundant to constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
                ++(*ndelconss);
@@ -1593,8 +1595,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                SCIPdebugMessage("constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIPdebugMessage("is redundant to constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                SCIP_CALL( SCIPdelCons(scip, cons1) );
                ++(*ndelconss);
@@ -1613,10 +1617,12 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
-		  SCIPdebugMessage("deleted rhs of constraint: ");
-		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-		  SCIPdebugMessage("due to constraint: ");
-		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+                  SCIPdebugMessage("deleted rhs of constraint: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                  SCIPdebugMessage("due to constraint: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	       }
 
                /* later on we cannot not want to delete cons1 */
@@ -1633,10 +1639,12 @@ SCIP_RETCODE preprocessConstraintPairs(
 		  SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
-		  SCIPdebugMessage("deleted lhs of constraint: ");
-		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-		  SCIPdebugMessage("due to constraint: ");
-		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+                  SCIPdebugMessage("deleted lhs of constraint: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                  SCIPdebugMessage("due to constraint: ");
+                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	       }
 
                /* later on we cannot not want to delete cons1 */
@@ -1650,8 +1658,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                SCIPdebugMessage("deleted lhs of constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIPdebugMessage("due to constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                continue;
             }
@@ -1663,8 +1673,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                SCIPdebugMessage("deleted rhs of constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIPdebugMessage("due to constraint: ");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                continue;
             }
@@ -1703,8 +1715,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
             SCIPdebugMessage("constraint: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebugMessage("and constraint: ");
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebugMessage("are both redundant and lead to bounding of <%s> in [%g, %g]\n", SCIPvarGetName(consdata0->var), lhs, rhs);
 
             /* delete cons1 */
@@ -1733,8 +1747,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          SCIPdebugMessage("constraint: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebugMessage("and constraint: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* if sign of coefficient switches, update the rounding locks of the variable */
          if( SCIPconsIsLocked(cons0) && consdata0->vbdcoef * coef < 0.0 )
@@ -1792,6 +1808,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          SCIPdebugMessage("lead to new constraint: ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 /* if cons1 is still marked for deletion, delete it */
          if( deletecons1 )
@@ -1879,6 +1896,7 @@ SCIP_RETCODE prettifyConss(
 
                /* print constraint before scaling */
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                assert(SCIPisEQ(scip, consdata->vbdcoef * denominator, 1.0));
 
@@ -1960,6 +1978,7 @@ SCIP_RETCODE prettifyConss(
                /* print constraint after scaling */
                SCIPdebugMessage("transformed into:");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             }
          }
       }
@@ -2359,6 +2378,7 @@ SCIP_RETCODE applyFixings(
 
       SCIPdebugMessage("resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -3002,11 +3022,13 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 
             consdata = SCIPconsGetData(conss[i]);
             assert( consdata != NULL );
-            
+
             sum = SCIPgetSolVal(scip, sol, consdata->var);
             sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
-            
+
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             if( !SCIPisFeasGE(scip, sum, consdata->lhs) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - sum);
@@ -3020,7 +3042,7 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
       }
    } 
    *result = SCIP_FEASIBLE;
-   
+
    return SCIP_OKAY;
 }
 

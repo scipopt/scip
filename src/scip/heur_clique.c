@@ -773,6 +773,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conflictcons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
    }
 
@@ -972,6 +973,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
                   FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
             SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conflictcons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
          }
 

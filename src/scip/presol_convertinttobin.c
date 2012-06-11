@@ -267,6 +267,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
 

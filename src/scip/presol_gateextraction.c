@@ -1044,12 +1044,14 @@ SCIP_RETCODE extractGates(
 	 stickingatnode &= SCIPconsIsStickingAtNode(gateconss[v]);
 
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, gateconss[v], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 SCIP_CALL( SCIPdelCons(scip, gateconss[v]) );
 	 ++(*ndelconss);
       }
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       if( ngateconss == nlogicorvars - 1 )
       {
@@ -1080,6 +1082,7 @@ SCIP_RETCODE extractGates(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("-------------->\n");
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 ++(*naddconss);
 	 ++(presoldata->ngates);
@@ -1104,6 +1107,7 @@ SCIP_RETCODE extractGates(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("-------------->\n");
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 ++(*naddconss);
 	 ++(presoldata->ngates);
@@ -1628,7 +1632,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  SCIPdebugMessage("Following logicor is redundant to the set-partitioning constraint.\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	       }
 	       else
 	       {
@@ -1639,7 +1645,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  SCIPdebugMessage("Following logicor and set-packing constraints form a set-partitioning constraint.\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 		  /* create and add set-partitioning constraint */
 		  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
@@ -1650,6 +1658,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 		  SCIP_CALL( SCIPaddCons(scip, newcons) );
 		  SCIPdebugMessage("-------------->\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 		  ++(*naddconss);
 		  ++(presoldata->ngates);

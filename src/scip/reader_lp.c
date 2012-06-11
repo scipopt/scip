@@ -1210,7 +1210,7 @@ SCIP_RETCODE readObjective(
       {
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
-      
+
       /* insert dummy variable and constraint to represent quadratic part of objective */
       if( nquadcoefs > 0 )
       {
@@ -1219,11 +1219,11 @@ SCIP_RETCODE readObjective(
          SCIP_Real  lhs;
          SCIP_Real  rhs;
          SCIP_Real  minusone;
-         
+
          SCIP_CALL( SCIPcreateVar(scip, &quadobjvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
                SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, quadobjvar) );
-         
+
          if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
          {
             lhs = -SCIPinfinity(scip);
@@ -1234,15 +1234,16 @@ SCIP_RETCODE readObjective(
             lhs = 0.0;
             rhs = SCIPinfinity(scip);
          }
-         
+
          minusone = -1.0;
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
-         
+
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", lpinput->linenumber, SCIPconsGetName(quadobjcons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadobjcons, NULL) ) );
-         
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
          SCIP_CALL( SCIPreleaseCons(scip, &quadobjcons) );
          SCIP_CALL( SCIPreleaseVar(scip, &quadobjvar) );
       }
@@ -1417,6 +1418,7 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* create second constraint if it was an equation */
@@ -1431,6 +1433,7 @@ SCIP_RETCODE createIndicatorConstraint(
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1647,6 +1650,7 @@ SCIP_RETCODE readConstraints(
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
    else
@@ -1945,7 +1949,7 @@ SCIP_RETCODE readSemicontinuous(
    SCIP_Bool created;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
-   
+
    SCIP_VAR* vars[2];
    SCIP_BOUNDTYPE boundtypes[2];
    SCIP_Real bounds[2];
@@ -1963,7 +1967,7 @@ SCIP_RETCODE readSemicontinuous(
          syntaxError(scip, lpinput, "unexpected end.");
          return SCIP_OKAY;
       }
-      
+
       if( strcasecmp(lpinput->token, "-") == 0 )
       {
          if( !getNextToken(scip, lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
@@ -1977,7 +1981,7 @@ SCIP_RETCODE readSemicontinuous(
          pushToken(lpinput);
       }
    }
-   
+
    while( getNextToken(scip, lpinput) )
    {
       /* check if we reached a new section */
@@ -1991,35 +1995,36 @@ SCIP_RETCODE readSemicontinuous(
          syntaxError(scip, lpinput, "unknown variable in semi-continuous section.");
          return SCIP_OKAY;
       }
-      
+
       if( SCIPvarGetLbGlobal(var) <= 0.0 )
       {
          SCIPdebugMessage("ignore semi-continuity of variable <%s> with negative lower bound %g\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var));
          continue;
       }
-      
+
       oldlb = SCIPvarGetLbGlobal(var);
-      
+
       /* change the lower bound to 0.0 */
       SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
 
       /* add a bound disjunction constraint to say var <= 0.0 or var >= oldlb */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semicont_%s", SCIPvarGetName(var));
-      
+
       vars[0] = var;
       vars[1] = var;
       boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
       boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
       bounds[0] = 0.0;
       bounds[1] = oldlb;
-      
+
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vars, boundtypes, bounds,
             !dynamiccols, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamiccols, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      
+
       SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -2226,6 +2231,7 @@ SCIP_RETCODE readSos(
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", lpinput->linenumber, SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -3589,13 +3595,13 @@ SCIP_RETCODE SCIPwriteLp(
                SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
                SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetLhsQuadratic(scip, cons),
                SCIPgetRhsQuadratic(scip, cons), transformed) );
-         
+
          consQuadratic[nConsQuadratic++] = cons;
       }
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          SCIP_CALL( printSOCCons(scip, file, consname, cons) );
-         
+
          consSOC[nConsSOC++] = cons;
       }
       else
@@ -3603,6 +3609,7 @@ SCIP_RETCODE SCIPwriteLp(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
 

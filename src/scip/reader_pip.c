@@ -1360,6 +1360,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", pipinput->linenumber, SCIPconsGetName(quadobjcons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadobjcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          SCIP_CALL( SCIPreleaseCons(scip, &quadobjcons) );
          SCIP_CALL( SCIPreleaseVar(scip, &quadobjvar) );
@@ -1428,6 +1429,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPaddCons(scip, nonlinobjcons) );
          SCIPdebugMessage("(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, nonlinobjcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
          SCIP_CALL( SCIPreleaseVar(scip, &nonlinobjvar) );
@@ -1627,6 +1629,7 @@ SCIP_RETCODE readConstraints(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
  TERMINATE:
@@ -3272,6 +3275,7 @@ SCIP_RETCODE SCIPwritePip(
          {
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
          }
       }
       else if( strcmp(conshdlrname, "abspower") == 0 )
@@ -3340,6 +3344,7 @@ SCIP_RETCODE SCIPwritePip(
          {
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
          }
       }
       else if( strcmp(conshdlrname, "bivariate") == 0 )
@@ -3453,6 +3458,7 @@ SCIP_RETCODE SCIPwritePip(
          {
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
          }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
@@ -3488,6 +3494,7 @@ SCIP_RETCODE SCIPwritePip(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "\\ ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
 

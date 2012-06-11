@@ -1640,7 +1640,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> are redundant: delete <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -1650,7 +1652,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> are contradicting\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             *cutoff = TRUE;
          }
       }
@@ -1666,7 +1670,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1682,7 +1688,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             for( v = 0; v < consdata1->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons0, conshdlrdata->eventhdlr, consdata1->vars[v]) );
@@ -1705,7 +1713,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPfixVar(scip, singlevar1, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1721,7 +1731,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             for( v = 0; v < consdata0->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons1, conshdlrdata->eventhdlr, consdata0->vars[v]) );
@@ -2081,7 +2093,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
-         
+
          if( printreason )
          {
             int v;
@@ -2092,7 +2104,8 @@ SCIP_DECL_CONSCHECK(consCheckXor)
             assert( consdata != NULL );
 
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
-            
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             for( v = 0; v < consdata->nvars; ++v )
             {
                if( SCIPgetSolVal(scip, sol, consdata->vars[i]) > 0.5 )
@@ -2484,7 +2497,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
          /* parse string again with the correct size of the variable array */
          SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
-      
+
       assert(*success);
       assert(varssize >= requiredsize);
 
@@ -2495,15 +2508,16 @@ SCIP_DECL_CONSPARSE(consParseXor)
       /* search for the equal symbol */
       while( *str != '=' )
          str++;
-      
+
       if( SCIPstrToRealValue(str, &rhs, &endptr) )
       {
          assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
          /* create or constraint */
          SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-  
+
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else 
          *success = FALSE;

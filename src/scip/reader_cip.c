@@ -394,7 +394,7 @@ SCIP_RETCODE getConstraints(
 {
    SCIP_CONS* cons;
    char* buf;
-   
+
    SCIP_Bool separate;
    SCIP_Bool enforce;
    SCIP_Bool check;
@@ -411,30 +411,32 @@ SCIP_RETCODE getConstraints(
       cipinput->section = CIP_END;
       return SCIP_OKAY;
    }
-   
+
    SCIPdebugMessage("parse constraints in line %d\n", cipinput->linenumber);
-   
+
    separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
-   
+
    /* parse the constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
-   
+
    if( !success )
    {
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
    }
-   
+
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -612,16 +614,17 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( nconss > 0 )
    {
       SCIPinfoMessage(scip, file, "CONSTRAINTS\n");
-      
+
       for( i = 0; i < nconss; ++i )
       {
          /* in case the transformed is written only constraint are posted which are enabled in the current node */
          assert(!transformed || SCIPconsIsEnabled(conss[i]));
-         
+
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
-   
+
    *result = SCIP_SUCCESS;
 
    SCIPinfoMessage(scip, file, "END\n");

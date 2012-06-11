@@ -648,7 +648,9 @@ SCIP_RETCODE presolveFindDuplicates(
          assert(consdata1 != NULL);
 
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          assert(consdata0->x        == consdata1->x);
          assert(consdata0->exponent == consdata1->exponent);  /*lint !e777*/
@@ -837,7 +839,9 @@ SCIP_RETCODE presolveFindDuplicates(
             {
                SCIPdebugMessage("infeasibility detected while solving the equations, no solution exists\n");
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                break;
             }
 
@@ -845,7 +849,9 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIPvarGetName(consdata0->x), SCIPvarGetLbLocal(consdata0->x), SCIPvarGetUbLocal(consdata0->x), xval,
                SCIPvarGetName(consdata0->z), SCIPvarGetLbLocal(consdata0->z), SCIPvarGetUbLocal(consdata0->z), zval);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             if( SCIPvarGetStatus(SCIPvarGetProbvar(consdata0->x)) != SCIP_VARSTATUS_MULTAGGR )
             {
@@ -982,7 +988,9 @@ SCIP_RETCODE presolveFindDuplicates(
          assert(consdata1 != NULL);
 
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          assert(consdata0->z        == consdata1->z);
          assert(consdata0->exponent == consdata1->exponent);  /*lint !e777*/
@@ -1004,7 +1012,9 @@ SCIP_RETCODE presolveFindDuplicates(
 
             SCIPdebugMessage("<%s> and <%s> can be reformulated to one abspower and one aggregation\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
             if( consdata0->exponent == 2.0 )
                coef = SIGN(consdata0->zcoef / consdata1->zcoef) * sqrt(REALABS(consdata0->zcoef / consdata1->zcoef));
@@ -1049,6 +1059,7 @@ SCIP_RETCODE presolveFindDuplicates(
                      SCIPconsIsStickingAtNode(cons0)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, auxcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
 
                ++*nupgdconss;
@@ -1342,6 +1353,7 @@ SCIP_RETCODE presolveDual(
             SCIPvarGetName(consdata->z), SCIPvarGetLbGlobal(consdata->z), SCIPvarGetUbGlobal(consdata->z), zfix,
             SCIPconsGetName(cons));
          SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* fix x */
          SCIP_CALL( SCIPfixVar(scip, consdata->x, xfix, cutoff, &fixed) );
@@ -1569,6 +1581,7 @@ void computeBoundsZ(
 
    SCIPdebugMessage("given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    assert(!SCIPintervalIsEmpty(*zbnds));
 }
@@ -1622,6 +1635,7 @@ void computeBoundsX(
 
    SCIPdebugMessage("given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebug( SCIP_CALL_ABORT( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    assert(!SCIPintervalIsEmpty(*xbnds));
 }
@@ -1789,6 +1803,7 @@ SCIP_RETCODE checkFixedVariables(
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* rerun constraint comparison */
       conshdlrdata->comparedpairwise = FALSE;
@@ -3535,6 +3550,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMessage("generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebugMessage("xlb = %g  xub = %g  xval = %g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x));
 
    if( violside == SCIP_SIDETYPE_RIGHT )
@@ -4199,6 +4215,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
 
    SCIPdebugMessage("upgrade quadratic constraint <%s> to absolute power, x = [%g,%g], offset = %g\n", SCIPconsGetName(cons), SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x), xoffset);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    lhs = SCIPgetLhsQuadratic(scip, cons);
    rhs = SCIPgetRhsQuadratic(scip, cons);
@@ -4300,6 +4317,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[*nupgdconss], NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    ++*nupgdconss;
 
    return SCIP_OKAY;
@@ -4865,6 +4883,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -4892,6 +4911,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
@@ -5985,6 +6005,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
 
       SCIPdebugMessage("presolving constraint <%s>\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );  /*lint !e613*/
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* check if we can upgrade to a linear constraint */
       if( consdata->exponent == 1.0 )
@@ -6122,7 +6143,9 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
 
          SCIPdebugMessage("upgraded constraint <%s> to linear constraint due to binary x-variable\n", SCIPconsGetName(conss[c]));
          SCIPdebug( SCIPprintCons(scip, conss[c], NULL) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIPprintCons(scip, lincons, NULL) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );  /*lint !e613*/
          ++*nupgdconss;
@@ -6192,6 +6215,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       {
          SCIPdebugMessage("make z = <%s> implicit integer in cons <%s>\n", SCIPvarGetName(consdata->z), SCIPconsGetName(conss[c]));  /*lint !e613*/
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) ); /*lint !e613*/
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( SCIPchgVarType(scip, consdata->z, SCIP_VARTYPE_IMPLINT, &infeas) );
          if( infeas )
          {
