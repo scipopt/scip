@@ -1015,6 +1015,31 @@ SCIP_Real SCIPsolGetVal(
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
 
+   /** if the value of a transformed variable in an original solution is requested, we need to project the variable back
+    *  to the original space, the opposite case is handled below
+    */
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
+   {
+      SCIP_VAR* origvar;
+      SCIP_Real scalar;
+      SCIP_Real constant;
+
+      /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
+       * -> get the corresponding original variable first
+       */
+      origvar = var;
+      scalar = 1.0;
+      constant = 0.0;
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      if( origvar == NULL )
+      {
+         /* the variable has no original counterpart: in the original solution, it has a value of zero */
+         return 0.0;
+      }
+      assert(!SCIPvarIsTransformed(origvar));
+      return scalar * SCIPsolGetVal(sol, set, stat, origvar) + constant;
+   }
+
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
    switch( SCIPvarGetStatus(var) )
    {
@@ -1559,6 +1584,7 @@ SCIP_RETCODE SCIPsolPrint(
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
+
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
