@@ -98,14 +98,17 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
+$NAME/interfaces/matlab/* \
+$NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
+$NAME/check/instances/MIP/*.lp \
 $NAME/check/instances/MIP/*.mps \
 $NAME/check/instances/MIP/*.osil \
-$NAME/check/instances/MIQCP/*.lp \
-$NAME/check/instances/MIQCP/*.mps \
-$NAME/check/instances/MIQCP/*.osil \
-$NAME/check/instances/MIQCP/*.pip \
+$NAME/check/instances/MINLP/*.cip \
+$NAME/check/instances/MINLP/*.mps \
+$NAME/check/instances/MINLP/*.osil \
+$NAME/check/instances/MINLP/*.pip \
 $NAME/check/instances/PseudoBoolean/*.opb \
 $NAME/check/instances/PseudoBoolean/*.wbo \
 $NAME/check/instances/SAT/*.cnf \

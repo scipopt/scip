@@ -80,14 +80,14 @@ end
 % detect NLPI library %
 fprintf('Detecting NLP interface library...');
 
-pathtolibnlpi = [pathtoscip '/lib/libnlpi.a'];
+pathtolibnlpi = [pathtoscip '/lib/libnlpi.cppad.a'];
 
 if( ~isempty(dir(pathtolibnlpi)) )
    fprintf('using NLP interface library <%s>.\n', pathtolibnlpi);
 else
    while( isempty(dir(pathtolibnlpi)) )
       fprintf('Could not find library <%s>.\n', pathtolibnlpi);
-      pathtolibnlpi = input('Specify libnlpi.a manually or press CTRL-C to abort:', 's');
+      pathtolibnlpi = input('Specify libnlpi.cppad.a manually or press CTRL-C to abort:', 's');
    end
 end
 

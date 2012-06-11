@@ -14,26 +14,29 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 This is a very-beta-version of a functional MATLAB interface for SCIP
-Up to now, it has only been tested with SCIP version 2.0.1 and MATLAB version 7.9
+Up to now, it has only been tested with SCIP version 2.1.0 and MATLAB version 7.9
 
 It supports solving LPs and MIPs with SCIP that are defined via dense matrices in MATLAB.
 
-Currently not supported, but planned for future version:
+Currently not supported, but planned for future versions:
  - sparse data structures
  - setting user parameters in SCIP from MATLAB
  - problem types other than MIP (e.g., quadratic programs)
  - object-oriented interface to interactively manipulate the data structures
  - support of empty constraint set (a rather pathological case)
+ - other LP solvers than SoPlex
 
 Please let us know (e-mail to berthold@zib.de and gleixner@zib.de), if you are missing any of these or any other features.
 Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
 
 To use SCIP from MATLAB, you have to do the following:
- - start MATLAB
+ - set a link called libsoplex.a in the lib/-folder of your SCIP installation, pointing to the used SoPlex library, e.g.,
+   "cd  /home/ziboptsuite-2.1.0/scip-2.1.0/lib; ln -s libsoplex.linux.x86_64.gnu.opt.a libsoplex.a"
+ - start MATLAB from the Matlab interface bas directory, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/interfaces/matlab
  - run installscip
  - specify the path to your SCIP installation, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0
-   - this makes a function called scip available, which has 8 input and two output paramaters
-   - it might be necessary that you compiled SCIP with make USRCFLAGS="-fPic" USRCXXFLAGS="-fPic"
+   - this makes a function called scip available, which has 8 input and two output parameters
+   - it might be necessary that you compiled SCIP with make USRCFLAGS="-fPIC" USRCXXFLAGS="-fPIC"
  - if this works fine, you should try to run the example files diet_lp and stein9_ip
  - now try your own application
 
@@ -53,6 +56,6 @@ output parameters are
    objval   : objective function value of best solution found
 
 hints:
- - choose +/- 1e+20 (or bigger) to represent infinte values
+ - choose +/- 1e+20 (or bigger) to represent infinite values
  - choose lhs[i]=rhs[i] to represent an equation
  - choose obj = 0 to represent a pure feasibility problem
