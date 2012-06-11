@@ -1501,7 +1501,7 @@ void parseRange(
       syntaxError(scip, fzninput, "expected lower bound value");
 
    /* check if we have a float notation or an integer notation which defines the type of the variable */
-   if( fzninput->hasdot )
+   if( fzninput->hasdot || !SCIPisIntegral(scip, *lb) )
       *type = FZN_FLOAT;
    else
       *type = FZN_INT;
@@ -4963,7 +4963,7 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
 
          printValue(scip, file, solvalue, type);
 
-         SCIPinfoMessage(scip, file, "\n");
+         SCIPinfoMessage(scip, file, ";\n");
       }
       else
       {
