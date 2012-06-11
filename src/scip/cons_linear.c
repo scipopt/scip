@@ -11319,6 +11319,9 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
 
+#ifdef WITH_PRINTORIGCONSTYPES
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinear) );
+#endif
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
