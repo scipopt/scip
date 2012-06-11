@@ -520,7 +520,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
 
    /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
+   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
 
    QS_RETURN(rval);
 }
@@ -566,7 +567,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
 
    /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
+   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
 
    QS_RETURN(rval);
 }
@@ -679,7 +681,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, (int*) beg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+         lpi->isen, lpi->irng, (const char**)rownames);
       QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
    }
    else
@@ -691,7 +694,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
+      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+         lpi->isen, lpi->irng, (const char**)rownames);
       QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
    }
 
@@ -950,13 +954,13 @@ SCIP_RETCODE SCIPlpiChgBounds(
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'L';
 
-   rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
+   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) lb);
    QS_CONDRET(rval);
 
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'U';
 
-   rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
+   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) ub);
 
    QS_RETURN(rval);
 }
@@ -1887,8 +1891,11 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    assert(EPSISINT(psol, 1e-06));
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-      value for both cases. Could also implement a manual search as in lpi_cpx.c */
+    * value for both cases. Could also implement a manual search as in lpi_cpx.c
+    */
    rval = QSget_objval(lpi->prob, &objval);
+   QS_CONDRET(rval);
+
    *down = objval;
    *up = objval;
    *downvalid = TRUE;
@@ -1930,8 +1937,11 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIPdebugMessage("calling QSopt strong branching on %d variables with integral value (%d it lim)\n", ncols, itlim);
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-      value for all cases. Could also implement a manual search as in lpi_cpx.c */
+    * value for all cases. Could also implement a manual search as in lpi_cpx.c
+    */
    rval = QSget_objval(lpi->prob, &objval);
+   QS_CONDRET(rval);
+
    for( j = 0; j < ncols; ++j )
    {
       assert(EPSISINT(psols[j], 1e-06));
