@@ -72,6 +72,11 @@
 
 #include "scip/prop_vbounds.h"
 
+/**@name Propagator properties
+ *
+ * @{
+ */
+
 #define PROP_NAME              "vbounds"
 #define PROP_DESC              "propagates variable upper and lower bounds"
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP
@@ -79,8 +84,22 @@
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
+/**@} */
+
+/**@name Event handler properties
+ *
+ * @{
+ */
+
 #define EVENTHDLR_NAME         "vbounds"
 #define EVENTHDLR_DESC         "bound change event handler for for vbounds propagator"
+
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
 
 #define DEFAULT_USEBDWIDENING      TRUE      /**< should bound widening be used to initialize conflict analysis? */
 #define DEFAULT_USEIMPLICS         TRUE      /**< should implications be propagated? */
@@ -89,7 +108,13 @@
 #define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
 #define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
 
-/* The propagator works on indices representing a bound of a variable. This index will be called bound index in the
+/**@} */
+
+/**@name Propagator defines
+ *
+ * @{
+ *
+ * The propagator works on indices representing a bound of a variable. This index will be called bound index in the
  * following. For a given active variable with problem index i (note that active variables have problem indices
  * between 0 and nactivevariable - 1), the bound index of its lower bound is 2*i, the bound index of its upper
  * bound is 2*i + 1. The other way around, a given bound index i corresponds to the variable with problem index
@@ -103,6 +128,8 @@
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
 #define getBoundString(lower) ((lower) ? "lb" : "ub")
 #define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
+
+/**@} */
 
 /*
  * Data structures
@@ -1854,8 +1881,9 @@ SCIP_RETCODE propagateVbounds(
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of propagator
+/**@name Callback methods of propagator
+ *
+ * @{
  */
 
 /** copy method for propagator plugins (called when SCIP copies plugins) */
@@ -1886,14 +1914,6 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
 
    return SCIP_OKAY;
 }
-
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_PROPINITSOL(propInitsolVbounds)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
@@ -1976,8 +1996,11 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
    return SCIP_OKAY;
 }
 
-/*
- * Event Handler
+/**@} */
+
+/**@name Callback methods of event handler
+ *
+ * @{
  */
 
 /** execution method of bound change event handler */
@@ -2021,8 +2044,11 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    return SCIP_OKAY;
 }
 
-/*
- * propagator specific interface methods
+/**@} */
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the vbounds propagator and includes it in SCIP */
@@ -2048,7 +2074,6 @@ SCIP_RETCODE SCIPincludePropVbounds(
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyVbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeVbounds) );
-   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolVbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
 
    /* include event handler for bound change events */
@@ -2114,3 +2139,5 @@ SCIP_RETCODE SCIPexecPropVbounds(
 
    return SCIP_OKAY;
 }
+
+/**@} */
