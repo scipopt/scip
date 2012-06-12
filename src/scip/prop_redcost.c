@@ -47,7 +47,6 @@
 /**@} */
 
 
-
 /**@name Default parameter values
  *
  * @{

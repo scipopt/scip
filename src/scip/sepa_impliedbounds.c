@@ -258,8 +258,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -277,17 +275,6 @@ SCIP_DECL_SEPACOPY(sepaCopyImpliedbounds)
  
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 /** LP solution separation method of separator */
@@ -400,8 +387,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

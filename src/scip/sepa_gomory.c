@@ -134,14 +134,6 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 }
 
 
-
-
-
-
-
-
-
-
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
@@ -450,10 +442,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /*

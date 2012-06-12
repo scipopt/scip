@@ -698,8 +698,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
 }
 
 
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecRens)
@@ -760,7 +758,6 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

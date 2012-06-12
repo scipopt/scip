@@ -46,7 +46,6 @@
 /*#define VARIANT_B*/
 
 
-
 /*
  * Default parameter settings
  */
@@ -97,8 +96,6 @@ struct SCIP_PropData
    int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
 };
-
-
 
 
 /*
@@ -787,7 +784,6 @@ SCIP_RETCODE applyProbing(
 }
 
 
-
 /*
  * Callback methods of propagator
  */
@@ -920,7 +916,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
 
    return SCIP_OKAY;
 }
-
 
 
 /** presolve method of propagator */
@@ -1218,8 +1213,6 @@ SCIP_DECL_PROPRESPROP(propRespropProbing)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

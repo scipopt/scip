@@ -62,7 +62,6 @@
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
 
-
 /** primal heuristic data */
 struct SCIP_HeurData
 {

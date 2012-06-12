@@ -30,8 +30,6 @@
 #define READER_EXTENSION        "xyz"
 
 
-
-
 /*
  * Data structures
  */
@@ -44,16 +42,11 @@ struct SCIP_ReaderData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
-
 
 
 /*

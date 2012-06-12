@@ -53,8 +53,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -403,8 +401,6 @@ SCIP_RETCODE selectEssentialRounding(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -729,8 +725,6 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

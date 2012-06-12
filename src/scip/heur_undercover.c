@@ -1612,7 +1612,6 @@ SCIP_RETCODE solveCoveringProblem(
 #endif
 
 
-
    /* solve covering problem */
    retcode = SCIPsolve(coveringscip);
 
@@ -3071,10 +3070,6 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
 }
 
 
-
-
-
-
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
@@ -3296,9 +3291,6 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

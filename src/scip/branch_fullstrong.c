@@ -45,8 +45,6 @@ struct SCIP_BranchruleData
 };
 
 
-
-
 /*
  * Callback methods
  */
@@ -92,12 +90,6 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /** branching execution method for fractional LP solutions */
@@ -373,12 +365,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /*

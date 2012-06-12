@@ -1420,7 +1420,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 }
 
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/

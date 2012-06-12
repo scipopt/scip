@@ -38,8 +38,6 @@
 #define EVENTHDLR_DESC         "objective change event handler for integer objective value separator"
 
 
-
-
 /*
  * Data structures
  */
@@ -51,8 +49,6 @@ struct SCIP_SepaData
    SCIP_VAR*             objvar;             /**< objective value variable */
    SCIP_Real             setoff;             /**< setoff of the inequality */
 };
-
-
 
 
 /*
@@ -242,8 +238,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -280,8 +274,6 @@ SCIP_DECL_SEPAFREE(sepaFreeIntobj)
 }
 
 
-
-
 /** deinitialization method of separator (called before transformed problem is freed) */
 static
 SCIP_DECL_SEPAEXIT(sepaExitIntobj)
@@ -299,8 +291,6 @@ SCIP_DECL_SEPAEXIT(sepaExitIntobj)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -360,8 +350,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 }
 
 
-
-
 /*
  * event handler for objective changes
  */
@@ -384,8 +372,6 @@ SCIP_DECL_EVENTEXIT(eventExitIntobj)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** execution method of objective change event handler */
@@ -432,8 +418,6 @@ SCIP_DECL_EVENTEXEC(eventExecIntobj)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

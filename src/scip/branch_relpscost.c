@@ -67,7 +67,6 @@ struct SCIP_BranchruleData
 };
 
 
-
 /*
  * local methods
  */
@@ -798,14 +797,6 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 }
 
 
-
-
-
-
-
-
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
@@ -831,12 +822,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /*

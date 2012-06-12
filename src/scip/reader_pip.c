@@ -114,8 +114,6 @@ static const char tokenchars[] = "-+:<>=*^";
 static const char commentchars[] = "\\";
 
 
-
-
 /*
  * Local methods (for reading)
  */
@@ -2093,7 +2091,6 @@ void appendLine(
 }
 
 
-
 /* print row in PIP format to file stream */
 static
 void printRow(
@@ -3714,8 +3711,6 @@ SCIP_DECL_READERCOPY(readerCopyPip)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader */

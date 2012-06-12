@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY  100000
 
 
-
-
 /*
  * Callback methods
  */
@@ -51,16 +49,6 @@ SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 /** node selection method of node selector */
@@ -121,9 +109,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompDfs)
          return 0;
    }
 }
-
-
-
 
 
 /*

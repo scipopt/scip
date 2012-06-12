@@ -41,7 +41,6 @@
 #define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 
 
-
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -175,8 +174,6 @@ SCIP_RETCODE performBranching(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -208,14 +205,6 @@ SCIP_DECL_BRANCHFREE(branchFreeInference)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
 
 
 /** branching execution method for fractional LP solutions */
@@ -253,8 +242,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-
-
 /** branching execution method for not completely fixed pseudo solutions */
 static
 SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
@@ -280,8 +267,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

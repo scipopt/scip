@@ -55,7 +55,6 @@ SCIP_DECL_HEURCOPY(heurCopyTrivial)
 }
 
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecTrivial)

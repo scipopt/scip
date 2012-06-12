@@ -704,9 +704,6 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
 }
 
 
-
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecCrossover)

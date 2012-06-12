@@ -51,7 +51,6 @@ struct SCIP_HeurData
 };
 
 
-
 /*
  * Local methods
  */
@@ -250,7 +249,6 @@ SCIP_RETCODE performRelaxSimpleRounding(
 
    return SCIP_OKAY;
 }
-
 
 
 /*

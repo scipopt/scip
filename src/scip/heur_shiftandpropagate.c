@@ -1286,7 +1286,6 @@ SCIP_DECL_HEURFREE(heurFreeShiftandpropagate)
 }
 
 
-
 /** copy method for primal heuristic plugins(called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyShiftandpropagate)

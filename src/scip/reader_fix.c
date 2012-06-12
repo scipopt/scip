@@ -35,7 +35,6 @@
 #define READER_EXTENSION        "fix"
 
 
-
 /*
  * local methods
  */

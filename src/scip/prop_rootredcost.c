@@ -629,7 +629,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
 /**@} */
 
-
 /**@name Interface methods
  *
  * @{

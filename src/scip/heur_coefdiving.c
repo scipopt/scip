@@ -41,7 +41,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -59,7 +58,6 @@
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
 
 
 /* locally defined heuristic data */
@@ -81,8 +79,6 @@ struct SCIP_HeurData
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    SCIP_CONSHDLR*        indconshdlr;        /**< indicator constraint handler (or NULL) */
 };
-
-
 
 
 /*
@@ -351,10 +347,6 @@ SCIP_DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** execution method of primal heuristic */
@@ -806,8 +798,6 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

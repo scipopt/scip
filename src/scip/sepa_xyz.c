@@ -34,8 +34,6 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
-
-
 /*
  * Data structures
  */
@@ -48,15 +46,11 @@ struct SCIP_SepaData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -183,8 +177,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolXyz)
 #else
 #define sepaExecsolXyz NULL
 #endif
-
-
 
 
 /*

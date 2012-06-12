@@ -74,7 +74,6 @@ void initReaderdata(
 }
 
 
-
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
 SCIP_RETCODE getActiveVariables(
@@ -346,7 +345,6 @@ void printRow(
 }
 
 
-
 /** prints given linear constraint information in PPM format to file stream */
 static
 SCIP_RETCODE printLinearCons(
@@ -511,7 +509,6 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 
    return SCIP_OKAY;
 }
-
 
 
 /* writes problem to file */

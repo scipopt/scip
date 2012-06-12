@@ -51,7 +51,6 @@
                                              * cutpool of the original scip be copied to constraints of the subscip */
 
 
-
 /*
  * Data structures
  */
@@ -73,7 +72,6 @@ struct SCIP_HeurData
                                               *   to constraints in subproblem?
                                               */
 };
-
 
 
 /*
@@ -261,7 +259,6 @@ SCIP_RETCODE createNewSol(
 }
 
 
-
 /*
  * Callback methods of primal heuristic
  */
@@ -319,11 +316,6 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /** execution method of primal heuristic */

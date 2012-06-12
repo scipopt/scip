@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY     100
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -59,7 +57,6 @@ struct SCIP_NodeselData
                                               *   (0: never) */
    int                   breadthfirstdepth;  /**< depth until breadth-fisrt search is applied */
 };
-
 
 
 /*
@@ -98,13 +95,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeEstimate)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
 
 
 /** node selection method of node selector */
@@ -328,9 +318,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
    assert(SCIPisGT(scip, estimate1, estimate2));
    return +1;
 }
-
-
-
 
 
 /*

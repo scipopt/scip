@@ -57,8 +57,6 @@
 #define WAITFORNEWSOL         1
 
 
-
-
 /*
  * Data structures
  */
@@ -327,11 +325,6 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /** execution method of primal heuristic */
@@ -663,8 +656,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

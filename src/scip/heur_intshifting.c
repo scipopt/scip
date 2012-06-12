@@ -50,8 +50,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -459,7 +457,6 @@ void addFracCounter(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -530,8 +527,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolIntshifting)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** execution method of primal heuristic */
@@ -993,8 +988,6 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

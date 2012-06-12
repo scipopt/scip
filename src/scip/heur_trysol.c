@@ -42,8 +42,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
-
 /*
  * Data structures
  */
@@ -56,8 +54,6 @@ struct SCIP_HeurData
    SCIP_SOL*             addsol;             /**< storing solution passed to heuristic which can be added without checking (NULL if none) */
    SCIP_Bool             rec;                /**< whether we are within our own call */
 };
-
-
 
 
 /*

@@ -33,15 +33,12 @@
 #define NODESEL_MEMSAVEPRIORITY   50000
 
 
-
-
 /*
  * Default parameter settings
  */
 
 #define SELECTBESTFREQ              100 /**< frequency for selecting the best node instead of the deepest one */
 #define COUNTONLYLEAVES            TRUE /**< only count leaf nodes or all nodes */
-
 
 
 /** node selector data for best first search node selection */
@@ -52,8 +49,6 @@ struct SCIP_NodeselData
    int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
    SCIP_Bool             countonlyleaves;    /**< only count leaf nodes or all nodes */
 };
-
-
 
 
 /*
@@ -92,9 +87,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 }
 
 
-
-
-
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
@@ -112,8 +104,6 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** node selection method of node selector */

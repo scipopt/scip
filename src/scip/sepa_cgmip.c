@@ -218,7 +218,6 @@ struct CGMIP_MIPData
 typedef struct CGMIP_MIPData CGMIP_MIPDATA;
 
 
-
 /*
  * constraint handler to filter out violated cuts
  */
@@ -427,9 +426,6 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
@@ -3206,7 +3202,6 @@ SCIP_RETCODE freeSubscip(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -3246,14 +3241,6 @@ SCIP_DECL_SEPAFREE(sepaFreeCGMIP)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
 
 
 /** LP solution separation method of separator */
@@ -3418,9 +3405,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

@@ -239,7 +239,6 @@ SCIP_DECL_HEURFREE(heurFreeOneopt)
 }
 
 
-
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolOneopt)

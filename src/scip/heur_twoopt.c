@@ -891,7 +891,6 @@ SCIP_RETCODE optimize(
    *varboundserr = FALSE;
 
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &bestmasters, DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestslaves, DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBufferArray(scip, &objchanges, DEFAULT_ARRAYSIZE) );

@@ -64,7 +64,6 @@ struct sparseGraph
 typedef struct sparseGraph SparseGraph;
 
 
-
 /*
  * Local methods (for writing)
  */
@@ -144,10 +143,6 @@ SCIP_RETCODE ensureEdgeCapacity(
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
@@ -281,7 +276,6 @@ SCIP_RETCODE createEdgesFromRow(
 }
 
 
-
 /** handle given linear constraint information */
 static
 SCIP_RETCODE handleLinearCons(
@@ -348,7 +342,6 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
 }
 
 
-
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteCcg)
@@ -381,11 +374,6 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /* writes problem to file */

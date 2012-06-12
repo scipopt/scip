@@ -179,7 +179,6 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
     
 
 
-
 /* --------------------------------------------------------------------------------------------------------------------
  * auxiliary (inline) functions
  * -------------------------------------------------------------------------------------------------------------------- */
@@ -370,8 +369,6 @@ static const unsigned int Zerohalf_bitarraybasetypesize_nbits = sizeof(BITARRAYB
  * -------------------------------------------------------------------------------------------------------------------- */
 
 
-
-
 /** parameters */
 struct SCIP_SepaData
 {
@@ -430,8 +427,6 @@ struct SCIP_SepaData
 };
 
 
-
-
 /** sub data of the LP or a sub-LP obtained by problem decomposition */
 struct Zerohalf_SubLPData
 {
@@ -445,8 +440,6 @@ struct Zerohalf_SubLPData
    SCIP_Real*            rcolsubslack;       /**< slack value of upper bound constraint: ub_j - x*_j */
 };
 typedef struct Zerohalf_SubLPData ZEROHALF_SUBLPDATA;
-
-
 
 
 /** LP data */
@@ -487,8 +480,6 @@ struct Zerohalf_LPData
 
 };
 typedef struct Zerohalf_LPData ZEROHALF_LPDATA;
-
-
 
 
 /** data structure to store data of the auxiliary IP:
@@ -537,8 +528,6 @@ struct Zerohalf_AuxIPData
 typedef struct Zerohalf_AuxIPData ZEROHALF_AUXIPDATA;
 
 
-
-
 /** data structure to store data (mod 2) densely*/
 struct Zerohalf_Mod2Data
 {
@@ -567,8 +556,6 @@ struct Zerohalf_Mod2Data
    int*                  colstatistics;      /**< stores if and why a column was removed in preprocessing */
 };
 typedef struct Zerohalf_Mod2Data ZEROHALF_MOD2DATA;
-
-
 
 
 /** data structure to store a violated zerohalf cut and related data */
@@ -601,7 +588,6 @@ typedef struct Zerohalf_CutData ZEROHALF_CUTDATA;
   
 
 
-
 /** auxiliary graph node data structure */
 struct Zerohalf_AuxGraph_Node;
 typedef struct Zerohalf_AuxGraph_Node ZEROHALF_AUXGRAPH_NODE;
@@ -617,8 +603,6 @@ struct Zerohalf_AuxGraph_Node
 };
 
 
-
-
 /** auxiliary graph data structure */
 struct Zerohalf_AuxGraph
 {
@@ -627,8 +611,6 @@ struct Zerohalf_AuxGraph
    int                   nnodes;             /**< number of original nodes (equals number of copies) */
 };
 typedef struct Zerohalf_AuxGraph ZEROHALF_AUXGRAPH;
-
-
 
 
 /* --------------------------------------------------------------------------------------------------------------------
@@ -659,8 +641,6 @@ SCIP_RETCODE ZerohalfSubLPDataCreate(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** frees sub LP data structures */
@@ -703,8 +683,6 @@ void ZerohalfSubLPDataFree(
 }
 
 
-
-
 /** creates and initializes LP data structures */
 static
 SCIP_RETCODE ZerohalfLPDataCreate(
@@ -738,8 +716,6 @@ SCIP_RETCODE ZerohalfLPDataCreate(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** frees LP data structures */
@@ -810,8 +786,6 @@ SCIP_RETCODE ZerohalfLPDataFree(
 }
 
 
-
-
 /** creates and initializes mod 2 data structures */
 static
 SCIP_RETCODE ZerohalfMod2DataCreate(
@@ -841,8 +815,6 @@ SCIP_RETCODE ZerohalfMod2DataCreate(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** frees  data structures */
@@ -913,8 +885,6 @@ SCIP_RETCODE ZerohalfMod2DataFree(
 }
 
 
-
-
 /** creates and initializes auxiliary IP data structures */
 static
 SCIP_RETCODE ZerohalfAuxIPDataCreate(
@@ -940,7 +910,6 @@ SCIP_RETCODE ZerohalfAuxIPDataCreate(
   
    return SCIP_OKAY;
 } 
-
 
 
 /** frees auxiliary IP data structures */
@@ -980,8 +949,6 @@ SCIP_RETCODE ZerohalfAuxIPDataFree(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** creates and initializes cut data structures */
@@ -1028,7 +995,6 @@ SCIP_RETCODE ZerohalfCutDataCreate(
 }
 
 
-
 /** frees cut data structures */
 static
 SCIP_RETCODE ZerohalfCutDataFree(
@@ -1049,8 +1015,6 @@ SCIP_RETCODE ZerohalfCutDataFree(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** creates and initializes auxiliary graph node data structures */
@@ -1075,8 +1039,6 @@ SCIP_RETCODE ZerohalfAuxGraphNodeCreate(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** frees auxiliary graph node data structures */
@@ -1108,8 +1070,6 @@ SCIP_RETCODE ZerohalfAuxGraphNodeFree(
 }
 
 
-
-
 /** creates and initializes auxiliary graph data structures */
 static
 SCIP_RETCODE ZerohalfAuxGraphCreate(
@@ -1129,8 +1089,6 @@ SCIP_RETCODE ZerohalfAuxGraphCreate(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** frees auxiliary graph data structures */
@@ -1172,8 +1130,6 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /* --------------------------------------------------------------------------------------------------------------------
@@ -1516,8 +1472,6 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
    return SCIP_OKAY;
 }
 #endif
-
-
 
 
 /* --------------------------------------------------------------------------------------------------------------------
@@ -1945,7 +1899,6 @@ void findClosestUb(
       *bestdvub = dvub[*bestubtype];      
    }  
 }
-
 
 
 /** searches for relevant rows, i.e., rows containing relevant columns that cannot be deleted because of basic 
@@ -2420,7 +2373,6 @@ SCIP_RETCODE getRelevantRows(
 }
 
 
-
  
 /* check if mod 2 data structure contains at most two nonzero entries per row */
 static
@@ -2456,7 +2408,6 @@ SCIP_Bool hasMatrixMax2EntriesPerRow(
   
    return TRUE;
 }
-
 
 
  
@@ -2875,8 +2826,6 @@ SCIP_RETCODE storeMod2Data(
 }
 
 
-
-
 /* --------------------------------------------------------------------------------------------------------------------
  * local methods: cut generation
  * -------------------------------------------------------------------------------------------------------------------- */
@@ -2992,7 +2941,6 @@ SCIP_RETCODE storeCutInArrays(
 }
 
 
-
  
 /** adds a separated zerohalf cut to SCIP if it was successfully created and is efficacious */
 static
@@ -3053,7 +3001,6 @@ SCIP_RETCODE addZerohalfCutToLP(
  * -------------------------------------------------------------------------------------------------------------------- */
 
 
-
  
 /** marks a row as "removed" and stores why it has been removed using a flag */
 static
@@ -3071,7 +3018,6 @@ void markRowAsRemoved(
 
    mod2data->rowstatistics[mod2data->rowsind[r]] = flag;
 }
-
 
 
  
@@ -3343,8 +3289,6 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
 }
 
 
-
-
 /** searches for trivial zerohalf cuts, given as (0,..0) row with rhs=1 and slack <= maxslack */
 static
 SCIP_RETCODE preprocessTrivialZerohalfCuts(
@@ -3463,8 +3407,6 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** applies some row reductions */
@@ -3602,8 +3544,6 @@ SCIP_RETCODE preprocessRows(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** applies some column reductions */
@@ -3784,8 +3724,6 @@ SCIP_RETCODE preprocessColumns(
 }
 
 
-
-
 /** applies modified Gaussian Elimination reduction */
 static
 SCIP_RETCODE preprocessModGaussElim(
@@ -3920,8 +3858,6 @@ SCIP_RETCODE preprocessModGaussElim(
    
    return SCIP_OKAY;
 }
-
-
 
 
 /** decomposes the problem into subproblems which can be considered separately */
@@ -4313,8 +4249,6 @@ SCIP_RETCODE decomposeProblem(
 }
 
 
-
-
 /** removes the largest number of columns such that the sum of the corresponding variables is at most delta */
 static
 SCIP_RETCODE preprocessColumnsWithSmallFracsol(
@@ -4374,8 +4308,6 @@ SCIP_RETCODE preprocessColumnsWithSmallFracsol(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** removes some rows that cannot be combined because the resulting slack would be larger than maxslack */
@@ -4560,8 +4492,6 @@ SCIP_RETCODE preprocessConsiderMinSlack(
 }
 
 
-
-
 /** aggregates identical columns into one column whose (artificial) LP solution is the sum of the aggregated columns */
 static
 SCIP_RETCODE preprocessIdenticalColums(
@@ -4639,8 +4569,6 @@ SCIP_RETCODE preprocessIdenticalColums(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** preprocess subproblem */
@@ -4870,8 +4798,6 @@ SCIP_RETCODE preprocess(
 }
 
 
-
-
 /* --------------------------------------------------------------------------------------------------------------------
  * local methods: separating methods
  * -------------------------------------------------------------------------------------------------------------------- */
@@ -4897,8 +4823,6 @@ SCIP_Real calcObjWeight(
    
    return (SCIP_Real) naggregatedrrows;
 }
-
-
 
 
 /** creates a "subscip" representing the following auxiliary IP (AuxIP):
@@ -5265,8 +5189,6 @@ SCIP_RETCODE createSubscip(
 }
 
 
-
-
 /** solves the auxiliary IP given as subscip */
 static
 SCIP_RETCODE solveSubscip(
@@ -5433,8 +5355,6 @@ SCIP_RETCODE getZerohalfWeightvectorForSingleRow(
 }
 
 
-
-
 /** gets the subset of rows that should be combined to a violated zerohalf cut */
 static
 SCIP_RETCODE getBitarrayOfSelectedRows(
@@ -5478,8 +5398,6 @@ SCIP_RETCODE getBitarrayOfSelectedRows(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** separates violated zerohalf cuts by solving an auxiliary IP. (exact method; exponential time) */
@@ -5624,8 +5542,6 @@ SCIP_RETCODE separateBySolvingAuxIP(
 }
 
 
-
-
 /** calculates the inner product of mod2data->row and the LP solution */
 static
 SCIP_RETCODE calcInnerProductOfRowAndFracsol(
@@ -5665,8 +5581,6 @@ SCIP_RETCODE calcInnerProductOfRowAndFracsol(
   
    return SCIP_OKAY;
 }
-
-
 
 
 /** separate violated zerohalf cuts by enumerating possible row combinations. (heuristic; polynomial time) */
@@ -5915,7 +5829,6 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 }
 
 
-
 #if 0
 /** prints a node of the auxiliary graph */
 static
@@ -5937,7 +5850,6 @@ void debugPrintAuxGraphNode(
       node->nneighbors, node->distance, node->previous);  
 }
 #endif  
-
 
 
 /** adds an edge (and its "copy" w.r.t. the node copies) to the auxiliary graph */
@@ -6054,8 +5966,6 @@ SCIP_RETCODE addEdgeToAuxGraph(
 }
 
 
-
-
 /** Dijkstra's shortest path algorithm. Calculates the shortest path between
     sourcenode and targetnode. The calculation is aborted if the shortest path
     cannot be shorter than maxdistance */ 
@@ -6152,8 +6062,6 @@ SCIP_RETCODE dijkstra(
    SCIPfreeBufferArray(scip, &unprocessednodes);
    return SCIP_OKAY;
 }
-
-
 
 
 /**  separates violated zerohalf cuts by searching for minweight odd-valued
@@ -6396,7 +6304,6 @@ SCIP_RETCODE separateByAuxGraph(
 }
 
 
-
  
 /** separates violated zerohalf cuts using an extended Gaussian elimination. (heuristic; polynomial time) */
 static
@@ -6533,8 +6440,6 @@ SCIP_RETCODE separateByGaussHeuristics(
   
    return SCIP_OKAY;  
 }
-
-
 
 
 /** processes subproblem (i.e. runs separation algorithms)*/
@@ -6755,7 +6660,6 @@ SCIP_RETCODE process(
 }
 
 
-
 #ifdef ZEROHALF__PRINT_STATISTICS 
 /** prints statistical information about the found zerohalfcuts as table */ 
 static
@@ -6900,24 +6804,6 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /** LP solution separation method of separator */
@@ -7436,12 +7322,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 }
 
 
-
-
-
-
-
-
 /* --------------------------------------------------------------------------------------------------------------------
  * separator specific interface methods 
  * -------------------------------------------------------------------------------------------------------------------- */
@@ -7641,7 +7521,6 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/zerohalf/preprocessing/ppmethods",
          preprocessingmethodsdescription,
          &(sepadata->ppmethods), FALSE, DEFAULT_PPMETHODS, NULL, NULL));
-
 
 
   

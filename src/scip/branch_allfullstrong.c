@@ -40,7 +40,6 @@ struct SCIP_BranchruleData
 };
 
 
-
 /** performs the all fullstrong branching */
 static
 SCIP_RETCODE branch(
@@ -361,8 +360,6 @@ SCIP_RETCODE branch(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -410,12 +407,6 @@ SCIP_DECL_BRANCHINIT(branchInitAllfullstrong)
 }
 
 
-
-
-
-
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
@@ -430,8 +421,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -451,8 +440,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

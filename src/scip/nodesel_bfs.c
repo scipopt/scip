@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY       0
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -42,7 +40,6 @@
 #define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
 #define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                               *   where plunging is performed */
-
 
 
 /** node selector data for best first search node selection */
@@ -55,7 +52,6 @@ struct SCIP_NodeselData
    int                   maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected
                                               *   (-1 for dynamic setting) */
 };
-
 
 
 /*
@@ -94,13 +90,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
 
 
 /** node selection method of node selector */
@@ -295,9 +284,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
       return +1;
    }
 }
-
-
-
 
 
 /*
