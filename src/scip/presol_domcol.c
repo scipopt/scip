@@ -62,7 +62,6 @@ enum Fixingdirection
 typedef enum Fixingdirection FIXINGDIRECTION;
 
 
-
 /********************************************************************/
 /************** matrix data structure and functions *****************/
 
@@ -762,7 +761,6 @@ void freeMatrix(
 
 /************** end matrix data structure and functions *************/
 /********************************************************************/
-
 
 
 /*
@@ -1518,7 +1516,6 @@ SCIP_RETCODE findDominancePairs(
 /*
  * Callback methods of presolver
  */
-
 
 
 /** execution method of presolver */

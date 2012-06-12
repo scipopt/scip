@@ -1067,7 +1067,6 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
 #endif
 
 
-
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecComponents)

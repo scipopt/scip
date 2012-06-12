@@ -37,7 +37,6 @@
 #endif
 
 
-
 /*
  * Callback methods of presolver
  */
@@ -55,16 +54,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
  
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 /** presolving execution method */
@@ -190,9 +179,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
