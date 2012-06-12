@@ -2862,49 +2862,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    return SCIP_OKAY;
 }
 
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_CONSEXITPRE(consExitprePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITSOL(consInitsolPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXITSOL(consExitsolPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
@@ -2951,49 +2908,6 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
 
    return SCIP_OKAY;
 }
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 0
-static
-SCIP_DECL_CONSINITLP(consInitlpPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** separation method of constraint handler for LP solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPALP(consSepalpPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPASOL(consSepasolPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -3094,21 +3008,6 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    return SCIP_OKAY;
 }
 
-
-/** domain propagation method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPROP(consPropPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
@@ -3197,21 +3096,6 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
    return SCIP_OKAY;
 }
-
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -3304,77 +3188,6 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    return SCIP_OKAY;
 }
 
-
-/** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActivePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactivePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnablePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisablePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint display method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** constraint copying method of constraint handler */
 static
 SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
@@ -3396,22 +3209,6 @@ SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
 
    return SCIP_OKAY;
 }
-
-/** constraint parsing method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPARSE(consParsePseudoboolean)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of pseudoboolean constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-
 
 
 /*

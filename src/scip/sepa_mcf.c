@@ -6771,37 +6771,6 @@ SCIP_DECL_SEPAFREE(sepaFreeMcf)
    return SCIP_OKAY;
 }
 
-
-/** initialization method of separator (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_SEPAINIT(sepaInitMcf)
-{
-   /*lint --e{715}*/
-   SCIPerrorMessage("method of mcf separator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_SEPAEXIT(sepaExitMcf)
-{
-   /*lint --e{715}*/
-   SCIPerrorMessage("method of mcf separator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_SEPAINITSOL(sepaInitsolMcf)

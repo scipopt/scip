@@ -87,15 +87,6 @@ SCIP_DECL_PRESOLFREE(presolFreeConvertinttobin)
    return SCIP_OKAY;
 }
 
-
-
-
-
-
-
-
-
-
 /** presolving execution method */
 static
 SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)

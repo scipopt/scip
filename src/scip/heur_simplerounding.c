@@ -417,9 +417,6 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-
-
-
 /*
  * heuristic specific interface methods
  */

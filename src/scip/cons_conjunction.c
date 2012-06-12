@@ -250,40 +250,6 @@ SCIP_RETCODE checkAllConss(
  * Callback methods of constraint handler
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
- 
-   *valid = TRUE;
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteConjunction)
@@ -292,7 +258,6 @@ SCIP_DECL_CONSDELETE(consDeleteConjunction)
    
    return SCIP_OKAY;
 }
-
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static

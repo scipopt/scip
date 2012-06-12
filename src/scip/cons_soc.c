@@ -3075,21 +3075,6 @@ SCIP_DECL_CONSEXIT(consExitSOC)
    return SCIP_OKAY;
 }
 
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreSOC)
@@ -3329,21 +3314,6 @@ SCIP_DECL_CONSTRANS(consTransSOC)
 
    return SCIP_OKAY;
 }
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 0
-static
-SCIP_DECL_CONSINITLP(consInitlpSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
 static
@@ -3825,20 +3795,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 } /*lint !e715*/
 
 
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockSOC)
@@ -3869,65 +3825,6 @@ SCIP_DECL_CONSLOCK(consLockSOC)
 
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActiveSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnableSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisableSOC)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-
 
 /** constraint display method of constraint handler */
 static
@@ -3971,7 +3868,6 @@ SCIP_DECL_CONSPRINT(consPrintSOC)
 
    return SCIP_OKAY;
 }
-
 
 /** constraint copying method of constraint handler */
 static

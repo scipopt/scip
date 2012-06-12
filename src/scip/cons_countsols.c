@@ -1556,6 +1556,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
    return SCIP_OKAY;
 }
 #else
+#define consExitsolCountsols NULL
 #endif
 
 

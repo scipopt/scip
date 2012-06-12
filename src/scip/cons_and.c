@@ -3659,6 +3659,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    return SCIP_OKAY;
 }
 #else
+#define consExitpreAnd NULL
 #endif
 
 

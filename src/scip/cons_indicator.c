@@ -1429,7 +1429,6 @@ SCIP_RETCODE fixAltLPVariable(
 
 
 /** unfix variable @a ind to 0 */
-#if 1
 static
 SCIP_RETCODE unfixAltLPVariable(
    SCIP_LPI*             lp,                 /**< alternative LP */
@@ -1444,8 +1443,6 @@ SCIP_RETCODE unfixAltLPVariable(
 
    return SCIP_OKAY;
 }
-#endif
-
 
 /** unfix variable given by @a S to 0 */
 static

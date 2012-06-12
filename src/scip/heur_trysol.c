@@ -202,9 +202,6 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
    return SCIP_OKAY;
 }
 
-
-
-
 /*
  * primal heuristic specific interface methods
  */

@@ -2615,7 +2615,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    return SCIP_OKAY;
 }
 
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockLinking)
@@ -2637,11 +2636,6 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 /** constraint enabling notification method of constraint handler */
 static
@@ -2670,10 +2664,6 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
 #endif
    return SCIP_OKAY;
 }
-
-
-
-
 
 /** constraint display method of constraint handler */
 static

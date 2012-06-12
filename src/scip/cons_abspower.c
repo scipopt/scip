@@ -4945,7 +4945,6 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAbspower)
 {  /*lint --e{715}*/
@@ -4960,11 +4959,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeAbspower)
 {  /*lint --e{715}*/
@@ -4980,12 +4976,8 @@ SCIP_DECL_CONSFREE(consFreeAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitAbspower)
 {  /*lint --e{715}*/
@@ -5003,12 +4995,8 @@ SCIP_DECL_CONSINIT(consInitAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitAbspower)
 {  /*lint --e{715}*/
@@ -5026,12 +5014,8 @@ SCIP_DECL_CONSEXIT(consExitAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreAbspower)
 {  /*lint --e{715}*/
@@ -5047,12 +5031,8 @@ SCIP_DECL_CONSINITPRE(consInitpreAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 {  /*lint --e{715}*/
@@ -5078,12 +5058,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 {  /*lint --e{715}*/
@@ -5196,12 +5172,8 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolAbspower)
 {  /*lint --e{715}*/
@@ -5242,12 +5214,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteAbspower)
 {  /*lint --e{715}*/
@@ -5269,12 +5237,8 @@ SCIP_DECL_CONSDELETE(consDeleteAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransAbspower)
 {  /*lint --e{715}*/
@@ -5308,15 +5272,11 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  * we add secant underestimators
  */
-#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
@@ -5478,12 +5438,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpAbspower)
 {  /*lint --e{715}*/
@@ -5627,12 +5583,8 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 {  /*lint --e{715}*/
@@ -5661,9 +5613,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -5911,7 +5860,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsAbspower)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropAbspower)
 {  /*lint --e{715}*/
@@ -5952,11 +5900,8 @@ SCIP_DECL_CONSPROP(consPropAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolAbspower)
 {  /*lint --e{715}*/
@@ -6236,9 +6181,6 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** resolves a propagation on the given variable by supplying the variables needed for applying the corresponding
  *  propagation rule (see propagateCons()):
@@ -6247,7 +6189,6 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
  *   (3) right hand side and bounds on z -> upper bound on x
  *   (4) right hand side and lower bound on x -> bound on z
  */
-#if 1
 static
 SCIP_DECL_CONSRESPROP(consRespropAbspower)
 {
@@ -6259,9 +6200,6 @@ SCIP_DECL_CONSRESPROP(consRespropAbspower)
 
    return SCIP_OKAY;
 }  /*lint !e715*/
-#else
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -6321,9 +6259,7 @@ SCIP_DECL_CONSLOCK(consLockAbspower)
    return SCIP_OKAY;
 }
 
-
 /** constraint activation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSACTIVE(consActiveAbspower)
 {  /*lint --e{715}*/
@@ -6339,26 +6275,8 @@ SCIP_DECL_CONSACTIVE(consActiveAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveAbspower)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of absolute power constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSENABLE(consEnableAbspower)
 {  /*lint --e{715}*/
@@ -6376,12 +6294,8 @@ SCIP_DECL_CONSENABLE(consEnableAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDISABLE(consDisableAbspower)
 {  /*lint --e{715}*/
@@ -6399,13 +6313,8 @@ SCIP_DECL_CONSDISABLE(consDisableAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
-
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintAbspower)
 {  /*lint --e{715}*/
@@ -6451,8 +6360,6 @@ SCIP_DECL_CONSPRINT(consPrintAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
 
 /** feasibility check method of constraint handler for integral solutions */
 static
@@ -6519,7 +6426,6 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
 }
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyAbspower)
 {  /*lint --e{715}*/
@@ -6556,12 +6462,8 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint parsing method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPARSE(consParseAbspower)
 {
@@ -6722,8 +6624,6 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
 
    return SCIP_OKAY;
 }  /*lint !e715*/
-#else
-#endif
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
@@ -6758,8 +6658,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsAbspower)
 
    return SCIP_OKAY;
 }
-
-
 
 /*
  * constraint specific interface methods

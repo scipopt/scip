@@ -5487,7 +5487,6 @@ SCIP_RETCODE createConsFromMonomial(
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
 {  /*lint --e{715}*/
@@ -5502,11 +5501,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_CONSFREE(consFreeBivariate)
 {  /*lint --e{715}*/
@@ -5533,12 +5529,8 @@ SCIP_DECL_CONSFREE(consFreeBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitBivariate)
 {  /*lint --e{715}*/
@@ -5555,12 +5547,8 @@ SCIP_DECL_CONSINIT(consInitBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitBivariate)
 {  /*lint --e{715}*/
@@ -5577,12 +5565,8 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 {  /*lint --e{715}*/
@@ -5604,12 +5588,8 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 {  /*lint --e{715}*/
@@ -5661,12 +5641,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 {  /*lint --e{715}*/
@@ -5795,12 +5771,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
 {  /*lint --e{715}*/
@@ -5834,12 +5806,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteBivariate)
 {  /*lint --e{715}*/
@@ -5869,12 +5837,8 @@ SCIP_DECL_CONSDELETE(consDeleteBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransBivariate)
 {  /*lint --e{715}*/
@@ -5907,12 +5871,8 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpBivariate)
 {  /*lint --e{715}*/
@@ -6131,12 +6091,8 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** separation method of constraint handler for LP solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 {  /*lint --e{715}*/
@@ -6163,12 +6119,8 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 {  /*lint --e{715}*/
@@ -6194,9 +6146,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -6530,7 +6479,6 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
 }
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropBivariate)
 {  /*lint --e{715}*/
@@ -6546,12 +6494,8 @@ SCIP_DECL_CONSPROP(consPropBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** presolving method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolBivariate)
 {  /*lint --e{715}*/
@@ -6633,23 +6577,6 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropBivariate)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of bivariate constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** variable rounding lock method of constraint handler */
 static
@@ -6694,7 +6621,6 @@ SCIP_DECL_CONSLOCK(consLockBivariate)
 
 
 /** constraint activation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSACTIVE(consActiveBivariate)
 {  /*lint --e{715}*/
@@ -6737,12 +6663,8 @@ SCIP_DECL_CONSACTIVE(consActiveBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint deactivation notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
 {  /*lint --e{715}*/
@@ -6768,12 +6690,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint enabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSENABLE(consEnableBivariate)
 {  /*lint --e{715}*/
@@ -6804,12 +6722,8 @@ SCIP_DECL_CONSENABLE(consEnableBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
 
 /** constraint disabling notification method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSDISABLE(consDisableBivariate)
 {  /*lint --e{715}*/
@@ -6838,13 +6752,8 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
-
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintBivariate)
 {  /*lint --e{715}*/
@@ -6906,11 +6815,8 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyBivariate)
 {  /*lint --e{715}*/
@@ -6975,23 +6881,6 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
 
    return SCIP_OKAY;
 }
-#else
-#endif
-
-
-/** constraint parsing method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPARSE(consParseBivariate)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of bivariate constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static

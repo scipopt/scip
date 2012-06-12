@@ -9401,7 +9401,6 @@ SCIP_DECL_CONSEXIT(consExitLinear)
 
 }
 
-
 #ifndef WITH_PRINTORIGCONSTYPES
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */

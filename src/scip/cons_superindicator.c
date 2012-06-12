@@ -689,8 +689,6 @@ SCIP_DECL_CONSFREE(consFreeSuperindicator)
    return SCIP_OKAY;
 }
 
-
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreSuperindicator)
@@ -711,9 +709,6 @@ SCIP_DECL_CONSINITPRE(consInitpreSuperindicator)
 
    return SCIP_OKAY;
 }
-
-
-
 
 /** frees specific constraint data */
 static

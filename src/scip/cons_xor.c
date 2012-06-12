@@ -1895,17 +1895,6 @@ SCIP_DECL_CONSFREE(consFreeXor)
    return SCIP_OKAY;
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolXor)
