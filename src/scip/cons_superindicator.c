@@ -2113,7 +2113,8 @@ SCIP_RETCODE SCIPtransformMinIIS(
 {
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   char name[SCIP_MAXSTRLEN];
+   char consname[SCIP_MAXSTRLEN];
+   char varname[SCIP_MAXSTRLEN];
    int maxbranchprio;
    int ntransconss;
    int nconss;
@@ -2166,15 +2167,18 @@ SCIP_RETCODE SCIPtransformMinIIS(
       assert(cons != NULL);
 
       /* create a new binary variable with objective coefficient one */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_super", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_master", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPcreateVar(scip, &binvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       /* get negated variable, since we want to minimize the number of violated constraints */
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &negbinvar) );
 
       /* create superindicator constraint */
-      retcode = SCIPcreateConsSuperindicator(scip, &supindcons, SCIPconsGetName(cons), negbinvar, cons,
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_super", SCIPconsGetName(cons));
+
+      retcode = SCIPcreateConsSuperindicator(scip, &supindcons, consname, negbinvar, cons,
          SCIPconsIsInitial(cons),  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
          SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons));
