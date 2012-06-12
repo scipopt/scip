@@ -953,6 +953,13 @@ SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_Real             feastol             /**< new feasibility tolerance */
    );
 
+/** sets primal feasibility tolerance of LP solver */
+extern
+SCIP_RETCODE SCIPsetSetLpfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   );
+
 /** sets feasibility tolerance for reduced costs in LP solution */
 extern
 SCIP_RETCODE SCIPsetSetDualfeastol(
@@ -1032,6 +1039,12 @@ SCIP_Real SCIPsetSumepsilon(
 /** returns feasibility tolerance for constraints */
 extern
 SCIP_Real SCIPsetFeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns primal feasibility tolerance of LP solver */
+extern
+SCIP_Real SCIPsetLpfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1512,6 +1525,7 @@ SCIP_Real SCIPsetGetHugeValue(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
+#define SCIPsetLpfeastol(set)              ( (set)->num_lpfeastol )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )

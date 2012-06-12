@@ -7859,7 +7859,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
-   (*lp)->lpifeastol = SCIPsetFeastol(set);
+   (*lp)->lpifeastol = SCIPsetLpfeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
    (*lp)->lpifromscratch = FALSE;
@@ -12455,7 +12455,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
-   SCIP_CALL( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetFeastol(set) : SCIPsetFeastol(set), &success) );
+   SCIP_CALL( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetLpfeastol(set) : SCIPsetLpfeastol(set), &success) );
    SCIP_CALL( lpSetDualfeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
          &success) );
    SCIP_CALL( lpSetBarrierconvtol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set)
@@ -12595,7 +12595,7 @@ SCIP_RETCODE lpSolveStable(
     */
    if( !tightfeastol && ((*lperror) || !SCIPlpiIsIterlimExc(lp->lpi)) )
    {
-      SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
+      SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetLpfeastol(set), &success) );
       SCIP_CALL( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
       SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
       if( success || success2 )
@@ -12621,7 +12621,7 @@ SCIP_RETCODE lpSolveStable(
          }
 
          /* reset feasibility tolerance */
-         SCIP_CALL( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+         SCIP_CALL( lpSetFeastol(lp, SCIPsetLpfeastol(set), &success) );
          SCIP_CALL( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
          SCIP_CALL( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
       }
@@ -12744,7 +12744,7 @@ SCIP_RETCODE lpSolveStable(
       /* solve again with tighter feasibility tolerance, use other simplex this time */
       if( !tightfeastol )
       {
-         SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetFeastol(set), &success) );
+         SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetLpfeastol(set), &success) );
          SCIP_CALL( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
          SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success2) );
          if( success || success2 )
@@ -12770,7 +12770,7 @@ SCIP_RETCODE lpSolveStable(
             }
          
             /* reset feasibility tolerance */
-            SCIP_CALL( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+            SCIP_CALL( lpSetFeastol(lp, SCIPsetLpfeastol(set), &success) );
             SCIP_CALL( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
             SCIP_CALL( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
          }
@@ -17661,7 +17661,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    /* create auxiliary LP */
    SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
 
-   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetFeastol(set));
+   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
    if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
    {
       SCIP_CALL( retcode );

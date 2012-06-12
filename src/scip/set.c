@@ -365,6 +365,20 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of lpfeastol */
+static
+SCIP_DECL_PARAMCHGD(paramChgdLpfeastol)
+{  /*lint --e{715}*/
+   SCIP_Real newlpfeastol;
+
+   newlpfeastol = SCIPparamGetReal(param);
+
+   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved */
+   SCIP_CALL( SCIPchgLpfeastol(scip, newlpfeastol) );
+
+   return SCIP_OKAY;
+}
+
 /** information method for a parameter change of dualfeastol */
 static
 SCIP_DECL_PARAMCHGD(paramChgdDualfeastol)
@@ -1299,6 +1313,11 @@ SCIP_RETCODE SCIPsetCreate(
          "feasibility tolerance for constraints",
          &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "numerics/lpfeastol",
+         "primal feasibility tolerance of LP solver",
+         &(*set)->num_lpfeastol, FALSE, SCIP_DEFAULT_LPFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         paramChgdLpfeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/dualfeastol",
          "feasibility tolerance for reduced costs in LP solution",
@@ -3989,6 +4008,19 @@ SCIP_RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
+/** sets primal feasibility tolerance of LP solver */
+SCIP_RETCODE SCIPsetSetLpfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   )
+{
+   assert(set != NULL);
+
+   set->num_lpfeastol = lpfeastol;
+
+   return SCIP_OKAY;
+}
+
 /** sets feasibility tolerance for reduced costs in LP solution */
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4067,6 +4099,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetEpsilon
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
+#undef SCIPsetLpfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
@@ -4170,6 +4203,16 @@ SCIP_Real SCIPsetDualfeastol(
    assert(set != NULL);
 
    return set->num_dualfeastol;
+}
+
+/** returns primal feasibility tolerance of LP solver */
+SCIP_Real SCIPsetLpfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_lpfeastol;
 }
 
 /** returns convergence tolerance used in barrier algorithm */

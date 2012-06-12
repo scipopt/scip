@@ -25935,6 +25935,17 @@ SCIP_Real SCIPfeastol(
    return SCIPsetFeastol(scip->set);
 }
 
+/** returns primal feasibility tolerance of LP solver */
+SCIP_Real SCIPlpfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetLpfeastol(scip->set);
+}
+
 /** returns feasibility tolerance for reduced costs */
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -25982,6 +25993,24 @@ SCIP_RETCODE SCIPchgFeastol(
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetFeastol(scip->set, feastol) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the primal feasibility tolerance of LP solver */
+SCIP_RETCODE SCIPchgLpfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgLpfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
+   if( scip->lp != NULL && lpfeastol < SCIPsetLpfeastol(scip->set) )
+      scip->lp->solved = FALSE;
+
+   /* change the settings */
+   SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol) );
 
    return SCIP_OKAY;
 }
