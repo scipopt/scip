@@ -11011,10 +11011,30 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
             assert((*var)->data.multaggr.vars != NULL);
             assert((*var)->data.multaggr.scalars != NULL);
             assert((*var)->data.multaggr.vars[0] != NULL);
-            assert(!SCIPsetIsInfinity(set, (*var)->data.multaggr.constant)
-               && !SCIPsetIsInfinity(set, (*var)->data.multaggr.constant));
             if( !SCIPsetIsInfinity(set, (*constant)) && !SCIPsetIsInfinity(set, -(*constant)) )
-               (*constant) += *scalar * (*var)->data.multaggr.constant;
+            {
+               /* the multi-aggregation constant can be infinite, if one of the multi-aggregation variables
+                * was fixed to +/-infinity; ensure that the constant is set to +/-infinity, too, and the scalar
+                * is set to 0.0, because the multi-aggregated variable can be seen as fixed, too
+                */
+               if( SCIPsetIsInfinity(set, (*var)->data.multaggr.constant)
+                  || SCIPsetIsInfinity(set, -((*var)->data.multaggr.constant)) )
+               {
+                  if( (*scalar) * (*var)->data.multaggr.constant > 0 )
+                  {
+                     assert(!SCIPsetIsInfinity(set, -(*constant)));
+                     (*constant) = SCIPsetInfinity(set);
+                  }
+                  else
+                  {
+                     assert(!SCIPsetIsInfinity(set, *constant));
+                     (*constant) = -SCIPsetInfinity(set);
+                  }
+                  (*scalar) = 0.0;
+               }
+               else
+                  (*constant) += *scalar * (*var)->data.multaggr.constant;
+            }
             (*scalar) *= (*var)->data.multaggr.scalars[0];
             *var = (*var)->data.multaggr.vars[0];
             break;
