@@ -2002,6 +2002,9 @@ SCIP_RETCODE priceAndCutLoop(
 
             /* update node estimate */
             SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+
+            if( root && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+               SCIPprobUpdateBestRootSol(prob, set, stat, lp);
          }
          else
          {
@@ -3708,14 +3711,15 @@ SCIP_RETCODE solveNode(
 	 || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
 	    && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
-   /* remember root LP solution */
+   /* remember the last root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
    {
       /* the root pseudo objective value and pseudo objective value should be equal in the root node */
       assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
 
-      SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
+      SCIPprobStoreRootSol(transprob, set, lp, SCIPtreeHasFocusNodeLP(tree));
    }
+
    /* check for cutoff */
    if( *cutoff )
    {

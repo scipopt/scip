@@ -32,22 +32,23 @@
 
 #include "scip/prop_genvbounds.h"
 
-#define PROP_NAME                       "genvbounds"
-#define PROP_DESC                       "generalized variable bounds propagator"
-#define PROP_TIMING                     SCIP_PROPTIMING_BEFORELP
-#define PROP_PRIORITY                     -10      /**< propagator priority */
-#define PROP_FREQ                           1      /**< propagator frequency */
-#define PROP_DELAY                      FALSE      /**< should propagation method be delayed, if other propagators
-                                                    *   found reductions? */
-#define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after
-                                                    *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY               FALSE      /**< should presolving be delay, if other presolvers found
-                                                    *   reductions? */
-#define PROP_PRESOL_MAXROUNDS              -1      /**< maximal number of presolving rounds the presolver participates
-                                                    *   in (-1: no limit) */
+#define PROP_NAME                            "genvbounds"
+#define PROP_DESC                            "generalized variable bounds propagator"
+#define PROP_TIMING SCIP_PROPTIMING_BEFORELP
+#define PROP_PRIORITY                    -10 /**< propagator priority */
+#define PROP_FREQ                          1 /**< propagator frequency */
+#define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
+                                              *   found reductions? */
+#define PROP_PRESOL_PRIORITY        -2000000 /**< priority of the presolving method (>= 0: before, < 0: after
+                                              *   constraint handlers); combined with presolvers */
+#define PROP_PRESOL_DELAY              FALSE /**< should presolving be delay, if other presolvers found
+                                              *   reductions? */
+#define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
+                                              *   in (-1: no limit) */
 
-#define EVENTHDLR_NAME                  "genvbounds"
-#define EVENTHDLR_DESC                  "event handler for generalized variable bounds propagator"
+#define EVENTHDLR_NAME                       "genvbounds"
+#define EVENTHDLR_DESC                       "event handler for generalized variable bounds propagator"
+
 
 /*
  * Data structures
@@ -193,14 +194,14 @@ SCIP_Real getMinActivity(
                                               */
    )
 {
+   SCIP_Real minval;
+   int i;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(nvars >= 0);
    assert(bdchgidx == NULL || !global);
-
-   SCIP_Real minval;
-   int i;
 
    minval = 0.0;
 
@@ -1459,15 +1460,14 @@ SCIP_RETCODE sortGenVBounds(
    SCIP_PROPDATA*        propdata            /**< data of the genvbounds propagator */
    )
 {
+   GENVBOUND** genvboundssorted;            /* array to store the sorted genvbounds */
+   SCIP_DIGRAPH* graph;
+   int sortedindex;
+   int i;
+
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(propdata->componentsstart == NULL);
-
-   GENVBOUND** genvboundssorted;            /* array to store the sorted genvbounds */
-   SCIP_DIGRAPH* graph;
-
-   int i;
-   int sortedindex;
 
    SCIPdebugMessage("(re-)sort genvbounds topologically\n");
 
@@ -1551,8 +1551,10 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMessage("genvbounds got: %d\n", propdata->ngenvbounds);
    for( i = 0; i < propdata->ncomponents; i++ )
    {
-      SCIPdebugMessage("{\n");
       int j;
+
+      SCIPdebugMessage("{\n");
+
       for( j = propdata->componentsstart[i]; j < propdata->componentsstart[i+1]; j++ )
       {
          SCIPdebugMessage("  [%d] ", j);
@@ -1889,8 +1891,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
-/** copy method for propagator plugins (called when SCIP copies plugins) */
-#define propCopyGenvbounds NULL
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -1907,6 +1907,7 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    assert(propdata != NULL);
 
    propdata->genvboundstore = NULL;
+   propdata->genvboundstoresize = 0;
    propdata->lbevents = NULL;
    propdata->ubevents = NULL;
    propdata->eventhdlr = NULL;
@@ -1935,14 +1936,8 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitGenvbounds NULL
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreGenvbounds NULL
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreGenvbounds NULL
 
 /** presolving method of propagator */
 static
@@ -1975,8 +1970,6 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-#define propInitsolGenvbounds NULL
 
 /** execution method of propagator */
 static
@@ -2239,15 +2232,20 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create genvbounds propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY, propCopyGenvbounds, propFreeGenvbounds,
-         propInitGenvbounds, propExitGenvbounds, propInitpreGenvbounds, propExitpreGenvbounds, propInitsolGenvbounds,
-         propExitsolGenvbounds, propPresolGenvbounds, propExecGenvbounds, propRespropGenvbounds, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
+         propExecGenvbounds, propRespropGenvbounds, propdata) );
+
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
+   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
+         PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );

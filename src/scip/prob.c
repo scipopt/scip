@@ -321,6 +321,72 @@ SCIP_RETCODE SCIPprobCreate(
    return SCIP_OKAY;
 }
 
+/** sets callback to free user data of original problem */
+void SCIPprobSetDelorig(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdelorig = probdelorig;
+}
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+void SCIPprobSetTrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probtrans = probtrans;
+}
+
+/** sets callback to free user data of transformed problem */
+void SCIPprobSetDeltrans(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdeltrans = probdeltrans;
+}
+
+/** sets solving process initialization callback of transformed data */
+void SCIPprobSetInitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probinitsol= probinitsol;
+}
+
+/** sets solving process deinitialization callback of transformed data */
+void SCIPprobSetExitsol(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization callback of transformed data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probexitsol= probexitsol;
+}
+
+/** sets callback to copy user data to copy it to a subscip, or NULL */
+void SCIPprobSetCopy(
+   SCIP_PROB*            prob,               /**< problem */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probcopy= probcopy;
+}
+
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
@@ -1521,7 +1587,6 @@ SCIP_RETCODE SCIPprobScaleObj(
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
@@ -1534,10 +1599,106 @@ void SCIPprobStoreRootSol(
    if( roothaslp )
    {
       for( v = 0; v < prob->nvars; ++v )
-         SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
+         SCIPvarStoreRootSol(prob->vars[v], roothaslp);
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set, prob);
+   }
+}
+
+/** remembers the best solution w.r.t. root reduced cost propagation as root solution in the problem variables */
+void SCIPprobUpdateBestRootSol(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_Real rootlpobjval;
+   int v;
+
+   assert(prob != NULL);
+   assert(prob->transformed);
+
+   /* in case we have a zero objective fucntion, we skip the root reduced cost update */
+   if( SCIPprobGetNObjVars(prob, set) == 0 )
+      return;
+
+   SCIPdebugMessage("update root reduced costs\n");
+
+   /* compute current root LP objective value */
+   rootlpobjval = SCIPlpGetObjval(lp, set, prob);
+   assert(rootlpobjval != SCIP_INVALID);
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_COL* col;
+      SCIP_Real rootsol;
+      SCIP_Real rootredcost;
+
+      var = prob->vars[v];
+      assert(var != NULL);
+
+      /* check if the variable is part of the LP */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+         continue;
+
+      col = SCIPvarGetCol(var);
+      assert(col != NULL);
+
+      assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+
+      if( !SCIPvarIsBinary(var) )
+      {
+         rootsol = SCIPvarGetSol(var, TRUE);
+         rootredcost = SCIPcolGetRedcost(col, stat, lp);
+      }
+      else
+      {
+         switch( SCIPcolGetBasisStatus(col) )
+         {
+         case SCIP_BASESTAT_LOWER:
+         case SCIP_BASESTAT_UPPER:
+         {
+            SCIP_Real lbrootredcost;
+            SCIP_Real ubrootredcost;
+
+            /* get reduced cost if the variable gets fixed to zero */
+            lbrootredcost = SCIPvarGetImplRedcost(var, FALSE, stat, lp);
+            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            /* get reduced cost if the variable gets fixed to one */
+            ubrootredcost = SCIPvarGetImplRedcost(var, TRUE, stat, lp);
+            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+               || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+            if( -lbrootredcost > ubrootredcost )
+            {
+               rootredcost = lbrootredcost;
+               rootsol = 1.0;
+            }
+            else
+            {
+               rootredcost = ubrootredcost;
+               rootsol = 0.0;
+            }
+            break;
+         }
+         case SCIP_BASESTAT_BASIC:
+         case SCIP_BASESTAT_ZERO:
+            continue;
+
+         default:
+            SCIPerrorMessage("invalid basis state\n");
+            SCIPABORT();
+            return;
+         }
+      }
+
+      /* update the current solution as best root solution in the problem variables if it is better */
+      SCIPvarUpdateBestRootSol(var, set, rootsol, rootredcost, rootlpobjval);
    }
 }
 
@@ -1618,6 +1779,9 @@ SCIP_RETCODE SCIPprobExitSolve(
          {
             SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
+
+         /* invalided root reduced cost, root reduced solution, and root LP objective value for each variable */
+         SCIPvarSetBestRootSol(var, 0.0, 0.0, SCIP_INVALID);
       }
    }
    assert(prob->ncolvars == 0);

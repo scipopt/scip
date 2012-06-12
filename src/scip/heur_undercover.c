@@ -3071,12 +3071,8 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
 }
 
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitUndercover NULL
 
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitUndercover NULL
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
@@ -3333,8 +3329,6 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyUndercover) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeUndercover) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitUndercover) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitUndercover) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolUndercover) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolUndercover) );
 

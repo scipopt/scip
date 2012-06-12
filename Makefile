@@ -30,7 +30,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	2.1.1.5
+VERSION		:=	2.1.1.6
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -257,6 +257,9 @@ ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+ifeq ($(GMP),true)
+LPSLDFLAGS	+=	$(GMP_LDFLAGS)
+endif
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
@@ -411,9 +414,12 @@ GMPDEP		:=	$(SRCDIR)/depend.gmp
 GMPSRC		:=	$(shell cat $(GMPDEP))
 ifeq ($(GMP),auto)
 GMP		=	$(ZIMPL)
+ifeq ($(LPS),spx)
+GMP		=	true
 endif
 ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
+endif
 endif
 
 READLINEDEP	:=	$(SRCDIR)/depend.readline
@@ -522,6 +528,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
+			scip/cons_superindicator.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
@@ -535,7 +542,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
-			scip/heur_hailmary.o \
+			scip/heur_zeroobj.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \

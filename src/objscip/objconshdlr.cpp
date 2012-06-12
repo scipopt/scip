@@ -53,9 +53,9 @@ static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyObj)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   
+
    assert(scip != NULL);
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
@@ -94,7 +94,7 @@ SCIP_DECL_CONSFREE(consFreeObj)
    /* free conshdlr data */
    delete conshdlrdata;
    SCIPconshdlrSetData(conshdlr, NULL); /*lint !e64*/
-   
+
    return SCIP_OKAY;
 }
 
@@ -196,7 +196,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitsol(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitsol(scip, conshdlr, conss, nconss, restart) );
 
    return SCIP_OKAY;
 }
@@ -219,7 +219,7 @@ SCIP_DECL_CONSDELETE(consDeleteObj)
 }
 
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransObj)
 {  /*lint --e{715}*/
@@ -315,7 +315,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss, 
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss,
          solinfeasible, objinfeasible, result) );
 
    return SCIP_OKAY;
@@ -333,7 +333,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol,
          checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
@@ -540,7 +540,7 @@ SCIP_DECL_CONSPARSE(consParseObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_parse(scip, conshdlr, cons, name, str, 
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_parse(scip, conshdlr, cons, name, str,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
@@ -607,10 +607,9 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, objconshdlr->scip_name_, objconshdlr->scip_desc_,
-         objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
-         objconshdlr->scip_eagerfreq_, objconshdlr->scip_maxprerounds_, objconshdlr->scip_delaysepa_,
-         objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_, objconshdlr->scip_needscons_,
-         objconshdlr->scip_timingmask_, consEnfolpObj, consEnfopsObj, consCheckObj, consLockObj,
+         objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
+         objconshdlr->scip_eagerfreq_, objconshdlr->scip_needscons_,
+         consEnfolpObj, consEnfopsObj, consCheckObj, consLockObj,
          conshdlrdata) ); /*lint !e429*/
    assert(conshdlr != NULL);
 
@@ -633,11 +632,14 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolObj) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpObj) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseObj) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolObj) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolObj, objconshdlr->scip_maxprerounds_,
+         objconshdlr->scip_delaypresol_) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintObj) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropObj, objconshdlr->scip_propfreq_) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropObj, objconshdlr->scip_propfreq_,
+         objconshdlr->scip_delayprop_, objconshdlr->scip_timingmask_) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropObj) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpObj, consSepasolObj, objconshdlr->scip_sepafreq_) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpObj, consSepasolObj, objconshdlr->scip_sepafreq_,
+         objconshdlr->scip_sepapriority_, objconshdlr->scip_delaysepa_) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransObj) );
 
    return SCIP_OKAY; /*lint !e429*/
@@ -661,7 +663,7 @@ scip::ObjConshdlr* SCIPfindObjConshdlr(
 
    return conshdlrdata->objconshdlr;
 }
-   
+
 /** returns the conshdlr object for the given constraint handler */
 scip::ObjConshdlr* SCIPgetObjConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */

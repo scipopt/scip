@@ -825,7 +825,7 @@ Var* xlp_addvar(
       /* if the number is unknown we have no valid primal solution candidate */
       if( numb_equal(startval, numb_unknown()) )
       {
-         SCIPdebugMessage("primal solution candidate conatians a unknown value for variable <%s>(%g)\n", 
+         SCIPdebugMessage("primal solution candidate contains an unknown value for variable <%s>(%g)\n",
             SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
          readerdata->valid = FALSE;
       }
@@ -833,7 +833,7 @@ Var* xlp_addvar(
       {
          assert(readerdata->sol != NULL);
          SCIPdebugMessage("change solution solution <%p>: <%s> = <%g>\n", 
-            readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
+            (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */
          SCIP_CALL_ABORT( SCIPsetSolVal(scip, readerdata->sol, var, (SCIP_Real)numb_todbl(startval)) );
@@ -1169,8 +1169,6 @@ SCIP_DECL_READERCOPY(readerCopyZpl)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeZpl NULL
 
 
 /** problem reading method of reader */
@@ -1404,8 +1402,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteZpl NULL
 
 #endif
 #endif

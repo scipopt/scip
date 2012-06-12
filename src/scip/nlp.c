@@ -222,6 +222,7 @@ int SCIPexprtreeFindVar(
 /** removes fixed variables from an expression tree, so that at exit all variables are active */
 SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
    int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
    int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
@@ -290,7 +291,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
 
       scalar   = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
 
       if( scalar == 0.0 )
       {
@@ -346,7 +347,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
          {
             mvar      = SCIPvarGetMultaggrVars(var)[j];
             mscalar   = scalar * SCIPvarGetMultaggrScalars(var)[j];
-            SCIP_CALL( SCIPvarGetProbvarSum(&mvar, &mscalar, &constant) );
+            SCIP_CALL( SCIPvarGetProbvarSum(&mvar, set, &mscalar, &constant) );
 
             /* if variable mvar is fixed, constant has been added to constant and we can continue */
             if( mscalar == 0.0 )
@@ -474,7 +475,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
        */
       SCIP_Bool gotchange;
 
-      SCIP_CALL( SCIPexprtreeRemoveFixedVars(tree, &gotchange, NULL, NULL) );
+      SCIP_CALL( SCIPexprtreeRemoveFixedVars(tree, set, &gotchange, NULL, NULL) );
       assert(gotchange);
    }
 
@@ -950,7 +951,7 @@ SCIP_RETCODE nlrowAddToLinearCoef(
       SCIP_Real constant;
 
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &coef, &constant) );
       if( constant != 0.0 )
       {
          nlrow->constant += constant;
@@ -1378,7 +1379,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
    oldconstant = nlrow->constant;
 
    /* replace fixed, aggregated, or negated variable */
-   SCIP_CALL( SCIPvarGetProbvarSum( &nlrow->linvars[pos], &nlrow->lincoefs[pos], &nlrow->constant) );
+   SCIP_CALL( SCIPvarGetProbvarSum( &nlrow->linvars[pos], set, &nlrow->lincoefs[pos], &nlrow->constant) );
 
    /* if var had been fixed, entry should be removed from row */
    if( nlrow->lincoefs[pos] == 0.0 )
@@ -1551,8 +1552,8 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
       constant1 = 0.0;
       constant2 = 0.0;
 
-      SCIP_CALL( SCIPvarGetProbvarSum(&var1, &coef1, &constant1) );
-      SCIP_CALL( SCIPvarGetProbvarSum(&var2, &coef2, &constant2) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var1, set, &coef1, &constant1) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var2, set, &coef2, &constant2) );
 
       if( coef1 == 0.0 && coef2 == 0.0 )
       {
@@ -1925,7 +1926,7 @@ SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
    if( nlrow->exprtree == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &changed, NULL, NULL) );
+   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &changed, NULL, NULL) );
    if( changed )
    {
       SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
@@ -2408,7 +2409,7 @@ SCIP_RETCODE SCIPnlrowAddLinearCoef(
 
       /* get corresponding active or multi-aggregated variable */
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &val, &constant) );
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &val, &constant) );
 
       /* add constant */
       SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + constant) );
@@ -2702,7 +2703,7 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
       if( nlrow->nlpindex >= 0 )
       {
          SCIP_Bool dummy;
-         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, &dummy, NULL, NULL) );
+         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &dummy, NULL, NULL) );
       }
    }
 

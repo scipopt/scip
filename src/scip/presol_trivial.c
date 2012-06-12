@@ -57,24 +57,14 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
 }
 
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-#define presolFreeTrivial NULL
 
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitTrivial NULL
 
 
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitTrivial NULL
 
 
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreTrivial NULL
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreTrivial NULL
 
 
 /** presolving execution method */

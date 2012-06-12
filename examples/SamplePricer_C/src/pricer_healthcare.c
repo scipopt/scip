@@ -246,7 +246,7 @@ SCIP_RETCODE HCPincludePricerHealthcare(
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerRedcostHealthcare, pricerdata) );
+         pricerRedcostHealthcare, NULL, pricerdata) );
 
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyHealthcare) );
 

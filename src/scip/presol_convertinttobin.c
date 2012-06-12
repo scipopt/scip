@@ -88,20 +88,12 @@ SCIP_DECL_PRESOLFREE(presolFreeConvertinttobin)
 }
 
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitConvertinttobin NULL
 
 
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitConvertinttobin NULL
 
 
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreConvertinttobin NULL
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreConvertinttobin NULL
 
 
 /** presolving execution method */
@@ -204,7 +196,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       nnewbinvars = (int)SCIPfloor(scip, (log(domainsize)/log(2.0))) + 1;
 
-      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %lf\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ", SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
+      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %g\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ", SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
 
       assert(nnewbinvars > 0);
 
@@ -275,6 +267,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
 

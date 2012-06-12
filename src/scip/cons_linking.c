@@ -1346,7 +1346,7 @@ SCIP_RETCODE createRows(
    SCIP_CONSDATA* consdata;
    char rowname[SCIP_MAXSTRLEN];
    int b;
-   
+
    assert( cons != NULL);
 
    /* get constraint data */
@@ -1359,9 +1359,9 @@ SCIP_RETCODE createRows(
    /* create the LP row which captures the linking between the integer and binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row1, rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row1, SCIPconsGetHdlr(cons), rowname, -(SCIP_Real)consdata->offset, -(SCIP_Real)consdata->offset,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   
+
    /* add integer variable to the row */
    assert(consdata->intvar != NULL);
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->row1, consdata->intvar, -1.0) );
@@ -1372,14 +1372,14 @@ SCIP_RETCODE createRows(
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row1, consdata->binvars[b], (SCIP_Real)b) );
    }
-   
+
    /* create the LP row which captures the set partitioning condition of the binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[setppc]", SCIPconsGetName(cons));
-   assert( consdata->nbinvars > 0 );   
+   assert( consdata->nbinvars > 0 );
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row2, rowname, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row2, SCIPconsGetHdlr(cons), rowname, 1.0, 1.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   
+
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row2, consdata->nbinvars, consdata->binvars, 1.0) );
 
    return SCIP_OKAY;
@@ -1633,11 +1633,7 @@ SCIP_DECL_CONSFREE(consFreeLinking)
    return SCIP_OKAY;
 }
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLinking NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLinking NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -1673,11 +1669,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    return SCIP_OKAY;
 }
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLinking NULL
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLinking NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -1987,7 +1979,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    int c;
-   
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
@@ -2008,14 +2000,14 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
                int pos;
                int b;
 
                pos = -1;
-               
+
 #ifndef NDEBUG
                for( b = 0; b < consdata->nbinvars; ++b )
                {
@@ -2025,12 +2017,13 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 #endif
 
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                /* check that at most one binary variable is fixed */
                for( b = 0; b < consdata->nbinvars; ++b )
                {
                   assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, consdata->binvars[b])) );
-                  
+
                   /* check if binary variable is fixed */
                   if( SCIPgetSolVal(scip, sol, consdata->binvars[b]) > 0.5 )
                   {
@@ -2042,7 +2035,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      pos = b ;
                   }
                }
-               
+
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
@@ -2056,12 +2049,12 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                      SCIPvarGetName(consdata->binvars[pos]) );
                }
             }
-            
+
             return SCIP_OKAY;
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2646,12 +2639,8 @@ SCIP_DECL_CONSLOCK(consLockLinking)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveLinking NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveLinking NULL
 
 
 /** constraint enabling notification method of constraint handler */
@@ -2682,12 +2671,8 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
    return SCIP_OKAY;
 }
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableLinking NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsLinking NULL
 
 
 /** constraint display method of constraint handler */
@@ -2994,10 +2979,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpLinking, consEnfopsLinking, consCheckLinking, consLockLinking,
          conshdlrdata) );
 
@@ -3014,11 +2996,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinking) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinking) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinking) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinking) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinking) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
 
 

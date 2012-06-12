@@ -51,6 +51,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds);
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeFreetransproblem);
 
+/** dialog execution method for the changing the objective sense */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeObjSense);
+
 /** dialog execution method for the checksol command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);

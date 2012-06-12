@@ -478,8 +478,6 @@ SCIP_DECL_HEURCOPY(heurCopyIntshifting)
    return SCIP_OKAY;
 }
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeIntshifting NULL
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -534,8 +532,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolIntshifting)
 }
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolIntshifting NULL
 
 
 /** execution method of primal heuristic */

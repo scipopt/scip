@@ -1942,10 +1942,10 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          SCIP_VAR** vars;
          int ncols;
          int i;
-         
+
          cols = SCIProwGetCols(row);
          ncols = SCIProwGetNNonz(row);
-         
+
          /* get all variables of the row */
          SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
          for( i = 0; i < ncols; ++i )
@@ -1963,14 +1963,14 @@ SCIP_RETCODE SCIPconvertCutsToConss(
                if( !success )
                {
                   SCIPdebugMessage("Converting cuts to constraints failed.\n");
-                  
+
                   /* free temporary memory */
                   SCIPfreeBufferArray(targetscip, &vars);
                   return SCIP_OKAY;
                }
             }
          }
-         
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(sourcescip));
          SCIP_CALL( SCIPcreateConsLinear(targetscip, &cons, name, ncols, vars, SCIProwGetVals(row),
                SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
@@ -1979,6 +1979,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 
          SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(targetscip, cons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(targetscip, NULL, ";\n") );
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
          /* free temporary memory */
@@ -3071,6 +3072,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
                                               *   default problem variable pricing in the same round)
                                               */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    )
 {
@@ -3088,7 +3090,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
    SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, delay,
          NULL,
-         NULL, NULL, NULL, NULL, NULL, pricerredcost, NULL, pricerdata) );
+         NULL, NULL, NULL, NULL, NULL, pricerredcost, pricerfarkas, pricerdata) );
    SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
 
    if( pricerptr != NULL )
@@ -3189,22 +3191,6 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    assert(pricer != NULL);
 
    SCIPpricerSetExitsol(pricer, pricerexitsol);
-
-   return SCIP_OKAY;
-}
-
-/** sets Farkas pricing method of variable pricer for infeasible LPs */
-SCIP_RETCODE SCIPsetPricerFarkas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetPricerFarkas", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   assert(pricer != NULL);
-
-   SCIPpricerSetFarkas(pricer, pricerfarkas);
 
    return SCIP_OKAY;
 }
@@ -3391,17 +3377,11 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
    const char*           name,               /**< name of constraint handler */
    const char*           desc,               /**< description of constraint handler */
-   int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
-   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -3421,9 +3401,9 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    }
 
    SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, sepapriority, enfopriority, chckpriority, -1, -1, eagerfreq, maxprerounds,
-         delaysepa, delayprop, delaypresol, needscons,
-         timingmask,
+         name, desc, 0, enfopriority, chckpriority, -1, -1, eagerfreq, 0,
+         FALSE, FALSE, FALSE, needscons,
+         SCIP_PROPTIMING_BEFORELP,
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL, consenfolp, consenfops, conscheck, NULL,
@@ -3437,20 +3417,40 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    return SCIP_OKAY;
 }
 
-/* sets all separation related callbacks of the constraint handler */
+/* sets all separation related callbacks/parameters of the constraint handler */
 SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
-   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    )
 {
+   int oldsepapriority;
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPconshdlrSetSepa(conshdlr, conssepalp, conssepasol, sepafreq);
+   oldsepapriority = SCIPconshdlrGetSepaPriority(conshdlr);
+   SCIPconshdlrSetSepa(conshdlr, conssepalp, conssepasol, sepafreq, sepapriority, delaysepa);
+
+   /* change the position of the constraint handler in the constraint handler array w.r.t. its new sepa priority */
+   if( oldsepapriority != sepapriority )
+      SCIPsetReinsertConshdlrSepaPrio(scip->set, conshdlr, oldsepapriority);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, sepafreq) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
+      SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaysepa) );
 
    return SCIP_OKAY;
 }
@@ -3460,14 +3460,31 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
-   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPconshdlrSetProp(conshdlr, consprop, propfreq);
+   SCIPconshdlrSetProp(conshdlr, consprop, propfreq, delayprop, timingmask);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, propfreq) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/timingmask", name);
+      SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, timingmask) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delayprop) );
 
    return SCIP_OKAY;
 }
@@ -3605,13 +3622,28 @@ SCIP_RETCODE SCIPsetConshdlrExitpre(
 SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPconshdlrSetPresol(conshdlr, conspresol);
+   SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, delaypresol);
+
+   name = SCIPconshdlrGetName(conshdlr);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, maxprerounds) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaypresol", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, delaypresol) );
 
    return SCIP_OKAY;
 }
@@ -3886,7 +3918,9 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
 
 /** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
+ *  Optional callbacks can be set via specific setter functions SCIPsetConflicthdlrCopy(), SCIPsetConflicthdlrFree(),
+ *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
+ *  and SCIPsetConflicthdlrExitsol()
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
  */
@@ -4107,11 +4141,12 @@ SCIP_RETCODE SCIPincludePresol(
    return SCIP_OKAY;
 }
 
-/** creates a presolver and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
+/** creates a presolver and includes it in SCIP with its fundamental callback. All non-fundamental (or optional)
+ *  callbacks as, e.g., init and exit callbacks, will be set to NULL. Optional callbacks can be set via specific setter
+ *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
+ *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol.
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
  */
 SCIP_RETCODE SCIPincludePresolBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4141,7 +4176,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
          NULL, NULL, NULL, NULL, NULL, presolexec, presoldata) );
    SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
 
-   if( presol != NULL )
+   if( presolptr != NULL )
       *presolptr = presol;
 
    return SCIP_OKAY;
@@ -4333,8 +4368,10 @@ SCIP_RETCODE SCIPincludeRelax(
    return SCIP_OKAY;
 }
 
-/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+/** creates a relaxation handler and includes it in SCIP. All non fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), SCIPsetRelaxExit(),
+ *  SCIPsetRelaxCopy(), SCIPsetRelaxFree(), SCIPsetRelaxInitsol(), and SCIPsetRelaxExitsol()
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
  */
@@ -4563,10 +4600,10 @@ SCIP_RETCODE SCIPincludeSepa(
    return SCIP_OKAY;
 }
 
-/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+/** creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaInit(), SCIPsetSepaFree(),
- *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy, SCIPsetExit().
+ *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy(), SCIPsetExit().
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
  */
@@ -4823,9 +4860,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
-   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -4843,7 +4877,7 @@ SCIP_RETCODE SCIPincludePropBasic(
    }
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoldelay,
+         name, desc, priority, freq, delay, timingmask, 0, -1, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
@@ -4986,14 +5020,33 @@ SCIP_RETCODE SCIPsetPropExitpre(
 SCIP_RETCODE SCIPsetPropPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    )
 {
+   const char* name;
+   char paramname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
    SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   assert(prop != NULL);
 
-   SCIPpropSetPresol(prop, proppresol);
+   assert(prop != NULL);
+   SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoldelay);
+
+   name = SCIPpropGetName(prop);
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolmaxrounds) );
+
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolpriority) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoldelay", name);
+   SCIP_CALL( SCIPsetSetDefaultBoolParam(scip->set, paramname, presoldelay) );
 
    return SCIP_OKAY;
 }
@@ -5108,10 +5161,13 @@ SCIP_RETCODE SCIPincludeHeur(
    return SCIP_OKAY;
 }
 
-/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurInit() in pub_heur.h, for example.
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks.
+ *  All non-fundamental (or optional) callbacks
+ *  as, e. g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurCopy(), SCIPsetHeurFree(),
+ *  SCIPsetHeurInit(), SCIPsetHeurExit(), SCIPsetHeurInitsol(), and SCIPsetHeurExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
  */
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5302,7 +5358,10 @@ SCIP_RETCODE SCIPsetHeurPriority(
    return SCIP_OKAY;
 }
 
-/** creates an event handler and includes it in SCIP */
+/** creates an event handler and includes it in SCIP
+ *
+ *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
+ */
 SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
@@ -5551,8 +5610,10 @@ SCIP_RETCODE SCIPincludeNodesel(
 
 /** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetNodeselCopy(), SCIPsetNodeselFree(),
+ *  SCIPsetNodeselInit(), SCIPsetNodeselExit(), SCIPsetNodeselInitsol(), and SCIPsetNodeselExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeNodesel().
  */
 SCIP_RETCODE SCIPincludeNodeselBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6530,6 +6591,110 @@ SCIP_RETCODE SCIPcreateProb(
    return SCIP_OKAY;
 }
 
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  all callback methods will be set to NULL and can be set afterwards, if needed, via SCIPsetProbDelorig(),
+ *  SCIPsetProbTrans(), SCIPsetProbDeltrans(), SCIPsetProbInitsol(), SCIPsetProbExitsol(), and
+ *  SCIPsetProbCopy()
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+SCIP_RETCODE SCIPcreateProbBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< problem name */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateProbBasic", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to free user data of original problem */
+SCIP_RETCODE SCIPsetProbDelorig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDelorig", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetDelorig(scip->origprob, probdelorig);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+SCIP_RETCODE SCIPsetProbTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbTrans", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetTrans(scip->origprob, probtrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to free user data of transformed problem */
+SCIP_RETCODE SCIPsetProbDeltrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbDeltrans", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetDeltrans(scip->origprob, probdeltrans);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization callback of transformed data */
+SCIP_RETCODE SCIPsetProbInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetProbInitsol", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetInitsol(scip->origprob, probinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization callback of transformed data */
+SCIP_RETCODE SCIPsetProbExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbExitsol", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetExitsol(scip->origprob, probexitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets callback to copy user data to a subscip */
+SCIP_RETCODE SCIPsetProbCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
+   )
+{
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPsetProbCopy", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobSetCopy(scip->origprob, probcopy);
+
+   return SCIP_OKAY;
+}
+
 /** reads problem from file and initializes all solving data structures */
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7471,7 +7636,7 @@ SCIP_VAR** SCIPgetVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -7485,6 +7650,7 @@ SCIP_VAR** SCIPgetVars(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
       return scip->transprob->vars;
 
    default:
@@ -7499,7 +7665,7 @@ int SCIPgetNVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -7513,6 +7679,7 @@ int SCIPgetNVars(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
       return scip->transprob->nvars;
 
    default:
@@ -11674,6 +11841,28 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    return SCIP_OKAY;
 }
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+SCIP_RETCODE SCIPgetProbvarSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(scalar != NULL);
+   assert(constant != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetProbvarSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPvarGetProbvarSum(var, scip->set, scalar, constant) );
+
+   return SCIP_OKAY;
+}
+
 /** return for given variables all their active counterparts; all active variables will be pairwise different
  *  @note It does not hold that the first output variable is the active variable for the first input variable.
  */
@@ -11740,6 +11929,45 @@ SCIP_Real SCIPgetVarRedcost(
       return SCIP_INVALID;
    }
 }
+
+/** returns the implied reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
+ */
+SCIP_Real SCIPgetVarImplRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get reduced costs, should be a column in current node LP */
+   SCIP_Bool             varfixing           /**< FALSE if for x == 0, TRUE for x == 1 */
+   )
+{
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPgetVarImplRedcost(scip, var->data.original.transvar, varfixing);
+
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPvarGetImplRedcost(var, varfixing, scip->stat, scip->lp);
+
+   case SCIP_VARSTATUS_LOOSE:
+      return SCIP_INVALID;
+
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return 0.0;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID;
+   }
+}
+
 
 /** returns the Farkas coefficient of the variable in the current node's LP relaxation;
  *  the current node has to have an infeasible LP.
@@ -12099,6 +12327,24 @@ SCIP_RETCODE analyzeStrongbranch(
          SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, col, downconflict, upconflict) );
       }
+   }
+
+   /* the strong branching results can be used to strength the root reduced cost information which is used for example
+    * to propagate against the cutoff bound
+    *
+    * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
+    *       theory but can arise due to numerical issues.
+    */
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   {
+      SCIP_Real lpobjval;
+
+      lpobjval =  SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
+
+      if( col->sbdownvalid && lpobjval < col->sbdown )
+         SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetUbGlobal(var), -(col->sbdown - lpobjval), lpobjval);
+      if( col->sbupvalid && lpobjval < col->sbup )
+         SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetLbGlobal(var), col->sbup - lpobjval,  lpobjval);
    }
 
    return SCIP_OKAY;
@@ -12785,7 +13031,7 @@ SCIP_Real SCIPadjustedVarUb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -12856,7 +13102,7 @@ SCIP_RETCODE SCIPchgVarLb(
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -12980,7 +13226,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
 /** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13048,7 +13294,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
  *  if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13164,7 +13410,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13260,7 +13506,7 @@ SCIP_RETCODE SCIPtightenVarLb(
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13356,7 +13602,7 @@ SCIP_RETCODE SCIPtightenVarUb(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13452,7 +13698,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13643,7 +13889,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13739,7 +13985,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  the given inference propagator is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -13929,7 +14175,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -14027,7 +14273,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
  *  also tightens the local bound, if the global bound is better than the local bound
  *
- *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
  *           SCIPgetVars()) gets resorted.
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
@@ -14204,7 +14450,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
 }
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal
- *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is
+ *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable lower bound is
  *  available
  */
 SCIP_RETCODE SCIPgetVarClosestVlb(
@@ -14242,6 +14488,8 @@ SCIP_RETCODE SCIPgetVarClosestVub(
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  if z is non-continuous and 1/b not too small, the corresponding valid upper/lower bound
+ *  z <= (x-d)/b or z >= (x-d)/b (depending on the sign of of b) is added, too;
  *  improves the global bounds of the variable and the vlb variable if possible
  */
 SCIP_RETCODE SCIPaddVarVlb(
@@ -14259,11 +14507,32 @@ SCIP_RETCODE SCIPaddVarVlb(
    SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
          scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, nbdchgs) );
 
+   /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
+    * detected infeasibility
+    */
+   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vlbcoef) )
+   {
+      if( vlbcoef > 0.0 )
+      {
+         /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+      }
+      else
+      {
+         /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, nbdchgs) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  if z is non-continuous and 1/b not too small, the corresponding valid lower/upper bound
+ *  z >= (x-d)/b or z <= (x-d)/b (depending on the sign of of b) is added, too;
  *  improves the global bounds of the variable and the vlb variable if possible
  */
 SCIP_RETCODE SCIPaddVarVub(
@@ -14280,6 +14549,25 @@ SCIP_RETCODE SCIPaddVarVub(
 
    SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
          scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, nbdchgs) );
+
+   /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
+    * detected infeasibility
+    */
+   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vubcoef) )
+   {
+      if( vubcoef > 0.0 )
+      {
+         /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+      }
+      else
+      {
+         /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
+         SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+               scip->branchcand, scip->eventqueue, var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, nbdchgs) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -15003,8 +15291,8 @@ SCIP_RETCODE SCIPaggregateVars(
     */
    constantx = 0.0;
    constanty = 0.0;
-   SCIP_CALL( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
-   SCIP_CALL( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
+   SCIP_CALL( SCIPvarGetProbvarSum(&varx, scip->set, &scalarx, &constantx) );
+   SCIP_CALL( SCIPvarGetProbvarSum(&vary, scip->set, &scalary, &constanty) );
 
    /* we cannot aggregate multi-aggregated variables */
    if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
@@ -15915,7 +16203,7 @@ SCIP_RETCODE SCIPisConflictVarUsed(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisConflictVarUsed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return SCIPconflictIsVarUsed(scip->conflict, var, boundtype, bdchgidx, used);
+   return SCIPconflictIsVarUsed(scip->conflict, var, scip->set, boundtype, bdchgidx, used);
 }
 
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
@@ -16634,7 +16922,7 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, result) );
 
@@ -17080,7 +17368,6 @@ SCIP_Real SCIPgetLPLooseObjval(
 /** gets the global pseudo objective value; that is all variables set to their best  (w.r.t. the objective
  *  function) global bound
  */
-extern
 SCIP_Real SCIPgetGlobalPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -17689,7 +17976,59 @@ SCIP_Real SCIPgetColFarkasCoef(
  * LP row methods
  */
 
-/** creates and captures an LP row */
+/** creates and captures an LP row from a constraint handler */
+SCIP_RETCODE SCIPcreateRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) conshdlr, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row from a separator */
+SCIP_RETCODE SCIPcreateRowSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row from unspecified origin
+ *
+ *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  to facilitate correct statistics.
+ */
 SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -17707,12 +18046,58 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
-         name, len, cols, vals, lhs, rhs, local, modifiable, removable) );
+         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNKOWN, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures an LP row without any coefficients */
+/** creates and captures an LP row without any coefficients from a constraint handler */
+SCIP_RETCODE SCIPcreateEmptyRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, conshdlr, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row without any coefficients from a separator */
+SCIP_RETCODE SCIPcreateEmptyRowSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, sepa, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row without any coefficients
+ *
+ *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  to facilitate correct statistics.
+ */
 SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -17727,7 +18112,7 @@ SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
-         name, 0, NULL, NULL, lhs, rhs, local, modifiable, removable) );
+         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNKOWN, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
@@ -21860,28 +22245,7 @@ SCIP_Real SCIPgetSolVal(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( sol != NULL && SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
-   {
-      SCIP_VAR* origvar;
-      SCIP_Real scalar;
-      SCIP_Real constant;
-
-      /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
-       * -> get the corresponding original variable first
-       */
-      origvar = var;
-      scalar = 1.0;
-      constant = 0.0;
-      SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-      if( origvar == NULL )
-      {
-         /* the variable has no original counterpart: in the original solution, it has a value of zero */
-         return 0.0;
-      }
-      assert(!SCIPvarIsTransformed(origvar));
-      return scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
-   }
-   else if( sol != NULL )
+   if( sol != NULL )
       return SCIPsolGetVal(sol, scip->set, scip->stat, var);
    else
    {
@@ -21908,38 +22272,8 @@ SCIP_RETCODE SCIPgetSolVals(
    {
       int v;
 
-      if( SCIPsolIsOriginal(sol) )
-      {
-         SCIP_VAR* origvar;
-         SCIP_Real scalar;
-         SCIP_Real constant;
-
-         for( v = 0; v < nvars; ++v )
-         {
-            /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
-             * -> get the corresponding original variable first
-             */
-            origvar = vars[v];
-            scalar = 1.0;
-            constant = 0.0;
-            SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-            if( origvar == NULL )
-            {
-               /* the variable has no original counterpart: in the original solution, it has a value of zero */
-               vals[v] = 0.0;
-            }
-            else
-            {
-               assert(!SCIPvarIsTransformed(origvar));
-               vals[v] = scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
-            }
-         }
-      }
-      else
-      {
-         for( v = 0; v < nvars; ++v )
-            vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
-      }
+      for( v = 0; v < nvars; ++v )
+         vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
    }
    else
    {
@@ -24418,7 +24752,7 @@ void printConstraintStatistics(
    assert(scip->set != NULL);
 
    /** Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -24432,7 +24766,7 @@ void printConstraintStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d%c%10d %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d%c%10d %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             maxnactiveconss,
@@ -24445,6 +24779,7 @@ void printConstraintStatistics(
             SCIPconshdlrGetNCutoffs(conshdlr),
             SCIPconshdlrGetNDomredsFound(conshdlr),
             SCIPconshdlrGetNCutsFound(conshdlr),
+            SCIPconshdlrGetNCutsApplied(conshdlr),
             SCIPconshdlrGetNConssFound(conshdlr),
             SCIPconshdlrGetNChildren(conshdlr));
       }
@@ -24555,8 +24890,8 @@ void printConflictStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success   DomReds  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Conflict Analysis  :       Time      Calls    Success  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropSuccess(scip->conflict),
@@ -24642,8 +24977,8 @@ void printSeparatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts      Conss\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f            %10"SCIP_LONGINT_FORMAT"          -          - %10"SCIP_LONGINT_FORMAT"          -    (maximal pool size: %d)\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts    Applied      Conss\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f            %10"SCIP_LONGINT_FORMAT"          -          - %10"SCIP_LONGINT_FORMAT"          -          -    (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool),
       SCIPcutpoolGetNCalls(scip->cutpool),
       SCIPcutpoolGetNCutsFound(scip->cutpool),
@@ -24654,7 +24989,7 @@ void printSeparatorStatistics(
 
    for( i = 0; i < scip->set->nsepas; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetSetupTime(scip->set->sepas[i]),
@@ -24662,6 +24997,7 @@ void printSeparatorStatistics(
          SCIPsepaGetNCutoffs(scip->set->sepas[i]),
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
          SCIPsepaGetNCutsFound(scip->set->sepas[i]),
+         SCIPsepaGetNCutsApplied(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
    }
 }

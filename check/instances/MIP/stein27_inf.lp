@@ -1,5 +1,5 @@
 \ SCIP STATISTICS
-\   Problem name     : STEIN27
+\   Problem name     : STEIN27_INF
 \   Variables        : 27 (27 binary, 0 integer, 0 implicit integer, 0 continuous)
 \   Constraints      : 119
 \   Obj. scale       : 1

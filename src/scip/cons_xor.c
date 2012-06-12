@@ -899,7 +899,7 @@ SCIP_RETCODE createRelaxation(
 
       /* create LP row (resultant variable is also stored in vars array) */
       rhsval = (consdata->rhs ? 1.0 : 0.0);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], SCIPconsGetName(cons), rhsval, rhsval,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), rhsval, rhsval,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->intvar, -2.0) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], consdata->nvars, consdata->vars, 1.0) );
@@ -915,7 +915,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -925,7 +925,7 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= 2 row with all positive signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), 2.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
    }
@@ -940,7 +940,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 1.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -950,16 +950,16 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= -1 row with all negative signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), -1.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
    }
 
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of or constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -1640,7 +1640,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> are redundant: delete <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -1650,7 +1652,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> are contradicting\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             *cutoff = TRUE;
          }
       }
@@ -1666,7 +1670,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1682,7 +1688,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             for( v = 0; v < consdata1->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons0, conshdlrdata->eventhdlr, consdata1->vars[v]) );
@@ -1705,7 +1713,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             SCIP_CALL( SCIPfixVar(scip, singlevar1, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1721,7 +1731,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
             for( v = 0; v < consdata0->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons1, conshdlrdata->eventhdlr, consdata0->vars[v]) );
@@ -1884,24 +1896,14 @@ SCIP_DECL_CONSFREE(consFreeXor)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitXor NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitXor NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreXor NULL
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreXor NULL
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolXor NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -2091,7 +2093,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
-         
+
          if( printreason )
          {
             int v;
@@ -2102,7 +2104,8 @@ SCIP_DECL_CONSCHECK(consCheckXor)
             assert( consdata != NULL );
 
             SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
-            
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             for( v = 0; v < consdata->nvars; ++v )
             {
                if( SCIPgetSolVal(scip, sol, consdata->vars[i]) > 0.5 )
@@ -2353,24 +2356,14 @@ SCIP_DECL_CONSLOCK(consLockXor)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveXor NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveXor NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableXor NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableXor NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsXor NULL
 
 
 /** constraint display method of constraint handler */
@@ -2504,7 +2497,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
          /* parse string again with the correct size of the variable array */
          SCIP_CALL( SCIPparseVarsList(scip, str, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
       }
-      
+
       assert(*success);
       assert(varssize >= requiredsize);
 
@@ -2515,15 +2508,16 @@ SCIP_DECL_CONSPARSE(consParseXor)
       /* search for the equal symbol */
       while( *str != '=' )
          str++;
-      
+
       if( SCIPstrToRealValue(str, &rhs, &endptr) )
       {
          assert(SCIPisZero(scip, rhs) || SCIPisEQ(scip, rhs, 1.0));
          /* create or constraint */
          SCIP_CALL( SCIPcreateConsXor(scip, cons, name, (rhs > 0.5 ? TRUE : FALSE), nvars, vars,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-  
+
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) ); 
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else 
          *success = FALSE;
@@ -2634,10 +2628,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpXor, consEnfopsXor, consCheckXor, consLockXor,
          conshdlrdata) );
    assert(conshdlr != NULL);
@@ -2651,11 +2642,13 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXor) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXor) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXor) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXor) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXor, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXor, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXor) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXor) );
 
    /* add xor constraint handler parameters */

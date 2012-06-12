@@ -301,14 +301,8 @@ SCIP_DECL_HEURINIT(heurInitRins)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitRins NULL
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolRins NULL
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolRins NULL
 
 
 /** execution method of primal heuristic */

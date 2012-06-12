@@ -58,55 +58,38 @@ public:
 
    /** warning message print method of message handler
     *
-    *  This method is invoked, if SCIP wants to display a warning message to the screen or a file
+    *  @see SCIP_DECL_MESSAGEWARNING(x) in @ref type_message.h
     */
-   virtual void scip_warning(
-      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*              file,               /**< file stream to print into */
-      const char*        msg                 /**< string to output into the file */
-      )
+   virtual SCIP_DECL_MESSAGEWARNING(scip_warning)
    { /*lint --e{715}*/
 
    }
 
    /** dialog message print method of message handler
     *
-    *  This method is invoked, if SCIP wants to display a dialog message to the screen or a file
+    *  @see SCIP_DECL_MESSAGEDIALOG(x) in @ref type_message.h
     */
-   virtual void scip_dialog(
-      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*              file,               /**< file stream to print into */
-      const char*        msg                 /**< string to output into the file */
-      )
+   virtual SCIP_DECL_MESSAGEDIALOG(scip_dialog)
    { /*lint --e{715}*/
 
    }
 
    /** info message print method of message handler
     *
-    *  This method is invoked, if SCIP wants to display an information message to the screen or a file
+    *  @see SCIP_DECL_MESSAGEINFO(x) in @ref type_message.h
     */
-   virtual void scip_info(
-      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*              file,               /**< file stream to print into */
-      const char*        msg                 /**< string to output into the file */
-      )
+   virtual SCIP_DECL_MESSAGEINFO(scip_info)
    { /*lint --e{715}*/
 
    }
 
    /** destructor of message handler to free message handler data
     *
-    *  This method is invoked, if SCIP wants to display an information message to the screen or a file
-    *
-    *  input:
-    *  - messagehdlr     : the message handler itself
+    *  @see SCIP_DECL_MESSAGEHDLRFREE(x) in @ref type_message.h
     */
-   virtual void scip_free(
-      SCIP_MESSAGEHDLR*  messagehdlr         /**< the message handler itself */
-      )
+   virtual SCIP_DECL_MESSAGEHDLRFREE(scip_free)
    { /*lint --e{715}*/
-
+      return SCIP_OKAY;
    }
 };
 

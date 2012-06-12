@@ -703,12 +703,8 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolCrossover NULL
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolCrossover NULL
 
 
 /** execution method of primal heuristic */

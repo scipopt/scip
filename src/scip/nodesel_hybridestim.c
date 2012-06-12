@@ -119,20 +119,12 @@ SCIP_DECL_NODESELFREE(nodeselFreeHybridestim)
    return SCIP_OKAY;
 }
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitHybridestim NULL
 
 
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitHybridestim NULL
 
 
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolHybridestim NULL
 
 
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolHybridestim NULL
 
 
 /** node selection method of node selector */

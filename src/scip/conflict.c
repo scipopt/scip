@@ -2207,6 +2207,7 @@ SCIP_RETCODE incVSIDS(
 static
 SCIP_RETCODE convertToActiveVar(
    SCIP_VAR**            var,                /**< pointer to variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound that was changed: lower or upper bound */
    )
 {
@@ -2217,7 +2218,7 @@ SCIP_RETCODE convertToActiveVar(
    constant = 0.0;
 
    /* transform given varibale to active varibale */
-   SCIP_CALL( SCIPvarGetProbvarSum(var, &scalar, &constant) );
+   SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 
    /* if the scalar of the aggregation is negative, we have to switch the bound type */
@@ -2295,7 +2296,7 @@ SCIP_RETCODE SCIPconflictAddBound(
    assert(var != NULL);
 
    /* convert bound to active problem variable */
-   SCIP_CALL( convertToActiveVar(&var, &boundtype) );
+   SCIP_CALL( convertToActiveVar(&var, set, &boundtype) );
 
    /* we can ignore fixed variables */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
@@ -2462,6 +2463,7 @@ SCIP_Bool bdchginfoIsInvalid(
 SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */
@@ -2470,7 +2472,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_Real newbound;
 
    /* convert bound to active problem variable */
-   SCIP_CALL( convertToActiveVar(&var, &boundtype) );
+   SCIP_CALL( convertToActiveVar(&var, set, &boundtype) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       *used = FALSE;

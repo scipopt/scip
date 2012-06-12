@@ -218,8 +218,7 @@ SCIP_RETCODE addObjCutoff(
 
    /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip),
-         FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for( i = 0; i < nvars; i++ )
@@ -1093,6 +1092,7 @@ SCIP_DECL_SORTPTRCOMP(compBounds)
 #ifdef SCIP_DEBUG
 static
 void printGroups(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< data of the obbt propagator */
    )
 {
@@ -1101,22 +1101,22 @@ void printGroups(
    assert(propdata != NULL);
    assert(propdata->nbounds > 0);
 
-   printf("groups={\n");
+   SCIPinfoMessage(scip, NULL, "groups={\n");
 
    for( i = 0; i < propdata->nboundgroups; i++ )
    {
       int j;
-      printf("  {\n");
+      SCIPinfoMessage(scip, NULL, "  {\n");
       for( j = 0; j < propdata->boundgroups[i].nbounds; j++ )
       {
          BOUND* bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
-         printf("      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
+         SCIPinfoMessage(scip, NULL, "      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
             SCIPvarGetName(bound->var), bound->score);
       }
-      printf("  }\n");
+      SCIPinfoMessage(scip, NULL, "  }\n");
    }
 
-   printf("}\n");
+   SCIPinfoMessage(scip, NULL, "}\n");
 }
 #endif
 
@@ -1294,7 +1294,7 @@ SCIP_RETCODE initBounds(
 
       /* create groups */
       SCIP_CALL( createGroups(propdata) );
-      SCIPdebug( printGroups(propdata) );
+      SCIPdebug( printGroups(scip, propdata) );
    }
 
    return SCIP_OKAY;
@@ -1491,23 +1491,11 @@ SCIP_DECL_PROPFREE(propFreeObbt)
    return SCIP_OKAY;
 }
 
-/** copy method for propagator plugins (called when SCIP copies plugins) */
-#define propCopyObbt NULL
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitObbt NULL
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitObbt NULL
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreObbt NULL
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreObbt NULL
 
-/** presolving method of propagator */
-#define propPresolObbt NULL
 
 
 
@@ -1521,15 +1509,18 @@ SCIP_RETCODE SCIPincludePropObbt(
    )
 {
    SCIP_PROPDATA* propdata;
+   SCIP_PROP* prop;
 
    /* create obbt propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
-   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY, propCopyObbt, propFreeObbt, propInitObbt,
-         propExitObbt, propInitpreObbt, propExitpreObbt, propInitsolObbt, propExitsolObbt, propPresolObbt,
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecObbt, propRespropObbt, propdata) );
+
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObbt) );
+   SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObbt) );
+   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/creategenvbounds",
          "should obbt try to provide genvbounds if possible?",

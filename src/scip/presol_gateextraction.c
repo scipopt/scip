@@ -1019,9 +1019,13 @@ SCIP_RETCODE extractGates(
 
 #ifdef SCIP_DEBUG
       if( ngateconss == nlogicorvars )
+      {
 	 SCIPdebugMessage("Following constraints form a set-partitioning constraint.\n");
+      }
       else
+      {
 	 SCIPdebugMessage("Following constraints form an and-constraint.\n");
+      }
 #endif
 
       for( v = ngateconss - 1; v >= 0; --v )
@@ -1040,12 +1044,14 @@ SCIP_RETCODE extractGates(
 	 stickingatnode &= SCIPconsIsStickingAtNode(gateconss[v]);
 
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, gateconss[v], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 SCIP_CALL( SCIPdelCons(scip, gateconss[v]) );
 	 ++(*ndelconss);
       }
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       if( ngateconss == nlogicorvars - 1 )
       {
@@ -1076,6 +1082,7 @@ SCIP_RETCODE extractGates(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("-------------->\n");
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 ++(*naddconss);
 	 ++(presoldata->ngates);
@@ -1100,6 +1107,7 @@ SCIP_RETCODE extractGates(
 	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMessage("-------------->\n");
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 	 ++(*naddconss);
 	 ++(presoldata->ngates);
@@ -1161,8 +1169,6 @@ SCIP_DECL_PRESOLFREE(presolFreeGateextraction)
    return SCIP_OKAY;
 }
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitGateextraction NULL
 
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
@@ -1626,7 +1632,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  SCIPdebugMessage("Following logicor is redundant to the set-partitioning constraint.\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	       }
 	       else
 	       {
@@ -1637,7 +1645,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
 		  SCIPdebugMessage("Following logicor and set-packing constraints form a set-partitioning constraint.\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, logicor, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, setppc, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 		  /* create and add set-partitioning constraint */
 		  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
@@ -1648,6 +1658,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 		  SCIP_CALL( SCIPaddCons(scip, newcons) );
 		  SCIPdebugMessage("-------------->\n");
 		  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
 		  ++(*naddconss);
 		  ++(presoldata->ngates);
@@ -1768,6 +1779,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
    /* alloc presolve data object */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
@@ -1776,11 +1788,14 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    presoldataInit(presoldata);
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolCopyGateextraction,
-         presolFreeGateextraction, presolInitGateextraction, presolExitGateextraction,
-         presolInitpreGateextraction, presolExitpreGateextraction, presolExecGateextraction,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+         PRESOL_DELAY, presolExecGateextraction, presoldata) );
+
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyGateextraction) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeGateextraction) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitGateextraction) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreGateextraction) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreGateextraction) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

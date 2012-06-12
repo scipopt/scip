@@ -91,12 +91,8 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
    return SCIP_OKAY;
 }
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitRestartdfs NULL
 
 
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitRestartdfs NULL
 
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
@@ -118,8 +114,6 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 }
 
 
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolRestartdfs NULL
 
 
 /** node selection method of node selector */

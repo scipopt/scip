@@ -38,11 +38,12 @@ extern "C" {
  */
 extern
 SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    int                   maxtestdelta,       /**< maximal number of different deltas to try (-1: unlimited) */
-   SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
+   SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */

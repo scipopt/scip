@@ -77,6 +77,9 @@
 #include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
+#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+#include "spxsteepexpr.h"
+#endif
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
@@ -171,7 +174,11 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
-   SPxSteepPR            m_price_steep_ex;   /**< steepest edge with exact weight initialization */
+#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+   SPxSteepExPR          m_price_steep_ex;   /**< steepest edge with exact weight initialization */
+#else
+   SPxSteepPR            m_price_steep_ex;   /**< fallback to quick start pricer */
+#endif
    SPxParMultPR          m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR            m_price_devex;      /**< devex pricer */
 #ifdef WITH_BOUNDFLIPPING
@@ -209,9 +216,6 @@ public:
       const char*        probname = NULL     /**< name of problem */
       )
       : SPxSolver(LEAVE, COLUMN),
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 3)
-        m_price_steep_ex(SPxSteepPR::EXACT),
-#endif
         m_probname(0),
         m_fromscratch(false),
         m_scaling(true),
@@ -2376,6 +2380,23 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
    lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
+
+   return SCIP_OKAY;
+}
+
+/** gets objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetObjsen()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(objsen != NULL);
+
+   *objsen = (lpi->spx->getSense() == SPxLP::MINIMIZE) ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE;
 
    return SCIP_OKAY;
 }

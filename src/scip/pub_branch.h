@@ -54,69 +54,6 @@ void SCIPbranchruleSetData(
    SCIP_BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    );
 
-/** sets copy method of branching rule */
-extern
-void SCIPbranchruleSetCopy(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHCOPY  ((*branchcopy))     /**< copy method of branching rule or NULL if you don't want to copy your plugin into sub-SCIPs */
-   );
-
-/** sets destructor method of branching rule */
-extern
-void SCIPbranchruleSetFree(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHFREE  ((*branchfree))     /**< destructor of branching rule */
-   );
-
-/** sets initialization method of branching rule */
-extern
-void SCIPbranchruleSetInit(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHINIT  ((*branchinit))     /**< initialize branching rule */
-   );
-
-/** sets deinitialization method of branching rule */
-extern
-void SCIPbranchruleSetExit(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHEXIT  ((*branchexit))     /**< deinitialize branching rule */
-   );
-
-/** sets solving process initialization method of branching rule */
-extern
-void SCIPbranchruleSetInitsol(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHINITSOL((*branchinitsol)) /**< solving process initialization method of branching rule */
-   );
-
-/** sets solving process deinitialization method of branching rule */
-extern
-void SCIPbranchruleSetExitsol(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)) /**< solving process deinitialization method of branching rule */
-   );
-
-/** sets branching execution method for fractional LP solutions */
-extern
-void SCIPbranchruleSetExecLp(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHEXECLP((*branchexeclp))   /**< branching execution method for fractional LP solutions */
-   );
-
-/** sets branching execution method for external candidates  */
-extern
-void SCIPbranchruleSetExecExt(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHEXECEXT((*branchexecext)) /**< branching execution method for external candidates */
-   );
-
-/** sets branching execution method for not completely fixed pseudo solutions */
-extern
-void SCIPbranchruleSetExecPs(
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
-   );
-
 /** gets name of branching rule */
 extern
 const char* SCIPbranchruleGetName(

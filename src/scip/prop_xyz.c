@@ -245,7 +245,7 @@ SCIP_RETCODE SCIPincludePropXyz(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecXyz, propRespropXyz,
+         propExecXyz, propRespropXyz,
          propdata) );
 
    assert(prop != NULL);
@@ -259,7 +259,7 @@ SCIP_RETCODE SCIPincludePropXyz(
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolXyz) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreXyz) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreXyz) );
-   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolXyz) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolXyz, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* add xyz propagator parameters */
    /* TODO: (optional) add propagator specific parameters with SCIPaddTypeParam() here */

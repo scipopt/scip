@@ -436,6 +436,16 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    return SCIP_PLUGINNOTFOUND;
 }
 
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{  /*lint --e{715}*/
+   errorMessage();
+   return SCIP_PLUGINNOTFOUND;
+}
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */

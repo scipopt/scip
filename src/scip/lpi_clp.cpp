@@ -1486,6 +1486,17 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 }
 
 
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   )
+{
+   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
+   return SCIP_ERROR;
+}
+
+
 /** gets objective coefficients from LP problem object */
 SCIP_RETCODE SCIPlpiGetObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */

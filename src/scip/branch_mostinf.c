@@ -216,24 +216,14 @@ SCIP_DECL_BRANCHCOPY(branchCopyMostinf)
    return SCIP_OKAY;
 }
 
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeMostinf NULL
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-#define branchInitMostinf NULL
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitMostinf NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolMostinf NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolMostinf NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -367,8 +357,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 }
 
 
-/** branching execution method for not completely fixed pseudo solutions */
-#define branchExecpsMostinf NULL
 
 
 

@@ -198,8 +198,6 @@ BEGIN {
       lpsname = "msk";
    else if( $13 == "Gurobi" )
       lpsname = "grb";
-   else if( $13 == "NONE" )
-      lpsname = "none";
    else if( $13 == "QSopt" )
       lpsname = "qso";
 #   else if( $13 == "???" )

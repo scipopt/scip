@@ -1327,6 +1327,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
       return SCIP_OKAY;
@@ -1447,6 +1448,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraint:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          return SCIP_OKAY;
       }
@@ -1479,7 +1481,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else if( SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) || SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
       {
@@ -1510,7 +1514,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
       else
       {
@@ -1564,9 +1570,13 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[2], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[3], NULL)) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
 
       return SCIP_OKAY;
@@ -1625,7 +1635,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       *nupgdconss = 2;
 
@@ -1685,7 +1697,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       *nupgdconss = 2;
    }
@@ -1735,16 +1749,10 @@ SCIP_DECL_CONSFREE(consFreeBounddisjunction)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitBounddisjunction NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitBounddisjunction NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreBounddisjunction NULL
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -1804,12 +1812,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolBounddisjunction NULL
 
 
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolBounddisjunction NULL
 
 
 /** frees specific constraint data */
@@ -1861,16 +1865,10 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 }
 
 
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#define consInitlpBounddisjunction NULL
 
 
-/** separation method of constraint handler for LP solutions */
-#define consSepalpBounddisjunction NULL
 
 
-/** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolBounddisjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -2040,6 +2038,8 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
             int v;
 
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             SCIPinfoMessage(scip, NULL, "violation: ");
             for( v = 0; v < consdata->nvars; ++v )
             {
@@ -2415,16 +2415,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 }
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableBounddisjunction NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableBounddisjunction NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsBounddisjunction NULL
 
 
 /** constraint display method of constraint handler */
@@ -2839,10 +2833,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, consLockBounddisjunction,
          conshdlrdata) );
 
@@ -2858,9 +2849,11 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBounddisjunction) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBounddisjunction, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBounddisjunction) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBounddisjunction, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBounddisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
 

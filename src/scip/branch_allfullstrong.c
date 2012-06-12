@@ -410,16 +410,10 @@ SCIP_DECL_BRANCHINIT(branchInitAllfullstrong)
 }
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitAllfullstrong NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolAllfullstrong NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolAllfullstrong NULL
 
 
 /** branching execution method for fractional LP solutions */
@@ -438,8 +432,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 }
 
 
-/** branching execution method for relaxation solutions */
-#define branchExecextAllfullstrong NULL
 
 
 /** branching execution method for not completely fixed pseudo solutions */

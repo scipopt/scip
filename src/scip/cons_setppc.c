@@ -1786,7 +1786,7 @@ SCIP_RETCODE createRow(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), lhs, rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), lhs, rhs,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
@@ -2137,24 +2137,26 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
          /* constraint found: create a new constraint with same coefficients and best left and right hand side; 
           * delete old constraints afterwards
           */
          consdata0 = SCIPconsGetData(cons0);
          consdata1 = SCIPconsGetData(cons1);
-         
+
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
-         
+
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-         
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+
          /* if necessary change type of setppc constraint */
          if( consdata1->setppctype != SCIP_SETPPCTYPE_PARTITIONING && consdata0->setppctype != consdata1->setppctype ) /*lint !e641*/
          {
@@ -2203,7 +2205,9 @@ SCIP_RETCODE removeRedundantCons(
    SCIPdebugMessage(" -> removing setppc constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* update flags of cons0 */
    SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
@@ -2519,7 +2523,9 @@ SCIP_RETCODE removeRedundantConstraints(
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* both constraints consists of the same variables */
          if( consdata0->setppctype == consdata1->setppctype )
@@ -2556,7 +2562,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* cons0 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( processContainedCons(scip, cons0, cons1, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
       else if( cons1iscontained )
@@ -2564,7 +2572,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* cons1 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons1), SCIPconsGetName(cons0));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( processContainedCons(scip, cons1, cons0, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
    }
@@ -2890,24 +2900,14 @@ SCIP_DECL_CONSFREE(consFreeSetppc)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSetppc NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitSetppc NULL
 
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreSetppc NULL
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreSetppc NULL
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolSetppc NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -3539,14 +3539,15 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
             /* constraint is violated */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
                int v;
                SCIP_Real sum = 0.0;
-               
+
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                for( v = 0; v < consdata->nvars; ++v )
                {
                   assert(SCIPvarIsBinary(consdata->vars[v]));
@@ -4162,7 +4163,6 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
    return SCIP_OKAY;
 }
 #else
-#define consActiveSetppc NULL
 #endif
 
 
@@ -4183,16 +4183,11 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveSetppc NULL
 #endif
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableSetppc NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableSetppc NULL
 
 
 /** variable deletion method of constraint handler */
@@ -4568,10 +4563,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, consLockSetppc,
          conshdlrdata) );
    assert(conshdlr != NULL);
@@ -4586,11 +4578,13 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSetppc) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSetppc) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSetppc) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSetppc) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSetppc, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSetppc, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSetppc) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
 
 

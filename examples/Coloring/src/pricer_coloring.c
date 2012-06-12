@@ -891,7 +891,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
    pricer = NULL;
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerRedcostColoring, pricerdata) );
+         pricerRedcostColoring, pricerFarkasColoring, pricerdata) );
    assert(pricer != NULL);
    
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyColoring) );
@@ -900,8 +900,6 @@ SCIP_RETCODE SCIPincludePricerColoring(
    SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitColoring) );
    SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolColoring) );
    SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolColoring) );
-   SCIP_CALL( SCIPsetPricerFarkas(scip, pricer, pricerFarkasColoring) );
-
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "pricers/coloring/maxvarsround",

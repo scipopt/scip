@@ -53,24 +53,14 @@ SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
 }
 
 
-/** destructor of node selector to free user data (called when SCIP is exiting) */
-#define nodeselFreeDfs NULL
 
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitDfs NULL
 
 
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitDfs NULL
 
 
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolDfs NULL
 
 
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolDfs NULL
 
 
 /** node selection method of node selector */
@@ -157,7 +147,7 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
 
    assert(nodesel != NULL);
 
-   SCIPnodeselSetCopy(nodesel, nodeselCopyDfs);
+   SCIP_CALL( SCIPsetNodeselCopy(scip, nodesel, nodeselCopyDfs) );
 
    return SCIP_OKAY;
 }

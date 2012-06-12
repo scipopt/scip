@@ -257,7 +257,7 @@ SCIP_RETCODE depthFirstSearch(
       constant = 0.0;
 
       /* transform variable bound variable to an active variable if possible */
-      SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &scalar, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &scalar, &constant) );
       
       /* we could not resolve the variable bound variable to one active variable, therefore, ignore this variable bound */
       if( !SCIPvarIsActive(vbvar) )
@@ -346,7 +346,7 @@ SCIP_RETCODE catchEvents(
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -395,7 +395,7 @@ SCIP_RETCODE catchEvents(
             constant = 1.0;
                         
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -1117,7 +1117,7 @@ SCIP_RETCODE propagateVbounds(
             constant = constants[n];
             
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
          
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -1267,7 +1267,7 @@ SCIP_RETCODE propagateVbounds(
             constant = constants[n];
 
             /* transform variable bound variable to an active variable if possible */
-            SCIP_CALL( SCIPvarGetProbvarSum(&vbvar, &coef, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &vbvar, &coef, &constant) );
             
             if( !SCIPvarIsActive(vbvar) )
                continue;
@@ -1421,20 +1421,12 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
 }
 
 
-/** initialization method of propagator (called after problem was transformed) */
-#define propInitVbounds NULL
 
 
-/** deinitialization method of propagator (called before transformed problem is freed) */
-#define propExitVbounds NULL
 
 
-/** presolving initialization method of propagator (called when presolving is about to begin) */
-#define propInitpreVbounds NULL
 
 
-/** presolving deinitialization method of propagator (called after presolving has been finished) */
-#define propExitpreVbounds NULL
 
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
@@ -1536,8 +1528,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
 }
 
 
-/** presolving method of propagator */
-#define propPresolVbounds NULL
 
 
 /** execution method of propagator */
@@ -1609,7 +1599,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,propExecVbounds, propRespropVbounds,
+         propExecVbounds, propRespropVbounds,
          propdata) );
 
    assert(prop != NULL);

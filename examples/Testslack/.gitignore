@@ -1,0 +1,13 @@
+check/check.awk
+check/evalcheck.sh
+check/getlastprob.awk
+check/instances
+check/locks/
+check/results/
+check/testset
+doc/doxygen
+doc/footer.html
+doc/html/
+doc/miniscippy.png
+doc/scip.css
+doc/scippy.png

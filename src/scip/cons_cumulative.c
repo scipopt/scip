@@ -1921,6 +1921,7 @@ SCIP_RETCODE checkCumulativeCondition(
 
             /* first state the violated constraints */
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 
             /* second state the reason */
             SCIPinfoMessage(scip, NULL,
@@ -2267,7 +2268,7 @@ SCIP_RETCODE resolvePropagationCoretimes(
             scalar = 1.0;
             constant = 0.0;
 
-            SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+            SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
             assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN);
             assert(!SCIPisZero(scip, scalar));
 
@@ -2461,7 +2462,7 @@ void subtractStartingJobDemands(
    )
 {
 
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
    oldidx = *idx;
 #endif
@@ -2500,7 +2501,7 @@ void addEndingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
-#ifdef SCIP_DEBUG
+#if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
    oldidx = *idx;
 #endif
@@ -2847,6 +2848,7 @@ SCIP_RETCODE solveIndependentCons(
 
    SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -4612,7 +4614,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
 
    /* construct row name */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coverbig_%d", time);
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -4689,7 +4691,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
    {
       /* construct row name */
       (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coversmall_%d", time);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -4946,7 +4948,7 @@ SCIP_RETCODE createCapacityRestriction(
    {
       SCIP_ROW* row;
 
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
       for( b = 0; b < nbinvars; ++b )
@@ -5392,12 +5394,12 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "lower(%d)", curtime);
 
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, (SCIP_Real) lhs, SCIPinfinity(scip),  TRUE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, (SCIP_Real) lhs, SCIPinfinity(scip),  TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
    else
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "upper(%d)", curtime);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real) lhs, TRUE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) lhs, TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -5761,6 +5763,7 @@ SCIP_RETCODE adjustOversizedJobBounds(
             TRUE, FALSE, TRUE, TRUE /*check*/, TRUE/*prop*/, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       (*naddconss)++;
@@ -7079,11 +7082,7 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    return SCIP_OKAY;
 }
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitCumulative NULL
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitCumulative NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -7131,12 +7130,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreCumulative NULL
 #endif
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolCumulative NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -7585,10 +7581,12 @@ SCIP_DECL_CONSPROP(consPropCumulative)
       }
    }
 
-   // if( !cutoff && conshdlrdata->dualpresolve )
-   // {
-   //    SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, NULL) );
-   // }
+#if 0
+   if( !cutoff && conshdlrdata->dualpresolve )
+   {
+      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, NULL) );
+   }
+#endif
 
    if( cutoff )
    {
@@ -7752,17 +7750,9 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-#define consActiveCumulative NULL
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveCumulative NULL
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableCumulative NULL
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableCumulative NULL
 
 /** constraint display method of constraint handler */
 static
@@ -7842,8 +7832,6 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
    return SCIP_OKAY;
 }
 
-/** variable deletion method of constraint handler */
-#define consDelvarsCumulative NULL
 
 
 /** constraint parsing method of constraint handler */
@@ -8034,10 +8022,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpCumulative, consEnfopsCumulative, consCheckCumulative, consLockCumulative,
          conshdlrdata) );
 
@@ -8053,11 +8038,14 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreCumulative) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCumulative) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCumulative) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCumulative, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCumulative) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCumulative, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropCumulative) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCumulative, consSepasolCumulative, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCumulative, consSepasolCumulative, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCumulative) );
 
    /* add cumulative constraint handler parameters */

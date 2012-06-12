@@ -95,20 +95,12 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
    return SCIP_OKAY;
 }
 
-/** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitBfs NULL
 
 
-/** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitBfs NULL
 
 
-/** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolBfs NULL
 
 
-/** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolBfs NULL
 
 
 /** node selection method of node selector */

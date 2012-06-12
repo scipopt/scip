@@ -85,7 +85,7 @@ struct SCIP_EventHole
 /** data for implication added events */
 struct SCIP_EventImplAdd
 {
-   SCIP_VAR*             var;                /**< variable for which the lock numbers were changed */
+   SCIP_VAR*             var;                /**< variable for which an implication, variable bound, or clique was added */
 };
 
 /** data for row addition to separation storage events */

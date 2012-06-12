@@ -368,13 +368,26 @@ SCIP_RETCODE SCIPcheckCurvatureNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** gets the curvature of the nonlinear function of a nonlinear constraint */
+/** gets the curvature of the nonlinear function of a nonlinear constraint
+ *
+ * The curvature is computed by summing up the curvature for each nonlinear summand.
+ * To get the curvature for single summands, use SCIPgetExprtreeCurvaturesNonlinear().
+ */
 extern
 SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
    SCIP_EXPRCURV*        curvature           /**< buffer to store curvature of constraint */
+   );
+
+/** gets the curvature of the expression trees (multiplied by their coefficient) of a nonlinear constraint */
+extern
+SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             checkcurv,          /**< whether to check constraint curvature, if not checked before */
+   SCIP_EXPRCURV**       curvatures          /**< buffer to store curvatures of exprtrees */
    );
 
 /** computes the violation of a nonlinear constraint by a solution */

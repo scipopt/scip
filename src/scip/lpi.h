@@ -292,6 +292,12 @@ SCIP_RETCODE SCIPlpiGetNCols(
    int*                  ncols               /**< pointer to store the number of cols */
    );
 
+/** gets the objective sense of the LP */
+SCIP_RETCODE SCIPlpiGetObjsen(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
+   );
+
 /** gets the number of nonzero elements in the LP constraint matrix */
 extern
 SCIP_RETCODE SCIPlpiGetNNonz(

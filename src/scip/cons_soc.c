@@ -656,6 +656,7 @@ SCIP_RETCODE createNlRow(
 
    SCIPdebugMessage("created nonlinear row representation of SOC constraint\n");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebug( SCIP_CALL( SCIPprintNlRow(scip, consdata->nlrow, NULL) ) );
 
    return SCIP_OKAY;
@@ -877,13 +878,13 @@ SCIP_RETCODE generateCutSol(
 
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
 
    SCIPfreeBufferArray(scip, &rowcoeff);
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** generate supporting hyperplane in a given point */
@@ -947,13 +948,13 @@ SCIP_RETCODE generateCutPoint(
 
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
 
    SCIPfreeBufferArray(scip, &rowcoeff);
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** generate supporting hyperplane w.r.t. solution projected on feasible set 
@@ -1049,13 +1050,13 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
 
    SCIPfreeBufferArray(scip, &rowcoeff);
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** generates sparsified supporting hyperplane */
@@ -1425,6 +1426,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
    SCIPdebugMessage("remove fixed variables from constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    havechange     = FALSE;
    haveremovedvar = FALSE;
@@ -1448,7 +1450,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = consdata->offsets[i];
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  lhs term at position %d is replaced by %g * <%s> + %g\n",
          i, coef, SCIPvarGetName(x), offset);
@@ -1493,7 +1495,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
       coef = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&x, &coef, &offset) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &x, &coef, &offset) );
 
       SCIPdebugMessage("  rhs variable is replaced by %g * <%s> + %g\n", coef, SCIPvarGetName(x), offset);
 
@@ -1573,6 +1575,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
    SCIPdebugMessage("\t-> ");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    if( consdata->nvars == 0 )
    { /* all variables on left hand size have been removed, remaining constraint is sqrt(gamma) <= ... */
@@ -1680,6 +1683,7 @@ SCIP_RETCODE presolveRemoveFixedVariables(
          SCIP_CALL( SCIPaddCons(scip, quadcons) );
          SCIPdebugMessage("upgraded <%s> to quadratic constraint: ", SCIPconsGetName(cons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          SCIP_CALL( SCIPreleaseCons(scip, &quadcons) );
 
@@ -1905,6 +1909,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
          SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    ++*naddconss;
 
@@ -1924,6 +1929,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
             SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
       ++*naddconss;
 
@@ -1941,6 +1947,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
             SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
       ++*naddconss;
    }
@@ -1977,6 +1984,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
             SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
       ++*naddconss;
 
@@ -1996,6 +2004,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
             SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
       ++*naddconss;
 
@@ -2015,6 +2024,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
             SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
       ++*naddconss;
    }
@@ -2037,6 +2047,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
          SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    ++*naddconss;
 
@@ -2773,6 +2784,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* currently do not support linear parts in upgrading of SOC constraints */
    if( SCIPgetNLinearVarsQuadratic(scip, cons) )
@@ -2870,6 +2882,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       /* create constraint that is equal to cons except that rhs is now infinity */
       if( !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
@@ -2958,6 +2971,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          /* create constraint that is equal to cons except that lhs is now -infinity */
          if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
@@ -3073,7 +3087,6 @@ SCIP_DECL_CONSINITPRE(consInitpreSOC)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreSOC NULL
 #endif
 
 
@@ -3329,7 +3342,6 @@ SCIP_DECL_CONSINITLP(consInitlpSOC)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpSOC NULL
 #endif
 
 
@@ -3652,6 +3664,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
             unscaledviol -= consdata->rhscoeff * (SCIPgetSolVal(scip, sol, consdata->rhsvar) + consdata->rhsoffset);
 
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );  /*lint !e613*/            
+         SCIPinfoMessage(scip, NULL, ";\n");
          SCIPinfoMessage(scip, NULL, "\tviolation: %g (scaled: %g)\n", unscaledviol, consdata->violation);
       }
 
@@ -3823,7 +3836,6 @@ SCIP_DECL_CONSRESPROP(consRespropSOC)
    return SCIP_OKAY;
 }
 #else
-#define consRespropSOC NULL
 #endif
 
 
@@ -3870,7 +3882,6 @@ SCIP_DECL_CONSACTIVE(consActiveSOC)
    return SCIP_OKAY;
 }
 #else
-#define consActiveSOC NULL
 #endif
 
 
@@ -3885,7 +3896,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSOC)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveSOC NULL
 #endif
 
 
@@ -3900,7 +3910,6 @@ SCIP_DECL_CONSENABLE(consEnableSOC)
    return SCIP_OKAY;
 }
 #else
-#define consEnableSOC NULL
 #endif
 
 
@@ -3915,12 +3924,9 @@ SCIP_DECL_CONSDISABLE(consDisableSOC)
    return SCIP_OKAY;
 }
 #else
-#define consDisableSOC NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsSOC NULL
 
 
 /** constraint display method of constraint handler */
@@ -4308,10 +4314,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpSOC, consEnfopsSOC, consCheckSOC, consLockSOC,
          conshdlrdata) );
    assert(conshdlr != NULL);
@@ -4328,10 +4331,11 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSOC) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOC) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOC) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOC) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSOC) );   /* include constraint handler */
 
    if( SCIPfindConshdlr(scip,"quadratic") != NULL )

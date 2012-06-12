@@ -1887,6 +1887,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nrespropcalls = 0;
    (*conshdlr)->ncutoffs = 0;
    (*conshdlr)->ncutsfound = 0;
+   (*conshdlr)->ncutsapplied = 0;
    (*conshdlr)->nconssfound = 0;
    (*conshdlr)->ndomredsfound = 0;
    (*conshdlr)->nchildren = 0;
@@ -2039,7 +2040,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIPclockReset(conshdlr->proptime);
       SCIPclockReset(conshdlr->checktime);
       SCIPclockReset(conshdlr->resproptime);
-      
+
       conshdlr->nsepacalls = 0;
       conshdlr->nenfolpcalls = 0;
       conshdlr->nenfopscalls = 0;
@@ -2048,6 +2049,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nrespropcalls = 0;
       conshdlr->ncutoffs = 0;
       conshdlr->ncutsfound = 0;
+      conshdlr->ncutsapplied = 0;
       conshdlr->nconssfound = 0;
       conshdlr->ndomredsfound = 0;
       conshdlr->nchildren = 0;
@@ -2576,7 +2578,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
-            
+
             /* update domain reductions; therefore remove the domain
              * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
@@ -3517,7 +3519,9 @@ void SCIPconshdlrSetSepa(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
-   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    )
 {
    assert(conshdlr != NULL);
@@ -3527,13 +3531,17 @@ void SCIPconshdlrSetSepa(
    conshdlr->conssepalp = conssepalp;
    conshdlr->conssepasol = conssepasol;
    conshdlr->sepafreq = sepafreq;
+   conshdlr->sepapriority = sepapriority;
+   conshdlr->delaysepa = delaysepa;
 }
 
 /* sets both the propagation callback and the propagation frequency of the constraint handler */
 void SCIPconshdlrSetProp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
-   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    )
 {
    assert(conshdlr != NULL);
@@ -3542,6 +3550,8 @@ void SCIPconshdlrSetProp(
 
    conshdlr->consprop = consprop;
    conshdlr->propfreq = propfreq;
+   conshdlr->delayprop = delayprop;
+   conshdlr->timingmask = timingmask;
 }
 
 /** sets copy method of both the constraint handler and each associated constraint */
@@ -3639,12 +3649,16 @@ void SCIPconshdlrSetExitpre(
 /** sets presolving method of constraint handler */
 void SCIPconshdlrSetPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
    )
 {
    assert(conshdlr != NULL);
 
    conshdlr->conspresol = conspresol;
+   conshdlr->maxprerounds = maxprerounds;
+   conshdlr->delaypresol = delaypresol;
 }
 
 /** sets method of constraint handler to free specific constraint data */
@@ -4037,6 +4051,27 @@ SCIP_Longint SCIPconshdlrGetNCutsFound(
    assert(conshdlr != NULL);
 
    return conshdlr->ncutsfound;
+}
+
+/** gets total number of cuts found by this constraint handler applied to lp */
+SCIP_Longint SCIPconshdlrGetNCutsApplied(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ncutsapplied;
+}
+
+/** increase count of applied cuts */
+extern
+void SCIPconshdlrIncNAppliedCuts(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   ++conshdlr->ncutsapplied;
 }
 
 /** gets total number of additional constraints added by this constraint handler */
@@ -5344,17 +5379,16 @@ SCIP_RETCODE SCIPconsPrint(
 
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
-   
+
    SCIPmessageFPrintInfo(messagehdlr, file, "  [%s] <%s>: ", conshdlr->name, cons->name);
-   
+
    if( conshdlr->consprint != NULL )
    {
       SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
-      SCIPmessageFPrintInfo(messagehdlr, file, ";\n");
    }
-   else 
+   else
       SCIPmessageFPrintInfo(messagehdlr, file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
-   
+
    return SCIP_OKAY;
 }
 

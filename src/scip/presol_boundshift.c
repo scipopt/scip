@@ -109,19 +109,11 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
    return SCIP_OKAY;
 }
 
-/** initialization method of presolver (called after problem was transformed) */
-#define presolInitBoundshift NULL
 
 
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#define presolExitBoundshift NULL
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#define presolInitpreBoundshift NULL
 
 
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#define presolExitpreBoundshift NULL
+
 
 
 /** presolving execution method */

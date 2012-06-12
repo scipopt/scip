@@ -192,8 +192,6 @@ SCIP_DECL_READERCOPY(readerCopyBnd)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeBnd NULL
 
 
 /** problem reading method of reader
@@ -231,8 +229,6 @@ SCIP_DECL_READERREAD(readerReadBnd)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteBnd NULL
 
 
 /*
@@ -255,9 +251,7 @@ SCIP_RETCODE SCIPincludeReaderBnd(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyBnd) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeBnd) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadBnd) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteBnd) );
 
    return SCIP_OKAY;
 }

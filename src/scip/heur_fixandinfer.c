@@ -185,20 +185,12 @@ SCIP_DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 }
 
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#define heurInitFixandinfer NULL
 
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitFixandinfer NULL
 
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolFixandinfer NULL
 
 
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolFixandinfer NULL
 
 
 /** execution method of primal heuristic */

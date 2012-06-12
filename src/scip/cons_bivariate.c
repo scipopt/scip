@@ -498,7 +498,7 @@ SCIP_RETCODE removeFixedVariables(
 
       /* replace by new variable, or NULL */
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&consdata->z, &consdata->zcoef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &consdata->z, &consdata->zcoef, &constant) );
       if( consdata->zcoef == 0.0 )
          consdata->z = NULL;
       if( constant != 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -550,7 +550,7 @@ SCIP_RETCODE removeFixedVariables(
 
          coef = 1.0;
          constant = 0.0;
-         SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
 
          if( coef == 0.0 )
          {
@@ -626,7 +626,7 @@ SCIP_RETCODE removeFixedVariables(
 
       coef = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &coef, &constant) );
+      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &constant) );
       assert(coef != 0.0); /* fixed vars should have been handled above */
 
       if( coef == 1.0 && constant == 0.0 )
@@ -1349,7 +1349,7 @@ SCIP_RETCODE generateLinearizationCut(
    /* setup SCIP row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), fgrad) );
 
@@ -1672,7 +1672,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      SCIP_CALL( SCIPcreateRow(scip, row, "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
       if( consdata->z != NULL )
@@ -3087,6 +3087,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
    SCIPdebugMessage("generate %sestimator for convex-concave constraint <%s>\n",
       (violside == SCIP_SIDETYPE_LEFT ? "over" : "under"), SCIPconsGetName(cons));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    if( violside == SCIP_SIDETYPE_LEFT )
    {
@@ -3103,7 +3104,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3135,7 +3136,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = -cutcoeff[1] / cutcoeff[2];
             coefs[1] = -cutcoeff[0] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveoverest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip), TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3160,7 +3162,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
          if( success )
          {
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRow(scip, row, cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3189,7 +3191,8 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = cutcoeff[0] / cutcoeff[2];
             coefs[1] = cutcoeff[1] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveunderest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRow(scip, row, cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2], TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
+                  TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
             {
@@ -3933,7 +3936,8 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    rhs = consdata->rhs + cutcoeff[3]/cutcoeff[2];
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "1ConvexUnderest", -SCIPinfinity(scip), rhs, TRUE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), "1ConvexUnderest", -SCIPinfinity(scip), rhs,
+         TRUE, FALSE /* modifiable */, TRUE /* removable */) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
    if( consdata->z != NULL )
@@ -3995,6 +3999,7 @@ SCIP_RETCODE generateCut(
       SCIPdebugPrintf(", %s = %g with bounds [%g, %g]", SCIPvarGetName(consdata->z), SCIPgetSolVal(scip, sol, consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
    SCIPdebugPrintf("\n");
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebugPrintf("\n");
 
    switch( consdata->convextype )
@@ -4609,6 +4614,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -5278,6 +5284,7 @@ SCIP_RETCODE createConsFromQuadTerm(
          SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
          SCIPconsIsStickingAtNode(srccons)) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -5468,6 +5475,7 @@ SCIP_RETCODE createConsFromMonomial(
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -5495,7 +5503,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBivariate)
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopyBivariate NULL
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
@@ -5527,7 +5534,6 @@ SCIP_DECL_CONSFREE(consFreeBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consFreeBivariate NULL
 #endif
 
 
@@ -5550,7 +5556,6 @@ SCIP_DECL_CONSINIT(consInitBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitBivariate NULL
 #endif
 
 
@@ -5573,7 +5578,6 @@ SCIP_DECL_CONSEXIT(consExitBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitBivariate NULL
 #endif
 
 
@@ -5601,7 +5605,6 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitpreBivariate NULL
 #endif
 
 
@@ -5659,7 +5662,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreBivariate NULL
 #endif
 
 
@@ -5794,7 +5796,6 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitsolBivariate NULL
 #endif
 
 
@@ -5834,7 +5835,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consExitsolBivariate NULL
 #endif
 
 
@@ -5870,7 +5870,6 @@ SCIP_DECL_CONSDELETE(consDeleteBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDeleteBivariate NULL
 #endif
 
 
@@ -5909,7 +5908,6 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consTransBivariate NULL
 #endif
 
 
@@ -6134,7 +6132,6 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consInitlpBivariate NULL
 #endif
 
 
@@ -6167,7 +6164,6 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consSepalpBivariate NULL
 #endif
 
 
@@ -6199,7 +6195,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consSepasolBivariate NULL
 #endif
 
 
@@ -6476,6 +6471,8 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
@@ -6550,7 +6547,6 @@ SCIP_DECL_CONSPROP(consPropBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPropBivariate NULL
 #endif
 
 
@@ -6597,6 +6593,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
       havechange = FALSE;
 
@@ -6611,6 +6608,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       {
          SCIPdebugMessage("removed fixed variables -> ");
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
       }
    }
 
@@ -6636,7 +6634,6 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPresolBivariate NULL
 #endif
 
 
@@ -6651,7 +6648,6 @@ SCIP_DECL_CONSRESPROP(consRespropBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consRespropBivariate NULL
 #endif
 
 
@@ -6742,7 +6738,6 @@ SCIP_DECL_CONSACTIVE(consActiveBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consActiveBivariate NULL
 #endif
 
 
@@ -6774,7 +6769,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveBivariate NULL
 #endif
 
 
@@ -6811,7 +6805,6 @@ SCIP_DECL_CONSENABLE(consEnableBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consEnableBivariate NULL
 #endif
 
 
@@ -6846,12 +6839,9 @@ SCIP_DECL_CONSDISABLE(consDisableBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consDisableBivariate NULL
 #endif
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsBivariate NULL
 
 /** constraint display method of constraint handler */
 #if 1
@@ -6917,7 +6907,6 @@ SCIP_DECL_CONSPRINT(consPrintBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consPrintBivariate NULL
 #endif
 
 /** constraint copying method of constraint handler */
@@ -6987,7 +6976,6 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consCopyBivariate NULL
 #endif
 
 
@@ -7002,7 +6990,6 @@ SCIP_DECL_CONSPARSE(consParseBivariate)
    return SCIP_OKAY;
 }
 #else
-#define consParseBivariate NULL
 #endif
 
 
@@ -7336,6 +7323,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          ++*nupgdconss;
 
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadcons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
          if( keeporig )
          {
@@ -7440,6 +7428,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
          SCIPexprGetMonomialCoef(monomial), expx, expy, -1.0, -SCIPexprgraphGetNodePolynomialConstant(node), -SCIPexprgraphGetNodePolynomialConstant(node)) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 
@@ -7475,10 +7464,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpBivariate, consEnfopsBivariate, consCheckBivariate, consLockBivariate,
          conshdlrdata) );
 
@@ -7501,10 +7487,12 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBivariate) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBivariate) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBivariate) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBivariate) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBivariate) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */

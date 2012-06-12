@@ -168,17 +168,6 @@ SCIP_RETCODE SCIPvarGetProbvarHole(
    SCIP_Real*            right               /**< pointer to right bound of open interval in hole to transform */
    );
 
-/** transforms given variable, scalar and constant to the corresponding active, fixed, or
- *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
- *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
- */
-extern
-SCIP_RETCODE SCIPvarGetProbvarSum(
-   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
-   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
-   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
-   );
-
 /** retransforms given variable, scalar and constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
@@ -790,8 +779,10 @@ SCIP_Real* SCIPvarGetImplBounds(
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
-/** gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,  
- *  there are no implications for nonbinary variable x
+/** Gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,
+ *  there are no implications for nonbinary variable x.
+ *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
+ *  its id is negative, otherwise it is nonnegative.
  */
 extern
 int* SCIPvarGetImplIds(
@@ -837,7 +828,7 @@ extern
 int SCIPvarGetNBdchgInfosLb(
    SCIP_VAR*             var                 /**< problem variable */
    );
- 
+
 /** return upper bound change info at requested position */
 extern
 SCIP_BDCHGINFO* SCIPvarGetBdchgInfoUb(
@@ -973,20 +964,47 @@ SCIP_Real SCIPvarGetSol(
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
-/** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, zero is returned
+/** returns the solution of the variable in the last root node's relaxation, if the root relaxation is not yet
+ *  completely solved, zero is returned
  */
 extern
 SCIP_Real SCIPvarGetRootSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
- *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
+/** returns the best solution (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation, if
+ *  the root relaxation is not yet completely solved, zero is returned
  */
 extern
-SCIP_Real SCIPvarGetRootRedcost(
+SCIP_Real SCIPvarGetBestRootSol(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the best reduced costs (w.r.t. root reduced cost propagation) of the variable in the root node's relaxation,
+ *  if the root relaxation is not yet completely solved, or the variable was no column of the root LP, SCIP_INVALID is
+ *  returned
+ */
+extern
+SCIP_Real SCIPvarGetBestRootRedcost(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the best objective value (w.r.t. root reduced cost propagation) of the root LP which belongs the root
+ *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
+ *  SCIP_INVALID is returned
+ */
+extern
+SCIP_Real SCIPvarGetBestRootLPobjval(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** set the given solution as the best root solution w.r.t. root reduced cost propagation in the variables */
+extern
+void SCIPvarSetBestRootSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             rootsol,            /**< root solution value */
+   SCIP_Real             rootredcost,        /**< root reduced cost */
+   SCIP_Real             rootlpobjval        /**< objective value of the root LP */
    );
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */

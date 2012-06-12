@@ -14,6 +14,7 @@
 =opt= rgn                      82.1999974
 =opt= stein27                          18
 =inf= stein27_inf
+=opt= stein27_super                     1
 =opt= vpm2                          13.75
 =opt= mcf64-4-1                        10
 =opt= mcf128-4-1                       14

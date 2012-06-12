@@ -698,7 +698,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerRedcostBinpacking, pricerdata) );
+         pricerRedcostBinpacking, NULL, pricerdata) );
 
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeBinpacking) );
    SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitBinpacking) );

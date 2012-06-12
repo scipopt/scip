@@ -54,11 +54,6 @@ SCIP_DECL_HEURCOPY(heurCopyTrivial)
    return SCIP_OKAY;
 }
 
-#define heurFreeTrivial NULL
-#define heurInitTrivial NULL
-#define heurExitTrivial NULL
-#define heurInitsolTrivial NULL
-#define heurExitsolTrivial NULL
 
 
 /** execution method of primal heuristic */

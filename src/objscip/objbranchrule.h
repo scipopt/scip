@@ -52,10 +52,10 @@ public:
 
    /** name of the branching rule */
    char* scip_name_;
-   
+
    /** description of the branching rule */
    char* scip_desc_;
-   
+
    /** default priority of the branching rule */
    const int scip_priority_;
 
@@ -100,90 +100,67 @@ public:
       SCIPfreeMemoryArray(scip_, &scip_desc_);
    }
 
-   /** destructor of branching rule to free user data (called when SCIP is exiting) */
-   virtual SCIP_RETCODE scip_free(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
-      )
+   /** destructor of branching rule to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_BRANCHFREE(x) in @ref type_branch.h
+    */
+   virtual SCIP_DECL_BRANCHFREE(scip_free)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** initialization method of branching rule (called after problem was transformed) */
-   virtual SCIP_RETCODE scip_init(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
-      )
+
+   /** initialization method of branching rule (called after problem was transformed)
+    *
+    *  @see SCIP_DECL_BRANCHINIT(x) in @ref type_branch.h
+    */
+   virtual SCIP_DECL_BRANCHINIT(scip_init)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** deinitialization method of branching rule (called before transformed problem is freed) */
-   virtual SCIP_RETCODE scip_exit(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
-      )
+
+   /** deinitialization method of branching rule (called before transformed problem is freed)
+    *
+    *  @see SCIP_DECL_BRANCHEXIT(x) in @ref type_branch.h
+    */
+   virtual SCIP_DECL_BRANCHEXIT(scip_exit)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-   virtual SCIP_RETCODE scip_initsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
-      )
+
+   /** solving process initialization method of branching rule (called when branch and bound process is about to begin)
+    *
+    *  @see SCIP_DECL_BRANCHINITSOL(x) in @ref type_branch.h
+    */
+   virtual SCIP_DECL_BRANCHINITSOL(scip_initsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
-   /** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-   virtual SCIP_RETCODE scip_exitsol(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
-      )
+
+   /** solving process deinitialization method of branching rule (called before branch and bound process data is freed)
+    *
+    *  @see SCIP_DECL_BRANCHEXITSOL(x) in @ref type_branch.h
+    */
+   virtual SCIP_DECL_BRANCHEXITSOL(scip_exitsol)
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** branching execution method for fractional LP solutions
     *
-    *  possible return values for *result (if more than one applies, the first in the list should be used):
-    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
-    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
-    *                      returned, if allowaddcons is FALSE
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
-    *  - SCIP_SEPARATED  : a cutting plane was generated
-    *  - SCIP_BRANCHED   : branching was applied
-    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    *  @see SCIP_DECL_BRANCHEXECLP(x) in @ref type_branch.h
     */
-   virtual SCIP_RETCODE scip_execlp(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
-      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
-      )
+   virtual SCIP_DECL_BRANCHEXECLP(scip_execlp)
    {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-   
+
    /** branching execution method for external candidates
     *
-    *  possible return values for *result (if more than one applies, the first in the list should be used):
-    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
-    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
-    *                      returned, if allowaddcons is FALSE
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
-    *  - SCIP_BRANCHED   : branching was applied
-    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    *  @see SCIP_DECL_BRANCHEXECEXT(x) in @ref type_branch.h
     */
-   virtual SCIP_RETCODE scip_execext(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
-      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
-      )
+   virtual SCIP_DECL_BRANCHEXECEXT(scip_execext)
    {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
@@ -192,20 +169,9 @@ public:
 
    /** branching execution method for not completely fixed pseudo solutions
     *
-    *  possible return values for *result (if more than one applies, the first in the list should be used):
-    *  - SCIP_CUTOFF     : the current node was detected to be infeasible
-    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
-    *                      returned, if allowaddcons is FALSE
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
-    *  - SCIP_BRANCHED   : branching was applied
-    *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+    *  @see SCIP_DECL_BRANCHEXECPS(x) in @ref type_branch.h
     */
-   virtual SCIP_RETCODE scip_execps(
-      SCIP*              scip,               /**< SCIP data structure */
-      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
-      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
-      )
+   virtual SCIP_DECL_BRANCHEXECPS(scip_execps)
    {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
@@ -215,7 +181,7 @@ public:
 
 } /* namespace scip */
 
-   
+
 /** creates the branching rule for the given branching rule object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

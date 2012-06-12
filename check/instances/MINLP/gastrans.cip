@@ -1,5 +1,5 @@
 STATISTICS
-  Problem name     : t_check/instances/MINLP/gastrans.osil
+  Problem name     : gastrans.osil
   Variables        : 86 (12 binary, 0 integer, 0 implicit integer, 74 continuous)
   Constraints      : 144 initial, 144 maximal
 OBJECTIVE

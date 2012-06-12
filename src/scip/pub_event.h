@@ -59,55 +59,6 @@ void SCIPeventhdlrSetData(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
    );
 
-/** sets copy callback for all events of this event handler */
-extern
-void SCIPeventhdlrSetCopy(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback for events */
-   );
-
-/** sets destructor callback of this event handler */
-extern
-void SCIPeventhdlrSetFree(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTFREE   ((*eventfree))      /**< destructor callback of event handler */
-   );
-
-/** sets initialization callback of this event handler */
-extern
-void SCIPeventhdlrSetInit(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialization callback of event handler */
-   );
-
-/** sets deinitialization callback of this event handler */
-extern
-void SCIPeventhdlrSetExit(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialization callback of event handler */
-   );
-
-/** sets solving process initialization callback of this event handler */
-extern
-void SCIPeventhdlrSetInitsol(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
-   );
-
-/** sets solving process deinitialization callback of this event handler */
-extern
-void SCIPeventhdlrSetExitsol(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
-   );
-
-/** sets callback to free specific event data */
-extern
-void SCIPeventhdlrSetDelete(
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< callback to free specific event data */
-   );
-
 /** is event handler initialized? */
 extern
 SCIP_Bool SCIPeventhdlrIsInitialized(

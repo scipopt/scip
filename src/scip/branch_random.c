@@ -160,16 +160,10 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 }
 
 
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-#define branchExitRandom NULL
 
 
-/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-#define branchInitsolRandom NULL
 
 
-/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-#define branchExitsolRandom NULL
 
 
 /** branching execution method for fractional LP solutions */

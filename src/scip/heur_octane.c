@@ -620,8 +620,6 @@ SCIP_DECL_HEUREXIT(heurExitOctane)
    return SCIP_OKAY;
 }
 
-#define heurInitsolOctane NULL
-#define heurExitsolOctane NULL
 
 /** execution method of primal heuristic */
 static

@@ -1,5 +1,5 @@
 STATISTICS
-  Problem name     : check/instances/MIP/stein27.fzn
+  Problem name     : linking.cip
   Variables        : 5 (3 binary, 2 integer, 0 implicit integer, 0 continuous)
   Constraints      : 0 initial, 2 maximal
 OBJECTIVE

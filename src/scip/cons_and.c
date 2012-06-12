@@ -942,16 +942,15 @@ SCIP_RETCODE createRelaxation(
    /* get memory for rows */
    consdata->nrows = consdataGetNRows(consdata);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->nrows) );
-   
+
    /* creates LP rows corresponding to and constraint:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
-   
+
    /* create additional row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], rowname, 
-         -consdata->nvars + 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->resvar, 1.0) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
@@ -960,14 +959,14 @@ SCIP_RETCODE createRelaxation(
    for( i = 0; i < nvars; ++i )
    {
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i+1], rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->resvar, 1.0) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->vars[i], -1.0) );
    }
-   
+
    return SCIP_OKAY;
-}  
+}
 
 /** adds linear relaxation of and constraint to the LP */
 static 
@@ -989,19 +988,19 @@ SCIP_RETCODE addRelaxation(
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - for each operator variable vi:  resvar - vi            <= 0
     */
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   
+
    if( consdata->rows == NULL )
    {
       /* create the n+1 row relaxation */
       SCIP_CALL( createRelaxation(scip, cons) );
    }
-   
+
    /* create/add/releas the row aggregated row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &aggrrow, rowname, -SCIPinfinity(scip), 0.0,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &aggrrow, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, aggrrow, consdata->nvars, consdata->vars, -1.0) );
@@ -1013,7 +1012,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1084,6 +1083,7 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
 
             SCIPinfoMessage(scip, NULL, "violation:");
             if( i == consdata->nvars )
@@ -2360,6 +2360,7 @@ SCIP_RETCODE cliquePresolve(
 		  SCIPconsIsStickingAtNode(cons)) );
 	    SCIPdebugMessage(" -> adding clique constraint: ");
 	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	    ++(*naddconss);
@@ -2511,6 +2512,7 @@ SCIP_RETCODE cliquePresolve(
                         SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
                   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                   SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
@@ -2772,6 +2774,7 @@ SCIP_RETCODE cliquePresolve(
 	       SCIPconsIsStickingAtNode(cons)) );
 	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	 ++(*naddconss);
@@ -3306,6 +3309,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 
@@ -3374,12 +3378,8 @@ SCIP_DECL_CONSFREE(consFreeAnd)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitAnd NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitAnd NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -3508,10 +3508,11 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 }
 
 
+#ifdef GMLGATEPRINTING
+
 #define HASHTABLESIZE_FACTOR 5
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#ifdef GMLGATEPRINTING
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 {  /*lint --e{715}*/
@@ -3658,11 +3659,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    return SCIP_OKAY;
 }
 #else
-#define consExitpreAnd NULL
 #endif
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolAnd NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -4160,24 +4158,14 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 }
 
 
-/** constraint activation notification method of constraint handler */
-#define consActiveAnd NULL
 
 
-/** constraint deactivation notification method of constraint handler */
-#define consDeactiveAnd NULL
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableAnd NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableAnd NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsAnd NULL
 
 
 /** constraint display method of constraint handler */
@@ -4414,10 +4402,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    /* create constraint handler data */
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpAnd, consEnfopsAnd, consCheckAnd, consLockAnd,
          conshdlrdata) );
 
@@ -4433,11 +4418,13 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAnd) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAnd) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAnd) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAnd) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAnd, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAnd, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropAnd) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
 
    /* add and constraint handler parameters */

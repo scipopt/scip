@@ -57,11 +57,11 @@ void mexFunction(
       return;
    }
 
-   /* output SCIP information */
-   SCIPprintVersion(NULL);
-
    /* initialize SCIP */
    SCIP_CALL_ABORT( SCIPcreate(&scip) );
+
+   /* output SCIP information */
+   SCIPprintVersion(scip, NULL);
 
    /* include default SCIP plugins */
    SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(scip) );

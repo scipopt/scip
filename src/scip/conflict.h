@@ -128,8 +128,47 @@ void SCIPconflicthdlrSetPriority(
    int                   priority            /**< new priority of the conflict handler */
    );
 
+/** set copy method of conflict handler */
+extern
+void SCIPconflicthdlrSetCopy(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy))   /**< copy method of the conflict handler */
+   );
 
+/** set destructor of conflict handler */
+extern
+void SCIPconflicthdlrSetFree(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree))   /**< destructor of conflict handler */
+   );
 
+/** set initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit))   /**< initialization method conflict handler */
+   );
+
+/** set deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit))   /**< deinitialization method conflict handler */
+   );
+
+/** set solving process initialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol))/**< solving process initialization method of conflict handler */
+   );
+
+/** set solving process deinitialization method of conflict handler */
+extern
+void SCIPconflicthdlrSetExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   );
 
 /*
  * Conflict Analysis
@@ -197,6 +236,7 @@ extern
 SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for which the score should be increased */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_Bool*            used                /**< pointer to store if the variable is already used */

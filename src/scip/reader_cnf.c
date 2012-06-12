@@ -371,8 +371,6 @@ SCIP_DECL_READERCOPY(readerCopyCnf)
 }
 
 
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeCnf NULL
 
 
 /** problem reading method of reader */
@@ -411,8 +409,6 @@ SCIP_DECL_READERREAD(readerReadCnf)
 }
 
 
-/** problem writing method of reader */
-#define readerWriteCnf NULL
 
 
 /*

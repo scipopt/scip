@@ -292,6 +292,14 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** changes the default value of an existing SCIP_Bool parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
 /** changes the value of an existing Int parameter */
 extern
 SCIP_RETCODE SCIPsetChgIntParam(
@@ -308,6 +316,14 @@ SCIP_RETCODE SCIPsetSetIntParam(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing Int parameter */
+extern
+SCIP_RETCODE SCIPsetSetDefaultIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -541,6 +557,14 @@ extern
 SCIP_RETCODE SCIPsetIncludeConshdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** reinserts a constraint handler with modified sepa priority into the sepa priority sorted array */
+extern
+void SCIPsetReinsertConshdlrSepaPrio(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler to be reinserted */
+   int                   oldpriority         /**< the old separation priority of constraint handler */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */

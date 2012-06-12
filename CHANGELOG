@@ -113,6 +113,28 @@ interface
 - new method SCIPsolIsOriginal() that returns whether a solution is defined on the original variables
 - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher
 - new method SCIPsetBasePointClosecuts() to set the base point for close cut separation
+- method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead;
+  also method SCIPexprtreeRemoveFixedVars() is not public anymore
+- all objscip *.h file now use the default SCIP interface macros (this should avoid errors when changing the interface)
+- added "basic" inclusion methods which have only fundamental data of the plug-ins as arguments; added setter functions
+  for all non-fundamental callbacks of the plug-ins; the plug-in types with basic inclusion functions are:
+  readers, constraint handlers, conflict handlers, presolvers, propagators, heuristics, separators, relaxation handlers,
+  branching rules, node selectors, and pricers
+- added basic creation methods for all constraint handlers
+- added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions for
+  non-fundamental callbacks of variables and problems.
+- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), SCIPcreateRowSepa() that allow
+  to set the originating constraint handler or separator of a row respectively; this is, for instance, needed for
+  statistics on the number of applied cuts.
+- new functions SCIProwGetOrigintype and SCIProwGetOriginCons SCIProwGetOriginSepa to obtain the originator that created a row
+- new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
+- new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
+- new LPI method SCIPlpiGetObjsen() to query objective sense
+- new method SCIPgetVarImplRedcost() which returns the implied reduced costs
+- new methods SCIPvarGetBestRootSol(), SCIPvarGetBestRootRedcost(), SCIPvarGetBestRootLPobjval() which return the best
+  combination for a variable w.r.t. root solution value, root LP objective value, and root reduced cost
+- removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
+- SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -142,6 +164,7 @@ performance improvements:
   thrown for fixation, aggregation or multi-aggregations
 - changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
   aggressive separation
+- revised reduced cost propagator
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -157,10 +180,11 @@ plugins:
 - added new presolver components, that searches for independent components in the problem structure and solves
   these components as sub-SCIPs when they are small enough (per default <= 20 discrete variables, nodelimit of 10000)
 - added new presolver domcol that looks for dominated columns in a MIP and tries to fix them
-- added hailmary heuristic that solve a copy of the problem without an objective function and with quite strict limits
+- added zeroobj heuristic that solves a copy of the problem without an objective function and with quite strict limits
   on the number of nodes and LP iterations
 
 fixed bugs:
+- fixed potential bugs in shiftandpropagate heuristic concerning the transformation update of a variable with free status
 - fixed minor bugs with respect to counting generated and lifted cuts in sepa_oddcycle
 - fixed bug in heur_zirounding with computation of up/downslacks
 - fixed bug in cons_linear w.r.t recalculation of unreliable activities
@@ -179,6 +203,12 @@ fixed bugs:
 - fixed bug in SoPlex LPI where objective sense was not correct after reading LP from file in SCIPlpiReadLP()
 - fixed potential bug in fix-and-infer heuristic with variables being fixed to infinite value
 - fixed bug in diving heuristics with variables being fixed to values outside their domain
+- method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
+  variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
+- primal solutions with infinite objective value are now automatically discarded
+- fixed bug that disabled multi-aggregation of two integer or implicit integer variables
+- fixed bug in sol.c with requesting values of transformed variables in original solution; previously this had only
+  been handled in SCIPgetSolVal(), now the handling has been moved to SCIPsolGetVal()
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -217,6 +247,8 @@ parameters:
   solutions into the transformed space (in initsol and if a heuristic adds an original solution during solving)
 - new parameters lp/{rootiterlim,iterlim} to set a limit on the LP iterations spend in the initial root LP and each
   LP resolve, respectively
+- removed superfluous parameter <separating/closecuts/separootonly>
+- removed <constraints/quadratic/defaultbound>
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -253,6 +285,10 @@ features:
   SCIPgmlWriteNode() wo write to a given GML file
 - automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
   adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
+- new constraint handler "superindicator" for indicator constraints with slack constraints of arbitrary type
+- added possibility to use GUBs for lifting knapsack cuts (disabled)
+- added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
+  use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

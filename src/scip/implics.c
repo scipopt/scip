@@ -724,6 +724,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    SCIP_Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   SCIP_Bool             isshortcut,         /**< is the implication a shortcut, i.e., added as part of the transitive closure of another implication? */
    SCIP_Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
    SCIP_Bool*            added               /**< pointer to store whether the implication was added */
    )
@@ -834,7 +835,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -907,7 +908,7 @@ SCIP_RETCODE SCIPimplicsAdd(
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
          (*implics)->bounds[varfixing][posadd] = implbound;
-         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         (*implics)->ids[varfixing][posadd] = (isshortcut ? -stat->nimplications : stat->nimplications);
          if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
             (*implics)->nbinimpls[varfixing]++;
          (*implics)->nimpls[varfixing]++;
@@ -2003,7 +2004,10 @@ SCIP_Real* SCIPimplicsGetBounds(
    return implics != NULL ? implics->bounds[varfixing] : NULL;
 }
 
-/** gets array with unique implication identifiers for a given binary variable fixing */
+/** Gets array with unique implication identifiers for a given binary variable fixing.
+ *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
+ *  its id is negative, otherwise it is nonnegative.
+ */
 int* SCIPimplicsGetIds(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */

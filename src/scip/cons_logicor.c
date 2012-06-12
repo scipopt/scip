@@ -1278,9 +1278,9 @@ SCIP_RETCODE createRow(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   
+
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
    return SCIP_OKAY;
@@ -1735,7 +1735,9 @@ SCIP_RETCODE removeRedundantCons(
    SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
    /* update flags of cons0 */
    SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
@@ -1860,7 +1862,9 @@ SCIP_RETCODE removeRedundantConstraints(
          /* delete consdel */
          SCIPdebugMessage("logicor constraint <%s> is contained in <%s>\n", SCIPconsGetName(consdel), SCIPconsGetName(consstay));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consstay, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consdel, NULL) ) );
+         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
          SCIP_CALL( removeRedundantCons(scip, consstay, consdel, ndelconss) );
 
          /* update the first changed constraint to begin the next aggregation round with */
@@ -2054,6 +2058,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
@@ -2232,12 +2237,8 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 }
 
 
-/** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLogicor NULL
 
 
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLogicor NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
@@ -2300,8 +2301,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLogicor NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -2645,7 +2644,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
-            
+
             if( printreason )
             {
 #ifndef NDEBUG
@@ -2658,14 +2657,16 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
                }
 #endif
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, ";\n");
+
                SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
             }
-            
+
             return SCIP_OKAY;
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3114,16 +3115,10 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 }
 
 
-/** constraint enabling notification method of constraint handler */
-#define consEnableLogicor NULL
 
 
-/** constraint disabling notification method of constraint handler */
-#define consDisableLogicor NULL
 
 
-/** variable deletion method of constraint handler */
-#define consDelvarsLogicor NULL
 
 
 /** constraint display method of constraint handler */
@@ -3412,10 +3407,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, consLockLogicor,
          conshdlrdata) );
    assert(conshdlr != NULL);
@@ -3433,11 +3425,13 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLogicor) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLogicor) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLogicor) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLogicor) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLogicor,CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLogicor) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLogicor, CONSHDLR_PROPFREQ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLogicor, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+         CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLogicor) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLogicor, consSepasolLogicor, CONSHDLR_SEPAFREQ) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLogicor, consSepasolLogicor, CONSHDLR_SEPAFREQ,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLogicor) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");

@@ -1067,6 +1067,9 @@ int SCIPgetNReaders(
 /** creates a variable pricer and includes it in SCIP
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
+ *
+ *  @deprecated Please use method SCIPincludePricerBasic() instead and add non-fundamental callbacks via
+ *              setter functions
  */
 extern
 SCIP_RETCODE SCIPincludePricer(
@@ -1078,8 +1081,7 @@ SCIP_RETCODE SCIPincludePricer(
                                               *   problem variables with negative reduced costs are found?
                                               *   if this is set to FALSE it may happen that the pricer produces columns
                                               *   that already exist in the problem (which are also priced in by the
-                                              *   default problem variable pricing in the same round)
-                                              */
+                                              *   default problem variable pricing in the same round) */
    SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
@@ -1093,8 +1095,8 @@ SCIP_RETCODE SCIPincludePricer(
 
 /** creates a variable pricer and includes it in SCIP with all non-fundamental callbacks set to NULL;
  *  if needed, these can be added afterwards via setter functions SCIPsetPricerCopy(), SCIPsetPricerFree(),
- *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), SCIPsetPricerExitsol(),
- *  SCIPsetPricerFarkas();
+ *  SCIPsetPricerInity(), SCIPsetPricerExit(), SCIPsetPricerInitsol(), and SCIPsetPricerExitsol()
+ *
  *
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
@@ -1110,9 +1112,9 @@ SCIP_RETCODE SCIPincludePricerBasic(
                                               *   problem variables with negative reduced costs are found?
                                               *   if this is set to FALSE it may happen that the pricer produces columns
                                               *   that already exist in the problem (which are also priced in by the
-                                              *   default problem variable pricing in the same round)
-                                              */
+                                              *   default problem variable pricing in the same round) */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    );
 
@@ -1162,14 +1164,6 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
    SCIP_DECL_PRICEREXITSOL((*pricerexitsol)) /**< solving process deinitialization method of pricer */
-   );
-
-/** sets Farkas pricing method of variable pricer for infeasible LPs */
-extern
-SCIP_RETCODE SCIPsetPricerFarkas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRICER*          pricer,             /**< pricer */
-   SCIP_DECL_PRICERFARKAS((*pricerfarkas))   /**< Farkas pricing method of variable pricer for infeasible LPs */
    );
 
 /** returns the variable pricer of the given name, or NULL if not existing */
@@ -1223,7 +1217,11 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
-/** creates a constraint handler and includes it in SCIP */
+/** creates a constraint handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeConshdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1289,17 +1287,11 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
    const char*           name,               /**< name of constraint handler */
    const char*           desc,               /**< description of constraint handler */
-   int                   sepapriority,       /**< priority of the constraint handler for separation */
    int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int                   chckpriority,       /**< priority of the constraint handler for checking feasibility (and propagation) */
    int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
-   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -1307,14 +1299,16 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
-/* sets all separation related callbacks of the constraint handler */
+/* sets all separation related callbacks/parameters of the constraint handler */
 extern
 SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
-   int                   sepafreq            /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    );
 
 /* sets both the propagation callback and the propagation frequency of the constraint handler */
@@ -1323,7 +1317,9 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
-   int                   propfreq            /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    );
 
 /** sets copy method of both the constraint handler and each associated constraint */
@@ -1396,7 +1392,9 @@ extern
 SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSPRESOL  ((*conspresol))     /**< presolving method of constraint handler */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
    );
 
 /** sets method of constraint handler to free specific constraint data */
@@ -1522,7 +1520,11 @@ int SCIPgetNConshdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates a conflict handler and includes it in SCIP */
+/** creates a conflict handler and includes it in SCIP
+ *
+ *  @deprecated Please use method SCIPincludeConflicthdlrBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1541,9 +1543,11 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
 
 /** creates a conflict handler and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
+ *  Optional callbacks can be set via specific setter functions SCIPsetConflicthdlrCopy(), SCIPsetConflicthdlrFree(),
+ *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
+ *  and SCIPsetConflicthdlrExitsol()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr.
+ *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
  */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlrBasic(
@@ -1770,8 +1774,10 @@ SCIP_RETCODE SCIPincludeRelax(
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
 
-/**  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), for example.
+/** creates a relaxation handler and includes it in SCIP. All non fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), SCIPsetRelaxExit(),
+ *  SCIPsetRelaxCopy(), SCIPsetRelaxFree(), SCIPsetRelaxInitsol(), and SCIPsetRelaxExitsol()
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
  */
@@ -1889,10 +1895,12 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_SEPADATA*        sepadata            /**< separator data */
    );
 
-/** Creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+/** creates a separator and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPSepaSetInit() in pub_sepa.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaCopy(), SCIPsetSepaFree(),
+ *  SCIPsetSepaInit(), SCIPsetSepaExit(), SCIPsetSepaInitsol(), and SCIPsetSepaExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
  */
 extern
 SCIP_RETCODE SCIPincludeSepaBasic(
@@ -2034,9 +2042,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
-   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
    SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
@@ -2111,7 +2116,10 @@ extern
 SCIP_RETCODE SCIPsetPropPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_DECL_PROPPRESOL((*proppresol))       /**< presolving method of propagator */
+   SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
+   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    );
 
 /** returns the propagator of the given name, or NULL if not existing */
@@ -2152,8 +2160,8 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
 
 /** creates a primal heuristic and includes it in SCIP.
  *
- *  @deprecated Please use method <code>SCIPincludeHeurBasic()</code> instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @deprecated Please use method SCIPincludeHeurBasic() instead and add
+ *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
 SCIP_RETCODE SCIPincludeHeur(
@@ -2178,10 +2186,14 @@ SCIP_RETCODE SCIPincludeHeur(
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    );
 
-/** Creates a primal heuristic and includes it in SCIP with its most fundamental callbacks. All non-fundamental (or optional) callbacks
+/** creates a primal heuristic and includes it in SCIP with its most fundamental callbacks.
+ *  All non-fundamental (or optional) callbacks
  *  as, e. g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeHeur</code>. */
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurCopy(), SCIPsetHeurFree(),
+ *  SCIPsetHeurInit(), SCIPsetHeurExit(), SCIPsetHeurInitsol(), and SCIPsetHeurExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+ */
 extern
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2275,7 +2287,10 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
-/** creates an event handler and includes it in SCIP */
+/** creates an event handler and includes it in SCIP
+ *
+ *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
+ */
 extern
 SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2408,8 +2423,10 @@ SCIP_RETCODE SCIPincludeNodesel(
 
 /** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPnodeselSetInit() in pub_nodesel.h, for example.
- *  Since SCIP version 3.0, this method replaces the deprecated method <code>SCIPincludeNodesel</code>.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetNodeselCopy(), SCIPsetNodeselFree(),
+ *  SCIPsetNodeselInit(), SCIPsetNodeselExit(), SCIPsetNodeselInitsol(), and SCIPsetNodeselExitsol()
+ *
+ *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeNodesel().
  */
 extern
 SCIP_RETCODE SCIPincludeNodeselBasic(
@@ -2911,6 +2928,60 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_DECL_PROBEXITSOL ((*probexitsol)),   /**< solving process deinitialization method of transformed data */
    SCIP_DECL_PROBCOPY    ((*probcopy)),      /**< copies user data if you want to copy it to a subscip, or NULL */
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
+   );
+
+/** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
+ *  all callback methods will be set to NULL and can be set afterwards, if needed, via SCIPsetProbDelorig(),
+ *  SCIPsetProbTrans(), SCIPsetProbDeltrans(), SCIPsetProbInitsol(), SCIPsetProbExitsol(), and
+ *  SCIPsetProbCopy()
+ *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
+ *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
+ */
+extern
+SCIP_RETCODE SCIPcreateProbBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< problem name */
+   );
+
+/** sets callback to free user data of original problem */
+SCIP_RETCODE SCIPsetProbDelorig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
+   );
+
+/** sets callback to create user data of transformed problem by transforming original user data */
+extern
+SCIP_RETCODE SCIPsetProbTrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
+   );
+
+/** sets callback to free user data of transformed problem */
+extern
+SCIP_RETCODE SCIPsetProbDeltrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
+   );
+
+/** sets solving process initialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
+   );
+
+/** sets solving process deinitialization callback of transformed data */
+extern
+SCIP_RETCODE SCIPsetProbExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
+   );
+
+/** sets callback to copy user data to a subscip */
+extern
+SCIP_RETCODE SCIPsetProbCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
    );
 
 /** reads problem from file and initializes all solving data structures */
@@ -3936,6 +4007,18 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"
+ */
+extern
+SCIP_RETCODE SCIPgetProbvarSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
 /** return for given variables all their active counterparts; all active variables will be pairwise different
  *  @note It does not hold that the first output variable is the active variable for the first input variable.
  */
@@ -3960,6 +4043,19 @@ extern
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
+   );
+
+/** returns the implied reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *
+ *  returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
+ */
+extern
+SCIP_Real SCIPgetVarImplRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to get reduced costs, should be a column in current node LP */
+   SCIP_Bool             varfixing           /**< FALSE if for x == 0, TRUE for x == 1 */
    );
 
 /** returns the Farkas coefficient of the variable in the current node's LP relaxation;
@@ -6364,7 +6460,45 @@ SCIP_Real SCIPgetColFarkasCoef(
 /**@name LP Row Methods */
 /**@{ */
 
-/** creates and captures an LP row */
+/** creates and captures an LP row from a constraint handler */
+extern
+SCIP_RETCODE SCIPcreateRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row from a separator */
+extern
+SCIP_RETCODE SCIPcreateRowSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row from unspecified origin
+ *
+ *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  to facilitate correct statistics.
+ */
 extern
 SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6380,7 +6514,39 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row without any coefficients */
+/** creates and captures an LP row without any coefficients from a constraint handler */
+extern
+SCIP_RETCODE SCIPcreateEmptyRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row without any coefficients from a separator */
+extern
+SCIP_RETCODE SCIPcreateEmptyRowSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row without any coefficients
+ *
+ *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  to facilitate correct statistics.
+ */
 extern
 SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
