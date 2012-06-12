@@ -28,7 +28,7 @@
  * @todo simulation of presolving without solve
  * @todo solve all components with less than given size, count number of components with nodelimit reached;
  *       if all components could be solved within nodelimit (or all but x), continue solving components in
- *       increasing order until one hit the time limit
+ *       increasing order until one hit the node limit
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -50,7 +50,7 @@
 #define DEFAULT_RELDECREASE         0.2      /**< percentage by which the number of variables has to be decreased after the last component solving
                                               *   to allow running again (1.0: do not run again) */
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 static int NCATEGORIES = 6;
 static int CATLIMITS[] = {0,20,50,100,500};
 #endif
@@ -71,7 +71,7 @@ struct SCIP_PresolData
                                               *  to allow running again (1.0: do not run again) */
    int                   lastnvars;          /** number of variables after last run of the presolver */
    SCIP*                 subscip;            /** sub-SCIP used to solve single components */
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
    int*                  compspercat;        /** number of components of the different categories */
    int                   nsinglevars;        /** number of components with a single variable without constraint */
    SCIP_Real             subsolvetime;       /** total solving time of the subproblems */
@@ -82,7 +82,7 @@ struct SCIP_PresolData
  * Statistic methods
  */
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 /** initialize data for statistics */
 static
 SCIP_RETCODE initStatistics(
@@ -208,14 +208,6 @@ void printStatistics(
    printf("# Total subproblem solving time: %.2f\n", presoldata->subsolvetime);
    printf("############\n");
 }
-
-#else
-#define initStatistics(scip, presoldata) SCIP_OKAY
-#define resetStatistics(scip, presoldata) /**/
-#define updateStatisticsComp(presoldata, nbinvars, nintvars) /**/
-#define updateStatisticsSingleVar(presoldata) /**/
-#define updateStatisticsSubsolvetime(presoldata, subsolvetime) /**/
-#define printStatistics(presoldata) /**/
 #endif
 
 
@@ -403,7 +395,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
 
-      updateStatisticsSubsolvetime(presoldata, SCIPgetSolvingTime(subscip));
+      SCIPstatistic( updateStatisticsSubsolvetime(presoldata, SCIPgetSolvingTime(subscip)) );
 
       if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       {
@@ -478,7 +470,7 @@ SCIP_RETCODE copyAndSolveComponent(
           * the original problem without also transferring the possibly suboptimal solution (which is currently not
           * possible)
           */
-         if( SCIPgetNSols(subscip) > 0 )
+         if( SCIPgetNSols(subscip) == 0 )
          {
             SCIP_Bool infeasible;
             SCIP_Bool tightened;
@@ -726,7 +718,7 @@ SCIP_RETCODE splitProblem(
          ++c;
 
       /* collect some statistical information */
-      updateStatisticsComp(presoldata, nbinvars, nintvars);
+      SCIPstatistic( updateStatisticsComp(presoldata, nbinvars, nintvars) );
 
       compvars = &(vars[compvarsstart]);
       compconss = &(conss[compconssstart]);
@@ -766,7 +758,7 @@ SCIP_RETCODE splitProblem(
          ++(*nsolvedprobs);
 
          /* update statistics */
-         updateStatisticsSingleVar(presoldata);
+         SCIPstatistic( updateStatisticsSingleVar(presoldata) );
       }
       else
       {
@@ -864,7 +856,7 @@ SCIP_RETCODE presolComponents(
    if( nvars == 0 || (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
       return SCIP_OKAY;
 
-   resetStatistics(scip, presoldata);
+   SCIPstatistic( resetStatistics(scip, presoldata) );
 
    *result = SCIP_DIDNOTFIND;
    presoldata->didsearch = TRUE;
@@ -1003,10 +995,14 @@ SCIP_RETCODE presolComponents(
       *result = SCIP_SUCCESS;
 
    /* print statistics */
-   printStatistics(presoldata);
+   SCIPstatistic( printStatistics(presoldata) );
 
    SCIPdebugMessage("### %d components, %d solved, %d deleted constraints, %d deleted variables\n",
       ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+#ifdef NDEBUG
+   SCIPstatisticMessage("%d components, %d solved, %d deleted constraints, %d deleted variables\n",
+      ncomponents, nsolvedprobs, ndeletedconss, ndeletedvars);
+#endif
 
    presoldata->lastnvars = SCIPgetNVars(scip);
 
@@ -1045,7 +1041,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    assert(presoldata != NULL);
 
    /* initialize statistics */
-   SCIP_CALL( initStatistics(scip, presoldata) ); /*lint !e506 !e774*/
+   SCIPstatistic( SCIP_CALL( initStatistics(scip, presoldata) ) );
 
    presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
@@ -1053,7 +1049,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
    return SCIP_OKAY;
 }
 
-#ifdef WITH_STATISTICS
+#ifdef SCIP_STATISTIC
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitComponents)
@@ -1064,7 +1060,7 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   freeStatistics(scip, presoldata);
+   SCIPstatistic( freeStatistics(scip, presoldata) );
 
    return SCIP_OKAY;
 }
@@ -1105,9 +1101,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
 
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeComponents) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitComponents) );
-#ifdef WITH_STATISTICS
-   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitComponents) );
-#endif
+   SCIPstatistic( SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitComponents) ) );
 
    /* add presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
