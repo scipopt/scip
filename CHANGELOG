@@ -166,6 +166,7 @@ performance improvements:
 - changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
   aggressive separation
 - revised reduced cost propagator
+- increased performance in SCIPcliqueAddVar(), adding a variable to a clique
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
