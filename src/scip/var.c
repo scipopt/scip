@@ -3109,8 +3109,8 @@ SCIP_RETCODE SCIPvarTransform(
 
    assert(origvar != NULL);
    assert(SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_ORIGINAL);
-   assert(origvar->glbdom.lb == origvar->locdom.lb); /*lint !e777*/
-   assert(origvar->glbdom.ub == origvar->locdom.ub); /*lint !e777*/
+   assert(SCIPsetIsEQ(set, origvar->glbdom.lb, origvar->locdom.lb));
+   assert(SCIPsetIsEQ(set, origvar->glbdom.ub, origvar->locdom.ub));
    assert(origvar->vlbs == NULL);
    assert(origvar->vubs == NULL);
    assert(transvar != NULL);
