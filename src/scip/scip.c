@@ -14900,6 +14900,44 @@ SCIP_CLIQUE** SCIPgetCliques(
    return SCIPcliquetableGetCliques(scip->cliquetable);
 }
 
+/** returns whether there is a clique that contains both given variable/value pairs;
+ *  the variables must be active binary variables;
+ *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
+ *  if regardimplics is TRUE, both the cliques and the implications of the implication graph are regarded
+ *
+ *  @note a variable with it's negated variable are NOT! in a clique
+ *  @note a variable with itself are in a clique
+ */
+SCIP_Bool SCIPhaveVarsCommonClique(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_Bool             value1,             /**< value of first variable */
+   SCIP_VAR*             var2,               /**< second variable */
+   SCIP_Bool             value2,             /**< value of second variable */
+   SCIP_Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
+   )
+{
+   assert(scip != NULL);
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(SCIPvarIsActive(var1));
+   assert(SCIPvarIsActive(var2));
+   assert(SCIPvarIsBinary(var1));
+   assert(SCIPvarIsBinary(var2));
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPhaveVarsCommonClique", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* if both variables together have more cliques then actual cliques exist, then they have a common clique (in debug
+    * mode we check this for correctness), otherwise we need to call the pairwise comparison method for these variables
+    */
+#ifndef NDEBUG
+   assert((SCIPvarGetNCliques(var1, value1) + SCIPvarGetNCliques(var2, value2) > SCIPcliquetableGetNCliques(scip->cliquetable)) ? SCIPvarsHaveCommonClique(var1, value1, var2, value2, FALSE) : TRUE);
+#endif
+
+   return (SCIPvarGetNCliques(var1, value1) + SCIPvarGetNCliques(var2, value2) > SCIPcliquetableGetNCliques(scip->cliquetable)
+      || SCIPvarsHaveCommonClique(var1, value1, var2, value2, regardimplics));
+}
+
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
