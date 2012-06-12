@@ -503,7 +503,7 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
-SCIP_DECL_PROPEXIT(propExitsolRootredcost)
+SCIP_DECL_PROPEXITSOL(propExitsolRootredcost)
 {
    SCIP_PROPDATA* propdata;
 
