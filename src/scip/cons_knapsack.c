@@ -98,8 +98,6 @@
 #define GUBSPLITGNC1GUBS          FALSE /**< should GNC1 GUB conss without F vars be split into GOC1 and GR GUB conss? */
 
 
-
-
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
 /*
@@ -10527,8 +10525,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 }
 
 
-
-
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
@@ -11176,13 +11172,6 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 }
 
 
-
-
-
-
-
-
-
 /** variable deletion method of constraint handler */
 static
 SCIP_DECL_CONSDELVARS(consDelvarsKnapsack)
@@ -11452,8 +11441,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

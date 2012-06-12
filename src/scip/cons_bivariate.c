@@ -144,8 +144,6 @@ struct SCIP_ConshdlrData
 };
 
 
-
-
 /*
  * Local methods
  */

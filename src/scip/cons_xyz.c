@@ -51,8 +51,6 @@
 #endif
 
 
-
-
 /*
  * Data structures
  */
@@ -68,8 +66,6 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
 };
-
-
 
 
 /*
@@ -112,8 +108,6 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
    return SCIP_OKAY;
 }
 #endif
-
-
 
 
 /*

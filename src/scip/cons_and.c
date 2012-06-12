@@ -116,8 +116,6 @@ struct SCIP_ConshdlrData
 };
 
 
-
-
 /*
  * Propagation rules
  */
@@ -131,8 +129,6 @@ enum Proprule
    PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
-
-
 
 
 /*
@@ -3378,9 +3374,6 @@ SCIP_DECL_CONSFREE(consFreeAnd)
 }
 
 
-
-
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreAnd)
@@ -3661,7 +3654,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 #else
 #define consExitpreAnd NULL
 #endif
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -4159,16 +4151,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
@@ -4380,8 +4362,6 @@ SCIP_DECL_EVENTEXEC(eventExecAnd)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

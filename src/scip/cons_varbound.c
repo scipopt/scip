@@ -109,8 +109,6 @@ enum Proprule
 typedef enum Proprule PROPRULE;
 
 
-
-
 /*
  * Local methods
  */

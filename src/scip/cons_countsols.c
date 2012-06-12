@@ -1483,7 +1483,6 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 }
 
 
-
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
@@ -1558,10 +1557,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
 #else
 #define consExitsolCountsols NULL
 #endif
-
-
-
-
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1671,24 +1666,12 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 }
 
 
-
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockCountsols)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
 
 
 /*

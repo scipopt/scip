@@ -112,8 +112,6 @@ struct SCIP_ConsData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -2237,9 +2235,6 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 }
 
 
-
-
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLogicor)
@@ -2300,7 +2295,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 
    return SCIP_OKAY;
 }
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -3115,12 +3109,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 }
 
 
-
-
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
@@ -3311,8 +3299,6 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
 }
 
 
-
-
 /*
  * Callback methods of conflict handler
  */
@@ -3377,8 +3363,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

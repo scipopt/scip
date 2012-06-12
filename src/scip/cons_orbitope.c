@@ -1835,8 +1835,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 }
 
 
-
-
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropOrbitope)
@@ -1890,16 +1888,6 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 /** constraint display method of constraint handler */

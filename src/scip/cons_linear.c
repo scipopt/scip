@@ -356,7 +356,6 @@ int getInferInt(
 }
 
 
-
 /*
  * memory growing methods for dynamically allocated arrays
  */
@@ -415,8 +414,6 @@ SCIP_RETCODE consdataEnsureVarsSize(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -1170,7 +1167,6 @@ void consdataRecomputeGlbMaxactivity(
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
-
 
 
 /** updates activities for a change in a bound */
@@ -5185,8 +5181,6 @@ SCIP_RETCODE propagateCons(
 }
 
 
-
-
 /*
  * Presolving methods
  */
@@ -7423,7 +7417,6 @@ SCIP_RETCODE aggregateVariables(
    
    return SCIP_OKAY;
 }
-
 
 
 /*  tries to simplify coefficients and delete variables in inequalities lhs <= a^Tx <= rhs
@@ -9810,8 +9803,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 }
 
 
-
-
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolLinear)
@@ -10735,13 +10726,6 @@ SCIP_DECL_CONSLOCK(consLockLinear)
 }
 
 
-
-
-
-
-
-
-
 /** variable deletion method of constraint handler */
 static
 SCIP_DECL_CONSDELVARS(consDelvarsLinear)
@@ -11134,8 +11118,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 }
 
 
-
-
 /*
  * Callback methods of conflict handler
  */
@@ -11220,8 +11202,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*
@@ -12196,7 +12176,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       else
          negcoeffsum += val;
    }
-
 
 
    /*

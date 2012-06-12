@@ -46,7 +46,6 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
-
 /*
  * Data structures
  */
@@ -58,8 +57,6 @@ struct SCIP_ConsData
    int                   consssize;          /**< size of conss array */
    int                   nconss;             /**< number of constraints in conjunction */
 };
-
-
 
 
 /*
@@ -244,8 +241,6 @@ SCIP_RETCODE checkAllConss(
 }
 
 
-
-
 /*
  * Callback methods of constraint handler
  */
@@ -301,12 +296,6 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 }
 
 
-
-
-
-
-
-
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
@@ -344,8 +333,6 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** presolving method of constraint handler */
@@ -402,8 +389,6 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
 }
 
 
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockConjunction)
@@ -422,16 +407,6 @@ SCIP_DECL_CONSLOCK(consLockConjunction)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 /** constraint display method of constraint handler */
@@ -460,10 +435,6 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
    
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /*

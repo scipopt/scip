@@ -90,8 +90,6 @@ struct SCIP_ConsData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -1749,12 +1747,6 @@ SCIP_DECL_CONSFREE(consFreeBounddisjunction)
 }
 
 
-
-
-
-
-
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
@@ -1813,9 +1805,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 }
 
 
-
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteBounddisjunction)
@@ -1863,12 +1852,6 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -2415,12 +2398,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 }
 
 
-
-
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
@@ -2677,8 +2654,6 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

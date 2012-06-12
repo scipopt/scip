@@ -645,7 +645,6 @@ SCIP_RETCODE upgradeSuperindicator(
 }
 
 
-
 /*
  * Callback methods of constraint handler
  */
@@ -1547,10 +1546,6 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
 }
 
 
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintSuperindicator)
@@ -1844,7 +1839,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSuperindicator)
 }
 
 
-
 /*
  * constraint specific interface methods
  */
@@ -2095,7 +2089,6 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 }
 
 
-
 /*
  *  constraint-dependent SCIP methods
  */
@@ -2228,7 +2221,6 @@ SCIP_RETCODE SCIPtransformMinIIS(
 
    return SCIP_OKAY;
 }
-
 
 
 /*

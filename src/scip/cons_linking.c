@@ -1634,7 +1634,6 @@ SCIP_DECL_CONSFREE(consFreeLinking)
 }
 
 
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLinking)
@@ -1668,7 +1667,6 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    
    return SCIP_OKAY;
 }
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -2994,7 +2992,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
-
 
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */

@@ -531,7 +531,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 }
 
 
-
 /* ------------------------ conflict handler ---------------------------------*/
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting) */
@@ -794,7 +793,6 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 
    return SCIP_OKAY;
 }
-
 
 
 /* ------------------------ debugging routines ---------------------------------*/
@@ -1112,7 +1110,6 @@ SCIP_RETCODE consdataEnsureAddLinConsSize(
 
    return SCIP_OKAY;
 }
-
 
 
 /* ------------------------ operations on the alternative LP -------------------*/
@@ -2834,10 +2831,6 @@ SCIP_RETCODE extendToCover(
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /* ---------------------------- constraint handler local methods ----------------------*/
@@ -5536,11 +5529,6 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
