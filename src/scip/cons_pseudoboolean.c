@@ -1672,7 +1672,12 @@ SCIP_RETCODE checkCons(
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+      /* only reset constraint age if we are in enforcement */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      }
 
       if ( printreason )
       {

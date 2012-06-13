@@ -845,8 +845,13 @@ SCIP_RETCODE checkCons(
       SCIP_Real sum;
       int i;
 
-      /* increase age of constraint; age is reset to zero, if a violation was found */
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
+      /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
+       * enforcement
+       */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
 
       sum = 0.0;
       for( i = 0; i < consdata->nvars; ++i )
@@ -856,8 +861,13 @@ SCIP_RETCODE checkCons(
 
       if( SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity) )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
 
          if( printreason )
          {

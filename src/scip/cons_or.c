@@ -793,8 +793,13 @@ SCIP_RETCODE checkCons(
       SCIP_Real solval;
       int i;
 
-      /* increase age of constraint; age is reset to zero, if a violation was found */
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
+      /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
+       * enforcement
+       */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
 
       /* check, if all operator variables are FALSE */
       for( i = 0; i < consdata->nvars; ++i )
@@ -811,8 +816,13 @@ SCIP_RETCODE checkCons(
 
       if( (i == consdata->nvars) != (solval < 0.5) )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
 
          if( printreason )
          {

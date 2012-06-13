@@ -6325,7 +6325,6 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
          if( !checkCons(scip, consdata, sol) )
          {
             /* constraint is violated */
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
 
             if( printreason )
@@ -6344,10 +6343,6 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
                SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
             }
             return SCIP_OKAY;
-         }
-         else
-         {
-            SCIP_CALL( SCIPincConsAge(scip, cons) );
          }
       }
    }

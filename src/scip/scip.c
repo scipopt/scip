@@ -16727,11 +16727,7 @@ SCIP_RETCODE SCIPincConsAge(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   /**@todo currently, many plugins call SCIPincConsAge() and SCIPresetConsAge() in the check callback; because of this,
-    *       they are allowed in SCIP_STAGE_INITSOLVE; this is not the intended behaviour (see comment above), however,
-    *       and should be changed in the plugins and here
-    */
-   SCIP_CALL( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsIncAge(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
 
@@ -16749,11 +16745,7 @@ SCIP_RETCODE SCIPresetConsAge(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   /**@todo currently, many plugins call SCIPincConsAge() and SCIPresetConsAge() in the check callback; because of this,
-    *       they are allowed in SCIP_STAGE_INITSOLVE; this is not the intended behaviour (see comment above), however,
-    *       and should be changed in the plugins and here
-    */
-   SCIP_CALL( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsResetAge(cons, scip->set) );
 

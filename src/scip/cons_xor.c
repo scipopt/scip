@@ -1030,9 +1030,14 @@ SCIP_RETCODE checkCons(
       int i;
       SCIP_Bool odd;
 
-      /* increase age of constraint; age is reset to zero, if a violation was found */
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
-      
+      /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
+       * enforcement
+       */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
+
       /* check, if all variables (including resultant) and the rhs sum up to an even value */
       odd = consdata->rhs;
       for( i = 0; i < consdata->nvars; ++i )
@@ -1043,8 +1048,13 @@ SCIP_RETCODE checkCons(
       }
       if( odd )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
       }
    }
 
