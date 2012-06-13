@@ -170,6 +170,7 @@ performance improvements:
   aggressive separation
 - revised reduced cost propagator
 - increased performance in SCIPcliqueAddVar(), adding a variable to a clique
+- tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
