@@ -1154,9 +1154,9 @@ void findFixings(
    }
    else
    {
-      if( SCIPisGT(scip,SCIPvarGetObj(dominatingvar),0.0) )
+      if( SCIPisPositive(scip, SCIPvarGetObj(dominatingvar)) )
       {
-         assert(SCIPisGT(scip,SCIPvarGetObj(dominatedvar),0.0));
+         assert(SCIPisPositive(scip, SCIPvarGetObj(dominatedvar)));
          if( !SCIPisInfinity(scip, -dominatingwclb) &&
             SCIPisLE(scip, dominatingwclb, SCIPvarGetUbLocal(dominatingvar)) )
          {
@@ -1406,7 +1406,7 @@ SCIP_RETCODE findDominancePairs(
                   !SCIPisInfinity(scip, matrix->rhs[rows1[r1]]) )
                {
                   /* no dominance relation if coefficients differ for equations or ranged rows */
-                  if( !SCIPisEQ(scip,vals1[r1],vals2[r2]) )
+                  if( !SCIPisEQ(scip, vals1[r1], vals2[r2]) )
                   {
                      col2domcol1 = FALSE;
                      col1domcol2 = FALSE;
