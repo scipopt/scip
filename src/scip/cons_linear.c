@@ -6264,6 +6264,9 @@ SCIP_RETCODE convertLongEquality(
 
          if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
             slackdomrng = SCIPinfinity(scip);
+         /* we do not want to perform multi-aggregation due to numerics, if the bounds are huge */
+         else if( SCIPisHugeValue(scip, varub) || SCIPisHugeValue(scip, -varlb) )
+            return SCIP_OKAY;
          else
          {
             slackdomrng = (varub - varlb)*absval;
