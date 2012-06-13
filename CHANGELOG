@@ -212,6 +212,7 @@ fixed bugs:
 - method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
   variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
 - primal solutions with infinite objective value are now automatically discarded
+- better handling of infinite solution values for aggregated and negated variables
 - fixed bug that disabled multi-aggregation of two integer or implicit integer variables
 - fixed bug in sol.c with requesting values of transformed variables in original solution; previously this had only
   been handled in SCIPgetSolVal(), now the handling has been moved to SCIPsolGetVal()

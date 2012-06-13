@@ -53,6 +53,7 @@ SCIP_RETCODE solClearArrays(
    assert(sol != NULL);
 
    SCIP_CALL( SCIPboolarrayClear(sol->valid) );
+   sol->hasinfval = FALSE;
 
    return SCIP_OKAY;
 }
@@ -80,6 +81,10 @@ SCIP_RETCODE solSetArrayVal(
 
    /* set the value in the solution array */
    SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, val) );
+
+   /* store whether the solution has infinite values assigned to variables */
+   if( val != SCIP_UNKNOWN ) /*lint !e777*/
+      sol->hasinfval = (sol->hasinfval || SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val));
 
    return SCIP_OKAY;
 }
@@ -116,6 +121,11 @@ SCIP_RETCODE solIncArrayVal(
       /* increase the value in the solution array */
       SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
    }
+
+   /* store whether the solution has infinite values assigned to variables */
+   incval = SCIPrealarrayGetVal(sol->vals, idx);
+   if( incval != SCIP_UNKNOWN ) /*lint !e777*/
+      sol->hasinfval = (sol->hasinfval || SCIPsetIsInfinity(set, incval) || SCIPsetIsInfinity(set, -incval));
 
    return SCIP_OKAY;
 }
@@ -290,6 +300,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -321,6 +332,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -342,7 +354,7 @@ SCIP_RETCODE SCIPsolCopy(
    assert(sol != NULL);
    assert(sourcesol != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
    SCIP_CALL( SCIPrealarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
    SCIP_CALL( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
    (*sol)->heur = sourcesol->heur;
@@ -354,6 +366,7 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->runnum = sourcesol->runnum;
    (*sol)->depth = sourcesol->depth;
    (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = sourcesol->hasinfval;
    stat->solindex++;
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
@@ -544,6 +557,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -606,7 +620,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
          SCIP_COL** cols;
          int ncols;
          int c;
-         
+
          cols = SCIPlpGetCols(lp);
          ncols = SCIPlpGetNCols(lp);
          for( c = 0; c < ncols; ++c )
@@ -821,7 +835,7 @@ SCIP_RETCODE SCIPsolUnlink(
       {
          SCIP_CALL( solUnlinkVar(sol, set, prob->vars[v]) );
       }
-      
+
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
 
@@ -871,6 +885,7 @@ SCIP_RETCODE SCIPsolSetVal(
                sol->obj += obj * val;
 
             solStamp(sol, stat, tree, FALSE);
+
          }
          return SCIP_OKAY;
       }
@@ -911,17 +926,30 @@ SCIP_RETCODE SCIPsolSetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
-      return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var),
-         val == SCIP_UNKNOWN ? val : (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var)); /*lint !e777*/
+      assert(!SCIPsetIsInfinity(set, SCIPvarGetAggrConstant(var)) && !SCIPsetIsInfinity(set, -SCIPvarGetAggrConstant(var)));
+      assert(!SCIPsetIsInfinity(set, SCIPvarGetAggrScalar(var)) && !SCIPsetIsInfinity(set, -SCIPvarGetAggrScalar(var)));
+
+      if( val == SCIP_UNKNOWN )/*lint !e777*/
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), val);
+      if( SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val) )
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var),  SCIPvarGetAggrScalar(var) > 0 ? val : -val);
+      else
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), 
-         val == SCIP_UNKNOWN ? val : SCIPvarGetNegationConstant(var) - val); /*lint !e777*/
-      
+      assert(!SCIPsetIsInfinity(set, SCIPvarGetNegationConstant(var)) && !SCIPsetIsInfinity(set, -SCIPvarGetNegationConstant(var)));
+
+      if( val == SCIP_UNKNOWN )/*lint !e777*/
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), val);
+      else if( SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val) )
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), -val);
+      else
+         return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), SCIPvarGetNegationConstant(var) - val);
+
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
@@ -938,19 +966,27 @@ SCIP_RETCODE SCIPsolIncVal(
    SCIP_Real             incval              /**< increment for solution value of variable */
    )
 {
+   SCIP_Real oldval;
+
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(var != NULL);
+   assert(!SCIPsetIsInfinity(set, incval) && !SCIPsetIsInfinity(set, -incval));
 
    SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
 
+   oldval = solGetArrayVal(sol, var);
+   if( SCIPsetIsInfinity(set, oldval) || SCIPsetIsInfinity(set, -oldval) )
+      return SCIP_OKAY;
+
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
+   /* @todo: handle strange cases, such as sums that yield infinite values */
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1245,6 +1281,7 @@ SCIP_RETCODE SCIPsolCheck(
 
    *feasible = TRUE;
 
+   /* check whether the solution respects the global bounds of the variables */
    if( checkbounds )
    {
       int v;
@@ -1265,7 +1302,7 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
             *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
-            
+
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
                SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
@@ -1283,9 +1320,47 @@ SCIP_RETCODE SCIPsolCheck(
       }
    }
 
+   /* check whether there are infinite variable values that lead to an objective value of +infinity */
+   if( *feasible && sol->hasinfval )
+   {
+      int v;
+
+      for( v = 0; v < prob->nvars && (*feasible || printreason); ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+
+         var = prob->vars[v];
+         solval = SCIPsolGetVal(sol, set, stat, var);
+         assert(solval != SCIP_INVALID); /*lint !e777*/
+
+         if( solval != SCIP_UNKNOWN ) /*lint !e777*/
+         {
+            *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
+            *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
+
+            if( printreason && ((SCIPsetIsInfinity(set, solval) &&  SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) ||
+                  (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
+            {
+               SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                  solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+            }
+         }
+
+#ifdef SCIP_DEBUG
+         if( !(*feasible) && !printreason )
+         {
+            SCIPdebugPrintf(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+               solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+         }
+#endif
+      }
+   }
+
+   /* check whether the solution fulfills all constraints */
    for( h = 0; h < set->nconshdlrs && (*feasible || printreason); ++h )
    {
-      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
             checkintegrality, checklprows, printreason, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
@@ -1332,7 +1407,7 @@ SCIP_RETCODE SCIPsolRound(
       var = prob->vars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       solval = solGetArrayVal(sol, var);
-      
+
       /* solutions with unknown entries cannot be rounded */
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          break;
@@ -1501,7 +1576,7 @@ SCIP_Bool SCIPsolsAreEqual(
    SCIP_Real obj1;
    SCIP_Real obj2;
    int v;
-   
+
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
@@ -1909,7 +1984,7 @@ void SCIPsolSetHeur(
    )
 {
    assert(sol != NULL);
- 
+
    sol->heur = heur;
 }
 
