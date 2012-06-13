@@ -17641,6 +17641,7 @@ void SCIPlpMarkDivingObjChanged(
  */
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PROB*            prob,               /**< problem data */
@@ -17662,6 +17663,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
+   SCIP_Real timelimit;
    SCIP_RETCODE retcode;
    int* colinds;
    int nnewcols;
@@ -18122,6 +18124,17 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
       assert( ncols == nnewcols );
    }
 #endif
+
+   /* set time limit */
+   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &timelimit) );
+   if ( ! SCIPsetIsInfinity(set, timelimit) )
+      timelimit -= SCIPclockGetTime(stat->solvingtime);
+   if ( timelimit <= 0.0 )
+   {
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+      return SCIP_OKAY;
+   }
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit) );
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */

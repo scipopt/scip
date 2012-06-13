@@ -17859,7 +17859,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pointvals, SCIPlpGetNCols(scip->lp)) );
 
-   SCIP_CALL( SCIPlpComputeRelIntPoint(scip->set, scip->messagehdlr, scip->lp, scip->transprob,
+   SCIP_CALL( SCIPlpComputeRelIntPoint(scip->set, scip->stat, scip->messagehdlr, scip->lp, scip->transprob,
          relaxrows, inclobjcutoff, normtype, pointvals, &success) );
 
    /* if successful, create new solution with point values */

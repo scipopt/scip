@@ -1434,6 +1434,7 @@ void SCIPlpRecalculateObjSqrNorm(
 extern
 SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PROB*            prob,               /**< problem data */
