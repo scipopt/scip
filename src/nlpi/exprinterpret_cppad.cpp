@@ -382,11 +382,11 @@ bool forward_posintpower(
    switch( k )
    {
    case 0:
-      ty[0] = pow(tx[0], id);
+      ty[0] = pow(tx[0], (int)id);
       break;
 
    case 1:
-      ty[1] = pow(tx[0], id-1) * tx[1];
+      ty[1] = pow(tx[0], (int)id-1) * tx[1];
       ty[1] *= double(id);
       break;
 
@@ -394,9 +394,9 @@ bool forward_posintpower(
       if( id > 2 )
       {
          // ty[2] = id * (id-1) * pow(tx[0], id-2) * tx[1] * tx[1] + id * pow(tx[0], id-1) * tx[2];
-         ty[2]  = pow(tx[0], id-2) * tx[1] * tx[1];
+         ty[2]  = pow(tx[0], (int)id-2) * tx[1] * tx[1];
          ty[2] *= id-1;
-         ty[2] += pow(tx[0], id-1) * tx[2];
+         ty[2] += pow(tx[0], (int)id-1) * tx[2];
          ty[2] *= id;
       }
       else
@@ -461,18 +461,18 @@ bool reverse_posintpower(
    {
    case 0:
       // px[0] = py[0] * id * pow(tx[0], id-1);
-      px[0]  = py[0] * pow(tx[0], id-1);
+      px[0]  = py[0] * pow(tx[0], (int)id-1);
       px[0] *= id;
       break;
 
    case 1:
       // px[0] = py[0] * id * pow(tx[0], id-1) + py[1] * id * (id-1) * pow(tx[0], id-2) * tx[1];
-      px[0]  = py[1] * tx[1] * pow(tx[0], id-2);
+      px[0]  = py[1] * tx[1] * pow(tx[0], (int)id-2);
       px[0] *= id-1;
-      px[0] += py[0] * pow(tx[0], id-1);
+      px[0] += py[0] * pow(tx[0], (int)id-1);
       px[0] *= id;
       // px[1] = py[1] * id * pow(tx[0], id-1);
-      px[1]  = py[1] * pow(tx[0], id-1);
+      px[1]  = py[1] * pow(tx[0], (int)id-1);
       px[1] *= id;
       break;
 
