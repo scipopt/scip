@@ -9830,6 +9830,11 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( transformSols(scip) );
    }
 
+   /**@todo check whether this premature switch can be moved to end of method */
+
+   /* switch stage to SOLVING */
+   scip->set->stage = SCIP_STAGE_SOLVING;
+
    /* inform the transformed problem that the branch and bound process starts now */
    SCIP_CALL( SCIPprobInitSolve(scip->transprob, scip->set) );
 
@@ -9874,9 +9879,6 @@ SCIP_RETCODE initSolve(
                scip->transprob, scip->tree, scip->lp, objbound) );
       }
    }
-
-   /* switch stage to SOLVING */
-   scip->set->stage = SCIP_STAGE_SOLVING;
 
    return SCIP_OKAY;
 }
