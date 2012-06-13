@@ -2409,17 +2409,23 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied */
    )
 {
-   SCIP_VAR* var;
    int v;
 
    for( v = 0; v < nvars; ++v )
    {
+      SCIP_VAR* var;
+
       var = vars[v];
       assert(var != NULL);
 
+
       if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
       {
-         if( alternativelbs[v] != INT_MAX )
+         int ub;
+
+         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+
+         if( alternativelbs[v] <= ub )
          {
             SCIP_CALL( SCIPbranchVarHole(scip, var, SCIPvarGetLbLocal(var), (SCIP_Real)alternativelbs[v], NULL, NULL) );
             (*branched) = TRUE;
@@ -2433,7 +2439,11 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
 
       if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
       {
-         if( alternativeubs[v] != INT_MIN )
+         int lb;
+
+         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+
+         if( alternativeubs[v] >= lb )
          {
             SCIP_CALL( SCIPbranchVarHole(scip, var, (SCIP_Real)alternativeubs[v], SCIPvarGetUbLocal(var), NULL, NULL) );
             (*branched) = TRUE;
@@ -3915,7 +3925,7 @@ SCIP_RETCODE checkOverload(
             (*initialized) = TRUE;
          }
          else
-            assert((SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)));
+            assert((SCIPgetDepth(scip) == 0 || SCIPgetStage(scip) != SCIP_STAGE_SOLVING) && !SCIPinProbing(scip));
       }
    }
 
@@ -4392,15 +4402,15 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
    int*                  nfixedvars          /**< pointer to store the number of fixed variables */
    )
 {
-   SCIP_VAR* var;
    int v;
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_Real lb;
-      SCIP_Real ub;
+      SCIP_VAR* var;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+      int ub;
+      int lb;
 
       var = vars[v];
       assert(var != NULL);
@@ -4414,6 +4424,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
 
       if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
       {
+
          if( alternativelbs[v] > ub )
          {
             SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
