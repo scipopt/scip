@@ -1350,7 +1350,7 @@ SCIP_RETCODE SCIPsolCheck(
 #ifdef SCIP_DEBUG
          if( !(*feasible) && !printreason )
          {
-            SCIPdebugPrintf(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+            SCIPdebugPrintf("infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
                solval, SCIPvarGetName(var), SCIPvarGetObj(var));
          }
 #endif
