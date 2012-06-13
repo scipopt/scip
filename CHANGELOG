@@ -257,6 +257,10 @@ parameters:
   LP resolve, respectively
 - removed superfluous parameter <separating/closecuts/separootonly>
 - removed <constraints/quadratic/defaultbound>
+- new parameters constraints/setppc/cliquelifting, constraints/setppc/addvariablesascliques,
+  constraints/setppc/cliqueshrinking, first for enabling/disabling the clique lifting algorithm in cons_setppc.c,
+  second parameter is for trying to create extra clique constraints in lifting algorithm, third parameter is for trying
+  to decrease the number of variable in a clique constraint in the lifting algorithm
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -297,6 +301,7 @@ features:
 - added possibility to use GUBs for lifting knapsack cuts (disabled)
 - added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
+- implemented first clique lifting procedure in cons_setppc.c (by default is off)
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
