@@ -785,7 +785,6 @@ SCIP_Longint SCIPsepaGetNCutsApplied(
 }
 
 /** increase count of applied cuts */
-extern
 void SCIPsepaIncNAppliedCuts(
    SCIP_SEPA*            sepa                /**< separator */
    )

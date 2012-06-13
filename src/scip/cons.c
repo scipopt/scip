@@ -4032,7 +4032,6 @@ SCIP_Longint SCIPconshdlrGetNCutsApplied(
 }
 
 /** increase count of applied cuts */
-extern
 void SCIPconshdlrIncNAppliedCuts(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )

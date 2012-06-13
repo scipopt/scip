@@ -5822,7 +5822,9 @@ $(LIBOBJDIR)/scip/sepastore.o: src/scip/sepastore.c src/scip/def.h src/scip/type
  src/scip/history.h src/scip/struct_history.h src/scip/event.h \
  src/scip/pub_event.h src/scip/struct_event.h src/scip/tree.h \
  src/scip/pub_tree.h src/scip/struct_tree.h src/scip/sepastore.h \
- src/scip/type_sepastore.h src/scip/debug.h src/scip/struct_sepastore.h
+ src/scip/type_sepastore.h src/scip/sepa.h src/scip/pub_sepa.h \
+ src/scip/cons.h src/scip/pub_cons.h src/scip/struct_cons.h \
+ src/scip/debug.h src/scip/struct_sepastore.h
 $(LIBOBJDIR)/scip/set.o: src/scip/set.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/buffer.h \
