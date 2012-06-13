@@ -110,12 +110,6 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 }
 
 
-
-
-
-
-
-
 /** presolving execution method */
 static
 SCIP_DECL_PRESOLEXEC(presolExecBoundshift)

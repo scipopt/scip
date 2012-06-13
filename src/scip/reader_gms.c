@@ -243,7 +243,6 @@ SCIP_RETCODE printConformName(
 }
 
 
-
 /* retransform to active variables and print in GAMS format to file stream with surrounding bracket, pre- and suffix */
 static
 SCIP_RETCODE printActiveVariables(
@@ -399,7 +398,6 @@ SCIP_RETCODE printActiveVariables(
 }
 
 
-
 /* print linear row in GAMS format to file stream (without retransformation to active variables) */
 static
 SCIP_RETCODE printLinearRow(
@@ -482,7 +480,6 @@ SCIP_RETCODE printLinearRow(
 
    return SCIP_OKAY;
 }
-
 
 
 /** prints given linear constraint information in GAMS format to file stream */
@@ -571,7 +568,6 @@ SCIP_RETCODE printLinearCons(
    
    return SCIP_OKAY;
 }
-
 
 
 /* print quadratic row in GAMS format to file stream (performing retransformation to active variables) */
@@ -691,7 +687,6 @@ SCIP_RETCODE printQuadraticRow(
 
    return SCIP_OKAY;
 }
-
 
 
 /** prints given quadratic constraint information in GAMS format to file stream */
@@ -1831,7 +1826,6 @@ SCIP_RETCODE checkConsnames(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -1851,8 +1845,6 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 }
 
 
-
-
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteGms)
@@ -1862,7 +1854,6 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -1910,7 +1901,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    return SCIP_OKAY;
 }
-
 
 
 /* writes problem to gms file */

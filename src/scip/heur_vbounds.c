@@ -866,7 +866,6 @@ SCIP_RETCODE applyVbounds(
 }
 
 
-
 /*
  * Callback methods of primal heuristic
  */
@@ -899,8 +898,6 @@ SCIP_DECL_HEURFREE(heurFreeVbounds)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */

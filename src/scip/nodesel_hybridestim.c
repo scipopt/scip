@@ -32,8 +32,6 @@
 #define NODESEL_MEMSAVEPRIORITY      50
 
 
-
-
 /*
  * Default parameter settings
  */
@@ -63,8 +61,6 @@ struct SCIP_NodeselData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -78,8 +74,6 @@ SCIP_Real getNodeselScore(
 {
    return (1.0-estimweight) * SCIPnodeGetLowerbound(node) + estimweight * SCIPnodeGetEstimate(node);
 }
-
-
 
 
 /*
@@ -118,13 +112,6 @@ SCIP_DECL_NODESELFREE(nodeselFreeHybridestim)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
 
 
 /** node selection method of node selector */
@@ -316,9 +303,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompHybridestim)
    assert(SCIPisGT(scip, score1, score2));
    return +1;
 }
-
-
-
 
 
 /*

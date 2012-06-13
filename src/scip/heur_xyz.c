@@ -36,8 +36,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
-
 /*
  * Data structures
  */
@@ -50,15 +48,11 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -165,9 +159,6 @@ SCIP_DECL_HEUREXEC(heurExecXyz)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

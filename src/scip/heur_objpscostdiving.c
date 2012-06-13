@@ -37,7 +37,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -52,7 +51,6 @@
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
 
 
 /* locally defined heuristic data */
@@ -70,8 +68,6 @@ struct SCIP_HeurData
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
-
-
 
 
 /*
@@ -132,8 +128,6 @@ void calcPscostQuot(
    if( SCIPvarIsBinary(var) )
       (*pscostquot) *= 1000.0;
 }
-
-
 
 
 /*
@@ -216,10 +210,6 @@ SCIP_DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** execution method of primal heuristic */
@@ -592,8 +582,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

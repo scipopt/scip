@@ -30,7 +30,6 @@
 #define READER_EXTENSION        "bnd"
 
 
-
 /*
  * Local methods of reader
  */
@@ -172,7 +171,6 @@ SCIP_RETCODE readBounds(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -190,8 +188,6 @@ SCIP_DECL_READERCOPY(readerCopyBnd)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader
@@ -227,8 +223,6 @@ SCIP_DECL_READERREAD(readerReadBnd)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

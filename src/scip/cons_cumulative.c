@@ -7083,7 +7083,6 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
 }
 
 
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreCumulative)
@@ -7129,9 +7128,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
 
    return SCIP_OKAY;
 }
-#else
 #endif
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -7751,9 +7748,6 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
 }
 
 
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintCumulative)
@@ -7831,7 +7825,6 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
 
    return SCIP_OKAY;
 }
-
 
 
 /** constraint parsing method of constraint handler */

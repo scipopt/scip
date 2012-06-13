@@ -49,8 +49,6 @@ SCIP_DECL_READERCOPY(readerCopyRlp)
 }
 
 
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadRlp)

@@ -67,7 +67,6 @@
 #define GENVBOUND_PROP_NAME             "genvbounds"
 
 
-
 /*
  * Data structures
  */
@@ -111,7 +110,6 @@ struct SCIP_PropData
    int                   nboundgroups;       /**< length of boundgroups array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
 };
-
 
 
 /*
@@ -1301,7 +1299,6 @@ SCIP_RETCODE initBounds(
 }
 
 
-
 /*
  * Callback methods of propagator
  */
@@ -1490,13 +1487,6 @@ SCIP_DECL_PROPFREE(propFreeObbt)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
 
 
 /*

@@ -590,7 +590,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
-   SORTTPL_KEYTYPE       val,                /**< data field to find positopn for */
+   SORTTPL_KEYTYPE       val,                /**< data field to find position for */
    int                   len,                /**< length of array */
    int*                  pos                 /**< pointer to store the insert position */
    )

@@ -74,7 +74,6 @@
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
 
 
-
 /*
  * Data structures
  */
@@ -102,8 +101,6 @@ struct SCIP_SepaData
    SCIP_Bool             multbyminusone;     /**< should flow cover cuts be separated for 0-1 single node flow set with reversed arcs in addition? */
    int                   maxtestdelta;       /**< cut generation heuristic: maximal number of different deltas to try */
 };
-
-
 
 
 /*
@@ -2614,8 +2611,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -2650,14 +2645,6 @@ SCIP_DECL_SEPAFREE(sepaFreeFlowcover)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
 
 
 /** LP solution separation method of separator */
@@ -2696,7 +2683,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolFlowcover)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

@@ -61,8 +61,6 @@
 #define EVENTHDLR_DESC         "event handler for or constraints"
 
 
-
-
 /*
  * Data structures
  */
@@ -93,8 +91,6 @@ struct SCIP_ConshdlrData
 };
 
 
-
-
 /*
  * Propagation rules
  */
@@ -108,8 +104,6 @@ enum Proprule
    PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
-
-
 
 
 /*
@@ -1378,16 +1372,6 @@ SCIP_DECL_CONSFREE(consFreeOr)
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolOr)
@@ -1773,16 +1757,6 @@ SCIP_DECL_CONSLOCK(consLockOr)
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintOr)
@@ -1988,8 +1962,6 @@ SCIP_DECL_EVENTEXEC(eventExecOr)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

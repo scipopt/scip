@@ -51,7 +51,6 @@ struct SCIP_HeurData
 };
 
 
-
 /*
  * Local methods
  */
@@ -252,7 +251,6 @@ SCIP_RETCODE performRelaxSimpleRounding(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -416,9 +414,6 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-
 
 /*
  * heuristic specific interface methods

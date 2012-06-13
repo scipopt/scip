@@ -74,7 +74,6 @@
  */
 
 
-
 /*
  * Data structures
  */
@@ -127,7 +126,6 @@ struct SCIP_PresolData
 /*
  * Local methods
  */
-
 
 
 /** returns TRUE iff both keys are equal; two constraints are equal if they have the same pointer */
@@ -1170,7 +1168,6 @@ SCIP_DECL_PRESOLFREE(presolFreeGateextraction)
 }
 
 
-
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
 SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
@@ -1264,7 +1261,6 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreGateextraction)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
-
 
 
 #define HASHTABLESIZE_FACTOR 5

@@ -54,7 +54,6 @@
 #define READER_EXTENSION        "mps"
 
 
-
 /*
  * mps reader internal methods
  */
@@ -3323,8 +3322,6 @@ SCIP_DECL_READERCOPY(readerCopyMps)
  
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader */

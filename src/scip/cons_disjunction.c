@@ -48,7 +48,6 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
-
 /*
  * Data structures
  */
@@ -60,8 +59,6 @@ struct SCIP_ConsData
    int                   consssize;          /**< size of conss array */
    int                   nconss;             /**< number of constraints in disjunction */
 };
-
-
 
 
 /*
@@ -325,20 +322,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyDisjunction)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteDisjunction)
@@ -371,12 +354,6 @@ SCIP_DECL_CONSTRANS(consTransDisjunction)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -516,8 +493,6 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
 }
 
 
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockDisjunction)
@@ -536,15 +511,6 @@ SCIP_DECL_CONSLOCK(consLockDisjunction)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
 
 
 /** constraint display method of constraint handler */
@@ -621,9 +587,6 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

@@ -531,7 +531,6 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
 }
 
 
-
 /* ------------------------ conflict handler ---------------------------------*/
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting) */
@@ -794,7 +793,6 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 
    return SCIP_OKAY;
 }
-
 
 
 /* ------------------------ debugging routines ---------------------------------*/
@@ -1114,7 +1112,6 @@ SCIP_RETCODE consdataEnsureAddLinConsSize(
 }
 
 
-
 /* ------------------------ operations on the alternative LP -------------------*/
 
 /** initialize alternative LP
@@ -1429,7 +1426,6 @@ SCIP_RETCODE fixAltLPVariable(
 
 
 /** unfix variable @a ind to 0 */
-#if 1
 static
 SCIP_RETCODE unfixAltLPVariable(
    SCIP_LPI*             lp,                 /**< alternative LP */
@@ -1444,8 +1440,6 @@ SCIP_RETCODE unfixAltLPVariable(
 
    return SCIP_OKAY;
 }
-#endif
-
 
 /** unfix variable given by @a S to 0 */
 static
@@ -2837,10 +2831,6 @@ SCIP_RETCODE extendToCover(
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /* ---------------------------- constraint handler local methods ----------------------*/
@@ -4485,11 +4475,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   if ( isinfeasible || isunbounded )
+   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
    SCIPdebugMessage("Initpre method for indicator constraints.\n");
@@ -5539,11 +5526,6 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */

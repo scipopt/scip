@@ -364,7 +364,6 @@ SCIP_RETCODE createNewSol(
 }
 
 
-
 /*
  * Callback methods of primal heuristic
  */
@@ -402,7 +401,6 @@ SCIP_DECL_HEURFREE(heurFreeDins)
 
    return SCIP_OKAY;
 }
-
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
@@ -821,7 +819,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

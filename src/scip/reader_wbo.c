@@ -50,8 +50,6 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
 }
 
 
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadWbo)

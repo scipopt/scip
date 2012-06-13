@@ -101,20 +101,14 @@ SCIP_RETCODE SCIPpropExit(
 extern
 SCIP_RETCODE SCIPpropInitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the presolving is finished */
 extern
 SCIP_RETCODE SCIPpropExitpre(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the branch and bound process is being started */
@@ -128,7 +122,8 @@ SCIP_RETCODE SCIPpropInitsol(
 extern
 SCIP_RETCODE SCIPpropExitsol(
    SCIP_PROP*            prop,               /**< propagator */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 /** executes presolving method of propagator */

@@ -32,8 +32,6 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 
-
-
 /*
  * Data structures
  */
@@ -46,15 +44,11 @@ struct SCIP_BranchruleData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -196,9 +190,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsXyz)
 #else
 #define branchExecpsXyz NULL
 #endif
-
-
-
 
 
 /*

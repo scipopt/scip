@@ -1634,7 +1634,6 @@ SCIP_DECL_CONSFREE(consFreeLinking)
 }
 
 
-
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
 SCIP_DECL_CONSINITPRE(consInitpreLinking)
@@ -1642,18 +1641,20 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
-   
    /* disable all linking constraints which contain at most one binary variable */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      
+
+      /* skip constraints which are not added */
+      if( !SCIPconsIsAdded(conss[c]) )
+         continue;
+
       if( consdata->nbinvars <= 1 )
       {
          SCIP_CALL( SCIPdisableCons(scip, conss[c]) );
@@ -1663,12 +1664,11 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
       {
          SCIP_CALL( consdataLinearize(scip, conss[c], consdata) );
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-      } 
+      }
    }
-   
+
    return SCIP_OKAY;
 }
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -2615,7 +2615,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    return SCIP_OKAY;
 }
 
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockLinking)
@@ -2637,11 +2636,6 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 /** constraint enabling notification method of constraint handler */
 static
@@ -2670,10 +2664,6 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
 #endif
    return SCIP_OKAY;
 }
-
-
-
-
 
 /** constraint display method of constraint handler */
 static
@@ -3004,7 +2994,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
-
 
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */

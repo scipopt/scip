@@ -114,8 +114,6 @@ struct SCIP_ConsData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -2900,16 +2898,6 @@ SCIP_DECL_CONSFREE(consFreeSetppc)
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSetppc)
@@ -3388,7 +3376,6 @@ SCIP_RETCODE branchPseudo(
    return SCIP_OKAY;
 }
 #endif
-
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -4163,6 +4150,7 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
    return SCIP_OKAY;
 }
 #else
+#define consActiveSetppc NULL
 #endif
 
 
@@ -4183,12 +4171,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
    return SCIP_OKAY;
 }
 #else
+#define consDeactiveSetppc NULL
 #endif
-
-
-
-
-
 
 /** variable deletion method of constraint handler */
 static
@@ -4205,7 +4189,6 @@ SCIP_DECL_CONSDELVARS(consDelvarsSetppc)
 
    return SCIP_OKAY;
 }
-
 
 
 /** constraint display method of constraint handler */
@@ -4469,8 +4452,6 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
 }
 
 
-
-
 /*
  * Callback methods of conflict handler
  */
@@ -4534,8 +4515,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

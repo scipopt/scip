@@ -35,7 +35,6 @@
 #define READER_EXTENSION        "sol"
 
 
-
 /*
  * Local methods of reader
  */
@@ -340,7 +339,6 @@ SCIP_RETCODE readXMLSol(
 }
 
 
-
 /*
  * Callback methods of reader
  */
@@ -358,8 +356,6 @@ SCIP_DECL_READERCOPY(readerCopySol)
  
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader 
@@ -434,8 +430,6 @@ SCIP_DECL_READERREAD(readerReadSol)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

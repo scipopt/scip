@@ -37,8 +37,6 @@
                                          *   limit) */
 
 
-
-
 /*
  * Data structures
  */
@@ -51,15 +49,11 @@ struct SCIP_PropData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -223,8 +217,6 @@ SCIP_DECL_PROPRESPROP(propRespropXyz)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

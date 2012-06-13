@@ -84,9 +84,6 @@
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
 
 
-
-
-
 /** constraint data for SOS1 constraints */
 struct SCIP_ConsData
 {
@@ -106,10 +103,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
-
-
-
-
 
 
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
@@ -1170,7 +1163,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
       /* free row */
       if ( consdata->row != NULL )
+      {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -1211,7 +1206,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
    {
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
-   /* free row - if still necessary */
+
+   /* free row */
    if ( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
@@ -1999,6 +1995,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
    return SCIP_OKAY;
 }
 
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -2059,8 +2056,6 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /* ---------------- Constraint specific interface methods ---------------- */

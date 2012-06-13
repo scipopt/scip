@@ -71,8 +71,6 @@ struct SCIP_SepaData
 };
 
 
-
-
 /*
  * local methods
  */
@@ -186,8 +184,6 @@ SCIP_RETCODE storeCutInArrays(
 }
 
 
-
-
 /*
  * Callback methods
  */
@@ -224,13 +220,6 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
 
 
 /** LP solution separation method of separator */
@@ -568,10 +557,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /*

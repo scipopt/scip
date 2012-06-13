@@ -9121,11 +9121,8 @@ SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
-
    return SCIP_OKAY;
 }
-#else
 #endif
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -9141,8 +9138,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-   *result = SCIP_FEASIBLE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -10270,20 +10265,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    return SCIP_OKAY;
 }
 
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockQuadratic)
@@ -10336,65 +10317,6 @@ SCIP_DECL_CONSLOCK(consLockQuadratic)
 
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActiveQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnableQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-/** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisableQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#endif
-
-
-
 
 /** constraint display method of constraint handler */
 static

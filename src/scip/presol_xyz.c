@@ -32,8 +32,6 @@
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
-
-
 /*
  * Data structures
  */
@@ -46,15 +44,11 @@ struct SCIP_PresolData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -163,9 +157,6 @@ SCIP_DECL_PRESOLEXEC(presolExecXyz)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

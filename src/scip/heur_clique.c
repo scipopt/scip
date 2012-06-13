@@ -505,9 +505,6 @@ SCIP_DECL_HEURINIT(heurInitClique)
 }
 
 
-
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecClique)

@@ -302,9 +302,6 @@ SCIP_DECL_HEURINIT(heurInitRins)
 }
 
 
-
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecRins)

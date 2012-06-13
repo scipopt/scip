@@ -1169,8 +1169,6 @@ SCIP_DECL_READERCOPY(readerCopyZpl)
 }
 
 
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadZpl)
@@ -1402,10 +1400,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
 }
 
 
-
 #endif
 #endif
-
 
 
 /*

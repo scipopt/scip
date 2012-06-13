@@ -3069,7 +3069,6 @@ SCIP_RETCODE propagateLowerbound(
 }
 
 
-
 /*
  * Callback methods of propagator
  */
@@ -3101,14 +3100,6 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
 
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
@@ -3357,8 +3348,6 @@ SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

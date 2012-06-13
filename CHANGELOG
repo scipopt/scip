@@ -135,6 +135,8 @@ interface
   combination for a variable w.r.t. root solution value, root LP objective value, and root reduced cost
 - removed method SCIPvarGetRootRedcost() replaced by SCIPvarGetBestRootRedcost()
 - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
+- new method SCIPhaveVarsCommonClique() in scip.{h,c}, to check for common clique information on two given variables
+- forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -165,6 +167,7 @@ performance improvements:
 - changed emphasis settings: knapsack disaggregation is now allowed in fast presolving, CG-MIP separator disabled in
   aggressive separation
 - revised reduced cost propagator
+- increased performance in SCIPcliqueAddVar(), adding a variable to a clique
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

@@ -46,7 +46,6 @@
 #define DEFAULT_CLIQUEDENSITY      0.05 /**< minimal density of cliques to use a dense clique table */
 
 
-
 /*
  * Data structures
  */
@@ -87,8 +86,6 @@ struct TCLIQUE_Graph
    int                   nnodes;             /**< number of nodes in graph */
    int                   tablewidth;         /**< number of unsigned ints per row in the table */
 };
-
-
 
 
 /*
@@ -952,8 +949,6 @@ void updateTcliquegraph(
 }
 
 
-
-
 /*
  * TClique Graph Callbacks
  */
@@ -1225,8 +1220,6 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 }
 
 
-
-
 /*
  * main separation method
  */
@@ -1326,8 +1319,6 @@ SCIP_RETCODE separateCuts(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -1362,12 +1353,6 @@ SCIP_DECL_SEPAFREE(sepaFreeClique)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -1431,8 +1416,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolClique)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

@@ -39,16 +39,12 @@
 #define MAXDIVEDEPTH          100
 
 
-
-
 /*
  * Default parameter settings
  */
 
 #define DEFAULT_PROPROUNDS           0  /**< maximal number of propagation rounds in probing subproblems */
 #define DEFAULT_MINFIXINGS         100  /**< minimal number of fixings to apply before dive may be aborted */
-
-
 
 
 /*
@@ -61,8 +57,6 @@ struct SCIP_HeurData
    int                   proprounds;         /**< maximal number of propagation rounds in probing subproblems */
    int                   minfixings;         /**< minimal number of fixings to apply before dive may be aborted */
 };
-
-
 
 
 /*
@@ -149,8 +143,6 @@ SCIP_RETCODE fixVariable(
 }
 
 
-
-
 /*
  * Callback methods of primal heuristic
  */
@@ -183,14 +175,6 @@ SCIP_DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
 
 
 /** execution method of primal heuristic */
@@ -295,9 +279,6 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

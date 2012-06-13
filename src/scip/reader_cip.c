@@ -46,7 +46,6 @@ enum CipSection
 typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 
 
-
 /*
  * Data structures
  */
@@ -64,7 +63,6 @@ struct CipInput
    SCIP_Bool             endfile;            /**< we have reached the end of the file */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
-
 
 
 /*
@@ -457,8 +455,6 @@ SCIP_DECL_READERCOPY(readerCopyCip)
  
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader */

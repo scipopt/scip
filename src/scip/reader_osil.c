@@ -2066,7 +2066,6 @@ SCIP_RETCODE readNonlinearExprs(
 
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_READERCOPY(readerCopyOsil)
 {  /*lint --e{715}*/
@@ -2076,27 +2075,8 @@ SCIP_DECL_READERCOPY(readerCopyOsil)
 
    return SCIP_OKAY;
 }
-#else
-#define readerCopyOsil NULL
-#endif
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#if 0
-static
-SCIP_DECL_READERFREE(readerFreeOsil)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of osil reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerFreeOsil NULL
-#endif
-
 
 /** problem reading method of reader */
-#if 1
 static
 SCIP_DECL_READERREAD(readerReadOsil)
 {  /*lint --e{715}*/
@@ -2245,25 +2225,6 @@ CLEANUP:
 
    return retcode;
 }
-#else
-#define readerReadOsil NULL
-#endif
-
-
-#if 0
-/** problem writing method of reader */
-static
-SCIP_DECL_READERWRITE(readerWriteOsil)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of osil reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerWriteOsil NULL
-#endif
-
 
 /*
  * reader specific interface methods

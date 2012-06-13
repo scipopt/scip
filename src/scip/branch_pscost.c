@@ -468,13 +468,6 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
 }
 
 
-
-
-
-
-
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
@@ -610,9 +603,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

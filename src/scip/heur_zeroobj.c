@@ -69,8 +69,6 @@ struct SCIP_HeurData
 };
 
 
-
-
 /*
  * Local methods
  */
@@ -149,9 +147,6 @@ SCIP_DECL_EVENTEXEC(eventExecZeroobj)
 
    return SCIP_OKAY;
 }
-
-
-
 /* ---------------- Callback methods of primal heuristic ---------------- */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
@@ -258,9 +253,6 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

@@ -3977,8 +3977,6 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 }
 
 
-
-
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadOpb)

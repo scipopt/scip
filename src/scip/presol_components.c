@@ -1065,9 +1065,7 @@ SCIP_DECL_PRESOLEXIT(presolExitComponents)
 
    return SCIP_OKAY;
 }
-#else
 #endif
-
 
 
 /** execution method of presolver */

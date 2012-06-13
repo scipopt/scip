@@ -62,7 +62,6 @@ enum Fixingdirection
 typedef enum Fixingdirection FIXINGDIRECTION;
 
 
-
 /********************************************************************/
 /************** matrix data structure and functions *****************/
 
@@ -762,7 +761,6 @@ void freeMatrix(
 
 /************** end matrix data structure and functions *************/
 /********************************************************************/
-
 
 
 /*
@@ -1524,7 +1522,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyDomcol)
 
    return SCIP_OKAY;
 }
-
 
 
 /** execution method of presolver */

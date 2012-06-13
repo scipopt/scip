@@ -170,10 +170,6 @@ SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
 }
 
 
-
-
-
-
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)

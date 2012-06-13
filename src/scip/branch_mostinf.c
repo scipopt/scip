@@ -217,15 +217,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyMostinf)
 }
 
 
-
-
-
-
-
-
-
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
@@ -355,10 +346,6 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /*

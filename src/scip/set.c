@@ -3698,71 +3698,29 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
-   SCIP_RESULT result;
    int i;
 
    assert(set != NULL);
-   assert(unbounded != NULL);
-   assert(infeasible != NULL);
 
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
-      }
+      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set) );
    }
 
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropInitpre(set->props[i], set, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected infeasibility\n", SCIPpropGetName(set->props[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
-      }
+      SCIP_CALL( SCIPpropInitpre(set->props[i], set) );
    }
 
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
-            SCIPconshdlrGetName(set->conshdlrs[i]));
-      }
+      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -3773,73 +3731,29 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundedness, if
-					      *   problem was already declared unbounded, it is already stored */
-   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility, if
-					      *   problem was already declared infeasible, it is already stored */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
-   SCIP_RESULT result;
    int i;
 
    assert(set != NULL);
-   assert(unbounded != NULL);
-   assert(infeasible != NULL);
 
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
-      }
+      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set) );
    }
 
    /* inform propagators that the presolving is abound to begin */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropExitpre(set->props[i], set, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "propagator <%s> detected infeasibility\n", SCIPpropGetName(set->props[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(set->props[i]));
-      }
+      SCIP_CALL( SCIPpropExitpre(set->props[i], set) );
    }
 
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, *unbounded, *infeasible, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundedness (or infeasibility)\n",
-            SCIPconshdlrGetName(set->conshdlrs[i]));
-      }
+      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -3972,7 +3886,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      SCIP_CALL( SCIPpropExitsol(set->props[i], set) );
+      SCIP_CALL( SCIPpropExitsol(set->props[i], set, restart) );
    }
 
    /* primal heuristics */

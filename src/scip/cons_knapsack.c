@@ -98,8 +98,6 @@
 #define GUBSPLITGNC1GUBS          FALSE /**< should GNC1 GUB conss without F vars be split into GOC1 and GR GUB conss? */
 
 
-
-
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
 /*
@@ -10447,12 +10445,9 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int nvars;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( nconss == 0 || conss != NULL );
-   assert( result != NULL );
-
-   *result = SCIP_FEASIBLE;
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(nconss == 0 || conss != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10496,9 +10491,9 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -10521,12 +10516,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    conshdlrdata->bools3size = 0;
    conshdlrdata->bools4size = 0;
 
-   *result = SCIP_FEASIBLE;
-
    return SCIP_OKAY;
 }
-
-
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -11176,13 +11167,6 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 }
 
 
-
-
-
-
-
-
-
 /** variable deletion method of constraint handler */
 static
 SCIP_DECL_CONSDELVARS(consDelvarsKnapsack)
@@ -11452,8 +11436,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

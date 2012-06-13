@@ -69,7 +69,6 @@
 #define NROWS 4
 
 
-
 /*
  * Data structures
  */
@@ -102,8 +101,6 @@ struct SCIP_ConshdlrData
 };
 
 
-
-
 /*
  * Propagation rules
  */
@@ -114,8 +111,6 @@ enum Proprule
    PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
-
-
 
 
 /*
@@ -1857,7 +1852,6 @@ SCIP_RETCODE createConsXorIntvar(
 }
 
 
-
 /*
  * Callback methods of constraint handler
  */
@@ -1894,17 +1888,6 @@ SCIP_DECL_CONSFREE(consFreeXor)
 
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -2356,16 +2339,6 @@ SCIP_DECL_CONSLOCK(consLockXor)
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintXor)
@@ -2603,8 +2576,6 @@ SCIP_DECL_EVENTEXEC(eventExecXor)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

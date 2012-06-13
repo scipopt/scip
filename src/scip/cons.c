@@ -2168,17 +2168,11 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* reset conshdlr last presolved data in case of a restart */
    conshdlr->lastpropdomchgcount = -1;
@@ -2219,23 +2213,13 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+      SCIP_CALL( conshdlr->consinitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving initialization method of constraint handler <%s> returned invalid result <%d>\n", 
-            conshdlr->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    /* after a restart the LP is empty but the initial constraints are not included in the initialconss array anymore;
@@ -2281,17 +2265,11 @@ SCIP_RETCODE SCIPconshdlrExitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool             isunbounded,        /**< was unboundedness already detected */
-   SCIP_Bool             isinfeasible,       /**< was infeasibility already detected */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_FEASIBLE;
 
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
@@ -2306,23 +2284,13 @@ SCIP_RETCODE SCIPconshdlrExitpre(
       SCIPclockStart(conshdlr->setuptime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, isunbounded, isinfeasible, result) );
+      SCIP_CALL( conshdlr->consexitpre(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->setuptime, set);
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_UNBOUNDED
-         && *result != SCIP_FEASIBLE )
-      {
-         SCIPerrorMessage("presolving deinitialization method of constraint handler <%s> returned invalid result <%d>\n", 
-            conshdlr->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
    }
 
    /* update statistics */

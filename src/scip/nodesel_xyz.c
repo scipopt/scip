@@ -31,8 +31,6 @@
 #define NODESEL_MEMSAVEPRIORITY 0
 
 
-
-
 /*
  * Data structures
  */
@@ -45,15 +43,11 @@ struct SCIP_NodeselData
 };
 
 
-
-
 /*
  * Local methods
  */
 
 /* put your local methods here, and declare them static */
-
-
 
 
 /*
@@ -170,8 +164,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompXyz)
 
    return 0;
 }
-
-
 
 
 /*

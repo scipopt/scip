@@ -37,7 +37,6 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
-
 /*
  * Default parameter settings
  */
@@ -153,10 +152,6 @@ SCIP_DECL_HEUREXIT(heurExitRootsoldiving) /*lint --e{715}*/
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** execution method of primal heuristic */

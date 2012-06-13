@@ -35,7 +35,6 @@
 #define READER_EXTENSION        "fix"
 
 
-
 /*
  * local methods
  */
@@ -157,9 +156,6 @@ SCIP_RETCODE readSol(
       return SCIP_OKAY;
 }
 
-
-
-
 /*
  * Callback methods of reader
  */
@@ -177,9 +173,6 @@ SCIP_DECL_READERCOPY(readerCopyFix)
  
    return SCIP_OKAY;
 }
-
-
-
 
 /** problem reading method of reader */
 static
@@ -207,10 +200,6 @@ SCIP_DECL_READERREAD(readerReadFix)
 
    return SCIP_OKAY;
 }
-
-
-
-
 
 /*
  * fix file reader specific interface methods

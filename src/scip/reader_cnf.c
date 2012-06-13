@@ -41,7 +41,6 @@
 #define MAXLINELEN       65536
 
 
-
 /*
  * cnf reader internal methods
  */
@@ -351,7 +350,6 @@ SCIP_RETCODE readCnf(
 }
 
 
-
 /*
  * Callback methods
  */
@@ -369,8 +367,6 @@ SCIP_DECL_READERCOPY(readerCopyCnf)
  
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader */
@@ -407,8 +403,6 @@ SCIP_DECL_READERREAD(readerReadCnf)
 
    return retcode;
 }
-
-
 
 
 /*

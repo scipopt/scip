@@ -108,8 +108,6 @@ typedef struct LpInput LPINPUT;
 static const char commentchars[] = "\\";
 
 
-
-
 /*
  * Local methods (for reading)
  */
@@ -2345,7 +2343,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 }
 
 
-
 #if 0
 /* prints variable name LP format conform; always use this method to stay consistent
  *
@@ -2490,7 +2487,6 @@ void appendLine(
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
 }
-
 
 
 /* print row in LP format to file stream */
@@ -3126,8 +3122,6 @@ SCIP_DECL_READERCOPY(readerCopyLp)
  
    return SCIP_OKAY;
 }
-
-
 
 
 /** problem reading method of reader */

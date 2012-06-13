@@ -1189,7 +1189,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
    SCIP_Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
    )
 {
-   int varidx;
+   int pos;
    int i;
 
    assert(clique != NULL);
@@ -1206,30 +1206,108 @@ SCIP_RETCODE SCIPcliqueAddVar(
    /* allocate memory */
    SCIP_CALL( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
 
-   /* store variable in clique, sorted by index and values */
-   varidx = SCIPvarGetIndex(var);
-   assert(varidx >= 0);
-   for( i = clique->nvars; i > 0 && SCIPvarGetIndex(clique->vars[i-1]) > varidx; --i )
-   {
-      clique->vars[i] = clique->vars[i-1];
-      clique->values[i] = clique->values[i-1];
-   }
-   clique->vars[i] = var;
-   for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
-   {
-      clique->values[i] = clique->values[i-1];
-      *oppositeentry = TRUE;
-   }
-   clique->values[i] = value;
-   clique->nvars++;
-   clique->eventsissued = FALSE;
+   /* search for insertion position by binary variable, note that first the entries are order after variable index and
+    * second after the bool value of the corresponding variable
+    */
+   (void) SCIPsortedvecFindPtr((void**) clique->vars, SCIPvarComp, var, clique->nvars, &pos);
 
-   /* check whether the variable is contained twice in the clique */
-   for( i--; i >= 0 && clique->vars[i] == var; --i )
+   assert(pos >= 0 && pos <= clique->nvars);
+   /* remember insertion position for later, pos might change */
+   i = pos;
+
+   if( pos < clique->nvars )
    {
-      *doubleentry = *doubleentry || (clique->values[i] == value);
-      *oppositeentry = *oppositeentry || (clique->values[i] != value);
+      const int amount = clique->nvars - pos;
+
+      /* moving elements to correct position */
+      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount);
+      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount);
+      clique->nvars++;
+
+      /* insertion for a variable with cliquevalue FALSE */
+      if( !value )
+      {
+	 /* find last entry with the same variable and value behind the insertion position */
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos );
+
+	 /* check if the same variable with other value also exists */
+	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+	 {
+	    assert(clique->values[pos + 1] != value);
+	    *oppositeentry = TRUE;
+	 }
+
+	 /* check if we found the same variable with the same value more than once */
+	 if( pos != i )
+	    *doubleentry = TRUE;
+	 else
+	 {
+	    /* find last entry with the same variable and different value before the insertion position */
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos );
+
+	    /* check if we found the same variable with the same value more than once */
+	    if( pos > 0 && clique->vars[pos - 1] == var )
+	    {
+	       assert(clique->values[pos - 1] == value);
+
+	       *doubleentry = TRUE;
+	    }
+	    /* if we found the same variable with different value, we need to order them correctly */
+	    if( pos != i )
+	    {
+	       assert(clique->vars[pos] == var);
+	       assert(clique->values[pos] != value);
+
+	       clique->values[pos] = value;
+	       value = !value;
+	    }
+	 }
+      }
+      /* insertion for a variable with cliquevalue TRUE */
+      else
+      {
+	 /* find last entry with the same variable and different value behind the insertion position */
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos );
+
+	 /* check if the same variable with other value also exists */
+	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+	 {
+	    assert(clique->values[pos + 1] == value);
+	    *doubleentry = TRUE;
+	 }
+
+	 /* check if we found the same variable with different value */
+	 if( pos != i )
+	 {
+	    *oppositeentry = TRUE;
+
+	    /* if we found the same variable with different value, we need to order them correctly */
+	    assert(clique->vars[pos] == var);
+	    assert(clique->values[pos] != value);
+
+	    clique->values[pos] = value;
+	    value = !value;
+	 }
+	 else
+	 {
+	    /* find last entry with the same variable and value before the insertion position */
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos );
+
+	    if( pos != i )
+	       *doubleentry = TRUE;
+
+	    /* check if we found the same variable with different value up front */
+	    if( pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value )
+	       *oppositeentry = TRUE;
+	 }
+      }
    }
+   else
+      clique->nvars++;
+
+   clique->vars[i] = var;
+   clique->values[i] = value;
+   clique->eventsissued = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1512,36 +1590,36 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
          cliques2 = tmpc;
          ncliques2 = tmpi;
       }
-    
+
       /* check whether both clique lists have a same clique */
       while( TRUE )  /*lint !e716*/
       {
-         cliqueid = SCIPcliqueGetId(cliques2[i2]);
+	 cliqueid = SCIPcliqueGetId(cliques2[i2]);
 
-         /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
-          * there will be no same item and we can stop */
-         if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
-            break;
+	 /* if last item in clique1 has a smaller index than the actual clique in clique2, than cause of increasing order
+	  * there will be no same item and we can stop */
+	 if( SCIPcliqueGetId(cliques1[ncliques1 - 1]) < cliqueid )
+	    break;
 
-         while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-         {
-            ++i1;
-            assert(i1 < ncliques1);
-         }
-         cliqueid = SCIPcliqueGetId(cliques1[i1]);
+	 while( SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+	 {
+	    ++i1;
+	    assert(i1 < ncliques1);
+	 }
+	 cliqueid = SCIPcliqueGetId(cliques1[i1]);
 
-         /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
-          * there will be no same item and we can stop */
-         if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
-            break;
+	 /* if last item in clique2 has a smaller index than the actual clique in clique1, than cause of increasing order
+	  * there will be no same item and we can stop */
+	 if( SCIPcliqueGetId(cliques2[ncliques2 - 1]) < cliqueid )
+	    break;
 
-         while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-         {
-            ++i2;
-            assert(i2 < ncliques2);
-         }
-         if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-            return TRUE;
+	 while( SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+	 {
+	    ++i2;
+	    assert(i2 < ncliques2);
+	 }
+	 if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+	    return TRUE;
       }
    }
    return FALSE;

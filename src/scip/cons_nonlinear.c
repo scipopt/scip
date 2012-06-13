@@ -6352,8 +6352,6 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
-   *result = SCIP_FEASIBLE;
-
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -6390,7 +6388,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_FEASIBLE;
    havegraphchange = FALSE;
 
    if( !conshdlrdata->isremovedfixings )
@@ -6405,14 +6402,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
    havegraphchange |= havechange;
-
-#if 0
-   if( domainerror )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-#endif
 
    for( c = 0; c < nconss; ++c )
    {

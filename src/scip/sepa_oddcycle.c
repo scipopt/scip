@@ -187,7 +187,6 @@ struct SCIP_SepaData
 };
 
 
-
 /*
  * debugging methods
  */
@@ -3871,8 +3870,6 @@ SCIP_DECL_SEPAINIT(sepaInitOddcycle)
 }
 
 
-
-
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
@@ -3889,8 +3886,6 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** LP solution separation method of separator */
@@ -3988,7 +3983,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

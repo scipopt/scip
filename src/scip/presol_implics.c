@@ -33,8 +33,6 @@
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 
-
-
 /*
  * Callback methods of presolver
  */
@@ -52,16 +50,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplics)
  
    return SCIP_OKAY;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 /** execution method of presolver */
@@ -351,9 +339,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

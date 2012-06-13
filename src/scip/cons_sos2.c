@@ -95,9 +95,6 @@
 #define EVENTHDLR_DESC         "bound change event handler for SOS2 constraints"
 
 
-
-
-
 /** constraint data for SOS2 constraints */
 struct SCIP_ConsData
 {
@@ -114,10 +111,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
-
-
-
-
 
 
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
@@ -252,7 +245,6 @@ SCIP_RETCODE unlockVariableSOS2(
 }
 
 
-
 /** ensures that the vars and weights array can store at least num entries */
 static
 SCIP_RETCODE consdataEnsurevarsSizeSOS2(
@@ -279,7 +271,6 @@ SCIP_RETCODE consdataEnsurevarsSizeSOS2(
 
    return SCIP_OKAY;
 }
-
 
 
 /** handle new variable */
@@ -1159,14 +1150,6 @@ SCIP_RETCODE generateRowSOS2(
 }
 
 
-
-
-
-
-
-
-
-
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -1273,7 +1256,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
 
-   /* free row - if still necessary */
+   /* free row */
    if ( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
@@ -2051,20 +2034,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS2)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -2124,8 +2093,6 @@ SCIP_DECL_EVENTEXEC(eventExecSOS2)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /* ---------------- Constraint specific interface methods ---------------- */

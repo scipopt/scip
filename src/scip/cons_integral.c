@@ -45,7 +45,6 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
-
 /*
  * Callback methods
  */
@@ -104,8 +103,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** feasibility check method of constraint handler for integral solutions */

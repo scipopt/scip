@@ -90,8 +90,6 @@ struct SCIP_SepaData
 };
 
 
-
-
 /** generate point for close cut separation
  *
  *  The constructed point is the convex combination of the point stored in set->closesol and the
@@ -146,8 +144,6 @@ SCIP_RETCODE generateCloseCutPoint(
 }
 
 
-
-
 /*
  * Callback methods of separator
  */
@@ -186,8 +182,6 @@ SCIP_DECL_SEPAFREE(sepaFreeClosecuts)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
@@ -322,9 +316,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*

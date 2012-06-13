@@ -118,7 +118,6 @@ struct SCIP_PropData
 };
 
 
-
 /*
  * Local methods
  */
@@ -1766,7 +1765,6 @@ SCIP_RETCODE execGenVBounds(
 }
 
 
-
 /*
  * Public methods
  */
@@ -1886,7 +1884,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
 }
 
 
-
 /*
  * Callback methods of propagator
  */
@@ -1935,8 +1932,6 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** presolving method of propagator */
@@ -2139,7 +2134,6 @@ SCIP_DECL_PROPFREE(propFreeGenvbounds)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

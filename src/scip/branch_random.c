@@ -160,12 +160,6 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 }
 
 
-
-
-
-
-
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
@@ -307,9 +301,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
