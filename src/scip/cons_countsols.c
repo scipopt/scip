@@ -1317,14 +1317,25 @@ SCIP_RETCODE includeConshdlrCountsols(
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* call inclusion method of constraint handler and do not add counting dialogs */
-   SCIP_CALL( includeConshdlrCountsols(scip, FALSE) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   *valid = TRUE;
+   /* in case the count constraint handler is active we avoid copying to ensure a safe count */
+   if( conshdlrdata->active )
+      *valid = FALSE;
+   else
+   {
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      /* call inclusion method of constraint handler and do not add counting dialogs */
+      SCIP_CALL( includeConshdlrCountsols(scip, FALSE) );
+
+      *valid = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -2549,6 +2560,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   /* include constraint handler including the count dialog */
    SCIP_CALL( includeConshdlrCountsols(scip, TRUE) );
 
    return SCIP_OKAY;
