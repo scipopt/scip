@@ -6713,8 +6713,8 @@ SCIP_RETCODE SCIPreadProb(
 
    assert(scip != NULL);  
    assert(filename != NULL);
-   
-   SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/useconstable", &useconstable) );
@@ -6730,14 +6730,14 @@ SCIP_RETCODE SCIPreadProb(
 
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
-   
+
    fileextension = NULL;
    if( extension == NULL )
    {
       /* get extension from filename */
       SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, NULL);
    }
-   
+
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
       retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename, 
