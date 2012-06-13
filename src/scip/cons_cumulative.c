@@ -1921,11 +1921,10 @@ SCIP_RETCODE checkCumulativeCondition(
 
             /* first state the violated constraints */
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
 
             /* second state the reason */
             SCIPinfoMessage(scip, NULL,
-               "violation: at time point %d available capacity = %d, needed capacity = %d\n",
+               ";\nviolation: at time point %d available capacity = %d, needed capacity = %d\n",
                curtime, capacity, capacity - freecapacity);
 
             for( i = 0; i <= j; ++i )
@@ -2857,8 +2856,7 @@ SCIP_RETCODE solveIndependentCons(
    vars = consdata->vars;
 
    SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -5773,8 +5771,7 @@ SCIP_RETCODE adjustOversizedJobBounds(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vartuple, boundtypetuple, boundtuple,
             TRUE, FALSE, TRUE, TRUE /*check*/, TRUE/*prop*/, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       (*naddconss)++;

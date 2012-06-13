@@ -1426,9 +1426,7 @@ SCIP_RETCODE forbidFixation(
    if( cons != NULL )
    {
       SCIPdebugMessage("adding constraint to forbid fixation in main problem\n");
-      /* SCIPdebug( SCIPprintCons(scip, cons, NULL) ); */
-      /* SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") ); */
-
+      /* SCIPdebugPrintCons(scip, cons, NULL); */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }

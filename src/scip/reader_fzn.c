@@ -1172,8 +1172,7 @@ SCIP_RETCODE createQuadraticCons(
    SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2,
          quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1198,8 +1197,7 @@ SCIP_RETCODE createLinearCons(
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, rhs,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2981,8 +2979,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             goto TERMINATE;
          }
 
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -3063,8 +3060,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       }
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
       *created = TRUE;
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3271,8 +3267,7 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -3380,8 +3375,7 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    SCIP_CALL( SCIPcreateConsCumulative(scip, &cons, fname, nvars, vars, durations, demands, capacity,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* add and release the constraint to the problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );

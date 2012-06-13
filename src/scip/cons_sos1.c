@@ -1608,8 +1608,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
                   int l;
 
                   SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
-                  SCIPinfoMessage(scip, NULL, ";\n");
-                  SCIPinfoMessage(scip, NULL, "violation: ");
+                  SCIPinfoMessage(scip, NULL, ";\nviolation: ");
 
                   for (l = 0; l < consdata->nvars; ++l)
                   {

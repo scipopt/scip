@@ -1574,8 +1574,7 @@ SCIP_RETCODE createAnds(
                SCIPconsIsInitial(cons), separate, SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), propagate, 
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), removable, SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, andcons) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, andcons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, andcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
       }
       assert(var != NULL);
@@ -1613,8 +1612,7 @@ SCIP_RETCODE checkCons(
    assert(violated != NULL);
 
    SCIPdebugMessage("checking pseudo boolean constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1950,8 +1948,7 @@ SCIP_RETCODE applyFixingsLinear(
       rhssubtrahend = 0.0;
 
       SCIPdebugMessage("applying fixings linear:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       assert(consdata->linvars != NULL);
       assert(consdata->lincoefs != NULL);
@@ -2076,9 +2073,7 @@ SCIP_RETCODE applyFixingsLinear(
       consdata->removedfixings = TRUE;
 
       SCIPdebugMessage("after fixings:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-
+      SCIPdebugPrintCons(scip, cons, NULL);
    }
    assert(consdata->removedfixings || consdata->nlinvars == 0);
 
@@ -2639,8 +2634,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->indvar, ub) );
 
                SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, lincons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
                /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
@@ -2666,8 +2660,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, negindvar , ub) );
 
                SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, lincons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
 
@@ -2704,8 +2697,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->indvar, lb) );
 
                SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, lincons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
                /* second we are modelling the implication that if the slack variable is on( negation is off), the constraint
@@ -2731,8 +2723,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIP_CALL( SCIPaddCoefLinear(scip, lincons, negindvar, lb) );
 
                SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, lincons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
 #else /* with indicator */
@@ -2771,8 +2762,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
 
                SCIP_CALL( SCIPaddCons(scip, indcons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, indcons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, indcons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
             }
 
@@ -2816,8 +2806,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                }
 
                SCIP_CALL( SCIPaddCons(scip, indcons) );
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, indcons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, indcons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
 
                /* free temporary memory */
@@ -2854,8 +2843,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             }
 
             SCIP_CALL( SCIPaddCons(scip, lincons) );
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebugPrintCons(scip, lincons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
             /* free temporary memory */
@@ -3084,8 +3072,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       SCIP_CALL( mergeMultiples(scip, cons, ndelconss, nchgcoefs, &cutoff) );
 
       SCIPdebugMessage("after merging:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       /* we can only presolve pseudoboolean constraints, that are not modifiable */
       if( SCIPconsIsModifiable(cons) )

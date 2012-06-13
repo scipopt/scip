@@ -1479,8 +1479,7 @@ SCIP_RETCODE readBounds(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          SCIPdebugMessage("add bound disjunction constraint for semi-continuity of <%s>:\n\t", SCIPvarGetName(var));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -1573,8 +1572,7 @@ SCIP_RETCODE readSOS(
             /* add last constraint */
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebugPrintCons(scip, cons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
 
@@ -1668,8 +1666,7 @@ SCIP_RETCODE readSOS(
       /* add last constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1841,8 +1838,7 @@ SCIP_RETCODE readQMatrix(
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       SCIP_CALL( SCIPreleaseVar(scip, &qmatrixvar) );
@@ -1981,7 +1977,7 @@ SCIP_RETCODE readQCMatrix(
             quadvars2[cnt] = var2;
             quadcoefs[cnt] = coef;
             ++cnt;
-            
+
             SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
 
             /* check other fields */
@@ -2008,8 +2004,7 @@ SCIP_RETCODE readQCMatrix(
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -2201,8 +2196,7 @@ SCIP_RETCODE readIndicators(
                      initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, cons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
                SCIPfreeBufferArray(scip, &vals);
@@ -2240,8 +2234,7 @@ SCIP_RETCODE readIndicators(
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 

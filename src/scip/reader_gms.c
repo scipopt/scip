@@ -2421,7 +2421,7 @@ SCIP_RETCODE SCIPwriteGms(
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
          SCIPinfoMessage(scip, file, "* ");
          SCIP_CALL( SCIPprintCons(scip, cons, file) );
-         SCIPinfoMessage(scip, file, "\n");
+         SCIPinfoMessage(scip, file, ";\n");
       }
 
       SCIPinfoMessage(scip, file, "\n");

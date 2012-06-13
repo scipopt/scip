@@ -3084,8 +3084,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
 
    SCIPdebugMessage("generate %sestimator for convex-concave constraint <%s>\n",
       (violside == SCIP_SIDETYPE_LEFT ? "over" : "under"), SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    if( violside == SCIP_SIDETYPE_LEFT )
    {
@@ -3996,8 +3995,7 @@ SCIP_RETCODE generateCut(
    if( consdata->z != NULL )
       SCIPdebugPrintf(", %s = %g with bounds [%g, %g]", SCIPvarGetName(consdata->z), SCIPgetSolVal(scip, sol, consdata->z), SCIPvarGetLbLocal(consdata->z), SCIPvarGetUbLocal(consdata->z));
    SCIPdebugPrintf("\n");
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIPdebugPrintf("\n");
 
    switch( consdata->convextype )
@@ -4611,8 +4609,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             SCIPconsIsStickingAtNode(conss[c])) );
 
       SCIPdebugMessage("replace violated nonlinear constraint <%s> by linear constraint after all nonlinear vars have been fixed\n", SCIPconsGetName(conss[c]) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
@@ -5281,8 +5278,7 @@ SCIP_RETCODE createConsFromQuadTerm(
          SCIPconsIsChecked(srccons), SCIPconsIsPropagated(srccons), SCIPconsIsLocal(srccons),
          SCIPconsIsModifiable(srccons), SCIPconsIsDynamic(srccons), SCIPconsIsRemovable(srccons),
          SCIPconsIsStickingAtNode(srccons)) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, *cons, NULL);
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -5472,8 +5468,7 @@ SCIP_RETCODE createConsFromMonomial(
             exprtree, convextype, z, zcoef, lhs, rhs,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, *cons, NULL);
 
    SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -6416,8 +6411,6 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
-
-            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
             }
@@ -6531,8 +6524,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
 #endif
 
       SCIPdebugMessage("process constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, conss[c], NULL);
 
       havechange = FALSE;
 
@@ -6546,8 +6538,7 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       if( havechange )
       {
          SCIPdebugMessage("removed fixed variables -> ");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
       }
    }
 
@@ -7206,8 +7197,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          upgdconss[*nupgdconss] = quadcons;
          ++*nupgdconss;
 
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadcons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, quadcons, NULL);
 
          if( keeporig )
          {
@@ -7311,8 +7301,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
    SCIP_CALL( createConsFromMonomial(scip, NULL, &cons, name, x, y, auxvar,
          SCIPexprGetMonomialCoef(monomial), expx, expy, -1.0, -SCIPexprgraphGetNodePolynomialConstant(node), -SCIPexprgraphGetNodePolynomialConstant(node)) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 

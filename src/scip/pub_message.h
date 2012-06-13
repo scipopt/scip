@@ -60,6 +60,14 @@ extern "C" {
 /** executes printf command only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintf                 printf
 
+/** executes SCIPprintCons() and prints termination symbol ";\n" only if SCIP_DEBUG flag is set */
+#define SCIPdebugPrintCons(x,y,z)       do                                                                   \
+                                        {                                                                    \
+                                           SCIP_CALL_ABORT( SCIPprintCons((x), (y), (z)) );                  \
+                                           SCIPinfoMessage((x), (z), ";\n");                                 \
+                                        }                                                                    \
+                                        while( FALSE )
+
 #else
 
 /** executes command only if SCIP_DEBUG flag is set */
@@ -70,6 +78,9 @@ extern "C" {
 
 /** executes printf command only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintf                 while( FALSE ) printf
+
+/** executes SCIPprintCons() and prints termination symbol ";\n" only if SCIP_DEBUG flag is set */
+#define SCIPdebugPrintCons(x,y,z)           /**/
 
 #endif
 

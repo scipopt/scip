@@ -872,14 +872,13 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
 
             /* complete the activity computation to discover the violation */
             for( ; i < consdata->nvars; ++i )
             {
                sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
             }
-            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", sum - consdata->capacity);
+            SCIPinfoMessage(scip, NULL, ";\nviolation: the capacity is violated by %.15g\n", sum - consdata->capacity);
          }
       }
    }
@@ -5680,7 +5679,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    tmpindices = NULL;
 
    SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
-   SCIPdebug( if( cons != NULL ) { SCIP_CALL( SCIPprintCons(scip, cons, NULL) ); SCIPinfoMessage(scip, NULL, ";\n"); } );
+   SCIPdebug( if( cons != NULL ) { SCIPdebugPrintCons(scip, cons, NULL); } );
 
    binvars = SCIPgetVars(scip);
 
@@ -6666,8 +6665,7 @@ SCIP_RETCODE dualPresolving(
       SCIP_Bool success;
 
       SCIPdebugMessage("the knapsack constraint <%s> is independent to rest of the problem\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       /* solve knapsack problem exactly */
       SCIP_CALL( SCIPsolveKnapsackExactly(scip, consdata->nvars, consdata->weights, profits, consdata->capacity,
@@ -7597,8 +7595,7 @@ SCIP_RETCODE deleteRedundantVars(
                         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                         SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
-                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                  SCIPdebugPrintCons(scip, cliquecons, NULL);
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                   SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
@@ -7868,8 +7865,7 @@ SCIP_RETCODE detectRedundantVars(
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
                SCIPdebugMessage(" -> adding clique constraint: ");
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-               SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+               SCIPdebugPrintCons(scip, cliquecons, NULL);
                SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                ++(*naddconss);
@@ -8090,8 +8086,7 @@ SCIP_RETCODE applyFixings(
    *cutoff = FALSE;
 
    SCIPdebugMessage("apply fixings:\n");
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* check infeasibility */
    if ( consdata->onesweightsum > consdata->capacity )
@@ -8253,8 +8248,7 @@ SCIP_RETCODE applyFixings(
    assert(consdata->onesweightsum == 0);
 
    SCIPdebugMessage("after applyFixings, before merging:\n");
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have to
     * clean up the constraint
@@ -8263,8 +8257,7 @@ SCIP_RETCODE applyFixings(
    {
       SCIP_CALL( mergeMultiples(scip, cons, cutoff) );
       SCIPdebugMessage("after applyFixings and merging:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
    }
 
    return SCIP_OKAY;
@@ -9252,8 +9245,7 @@ SCIP_RETCODE tightenWeights(
                            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                            SCIPconsIsStickingAtNode(cons)) );
                      SCIPdebugMessage(" -> adding clique constraint: ");
-                     SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-                     SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                     SCIPdebugPrintCons(scip, cliquecons, NULL);
                      SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                      SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                      SCIPfreeBufferArray(scip, &cliquevars);
@@ -9435,8 +9427,7 @@ SCIP_RETCODE addNegatedCliques(
       /* free capacity is the rest of not used capacity if the smallest amount of weights due to negated cliques are used */
       freecapacity = consdata->capacity - minactduetonegcliques;
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIPdebugMessage("Try to add negated cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n",
          SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
 
@@ -9644,8 +9635,7 @@ SCIP_RETCODE addCliques(
       /* free capacity is the rest of not used capacity if the smallest amount of weights due to negated cliques are used */
       freecapacity = consdata->capacity - minactduetonegcliques;
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
       SCIPdebugMessage("Try to add cliques in knapsack constraint handler for constraint %s; capacity = %"SCIP_LONGINT_FORMAT", minactivity(due to neg. cliques) = %"SCIP_LONGINT_FORMAT", freecapacity = %"SCIP_LONGINT_FORMAT".\n",
          SCIPconsGetName(cons), consdata->capacity, minactduetonegcliques, freecapacity);
 
@@ -9665,7 +9655,7 @@ SCIP_RETCODE addCliques(
             ++nposcliquevars;
          }
       }
-      
+
       if( nposcliquevars > 0 )
       {
          /* sort possible gain per substitution of the clique members */
@@ -10208,8 +10198,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( iscons1incons0contained )
       {
          SCIPdebugMessage("knapsack constraint <%s> is redundant\n", SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons1, NULL);
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
          SCIP_CALL( updateFlags(scip, cons0, cons1) );
@@ -10220,8 +10209,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       else if( iscons0incons1contained )
       {
          SCIPdebugMessage("knapsack constraint <%s> is redundant\n", SCIPconsGetName(cons0));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons0, NULL);
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
          SCIP_CALL( updateFlags(scip, cons1, cons0) );
@@ -10927,9 +10915,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          continue;
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-
+      SCIPdebugPrintCons(scip, cons, NULL);
       consdata->presolved = TRUE;
 
       /* remove all fixed variables */

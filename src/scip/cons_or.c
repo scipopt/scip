@@ -827,9 +827,7 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
-
-            SCIPinfoMessage(scip, NULL, "violation:\n");
+            SCIPinfoMessage(scip, NULL, ";\nviolation:\n");
             if( i == consdata->nvars )
             {
                SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
@@ -843,7 +841,7 @@ SCIP_RETCODE checkCons(
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 

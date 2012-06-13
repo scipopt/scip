@@ -1979,8 +1979,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          SCIP_CALL( SCIPaddCons(targetscip, cons) );
 
          SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(targetscip, cons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(targetscip, NULL, ";\n") );
+         SCIPdebugPrintCons(targetscip, cons, NULL);
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
          /* free temporary memory */

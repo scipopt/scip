@@ -1324,8 +1324,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    *nupgdconss = 0;
 
    SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
       return SCIP_OKAY;
@@ -1445,8 +1444,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraint:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
          return SCIP_OKAY;
       }
@@ -1478,10 +1476,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
       else if( SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) || SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
       {
@@ -1511,10 +1507,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
       }
       else
       {
@@ -1567,14 +1561,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
             SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugMessage("created bounddisjunction constraints:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[2], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[3], NULL)) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[2], NULL);
+         SCIPdebugPrintCons(scip, upgdconss[3], NULL);
       }
 
       return SCIP_OKAY;
@@ -1632,10 +1622,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsStickingAtNode(cons)) );
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
       *nupgdconss = 2;
 
@@ -1694,10 +1682,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsStickingAtNode(cons)) );
 
       SCIPdebugMessage("created bounddisjunction constraints:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[0], NULL)) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, upgdconss[1], NULL)) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
 
       *nupgdconss = 2;
    }
@@ -2007,9 +1993,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
             int v;
 
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
-
-            SCIPinfoMessage(scip, NULL, "violation: ");
+            SCIPinfoMessage(scip, NULL, ";\nviolation: ");
             for( v = 0; v < consdata->nvars; ++v )
             {
                assert(consdata->vars[v] != NULL);
@@ -2026,7 +2010,7 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
          return SCIP_OKAY;
       }
    }
-   
+
    return SCIP_OKAY;
 }
 

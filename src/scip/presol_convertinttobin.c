@@ -257,8 +257,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 	       &weights[nodd], (SCIP_Longint)domainsize,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, newcons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
 

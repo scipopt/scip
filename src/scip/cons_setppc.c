@@ -2280,7 +2280,7 @@ SCIP_RETCODE addExtraCliques(
 	 SCIP_CONSDATA* cliqueconsdata;
 
 	 SCIPdebugMessage(" -> adding clique constraint: ");
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL)) );
+	 SCIPdebugPrintCons(scip, cliquecons, NULL);
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	 ++(*naddconss);
 
@@ -4925,10 +4925,8 @@ SCIP_RETCODE detectRedundantConstraints(
 
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons0, NULL);
+         SCIPdebugPrintCons(scip, cons1, NULL);
 
          /* if necessary change type of setppc constraint */
          if( consdata1->setppctype != SCIP_SETPPCTYPE_PARTITIONING && consdata0->setppctype != consdata1->setppctype ) /*lint !e641*/
@@ -4977,10 +4975,8 @@ SCIP_RETCODE removeRedundantCons(
 
    SCIPdebugMessage(" -> removing setppc constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons0, NULL);
+   SCIPdebugPrintCons(scip, cons1, NULL);
 
    /* update flags of cons0 */
    SCIP_CALL( updateFlags(scip, cons0, cons1) );
@@ -5295,10 +5291,8 @@ SCIP_RETCODE removeRedundantConstraints(
       {
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons0, NULL);
+         SCIPdebugPrintCons(scip, cons1, NULL);
 
          /* both constraints consists of the same variables */
          if( consdata0->setppctype == consdata1->setppctype )
@@ -5334,20 +5328,16 @@ SCIP_RETCODE removeRedundantConstraints(
       {
          /* cons0 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons0, NULL);
+         SCIPdebugPrintCons(scip, cons1, NULL);
          SCIP_CALL( processContainedCons(scip, cons0, cons1, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
       else if( cons1iscontained )
       {
          /* cons1 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-	 SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, cons0, NULL);
+         SCIPdebugPrintCons(scip, cons1, NULL);
          SCIP_CALL( processContainedCons(scip, cons1, cons0, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
    }
@@ -6333,14 +6323,13 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
                SCIP_Real sum = 0.0;
 
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               SCIPinfoMessage(scip, NULL, ";\n");
 
                for( v = 0; v < consdata->nvars; ++v )
                {
                   assert(SCIPvarIsBinary(consdata->vars[v]));
                   sum += SCIPgetSolVal(scip, sol, consdata->vars[v]);
                }
-               SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
+               SCIPinfoMessage(scip, NULL, ";\nviolation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
             }
             return SCIP_OKAY;
          }

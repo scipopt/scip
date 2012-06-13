@@ -769,8 +769,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, (shortconflict ? nonefixvars - 1 : nonefixvars), onefixvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conflictcons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, conflictcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
    }
 
@@ -969,8 +968,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, (shortconflict ? nonefixvars - 1 : nonefixvars), onefixvars,
                   FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
             SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conflictcons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebugPrintCons(scip, conflictcons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
          }
 

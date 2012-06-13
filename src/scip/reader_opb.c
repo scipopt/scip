@@ -1199,8 +1199,7 @@ SCIP_RETCODE setObjective(
                   TRUE, TRUE, TRUE, TRUE, TRUE,  
                   FALSE, FALSE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, andcons) );
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, andcons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebugPrintCons(scip, andcons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -1252,8 +1251,7 @@ SCIP_RETCODE setObjective(
                FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, pseudocons) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, pseudocons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, pseudocons, NULL);
          SCIP_CALL( SCIPreleaseCons(scip, &pseudocons) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &var) );
@@ -1448,8 +1446,7 @@ SCIP_RETCODE readConstraints(
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    if( isNonlinear )
@@ -1630,8 +1627,7 @@ SCIP_RETCODE readOPBFile(
       SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip), 
             (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, topcostcons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, topcostcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
 
       SCIPfreeBufferArray(scip, &topcosts);

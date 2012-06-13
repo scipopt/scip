@@ -1089,9 +1089,8 @@ SCIP_RETCODE checkCons(
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
 
-            SCIPinfoMessage(scip, NULL, "violation:");
+            SCIPinfoMessage(scip, NULL, ";\nviolation:");
             if( i == consdata->nvars )
             {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
@@ -1105,7 +1104,7 @@ SCIP_RETCODE checkCons(
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2365,8 +2364,7 @@ SCIP_RETCODE cliquePresolve(
 		  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
 		  SCIPconsIsStickingAtNode(cons)) );
 	    SCIPdebugMessage(" -> adding clique constraint: ");
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+	    SCIPdebugPrintCons(scip, cliquecons, NULL);
 	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	    ++(*naddconss);
@@ -2517,8 +2515,7 @@ SCIP_RETCODE cliquePresolve(
                         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                         SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
-                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                  SCIPdebugPrintCons(scip, cliquecons, NULL);
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                   SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
@@ -2779,8 +2776,7 @@ SCIP_RETCODE cliquePresolve(
 	       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
 	       SCIPconsIsStickingAtNode(cons)) );
 	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+	 SCIPdebugPrintCons(scip, cliquecons, NULL);
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	 ++(*naddconss);
@@ -3314,8 +3310,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
    SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 
