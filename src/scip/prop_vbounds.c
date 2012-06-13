@@ -954,10 +954,10 @@ SCIP_RETCODE resolvePropagation(
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx ) );
+      SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       break;
    case SCIP_BOUNDTYPE_UPPER:
-      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx ) );
+      SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       break;
    default:
       SCIPerrorMessage("invalid bound type <%d>\n", boundtype);
@@ -1259,7 +1259,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant,           /**< inference variable bound constant used */
-   SCIP_Bool             canwide             /**< can bound widening be used or not (e.g., for implications or cliques */
+   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
    SCIP_VAR** vars;
@@ -1365,7 +1365,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    INFERINFO             inferinfo,          /**< inference information */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant,           /**< inference variable bound constant used */
-   SCIP_Bool             canwide             /**< can bound widening be used or not (e.g., for inplications or cliques */
+   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
    SCIP_VAR** vars;
@@ -1467,7 +1467,7 @@ SCIP_RETCODE tightenVarLb(
    SCIP_PROP*            prop,               /**< vbounds propagator */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             var,                /**< variable whose lower bound should be tightened */
-   SCIP_Real             newlb,              /**< new lower bound of the variable */
+   SCIP_Real             newlb,              /**< new lower bound for the variable */
    SCIP_Bool             global,             /**< is the bound globally valid? */
    INFERINFO             inferinfo,          /**< inference information storing variable and boundtype causing the propagation */
    SCIP_Bool             force,              /**< should domain changes be forced */
@@ -1475,7 +1475,7 @@ SCIP_RETCODE tightenVarLb(
                                               *   or 0.0 if propagation is caused by clique or implication */
    SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
-   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques */
+   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    int*                  nchgbds,            /**< pointer to increase, if a bound was changed */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
@@ -1522,11 +1522,8 @@ SCIP_RETCODE tightenVarLb(
          SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newlb, inferinfo, coef, constant, canwide) );
       }
       *result = SCIP_CUTOFF;
-
-      return SCIP_OKAY;
    }
-
-   if( tightened )
+   else if( tightened )
    {
       SCIPdebugMessage("tightened%s lower bound of variable <%s> to %g due the %s bound of variable <%s>\n",
          (global ? " global" : ""), SCIPvarGetName(var), newlb,
@@ -1553,7 +1550,7 @@ SCIP_RETCODE tightenVarUb(
                                               *   or 0.0 if propagation is caused by clique or implication */
    SCIP_Real             constant,           /**< constant in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
-   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques */
+   SCIP_Bool             canwide,            /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    int*                  nchgbds,            /**< pointer to increase, if a bound was changed */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
@@ -1600,11 +1597,8 @@ SCIP_RETCODE tightenVarUb(
          SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newub, inferinfo, coef, constant, canwide) );
       }
       *result = SCIP_CUTOFF;
-
-      return SCIP_OKAY;
    }
-
-   if( tightened )
+   else if( tightened )
    {
       SCIPdebugMessage("tightened%s upper bound of variable <%s> to %g due the %s bound of variable <%s>\n",
          (global ? " global" : ""), SCIPvarGetName(var), newub,
