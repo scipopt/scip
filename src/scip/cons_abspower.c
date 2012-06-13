@@ -18,8 +18,6 @@
  * @author Stefan Vigerske
  */
 
-/**@todo do not add varbounds to cutpool but create varbound constraints with appropriate flags */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -134,7 +132,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             projectrefpoint;    /**< whether to project the reference point when linearizing a absolute power constraint in a convex region */
    int                   preferzerobranch;   /**< how much we prefer to branch on 0.0 first */
    SCIP_Bool             branchminconverror; /**< whether to compute branching point such that the convexification error is minimized after branching on 0.0 */
-   SCIP_Bool             addvarbounds;       /**< will variable bounds be added to the cutpool? */
+   SCIP_Bool             addvarboundcons;    /**< should variable bound constraints be added? */
    SCIP_Bool             linfeasshift;       /**< try linear feasibility shift heuristic in CONSCHECK */
    SCIP_Bool             dualpresolve;       /**< should dual presolve be applied? */
    SCIP_Bool             sepainboundsonly;   /**< should tangents only be generated in variable bounds during separation? */
@@ -2924,13 +2922,15 @@ static
 SCIP_RETCODE addVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< absolute power constraint this variable bound is derived form */
+   SCIP_Bool             addcons,            /**< should the variable bound be added as constraint to SCIP? */
    SCIP_VAR*             var,                /**< variable x for which we want to add a variable bound */
    SCIP_VAR*             vbdvar,             /**< variable y which makes the bound a variable bound */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable vbdvar */
    SCIP_Real             lhs,                /**< left  hand side of varbound constraint */
    SCIP_Real             rhs,                /**< right hand side of varbound constraint */
    SCIP_Bool*            infeas,             /**< pointer to store whether an infeasibility was detected */
-   int*                  nbdchgs             /**< pointer where to add number of performed bound changes, or NULL */
+   int*                  nbdchgs,            /**< pointer where to add number of performed bound changes */
+   int*                  naddconss           /**< pointer where to add number of added constraints */
    )
 {
    int nbdchgs_local;
@@ -2968,13 +2968,30 @@ SCIP_RETCODE addVarbound(
 
    SCIPdebugMessage("-> %g <= <%s> + %g*<%s> <= %g\n", lhs, SCIPvarGetName(var), vbdcoef, SCIPvarGetName(vbdvar), rhs);
 
+   if( addcons )
+   {
+      SCIP_CONS* vbdcons;
+      char name[SCIP_MAXSTRLEN];
+
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_vbnd", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPcreateConsVarbound(scip, &vbdcons, name, var, vbdvar, vbdcoef, lhs, rhs,
+         FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, vbdcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &vbdcons) );
+
+      ++*naddconss;
+
+      return SCIP_OKAY;
+   }
+
+
    if( !SCIPisInfinity(scip, -lhs) )
    {
       SCIP_CALL( SCIPaddVarVlb(scip, var, vbdvar, -vbdcoef, lhs, infeas, &nbdchgs_local) );
       if( *infeas )
          return SCIP_OKAY;
-      if( nbdchgs )
-         *nbdchgs += nbdchgs_local;
+      *nbdchgs += nbdchgs_local;
    }
 
    if( !SCIPisInfinity(scip,  rhs) )
@@ -2982,8 +2999,7 @@ SCIP_RETCODE addVarbound(
       SCIP_CALL( SCIPaddVarVub(scip, var, vbdvar, -vbdcoef, rhs, infeas, &nbdchgs_local) );
       if( *infeas )
          return SCIP_OKAY;
-      if( nbdchgs )
-         *nbdchgs += nbdchgs_local;
+      *nbdchgs += nbdchgs_local;
    }
 
    return SCIP_OKAY;
@@ -3015,9 +3031,11 @@ SCIP_RETCODE propagateVarbounds(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_Bool*            infeas,             /**< pointer to store whether an infeasibility was detected */
-   int*                  nbdchgs             /**< pointer where to add number of performed bound changes, or NULL */
+   int*                  nbdchgs,            /**< pointer where to add number of performed bound changes */
+   int*                  naddconss           /**< pointer where to add number of added constraints */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR*      y;
    SCIP_Real      a;
@@ -3032,8 +3050,13 @@ SCIP_RETCODE propagateVarbounds(
    assert(conshdlr != NULL);
    assert(cons     != NULL);
    assert(infeas   != NULL);
+   assert(nbdchgs  != NULL);
+   assert(naddconss != NULL);
 
    *infeas =  FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3076,12 +3099,12 @@ SCIP_RETCODE propagateVarbounds(
          if( consdata->zcoef > 0.0 )
          {
             /* add varbound z >= (lhs-f(b))/c + y * (f(b)-f(a+b))/c */
-            SCIP_CALL( addVarbound(scip, cons, consdata->z, y, -vbcoef, vbconst,  SCIPinfinity(scip), infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->z, y, -vbcoef, vbconst,  SCIPinfinity(scip), infeas, nbdchgs, naddconss) );
          }
          else
          {
             /* add varbound z <= (lhs-f(b))/c + y * (f(b)-f(a+b))/c */
-            SCIP_CALL( addVarbound(scip, cons, consdata->z, y, -vbcoef, -SCIPinfinity(scip), vbconst, infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->z, y, -vbcoef, -SCIPinfinity(scip), vbconst, infeas, nbdchgs, naddconss) );
          }
          if( *infeas )
             return SCIP_OKAY;
@@ -3121,12 +3144,12 @@ SCIP_RETCODE propagateVarbounds(
          if( consdata->zcoef > 0.0 )
          {
             /* add varbound z <= (rhs-f(b))/c + y * (f(b)-f(a+b))/c */
-            SCIP_CALL( addVarbound(scip, cons, consdata->z, y, -vbcoef, -SCIPinfinity(scip), vbconst, infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->z, y, -vbcoef, -SCIPinfinity(scip), vbconst, infeas, nbdchgs, naddconss) );
          }
          else
          {
             /* add varbound z >= (rhs-f(b))/c + y * (f(b)-f(a+b))/c */
-            SCIP_CALL( addVarbound(scip, cons, consdata->z, y, -vbcoef, vbconst,  SCIPinfinity(scip), infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->z, y, -vbcoef, vbconst,  SCIPinfinity(scip), infeas, nbdchgs, naddconss) );
          }
          if( *infeas )
             return SCIP_OKAY;
@@ -3159,7 +3182,7 @@ SCIP_RETCODE propagateVarbounds(
             fb = SIGN(fb) * pow(ABS(fb), 1.0/consdata->exponent);
             fab = consdata->lhs - (a+b);
             fab = SIGN(fab) * pow(ABS(fab), 1.0/consdata->exponent);
-            SCIP_CALL( addVarbound(scip, cons, consdata->x, y, fb - fab, fb - consdata->xoffset, SCIPinfinity(scip),  infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->x, y, fb - fab, fb - consdata->xoffset, SCIPinfinity(scip),  infeas, nbdchgs, naddconss) );
          }
          else
          {
@@ -3167,7 +3190,7 @@ SCIP_RETCODE propagateVarbounds(
             fb = SIGN(fb) * pow(ABS(fb), 1.0/consdata->exponent);
             fab = consdata->rhs - (a+b);
             fab = SIGN(fab) * pow(ABS(fab), 1.0/consdata->exponent);
-            SCIP_CALL( addVarbound(scip, cons, consdata->x, y, fb - fab, -SCIPinfinity(scip), fb - consdata->xoffset, infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->x, y, fb - fab, -SCIPinfinity(scip), fb - consdata->xoffset, infeas, nbdchgs, naddconss) );
          }
          if( *infeas )
             return SCIP_OKAY;
@@ -3199,7 +3222,7 @@ SCIP_RETCODE propagateVarbounds(
             fb = SIGN(fb) * pow(ABS(fb), 1.0/consdata->exponent);
             fab = consdata->rhs - (a+b);
             fab = SIGN(fab) * pow(ABS(fab), 1.0/consdata->exponent);
-            SCIP_CALL( addVarbound(scip, cons, consdata->x, y, fb - fab, -SCIPinfinity(scip), fb - consdata->xoffset, infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->x, y, fb - fab, -SCIPinfinity(scip), fb - consdata->xoffset, infeas, nbdchgs, naddconss) );
          }
          else
          {
@@ -3207,72 +3230,11 @@ SCIP_RETCODE propagateVarbounds(
             fb = SIGN(fb) * pow(ABS(fb), 1.0/consdata->exponent);
             fab = consdata->lhs - (a+b);
             fab = SIGN(fab) * pow(ABS(fab), 1.0/consdata->exponent);
-            SCIP_CALL( addVarbound(scip, cons, consdata->x, y, fb - fab, fb - consdata->xoffset,  SCIPinfinity(scip), infeas, nbdchgs) );
+            SCIP_CALL( addVarbound(scip, cons, conshdlrdata->addvarboundcons, consdata->x, y, fb - fab, fb - consdata->xoffset,  SCIPinfinity(scip), infeas, nbdchgs, naddconss) );
          }
          if( *infeas )
             return SCIP_OKAY;
       }
-
-   return SCIP_OKAY;
-}
-
-/** adds variable bounds on a variable as LP rows into the cutpool */
-static
-SCIP_RETCODE addVarboundsToCutPool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   SCIP_Real constant;
-   SCIP_Real scalar;
-   SCIP_ROW* row;
-   SCIP_VAR* rowvars[2];
-   SCIP_Real rowcoef[2];
-   char      name[SCIP_MAXSTRLEN];
-   int i;
-
-   assert(scip != NULL);
-   assert(var  != NULL);
-
-   constant = 0.0;
-   scalar   = 1.0;
-
-   /* make sure var is active */
-   SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
-   if( !SCIPvarIsActive(var) || scalar == 0.0 )
-      return SCIP_OKAY;
-
-   rowvars[0] = var;
-   rowcoef[0] = scalar;
-
-   for( i = 0; i < SCIPvarGetNVlbs(var); ++i )
-   {
-      /* variable lower bound scalar*var+constant >= b_iz_i + d_i */
-      rowvars[1] = SCIPvarGetVlbVars(var)[i];
-      rowcoef[1] = -SCIPvarGetVlbCoefs(var)[i];
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_varlb", SCIPvarGetName(rowvars[0]), SCIPvarGetName(rowvars[1]));
-
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, SCIPvarGetVlbConstants(var)[i] - constant, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, row, 2, rowvars, rowcoef) );
-
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
-
-   for( i = 0; i < SCIPvarGetNVubs(var); ++i )
-   {
-      /* variable upper bound scalar*var+constant <= b_iz_i + d_i */
-      rowvars[1] = SCIPvarGetVubVars(var)[i];
-      rowcoef[1] = -SCIPvarGetVubCoefs(var)[i];
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_varub", SCIPvarGetName(rowvars[0]), SCIPvarGetName(rowvars[1]));
-
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), SCIPvarGetVubConstants(var)[i] - constant, FALSE, FALSE, TRUE) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, row, 2, rowvars, rowcoef) );
-
-      SCIP_CALL( SCIPaddPoolCut(scip, row) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
 
    return SCIP_OKAY;
 }
@@ -5135,12 +5097,6 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
          consdata->root = root;
       }
 
-      if( conshdlrdata->addvarbounds )
-      {
-         SCIP_CALL( addVarboundsToCutPool(scip, conshdlr, consdata->x) );
-         SCIP_CALL( addVarboundsToCutPool(scip, conshdlr, consdata->z) );
-      }
-
       /* add nlrow respresentation to NLP, if NLP had been constructed */
       if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
       {
@@ -6139,7 +6095,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       /* propagate variable bound constraints */
       if( !consdata->propvarbounds )
       {
-         SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds) );  /*lint !e613*/
+         SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds, naddconss) );  /*lint !e613*/
 
          if( infeas )
          {
@@ -6742,9 +6698,9 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          "whether to compute branching point such that the convexification error is minimized (after branching on 0.0)",
          &conshdlrdata->branchminconverror, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addvarbounds",
-         "should variable bounds be added to the cutpool?",
-         &conshdlrdata->addvarbounds, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addvarboundcons",
+         "should variable bound constraints be added for derived variable bounds?",
+         &conshdlrdata->addvarboundcons, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting the linear variable z",
