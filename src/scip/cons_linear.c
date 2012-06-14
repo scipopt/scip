@@ -1191,7 +1191,6 @@ void consdataUpdateActivities(
    int* activityposhuge;
    int* activityneghuge;
    SCIP_Real delta;
-   SCIP_Real newactivity;
    SCIP_Bool validact;
 
    assert(scip != NULL);
@@ -1523,18 +1522,15 @@ void consdataUpdateActivities(
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
-      newactivity = (*activity) + delta;
-      assert(!SCIPisInfinity(scip, -newactivity) && !SCIPisInfinity(scip, newactivity));
+      (*activity) = (*activity) + delta;
+      assert(!SCIPisInfinity(scip, -(*activity)) && !SCIPisInfinity(scip, *activity));
 
-      if( REALABS((*activity)) < REALABS(newactivity) )
+      if( REALABS((*lastactivity)) < REALABS(*activity) )
       {
-         (*activity) = newactivity;
-         (*lastactivity) = newactivity;
+         (*lastactivity) = (*activity);
       }
       else
       {
-         (*activity) = newactivity;
-
          if( checkreliability && SCIPisUpdateUnreliable(scip, (*activity), (*lastactivity)) )
          {
             SCIPdebugMessage("%s%s activity of linear constraint unreliable after update: %16.9g\n", (global ? "global " : ""),

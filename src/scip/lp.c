@@ -14213,8 +14213,6 @@ void lpUpdateObjval(
    SCIP_Bool             global              /**< should the global pseudo objective value be updated? */
    )
 {
-   SCIP_Real oldval;
-
    assert(lp != NULL);
    assert(lp->looseobjvalinf >= 0);
    assert(lp->pseudoobjvalinf >= 0);
@@ -14226,13 +14224,12 @@ void lpUpdateObjval(
       lp->pseudoobjvalinf += deltainf;
       if( lp->pseudoobjvalid )
       {
-         oldval = lp->pseudoobjval;
          lp->pseudoobjval += deltaval;
 
          /* if the absolute value was increased, this is regarded as reliable,
           * otherwise, we check whether we can still trust the updated value
           */
-         if( REALABS(oldval) < REALABS(lp->pseudoobjval) )
+         if( REALABS(lp->relpseudoobjval) < REALABS(lp->pseudoobjval) )
             lp->relpseudoobjval = lp->pseudoobjval;
          else if( SCIPsetIsUpdateUnreliable(set, lp->pseudoobjval, lp->relpseudoobjval) )
             lp->pseudoobjvalid = FALSE;
@@ -14249,13 +14246,12 @@ void lpUpdateObjval(
 
       if( deltaval != 0.0 && lp->looseobjvalid )
       {
-         oldval = lp->looseobjval;
          lp->looseobjval += deltaval;
 
          /* if the absolute value was increased, this is regarded as reliable,
           * otherwise, we check whether we can still trust the updated value
           */
-         if( REALABS(oldval) < REALABS(lp->looseobjval) )
+         if( REALABS(lp->rellooseobjval) < REALABS(lp->looseobjval) )
             lp->rellooseobjval = lp->looseobjval;
          else if( SCIPsetIsUpdateUnreliable(set, lp->looseobjval, lp->rellooseobjval) )
             lp->looseobjvalid = FALSE;
@@ -14267,13 +14263,12 @@ void lpUpdateObjval(
       lp->glbpseudoobjvalinf += deltainf;
       if( lp->glbpseudoobjvalid )
       {
-         oldval = lp->glbpseudoobjval;
          lp->glbpseudoobjval += deltaval;
 
          /* if the absolute value was increased, this is regarded as reliable,
           * otherwise, we check whether we can still trust the updated value
           */
-         if( REALABS(oldval) < REALABS(lp->glbpseudoobjval) )
+         if( REALABS(lp->relglbpseudoobjval) < REALABS(lp->glbpseudoobjval) )
             lp->relglbpseudoobjval = lp->glbpseudoobjval;
          else if( SCIPsetIsUpdateUnreliable(set, lp->glbpseudoobjval, lp->relglbpseudoobjval) )
             lp->glbpseudoobjvalid = FALSE;
