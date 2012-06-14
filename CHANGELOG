@@ -137,6 +137,8 @@ interface
 - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print ";\n" manually
 - new method SCIPhaveVarsCommonClique() in scip.{h,c}, to check for common clique information on two given variables
 - forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE
+- new parameter numerics/lpfeastol for primal feasibility tolerance used in LP solver
+- new macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -168,6 +170,7 @@ performance improvements:
   aggressive separation
 - revised reduced cost propagator
 - increased performance in SCIPcliqueAddVar(), adding a variable to a clique
+- tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -212,6 +215,7 @@ fixed bugs:
 - method SCIPvarGetProbvarSum() (and thus also SCIPgetProbvarSum()) returns +/-infinity if the variable resolves to a
   variable fixed to +/-infinity (depending on the sign of the scalar) but does not multiply with the scalar, anymore
 - primal solutions with infinite objective value are now automatically discarded
+- better handling of infinite solution values for aggregated and negated variables
 - fixed bug that disabled multi-aggregation of two integer or implicit integer variables
 - fixed bug in sol.c with requesting values of transformed variables in original solution; previously this had only
   been handled in SCIPgetSolVal(), now the handling has been moved to SCIPsolGetVal()
@@ -255,6 +259,10 @@ parameters:
   LP resolve, respectively
 - removed superfluous parameter <separating/closecuts/separootonly>
 - removed <constraints/quadratic/defaultbound>
+- new parameters constraints/setppc/cliquelifting, constraints/setppc/addvariablesascliques,
+  constraints/setppc/cliqueshrinking, first for enabling/disabling the clique lifting algorithm in cons_setppc.c,
+  second parameter is for trying to create extra clique constraints in lifting algorithm, third parameter is for trying
+  to decrease the number of variable in a clique constraint in the lifting algorithm
 
 features:
 - SCIPcomputeLPRelIntPoint with normtype='s' now uses homogenized LP for computing rel.int. point too and allow to
@@ -287,7 +295,7 @@ features:
   difficult instances (no guarantees)
 - new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
   statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
-- new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
+- new GML(Graph Modeling Language) methods SCIPgmlWriteOpening(), SCIPgmlWriteCosing(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
   SCIPgmlWriteNode() wo write to a given GML file
 - automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
   adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)
@@ -295,6 +303,7 @@ features:
 - added possibility to use GUBs for lifting knapsack cuts (disabled)
 - added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
+- implemented first clique lifting procedure in cons_setppc.c (by default is off)
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

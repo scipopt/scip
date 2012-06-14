@@ -185,7 +185,7 @@ SCIP_RETCODE consdataCheckSuperindicator(
 #endif
 
       SCIPdebugMessage("binvar <%s> == 1, sol=%p --> SCIPcheckCons() on constraint <%s> --> %s\n",
-         SCIPvarGetName(consdata->binvar), sol, SCIPconsGetName(consdata->slackcons),
+         SCIPvarGetName(consdata->binvar), (void*)sol, SCIPconsGetName(consdata->slackcons),
          *result == SCIP_FEASIBLE ? "satisfied" : "violated");
    }
    /* if binval is zero, the superindicator constraint is feasible */

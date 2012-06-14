@@ -2097,8 +2097,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
-   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
-   if( lpi->solstat == CPX_STAT_OPTIMAL ||  lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    */
+   if( lpi->solstat == CPX_STAT_OPTIMAL )
    {
 #ifdef NDEBUG
       lpi->solisbasic = TRUE;
@@ -2203,8 +2205,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
       }
    }
 
-   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case */
-   if( lpi->solstat == CPX_STAT_OPTIMAL || lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+   /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds 
+    */
+   if( lpi->solstat == CPX_STAT_OPTIMAL )
    {
 #ifdef NDEBUG
       lpi->solisbasic = TRUE;

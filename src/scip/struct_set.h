@@ -293,6 +293,7 @@ struct SCIP_Set
    SCIP_Real             num_epsilon;        /**< absolute values smaller than this are considered zero */
    SCIP_Real             num_sumepsilon;     /**< absolute values of sums smaller than this are considered zero */
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
+   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */

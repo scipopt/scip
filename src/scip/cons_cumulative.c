@@ -1921,11 +1921,10 @@ SCIP_RETCODE checkCumulativeCondition(
 
             /* first state the violated constraints */
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
 
             /* second state the reason */
             SCIPinfoMessage(scip, NULL,
-               "violation: at time point %d available capacity = %d, needed capacity = %d\n",
+               ";\nviolation: at time point %d available capacity = %d, needed capacity = %d\n",
                curtime, capacity, capacity - freecapacity);
 
             for( i = 0; i <= j; ++i )
@@ -2409,17 +2408,23 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
    SCIP_Bool*            branched            /**< pointer to store if a branching was applied */
    )
 {
-   SCIP_VAR* var;
    int v;
 
    for( v = 0; v < nvars; ++v )
    {
+      SCIP_VAR* var;
+
       var = vars[v];
       assert(var != NULL);
 
+
       if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
       {
-         if( alternativelbs[v] != INT_MAX )
+         int ub;
+
+         ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
+
+         if( alternativelbs[v] <= ub )
          {
             SCIP_CALL( SCIPbranchVarHole(scip, var, SCIPvarGetLbLocal(var), (SCIP_Real)alternativelbs[v], NULL, NULL) );
             (*branched) = TRUE;
@@ -2433,7 +2438,11 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
 
       if( SCIPvarGetNLocksUp(var) == uplocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
       {
-         if( alternativeubs[v] != INT_MIN )
+         int lb;
+
+         lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+
+         if( alternativeubs[v] >= lb )
          {
             SCIP_CALL( SCIPbranchVarHole(scip, var, (SCIP_Real)alternativeubs[v], SCIPvarGetUbLocal(var), NULL, NULL) );
             (*branched) = TRUE;
@@ -2847,8 +2856,7 @@ SCIP_RETCODE solveIndependentCons(
    vars = consdata->vars;
 
    SCIPdebugMessage("the cumulative constraint <%s> is independent from rest of the problem\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -3915,7 +3923,7 @@ SCIP_RETCODE checkOverload(
             (*initialized) = TRUE;
          }
          else
-            assert((SCIPgetStage(scip) != SCIP_STAGE_SOLVING && !SCIPinProbing(scip)));
+            assert((SCIPgetDepth(scip) == 0 || SCIPgetStage(scip) != SCIP_STAGE_SOLVING) && !SCIPinProbing(scip));
       }
    }
 
@@ -4392,15 +4400,15 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
    int*                  nfixedvars          /**< pointer to store the number of fixed variables */
    )
 {
-   SCIP_VAR* var;
    int v;
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_Real lb;
-      SCIP_Real ub;
+      SCIP_VAR* var;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+      int ub;
+      int lb;
 
       var = vars[v];
       assert(var != NULL);
@@ -4414,6 +4422,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
 
       if( SCIPvarGetNLocksDown(var) == downlocks[v] && SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
       {
+
          if( alternativelbs[v] > ub )
          {
             SCIP_CALL( SCIPfixVar(scip, var, SCIPvarGetLbLocal(var), &infeasible, &fixed) );
@@ -5762,8 +5771,7 @@ SCIP_RETCODE adjustOversizedJobBounds(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vartuple, boundtypetuple, boundtuple,
             TRUE, FALSE, TRUE, TRUE /*check*/, TRUE/*prop*/, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-      SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       (*naddconss)++;
@@ -8509,7 +8517,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* create opening of the GML format */
-   SCIPgmlOpen(file,  TRUE);
+   SCIPgmlWriteOpening(file,  TRUE);
 
    for( v = 0; v < nvars; ++v )
    {
@@ -8565,7 +8573,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
    }
 
    /* create closing of the GML format */
-   SCIPgmlClose(file);
+   SCIPgmlWriteCosing(file);
 
    /* close file */
    fclose(file);

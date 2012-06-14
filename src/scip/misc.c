@@ -188,7 +188,7 @@ void SCIPgmlWriteArc(
 }
 
 /** writes the starting line to a GML graph file, does not open a file */
-void SCIPgmlOpen(
+void SCIPgmlWriteOpening(
    FILE*                 file,               /**< file to write to */
    SCIP_Bool             directed            /**< is the graph directed */
    )
@@ -204,7 +204,7 @@ void SCIPgmlOpen(
 }
 
 /** writes the ending lines to a GML graph file, does not close a file */
-void SCIPgmlClose(
+void SCIPgmlWriteCosing(
    FILE*                 file                /**< file to close */
    )
 {
@@ -5037,7 +5037,7 @@ void SCIPdigraphPrintGml(
    int n;
 
    /* write GML format opening */
-   SCIPgmlOpen(file, TRUE);
+   SCIPgmlWriteOpening(file, TRUE);
 
    /* write all nodes of the graph */
    for( n = 0; n < digraph->nnodes; ++n )
@@ -5064,7 +5064,7 @@ void SCIPdigraphPrintGml(
       }
    }
    /* write GML format closing */
-   SCIPgmlClose(file);
+   SCIPgmlWriteCosing(file);
 }
 
 /** output of the given directed graph via the given message handler */
@@ -5442,7 +5442,7 @@ void SCIPbstPrintGml(
    )
 {
    /* write GML opening */
-   SCIPgmlOpen(file, TRUE);
+   SCIPgmlWriteOpening(file, TRUE);
 
    if( !SCIPbstIsEmpty(tree) )
    {
@@ -5458,7 +5458,7 @@ void SCIPbstPrintGml(
    }
 
    /* write GML closing */
-   SCIPgmlClose(file);
+   SCIPgmlWriteCosing(file);
 }
 
 /* some simple variable functions implemented as defines */

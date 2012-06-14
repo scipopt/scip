@@ -1268,6 +1268,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -6518,7 +6520,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
  *  to facilitate correct statistics.
  */
 extern
-SCIP_RETCODE SCIPcreateRow(
+SCIP_DEPRECATED SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6566,7 +6568,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
  *  to facilitate correct statistics.
  */
 extern
-SCIP_RETCODE SCIPcreateEmptyRow(
+SCIP_DEPRECATED SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -9607,6 +9609,12 @@ SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns primal feasibility tolerance of LP solver */
+extern
+SCIP_Real SCIPlpfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns feasibility tolerance for reduced costs */
 extern
 SCIP_Real SCIPdualfeastol(
@@ -9630,6 +9638,13 @@ extern
 SCIP_RETCODE SCIPchgFeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             feastol             /**< new feasibility tolerance for constraints */
+   );
+
+/** sets the primal feasibility tolerance of LP solver */
+extern
+SCIP_RETCODE SCIPchgLpfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
    );
 
 /** sets the feasibility tolerance for reduced costs */

@@ -88,14 +88,14 @@ void SCIPgmlWriteArc(
 
 /** writes the starting line to a GML graph file, does not open a file */
 extern
-void SCIPgmlOpen(
+void SCIPgmlWriteOpening(
    FILE*                 file,               /**< file to write to */
    SCIP_Bool             directed            /**< is the graph directed */
    );
 
 /** writes the ending lines to a GML graph file, does not close a file */
 extern
-void SCIPgmlClose(
+void SCIPgmlWriteCosing(
    FILE*                 file                /**< file to close */
    );
 

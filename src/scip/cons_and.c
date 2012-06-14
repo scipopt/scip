@@ -1055,8 +1055,13 @@ SCIP_RETCODE checkCons(
       SCIP_Real solval;
       int i;
 
-      /* increase age of constraint; age is reset to zero, if a violation was found */
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
+      /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
+       * enforcement
+       */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
 
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
@@ -1073,15 +1078,19 @@ SCIP_RETCODE checkCons(
 
       if( (i == consdata->nvars) != (solval > 0.5) )
       {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         /* only reset constraint age if we are in enforcement */
+         if( sol == NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
 
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
 
-            SCIPinfoMessage(scip, NULL, "violation:");
+            SCIPinfoMessage(scip, NULL, ";\nviolation:");
             if( i == consdata->nvars )
             {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
@@ -1095,7 +1104,7 @@ SCIP_RETCODE checkCons(
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2355,8 +2364,7 @@ SCIP_RETCODE cliquePresolve(
 		  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
 		  SCIPconsIsStickingAtNode(cons)) );
 	    SCIPdebugMessage(" -> adding clique constraint: ");
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+	    SCIPdebugPrintCons(scip, cliquecons, NULL);
 	    SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	    ++(*naddconss);
@@ -2507,8 +2515,7 @@ SCIP_RETCODE cliquePresolve(
                         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                         SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
-                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-                  SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+                  SCIPdebugPrintCons(scip, cliquecons, NULL);
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                   SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
@@ -2769,8 +2776,7 @@ SCIP_RETCODE cliquePresolve(
 	       SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
 	       SCIPconsIsStickingAtNode(cons)) );
 	 SCIPdebugMessage(" -> upgrading and-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
-	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+	 SCIPdebugPrintCons(scip, cliquecons, NULL);
 	 SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
 	 ++(*naddconss);
@@ -3304,8 +3310,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
    SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+   SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    ++*naddcons;
 
@@ -3559,7 +3564,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
 
    /* write starting of gml file */
-   SCIPgmlOpen(gmlfile, TRUE);
+   SCIPgmlWriteOpening(gmlfile, TRUE);
 
    /* walk over all and-constraints */
    for( c = nconss - 1; c >= 0; --c )
@@ -3644,7 +3649,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    /* free the variable mapping hash map */
    SCIPhashmapFree(&hashmap);
 
-   SCIPgmlClose(gmlfile);
+   SCIPgmlWriteCosing(gmlfile);
 
    fclose(gmlfile);
 

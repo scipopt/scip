@@ -1144,7 +1144,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    assert(targetscip->set != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyPlugins", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    /* passes the message handler of the source SCIP to the target SCIP, also if NULL */
@@ -1186,8 +1186,8 @@ SCIP_RETCODE SCIPcopyProb(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyProb", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyProb", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* free old problem */
    SCIP_CALL( SCIPfreeProb(targetscip) );
@@ -1274,7 +1274,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_Bool uselocalconsmap;
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPgetVarCopy", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(targetscip != NULL);
@@ -1503,7 +1503,7 @@ SCIP_RETCODE SCIPcopyVars(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyVars", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* get active variables of the source SCIP */
@@ -1656,6 +1656,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    assert(targetcons != NULL);
    assert(sourceconshdlr != NULL);
 
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetConsCopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPgetConsCopy", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    uselocalvarmap = (varmap == NULL);
@@ -1752,7 +1753,7 @@ SCIP_RETCODE SCIPcopyConss(
    assert(valid      != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check if we locally need to create a variable or constraint hash map */
@@ -1978,8 +1979,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          SCIP_CALL( SCIPaddCons(targetscip, cons) );
 
          SCIPdebugMessage("Converted cut <%s> to constraint <%s>.\n", SCIProwGetName(row), SCIPconsGetName(cons));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(targetscip, cons, NULL) ) );
-         SCIPdebug( SCIPinfoMessage(targetscip, NULL, ";\n") );
+         SCIPdebugPrintCons(targetscip, cons, NULL);
          SCIP_CALL( SCIPreleaseCons(targetscip, &cons) );
 
          /* free temporary memory */
@@ -2042,7 +2042,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
    assert(targetscip->set != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyParamSettings", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyParamSettings", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopyParamSettings", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPsetCopyParams(sourcescip->set, targetscip->set, targetscip->messagehdlr) );
@@ -2106,7 +2106,7 @@ SCIP_RETCODE SCIPcopy(
    assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    /* get time before start of copy procedure */
@@ -3334,6 +3334,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
    SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
+   SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
+   SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -3356,7 +3358,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars, consprint,
-         conscopy, consparse, NULL, NULL, conshdlrdata) );
+         conscopy, consparse, consgetvars, consgetnvars, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
    return SCIP_OKAY;
@@ -6713,8 +6715,8 @@ SCIP_RETCODE SCIPreadProb(
 
    assert(scip != NULL);  
    assert(filename != NULL);
-   
-   SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/useconstable", &useconstable) );
@@ -6730,14 +6732,14 @@ SCIP_RETCODE SCIPreadProb(
 
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
-   
+
    fileextension = NULL;
    if( extension == NULL )
    {
       /* get extension from filename */
       SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, NULL);
    }
-   
+
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
       retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename, 
@@ -8150,7 +8152,7 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -8329,7 +8331,7 @@ int SCIPgetNConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -8341,6 +8343,7 @@ int SCIPgetNConss(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       return scip->transprob->nconss;
@@ -14969,9 +14972,7 @@ SCIP_RETCODE tightenBounds(
    )
 {
    assert(scip != NULL);
-   /**@todo this will be only allowed in SCIP_STAGE_PRESOLVING once all plugins respect the new stages */
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM
-      || (SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE));
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPvarIsTransformed(var));
 
    *infeasible = FALSE;
@@ -16723,11 +16724,7 @@ SCIP_RETCODE SCIPincConsAge(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   /**@todo currently, many plugins call SCIPincConsAge() and SCIPresetConsAge() in the check callback; because of this,
-    *       they are allowed in SCIP_STAGE_INITSOLVE; this is not the intended behaviour (see comment above), however,
-    *       and should be changed in the plugins and here
-    */
-   SCIP_CALL( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsIncAge(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
 
@@ -16745,11 +16742,7 @@ SCIP_RETCODE SCIPresetConsAge(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   /**@todo currently, many plugins call SCIPincConsAge() and SCIPresetConsAge() in the check callback; because of this,
-    *       they are allowed in SCIP_STAGE_INITSOLVE; this is not the intended behaviour (see comment above), however,
-    *       and should be changed in the plugins and here
-    */
-   SCIP_CALL( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsResetAge(cons, scip->set) );
 
@@ -25933,6 +25926,17 @@ SCIP_Real SCIPfeastol(
    return SCIPsetFeastol(scip->set);
 }
 
+/** returns primal feasibility tolerance of LP solver */
+SCIP_Real SCIPlpfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetLpfeastol(scip->set);
+}
+
 /** returns feasibility tolerance for reduced costs */
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -25980,6 +25984,24 @@ SCIP_RETCODE SCIPchgFeastol(
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetFeastol(scip->set, feastol) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the primal feasibility tolerance of LP solver */
+SCIP_RETCODE SCIPchgLpfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgLpfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
+   if( scip->lp != NULL && lpfeastol < SCIPsetLpfeastol(scip->set) )
+      scip->lp->solved = FALSE;
+
+   /* change the settings */
+   SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol) );
 
    return SCIP_OKAY;
 }

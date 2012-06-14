@@ -97,6 +97,7 @@ extern "C" {
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-08  /**< default feasibility tolerance for constraints */
+#define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
@@ -249,6 +250,18 @@ extern "C" {
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
+
+/*
+ * Define to mark deprecated API functions
+ */
+
+#if defined(_WIN32)
+#  define SCIP_DEPRECATED __declspec(deprecated)
+#elif defined(__GNUC__) && defined(__linux__)
+#  define SCIP_DEPRECATED __attribute__ ((deprecated))
+#else
+#  define SCIP_DEPRECATED
+#endif
 
 #ifdef __cplusplus
 }

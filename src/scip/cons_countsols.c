@@ -833,8 +833,7 @@ SCIP_RETCODE checkLogicor(
       if( !fixedone )
       {
          SCIPdebugMessage("constraint <%s> cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -929,8 +928,7 @@ SCIP_RETCODE checkKnapsack(
       if( SCIPisFeasLT(scip, capa, 0.0) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -1007,8 +1005,7 @@ SCIP_RETCODE checkBounddisjunction(
       if( !satisfiedbound )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          (*satisfied) = FALSE;
       }
 
@@ -1079,8 +1076,7 @@ SCIP_RETCODE checkVarbound(
          || !SCIPisGE(scip, SCIPvarGetLbLocal(var), lhs - SCIPvarGetLbLocal(vbdvar) * coef ) )
       {
          SCIPdebugMessage("constraint %s cannot be disabled\n", SCIPconsGetName(conss[c]));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
-         SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+         SCIPdebugPrintCons(scip, conss[c], NULL);
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          SCIPdebugMessage("<%s>  lb: %.15g\t ub: %.15g\n", SCIPvarGetName(vbdvar), SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar));
          (*satisfied) = FALSE;
@@ -1183,8 +1179,7 @@ SCIP_RETCODE checkFeasSubtree(
          else
          {
             SCIPdebugMessage("sparse solution is infeasible since the following constraint (and maybe more) is(/are) enabled\n");
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL) ) );
-            SCIPdebug( SCIPinfoMessage(scip, NULL, ";\n") );
+            SCIPdebugPrintCons(scip, SCIPconshdlrGetConss(conshdlr)[0], NULL);
             return SCIP_OKAY;
          }
       }
@@ -1317,11 +1312,22 @@ SCIP_RETCODE includeConshdlrCountsols(
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
 {  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   *valid = TRUE;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* in case the count constraint handler is active we avoid copying to ensure a safe count */
+   if( conshdlrdata->active )
+      *valid = FALSE;
+   else
+   {
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      *valid = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -2546,6 +2552,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   /* include constraint handler including the count dialog */
    SCIP_CALL( includeConshdlrCountsols(scip, TRUE) );
 
    return SCIP_OKAY;

@@ -53,7 +53,7 @@ struct SCIP_Sol
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */
    SCIP_REALARRAY*       vals;               /**< solution values for variables */
-   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from 
+   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
    SCIP_HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
    int                   runnum;             /**< branch and bound run number in which the solution was found */
@@ -61,6 +61,10 @@ struct SCIP_Sol
    int                   primalindex;        /**< index of solution in array of existing solutions of primal data */
    int                   index;              /**< consecutively numbered unique index of all created solutions */
    SCIP_SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
+   SCIP_Bool             hasinfval;          /**< does the solution (potentially) contain an infinite value? Note: this
+                                              * could also be implemented as a counter for the number of infinite
+                                              * values, to avoid redundant checks when resetting inf. solution values
+                                              */
 };
 
 #ifdef __cplusplus

@@ -4935,8 +4935,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          if ( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
-            SCIPinfoMessage(scip, NULL, ";\n");
-            SCIPinfoMessage(scip, NULL, "violation:  <%s> = %g and <%s> = %.15g\n",
+            SCIPinfoMessage(scip, NULL, ";\nviolation:  <%s> = %g and <%s> = %.15g\n",
                SCIPvarGetName(consdata->binvar), SCIPgetSolVal(scip, sol, consdata->binvar),
                SCIPvarGetName(consdata->slackvar), SCIPgetSolVal(scip, sol, consdata->slackvar));
          }
