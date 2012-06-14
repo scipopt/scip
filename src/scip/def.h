@@ -251,6 +251,18 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+/*
+ * Define to mark deprecated API functions
+ */
+
+#if defined(_WIN32)
+#  define SCIP_DEPRECATED __declspec(deprecated)
+#elif defined(__GNUC__) && defined(__linux__)
+#  define SCIP_DEPRECATED __attribute__ ((deprecated))
+#else
+#  define SCIP_DEPRECATED
+#endif
+
 #ifdef __cplusplus
 }
 #endif

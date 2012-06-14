@@ -6520,7 +6520,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
  *  to facilitate correct statistics.
  */
 extern
-SCIP_RETCODE SCIPcreateRow(
+SCIP_DEPRECATED SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6568,7 +6568,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
  *  to facilitate correct statistics.
  */
 extern
-SCIP_RETCODE SCIPcreateEmptyRow(
+SCIP_DEPRECATED SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
