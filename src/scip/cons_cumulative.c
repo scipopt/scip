@@ -4175,14 +4175,12 @@ SCIP_RETCODE computeAlternativeBounds(
          {
             SCIP_VAR* aggrvar;
 
-            assert(SCIPvarGetUbLocal(var)  - SCIPvarGetLbLocal(var) < 1.5);
             assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
             assert(SCIPisEQ(scip, SCIPvarGetAggrScalar(var), 1.0));
 
             aggrvar = SCIPvarGetAggrVar(var);
             constant = convertBoundToInt(scip, SCIPvarGetAggrConstant(var));
             assert(SCIPvarIsActive(aggrvar));
-            assert(SCIPvarGetType(aggrvar) == SCIP_VARTYPE_BINARY);
 
             idx = SCIPvarGetProbindex(aggrvar);
          }
