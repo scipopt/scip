@@ -14972,9 +14972,7 @@ SCIP_RETCODE tightenBounds(
    )
 {
    assert(scip != NULL);
-   /**@todo this will be only allowed in SCIP_STAGE_PRESOLVING once all plugins respect the new stages */
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM
-      || (SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE));
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM || SCIPvarIsTransformed(var));
 
    *infeasible = FALSE;
