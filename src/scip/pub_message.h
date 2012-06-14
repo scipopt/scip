@@ -61,12 +61,12 @@ extern "C" {
 #define SCIPdebugPrintf                 printf
 
 /** executes SCIPprintCons() and prints termination symbol ";\n" only if SCIP_DEBUG flag is set */
-#define SCIPdebugPrintCons(x,y,z)       do                                                                   \
-                                        {                                                                    \
-                                           SCIP_CALL_ABORT( SCIPprintCons((x), (y), (z)) );                  \
-                                           SCIPinfoMessage((x), (z), ";\n");                                 \
-                                        }                                                                    \
-                                        while( FALSE )
+#define SCIPdebugPrintCons(scip,cons,file) do                                                                   \
+                                           {                                                                    \
+                                              SCIP_CALL_ABORT( SCIPprintCons((scip), (cons), (file)) );         \
+                                              SCIPinfoMessage((scip), (file), ";\n");                           \
+                                           }                                                                    \
+                                           while( FALSE )
 
 #else
 
