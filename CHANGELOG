@@ -294,7 +294,7 @@ features:
   difficult instances (no guarantees)
 - new switch SCIP_STATISTIC and new macros SCIPstatisticMessage(), SCIPstatisticPrintf() and SCIPstatistic() to output
   statistic and execute code lines which are only needed therefor. Works as SCIP_DEBUG and SCIPdebugXyz()
-- new GML(Graph Modeling Language) methods SCIPgmlOpen(), SCIPgmlClose(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
+- new GML(Graph Modeling Language) methods SCIPgmlWriteOpening(), SCIPgmlWriteCosing(), SCIPgmlWriteArc(), SCIPgmlWriteEdge(),
   SCIPgmlWriteNode() wo write to a given GML file
 - automatic transfer of original solutions (e.g., provided by the user, from solution pool, after restart, from heuristic
   adding original solution during solve) to the transformed space (might fail due to, e.g., dual fixings)

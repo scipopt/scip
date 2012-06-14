@@ -8517,7 +8517,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
          SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* create opening of the GML format */
-   SCIPgmlOpen(file,  TRUE);
+   SCIPgmlWriteOpening(file,  TRUE);
 
    for( v = 0; v < nvars; ++v )
    {
@@ -8573,7 +8573,7 @@ SCIP_RETCODE SCIPconsdataVisualize(
    }
 
    /* create closing of the GML format */
-   SCIPgmlClose(file);
+   SCIPgmlWriteCosing(file);
 
    /* close file */
    fclose(file);

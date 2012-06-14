@@ -6607,7 +6607,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
    nbranchings = 0;
 
    /* print opening in GML format */
-   SCIPgmlOpen(file, TRUE);
+   SCIPgmlWriteOpening(file, TRUE);
 
    while( SCIPnodeGetDepth(node) != 0 )
    {
@@ -6641,7 +6641,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
    }
 
    /* print closing in GML format */
-   SCIPgmlClose(file);
+   SCIPgmlWriteCosing(file);
 
    return SCIP_OKAY;
 }

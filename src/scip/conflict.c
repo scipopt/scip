@@ -207,7 +207,7 @@ void confgraphCreate(
       SCIPABORT();
    }
 
-   SCIPgmlOpen(confgraphfile, TRUE);
+   SCIPgmlWriteOpening(confgraphfile, TRUE);
 
    confgraphWriteNode(NULL, "conflict", "ellipse", "#ff0000", "#000000");
 
@@ -222,7 +222,7 @@ void confgraphFree(
 {
    if( confgraphfile != NULL )
    {
-      SCIPgmlClose(confgraphfile);
+      SCIPgmlWriteCosing(confgraphfile);
 
       fclose(confgraphfile);
 

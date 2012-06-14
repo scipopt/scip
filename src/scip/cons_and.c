@@ -3564,7 +3564,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
 
    /* write starting of gml file */
-   SCIPgmlOpen(gmlfile, TRUE);
+   SCIPgmlWriteOpening(gmlfile, TRUE);
 
    /* walk over all and-constraints */
    for( c = nconss - 1; c >= 0; --c )
@@ -3649,7 +3649,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    /* free the variable mapping hash map */
    SCIPhashmapFree(&hashmap);
 
-   SCIPgmlClose(gmlfile);
+   SCIPgmlWriteCosing(gmlfile);
 
    fclose(gmlfile);
 
