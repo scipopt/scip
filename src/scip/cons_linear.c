@@ -5814,7 +5814,8 @@ SCIP_RETCODE convertUnaryEquality(
    var = consdata->vars[0];
    val = consdata->vals[0];
    assert(!SCIPisZero(scip, val));
-   fixval = SCIPselectSimpleValue(consdata->lhs/val - SCIPepsilon(scip), consdata->rhs/val + SCIPepsilon(scip), MAXDNOM);
+   fixval = SCIPselectSimpleValue(consdata->lhs/val - 0.9 * SCIPepsilon(scip),
+      consdata->rhs/val + 0.9 * SCIPepsilon(scip), MAXDNOM);
    SCIPdebugMessage("linear equality <%s>: fix <%s> == %.15g\n",
       SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
 
@@ -7202,7 +7203,7 @@ SCIP_RETCODE fixVariables(
          {
             SCIP_Real fixval;
 
-            fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
+            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
             SCIPdebugMessage("converting variable <%s> with fixed bounds [%.15g,%.15g] into fixed variable fixed at %.15g\n",
                SCIPvarGetName(var), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );

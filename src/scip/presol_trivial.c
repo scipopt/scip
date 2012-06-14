@@ -158,7 +158,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
             SCIP_Real fixval;
 
 #ifdef FIXSIMPLEVALUE
-            fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
+            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
 #else
             fixval = (lb + ub)/2;
 #endif
