@@ -6426,6 +6426,10 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = consdata->lhsviol + consdata->rhsviol;
 
+         /* do not try to shift linear variables if activity is at infinity (leads to setting variable to infinity in solution, which is not allowed) */
+         if( maypropfeasible && SCIPisInfinity(scip, REALABS(consdata->activity)) )
+            maypropfeasible = FALSE;
+
          if( maypropfeasible )
          {
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )

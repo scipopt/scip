@@ -1383,7 +1383,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
          SCIP_Bool fixed;
 
          /* in both probings, variable j is deduced to the same value: fix variable to this value */
-         fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
+         fixval = SCIPselectSimpleValue(newlb - 0.9 * SCIPepsilon(scip), newub + 0.9 * SCIPepsilon(scip), MAXDNOM);
          if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
          {
             SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, cutoff, &fixed) );
