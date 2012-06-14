@@ -377,16 +377,16 @@ SCIP_RETCODE copyAndSolveComponent(
    assert(nintvars >= SCIPgetNIntVars(subscip));
 #endif
 
-   /* In debug mode, we want to be informed if the number of variables was reduced during copying.
+   /* In extended debug mode, we want to be informed if the number of variables was reduced during copying.
     * This might happen, since the components presolver uses SCIPgetConsVars() and then SCIPgetActiveVars() to get the
     * active representation, while SCIPgetConsCopy() might use SCIPgetProbvarLinearSum() and this might cancel out some
     * of the active variables and cannot be avoided. However, we want to notice it and check whether the constraint
     * handler could do something more clever.
     */
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
    if( nvars > SCIPgetNVars(subscip) )
    {
-      SCIPwarningMessage(scip, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
+      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars, SCIPgetNVars(subscip));
    }
 #endif
 
@@ -598,9 +598,7 @@ SCIP_RETCODE fillDigraph(
       for( v = nconsvars - 1; v >= 0; --v )
 	 assert(consvars[v] != NULL);
       if( nconsvars < nvars )
-      {
 	 assert(consvars[nconsvars] == NULL);
-      }
 #endif
 
       /* transform given variables to active variables */
@@ -745,10 +743,12 @@ SCIP_RETCODE splitProblem(
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetUbGlobal(compvars[0]);
 
-#ifndef NDEBUG
-	 SCIPwarningMessage(scip, "strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no constraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+#ifdef SCIP_MORE_DEBUG
+	 SCIPinfoMessage(scip, NULL, "presol components: fix variables <%s> (locks [%d, %d]) to %g because it occurs in no constraint\n",
+            SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
 #else
-	 SCIPdebugMessage("strange: fixing variables <%s> (locks [%d, %d]) to %g because it occurs in no constraint\n", SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
+	 SCIPdebugMessage("presol components: fix variables <%s> (locks [%d, %d]) to %g because it occurs in no constraint\n",
+            SCIPvarGetName(compvars[0]), SCIPvarGetNLocksUp(compvars[0]), SCIPvarGetNLocksDown(compvars[0]), fixval);
 #endif
 
          SCIP_CALL( SCIPfixVar(scip, compvars[0], fixval, &infeasible, &fixed) );
@@ -766,13 +766,13 @@ SCIP_RETCODE splitProblem(
 
          assert(ncompconss > 0);
 
-         /* in debug mode, we want to be informed about components with single constraints;
+         /* in extended debug mode, we want to be informed about components with single constraints;
           * this is only for noticing this case and possibly handling it within the constraint handler
           */
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
          if( ncompconss == 1 )
          {
-            SCIPwarningMessage(scip, "presol component detected component with a single constraint:\n");
+            SCIPinfoMessage(scip, NULL, "presol component detected component with a single constraint:\n");
             SCIP_CALL( SCIPprintCons(scip, compconss[0], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
          }
