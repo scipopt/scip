@@ -359,7 +359,7 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 
    newfeastol = SCIPparamGetReal(param);
 
-   /* change the feastol through the SCIP call in order to mark the LP unsolved */
+   /* change the feastol through the SCIP call in order to adjust lpfeastol if necessary */
    SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
@@ -373,7 +373,9 @@ SCIP_DECL_PARAMCHGD(paramChgdLpfeastol)
 
    newlpfeastol = SCIPparamGetReal(param);
 
-   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved */
+   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved and control that it does not exceed
+    * SCIP's feastol
+    */
    SCIP_CALL( SCIPchgLpfeastol(scip, newlpfeastol) );
 
    return SCIP_OKAY;
@@ -4005,6 +4007,15 @@ SCIP_RETCODE SCIPsetSetFeastol(
 
    set->num_feastol = feastol;
 
+   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if necessary,
+    * decrease it; use the SCIP change method in order to mark the LP unsolved
+    */
+   if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
+   {
+      SCIPdebugMessage("decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
+      SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set)) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4015,6 +4026,21 @@ SCIP_RETCODE SCIPsetSetLpfeastol(
    )
 {
    assert(set != NULL);
+
+   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if this is
+    * tried, we correct it to feastol; note that when we are called, e.g., by paramChgdLpfeastol, lpfeastol has already
+    * been modified and so we cannot leave the lpfeastol value unchanged; if we would not return SCIP_PARAMETERWRONGVAL
+    * in this case, the interactive shell would print the incorrect value to be set
+    */
+   if( lpfeastol > SCIPsetFeastol(set) )
+   {
+      SCIPwarningMessage(set->scip, "LP feasibility tolerance must be at least as tight as SCIP's feasibility tolerance; new numerics/lpfeastol = %g\n",
+         SCIPsetFeastol(set));
+
+      set->num_lpfeastol = SCIPsetFeastol(set);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
 
    set->num_lpfeastol = lpfeastol;
 

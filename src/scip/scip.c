@@ -25978,10 +25978,6 @@ SCIP_RETCODE SCIPchgFeastol(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgFeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   /* mark the LP unsolved, if the feasibility tolerance was tightened */
-   if( scip->lp != NULL && feastol < SCIPsetFeastol(scip->set) )
-      scip->lp->solved = FALSE;
-
    /* change the settings */
    SCIP_CALL( SCIPsetSetFeastol(scip->set, feastol) );
 
@@ -25996,7 +25992,7 @@ SCIP_RETCODE SCIPchgLpfeastol(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgLpfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   /* mark the LP unsolved, if the dual feasibility tolerance was tightened */
+   /* mark the LP unsolved, if the primal feasibility tolerance was tightened */
    if( scip->lp != NULL && lpfeastol < SCIPsetLpfeastol(scip->set) )
       scip->lp->solved = FALSE;
 
