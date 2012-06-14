@@ -3909,6 +3909,10 @@ SCIP_RETCODE proposeFeasibleSolution(
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
+      /* if violation is at infinity, give up */
+      if( SCIPisInfinity(scip, MAX(consdata->lhsviol, consdata->rhsviol)) )
+         break;
+
       /* @todo could also adjust x while keeping z fixed */
 
       /* if variable is multiaggregated, then cannot set its solution value, so give up */

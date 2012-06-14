@@ -3624,6 +3624,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       if( dolinfeasshift )
       {
          if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR &&
+            !SCIPisInfinity(scip, REALABS(consdata->lhsval)) &&
             (  (consdata->rhscoeff > 0.0 && SCIPvarMayRoundUp  (consdata->rhsvar)) ||
                (consdata->rhscoeff < 0.0 && SCIPvarMayRoundDown(consdata->rhsvar)) ) )
          {

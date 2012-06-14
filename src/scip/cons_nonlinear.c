@@ -7245,10 +7245,17 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
             }
          }
+
          if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible )
             return SCIP_OKAY;
+
          if( consdata->lhsviol > maxviol || consdata->rhsviol > maxviol )
             maxviol = MAX(consdata->lhsviol, consdata->rhsviol);
+
+         /* do not try to shift linear variables if activity is at infinity (leads to setting variable to infinity in solution, which is not allowed) */
+         if( maypropfeasible && SCIPisInfinity(scip, REALABS(consdata->activity)) )
+            maypropfeasible = FALSE;
+
          if( maypropfeasible )
          {
             /* update information on linear variables that may be in- or decreased */
