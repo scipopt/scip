@@ -1509,6 +1509,20 @@ SCIP_RETCODE findDominancePairs(
  * Callback methods of presolver
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyDomcol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolDomcol(scip) );
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of presolver */
 static
@@ -1520,7 +1534,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   /* do no dominated column presolving in case of probing an nonlinear processing
+   /* do no dominated column presolving in case of probing and nonlinear processing
     * @todo SCIPisNLPEnabled() always returns FALSE during presolve, since the necessary flag is set after presolve (in exitpre, currently)
     */
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
@@ -1829,9 +1843,12 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_PRESOL* presol;
+
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, NULL, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_DELAY, presolExecDomcol, NULL) );
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
 
    return SCIP_OKAY;
 }
