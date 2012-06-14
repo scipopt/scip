@@ -1455,12 +1455,12 @@ SCIP_RETCODE conflictAddConflictCons(
    {
       SCIP_VAR* var;
       SCIP_Real bound;
-      unsigned int boundtype;
+      SCIP_BOUNDTYPE boundtype;
 
       var = conflictset->bdchginfos[0]->var;
       assert(var != NULL);
 
-      boundtype =  SCIPboundtypeOpposite(conflictset->bdchginfos[0]->boundtype);
+      boundtype = SCIPboundtypeOpposite((SCIP_BOUNDTYPE) conflictset->bdchginfos[0]->boundtype);
       bound = conflictset->relaxedbds[0];
 
       /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */

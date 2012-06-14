@@ -1819,9 +1819,9 @@ void GUBsetSwapVars(
 {
    int gubcons;
    int var1idx;
-   int var1status;
+   GUBVARSTATUS var1status;
    int var2idx;
-   int var2status;
+   GUBVARSTATUS var2status;
 
    assert(scip != NULL);
    assert(gubset != NULL);

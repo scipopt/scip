@@ -4589,7 +4589,6 @@ SCIP_RETCODE preprocessCliques(
    SCIPsortDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, nusefulvars);
 
    /* extend cliques/constraints by checking whether some variables of a second constraint are in the same clique */
-   // extendsCliques();
    for( c = nusefulconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
    {
       SCIP_VAR** cons0vars;                  /* these are the clique variables */
@@ -6414,7 +6413,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* determine whether we want to run the clique lifting procedure */
    conshdlrdata->enablecliquelifting = conshdlrdata->enablecliquelifting || conshdlrdata->updatedsetppctype
       || conshdlrdata->noldfixedvars != SCIPgetNFixedVars(scip) || conshdlrdata->noldimpls != SCIPgetNImplications(scip)
-      || conshdlrdata->noldcliques != SCIPgetNCliques(scip) || conshdlrdata->noldupgrs != nconss;// SCIPgetNUpgrConss(scip);
+      || conshdlrdata->noldcliques != SCIPgetNCliques(scip) || conshdlrdata->noldupgrs != nconss;
 
    /* remember old values */
    startdelconss = *ndelconss;
