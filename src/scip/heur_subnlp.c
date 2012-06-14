@@ -92,6 +92,25 @@ struct SCIP_HeurData
  * Local methods
  */
 
+/** indicates whether the heuristic should be running, i.e., whether we expect something nonlinear after fixing all discrete variables */
+static
+SCIP_Bool runHeuristic(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   /* do not run heuristic if no NLP solver is available */
+   if( SCIPgetNNlpis(scip) <= 0 )
+      return FALSE;
+
+   /* do not run heuristic if no continuous nonlinear variables are present */
+   if( !SCIPisNLPConstructed(scip) || !SCIPhasNLPContinuousNonlinearity(scip) )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** creates copy of CIP from problem in SCIP */
 static
 SCIP_RETCODE createSubSCIP(
@@ -1838,16 +1857,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
-   /* do not setup sub-SCIP if heuristic is never called by SCIP */
-   if( SCIPheurGetFreq(heur) < 0 )
-      return SCIP_OKAY;
-
-   /* do not setup sub-SCIP if no NLP solver is available */
-   if( SCIPgetNNlpis(scip) <= 0 )
-      return SCIP_OKAY;
-
-   /* do not setup sub-SCIP if no continuous nonlinear variables are present */
-   if( !SCIPisNLPConstructed(scip) || !SCIPhasNLPContinuousNonlinearity(scip) )
+   /* skip setting up sub-SCIP if heuristic is disabled or we do not want to run the heuristic */
+   if( SCIPheurGetFreq(heur) < 0 || !runHeuristic(scip) )
       return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
@@ -1934,6 +1945,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     * otherwise, we continue and let SCIPapplyHeurSubNlp try to create subscip
     */
    if( heurdata->subscip == NULL && (heurdata->keepcopy || heurdata->triedsetupsubscip) )
+      return SCIP_OKAY;
+
+   /* if we recreate the subSCIP in every run, then also check whether we want to run the heuristic at all */
+   if( !heurdata->keepcopy && !runHeuristic(scip) )
       return SCIP_OKAY;
 
    if( heurdata->startcand == NULL )
