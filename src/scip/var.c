@@ -431,6 +431,7 @@ SCIP_RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].var = var;
    var->lbchginfos[var->nlbchginfos].bdchgidx.depth = depth;
    var->lbchginfos[var->nlbchginfos].bdchgidx.pos = pos;
+   var->lbchginfos[var->nlbchginfos].pos = var->nlbchginfos;
    var->lbchginfos[var->nlbchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].redundant = FALSE;
@@ -503,6 +504,7 @@ SCIP_RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].var = var;
    var->ubchginfos[var->nubchginfos].bdchgidx.depth = depth;
    var->ubchginfos[var->nubchginfos].bdchgidx.pos = pos;
+   var->ubchginfos[var->nubchginfos].pos = var->nubchginfos;
    var->ubchginfos[var->nubchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].redundant = FALSE;
@@ -13883,6 +13885,7 @@ SCIP_RETCODE SCIPbdchginfoCreate(
    (*bdchginfo)->inferencedata.info = 0;
    (*bdchginfo)->bdchgidx.depth = INT_MAX;
    (*bdchginfo)->bdchgidx.pos = -1;
+   (*bdchginfo)->pos = -1;
    (*bdchginfo)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING; /*lint !e641*/
    (*bdchginfo)->boundtype = boundtype; /*lint !e641*/
    (*bdchginfo)->inferboundtype = boundtype; /*lint !e641*/
@@ -13924,6 +13927,7 @@ SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
       {
          assert(var->lbchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
+         assert(var->lbchginfos[i].pos == i);
 
          /* if we reached the (due to global bounds) redundant bound changes, return NULL */
          if( var->lbchginfos[i].redundant )
@@ -13941,7 +13945,8 @@ SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
       {
          assert(var->lbchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
-         
+         assert(var->lbchginfos[i].pos == i);
+
          /* if we reached the (due to global bounds) redundant bound changes, return NULL */
          if( var->lbchginfos[i].redundant )
             return NULL;
@@ -13978,7 +13983,8 @@ SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
       {
          assert(var->ubchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
-         
+         assert(var->ubchginfos[i].pos == i);
+
          /* if we reached the (due to global bounds) redundant bound changes, return NULL */
          if( var->ubchginfos[i].redundant )
             return NULL;
@@ -13995,7 +14001,8 @@ SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
       {
          assert(var->ubchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
-         
+         assert(var->ubchginfos[i].pos == i);
+
          /* if we reached the (due to global bounds) redundant bound changes, return NULL */
          if( var->ubchginfos[i].redundant )
             return NULL;

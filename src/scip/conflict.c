@@ -2364,6 +2364,8 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    }
    else
    {
+      int nbdchgs;
+
       /* get bound change information */
       bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);
 
@@ -2372,6 +2374,80 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
        */
       if( bdchginfo == NULL )
          return SCIP_OKAY;
+
+      /* get the position of the bound change information within the bound change array of the variable */
+      nbdchgs = bdchginfo->pos;
+      assert(nbdchgs >= 0);
+
+      /* search for the bound change information which includes the relaxed bound */
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         /* check if relaxed lower bound is smaller or equal to global lower bound; if so we can ignore the conflicting
+          * bound
+          */
+         if( SCIPsetIsLE(set, relaxedbd, SCIPvarGetLbGlobal(var)) )
+            return SCIP_OKAY;
+
+         while( nbdchgs > 0 )
+         {
+            assert(SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+            /* check if the old lower bound is greater than or equal to relaxed lower bound; if not we found the bound
+             * change info which we need to report
+             */
+            if( SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
+               break;
+
+            bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
+
+            SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+               nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+               SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+               SCIPbdchginfoIsRedundant(bdchginfo));
+
+            /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
+            if( SCIPbdchginfoIsRedundant(bdchginfo) )
+               return SCIP_OKAY;
+
+            nbdchgs--;
+         }
+         assert(SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
+      }
+      else
+      {
+         assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+         /* check if relaxed upper bound is greater or equal to global upper bound; if so we can ignore the conflicting
+          * bound
+          */
+         if( SCIPsetIsGE(set, relaxedbd, SCIPvarGetUbGlobal(var)) )
+            return SCIP_OKAY;
+
+         while( nbdchgs > 0 )
+         {
+            assert(SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+            /* check if the old upper bound is smaller than or equal to the relaxed upper bound; if not we found the
+             * bound change info which we need to report
+             */
+            if( SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
+               break;
+
+            bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
+
+            SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+               nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+               SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+               SCIPbdchginfoIsRedundant(bdchginfo));
+
+            /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
+            if( SCIPbdchginfoIsRedundant(bdchginfo) )
+               return SCIP_OKAY;
+
+            nbdchgs--;
+         }
+         assert(SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
+      }
 
       assert(SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo), bdchgidx));
 
