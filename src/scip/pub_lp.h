@@ -229,7 +229,8 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetVals(col)             (col)->vals
 #define SCIPcolGetStrongbranchNode(col) (col)->sbnode
 #define SCIPcolGetNStrongbranchs(col)   (col)->nsbcalls
-#define SCIPboundtypeOpposite(boundtype) ((SCIP_BOUNDTYPE)((boundtype) ^ 1))
+#define SCIPboundtypeOpposite(boundtype) \
+   ((boundtype) == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 
 #endif
 
