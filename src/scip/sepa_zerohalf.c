@@ -2059,7 +2059,7 @@ SCIP_RETCODE getRelevantRows(
       
       /* get row data */
       colscurrentrow = SCIProwGetCols(row);
-      nnonzcurrentrow = SCIProwGetNNonz(row);
+      nnonzcurrentrow = SCIProwGetNLPNonz(row);
       valscurrentrow = SCIProwGetVals(row);
 
       /* clear dense coeffs arrays */
@@ -2187,7 +2187,7 @@ SCIP_RETCODE getRelevantRows(
          || (!rhsisinfinity && SCIPisLE(scip, rhsslack, maxslack)) )
       { 
          colscurrentrow = SCIProwGetCols(row);
-         nnonzcurrentrow = SCIProwGetNNonz(row);
+         nnonzcurrentrow = SCIProwGetNLPNonz(row);
          valscurrentrow = SCIProwGetVals(row);
 
          lhsiseven = ISEVEN(scip, lhs);
@@ -2611,7 +2611,7 @@ SCIP_RETCODE storeMod2Data(
       row = lpdata->rows[problem->rrows[i]]; 
       colscurrentrow = SCIProwGetCols(row);
       nonzvalscurrentrow = SCIProwGetVals(row);
-      nnonzcurrentrow = SCIProwGetNNonz(row);
+      nnonzcurrentrow = SCIProwGetNLPNonz(row);
       assert(nnonzcurrentrow > 0);
       tempcurrentrow = NULL;
       fliplhsrhs = FALSE;
@@ -3114,7 +3114,7 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
          else
             (*weights)[lppos] = lpdata->intscalarsrightrow[lppos] * 0.5;
       
-         nnonz += SCIProwGetNNonz(lpdata->rows[lppos]); 
+         nnonz += SCIProwGetNLPNonz(lpdata->rows[lppos]); 
          (*nrowsincut)++;
       }
    }
@@ -4035,7 +4035,7 @@ SCIP_RETCODE decomposeProblem(
 
          colsofrow = SCIProwGetCols(lpdata->rows[problem->rrows[i]]);
          colvals = SCIProwGetVals(lpdata->rows[problem->rrows[i]]);
-         ncolvals = SCIProwGetNNonz(lpdata->rows[problem->rrows[i]]);
+         ncolvals = SCIProwGetNLPNonz(lpdata->rows[problem->rrows[i]]);
 
          for( cidx = 0 ; cidx < ncolvals ; ++cidx)
          {
@@ -5345,7 +5345,7 @@ SCIP_RETCODE getZerohalfWeightvectorForSingleRow(
    else
       (*weights)[rowsindex] = lpdata->intscalarsrightrow[rowsindex] * 0.5;
 
-   if( SCIProwGetNNonz(lpdata->rows[rowsindex]) >= sepadata->maxnnonz )
+   if( SCIProwGetNLPNonz(lpdata->rows[rowsindex]) >= sepadata->maxnnonz )
    {
       SCIPfreeMemoryArray(scip, weights);
       weights = NULL; 
@@ -6965,7 +6965,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    sepadata->maxnnonz = 0;
    for( i = 0 ; i < lpdata->nrows ; i++ )
    {
-      sepadata->maxnnonz += SCIProwGetNNonz(lpdata->rows[i]); 
+      sepadata->maxnnonz += SCIProwGetNLPNonz(lpdata->rows[i]); 
    }
    sepadata->maxnnonz = (int) floor( 10.0 * sepadata->maxnnonz / (double) lpdata->nrows);
    sepadata->maxnnonz = (int) floor(MIN(0.1 * lpdata->ncols, sepadata->maxnnonz)) + NNONZOFFSET; 
