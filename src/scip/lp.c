@@ -11838,7 +11838,7 @@ SCIP_RETCODE lpLexDualSimplex(
 #ifdef DEBUG_LEXDUAL
       {
          int j;
-         
+
          if( !chooseBasic )
          {
             assert(primsol == NULL);
@@ -11846,11 +11846,13 @@ SCIP_RETCODE lpLexDualSimplex(
          }
          SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
          SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
-         
+
          for( j = 0; j < lp->nlpicols; ++j )
          {
             if( fixedc[j] )
+            {
                SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
+            }
             else
             {
                char type;
@@ -12058,17 +12060,19 @@ SCIP_RETCODE lpLexDualSimplex(
                   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
                }
                SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
-               
+
                for( j = 0; j < lp->nlpicols; ++j )
                {
                   if( fixedc[j] )
+                  {
                      SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
+                  }
                   else
                   {
                      char cstart = '[';
                      char cend = ']';
                      char type;
-                     
+
                      if(j == pos)
                      {
                         cstart = '*';
