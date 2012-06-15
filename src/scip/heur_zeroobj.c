@@ -279,6 +279,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
    SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
+   SCIP_Real large;
 
    int nvars;                                /* number of original problem's variables          */
    int i;
@@ -357,11 +358,33 @@ SCIP_RETCODE SCIPapplyZeroobj(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* determine large value to set variables to */
+   large = SCIPinfinity(scip);
+   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+      large = 0.1 / SCIPfeastol(scip);
+
    /* get variable image and change to 0.0 in sub-SCIP */
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_Real adjustedbound;
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+
+      /* adjust infinite bounds in order to avoid that variables with non-zero objective 
+       * get fixed to infinite value in zeroobj subproblem
+       */
+      if( SCIPisInfinity(subscip, SCIPvarGetUbGlobal(subvars[i]) ) )
+      {
+         adjustedbound = MAX(large, SCIPvarGetLbGlobal(subvars[i])+large);
+         adjustedbound = MIN(adjustedbound, SCIPinfinity(subscip));
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
+      }
+      if( SCIPisInfinity(subscip, -SCIPvarGetLbGlobal(subvars[i]) ) )
+      {
+         adjustedbound = MIN(-large, SCIPvarGetUbGlobal(subvars[i])-large);
+         adjustedbound = MAX(adjustedbound, -SCIPinfinity(subscip));
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
+      }
    }
 
    /* free hash map */
