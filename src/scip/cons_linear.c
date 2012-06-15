@@ -9430,11 +9430,6 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
    int counter[SCIP_CONSTYPE_GENERAL + 1];
    int c;
 
-   assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_CUTOFF;
-
    /* initialize counter for constraint types to zero */
    BMSclearMemoryArray(counter, SCIP_CONSTYPE_GENERAL + 1);
 
