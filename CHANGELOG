@@ -304,6 +304,7 @@ features:
 - added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 - implemented first clique lifting procedure in cons_setppc.c (by default is off)
+- oneopt can now be called before presolving
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

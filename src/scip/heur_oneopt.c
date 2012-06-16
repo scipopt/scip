@@ -36,11 +36,13 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_WEIGHTEDOBJ   TRUE
-#define DEFAULT_DURINGROOT    TRUE
+#define DEFAULT_WEIGHTEDOBJ   TRUE           /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
+#define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
+#define DEFAULT_BEFOREPRESOL  FALSE          /**< should the heuristic be called before presolving */
+#define DEFAULT_FORCELPCONSTRUCTION FALSE    /**< should the construction of the LP be forced even if LP solving is deactivated? */
 
 /*
  * Data structures
@@ -49,15 +51,63 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int       lastsolindex;                   /**< index of the last solution for which oneopt was performed */
-   SCIP_Bool weightedobj;                    /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
-   SCIP_Bool duringroot;                     /**< should the heuristic be called before and during the root node? */
+   int                   lastsolindex;       /**< index of the last solution for which oneopt was performed */
+   SCIP_Bool             weightedobj;        /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
+   SCIP_Bool             duringroot;         /**< should the heuristic be called before and during the root node? */
+   SCIP_Bool             forcelpconstruction;/**< should the construction of the LP be forced even if LP solving is deactivated? */
+   SCIP_Bool             beforepresol;       /**< should the heuristic be called before presolving */
 };
 
 
 /*
  * Local methods
  */
+
+/** creates a new solution for the original problem by copying the solution of the subproblem */
+static
+SCIP_RETCODE createNewSol(
+   SCIP*                 scip,               /**< original SCIP data structure                        */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
+   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                            */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
+   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
+   )
+{
+   SCIP_VAR** vars;                          /* the original problem's variables                */
+   int        nvars;                         /* the original problem's number of variables      */
+   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
+   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subvars != NULL);
+   assert(subsol != NULL);
+
+   /* get variables' data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
+    */
+   assert(nvars <= SCIPgetNOrigVars(subscip));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+
+   /* copy the solution */
+   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+
+   /* create new solution for the original problem */
+   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
+
+   /* try to add new solution to scip and free it immediately */
+   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+
+   SCIPfreeBufferArray(scip, &subsolvals);
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_Real calcShiftVal(
@@ -298,6 +348,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    int i;
    int nshiftcands;
    int shiftcandssize;
+   SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -318,10 +369,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   /* we can only work on solutions valid in the transformed space */
-   if( SCIPsolIsOriginal(bestsol) )
-      return SCIP_OKAY;
-
    /* get problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nintvars += nbinvars;
@@ -333,17 +380,134 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       return SCIP_OKAY;
    }
 
-   /* we need to be able to start diving from current node in order to resolve the LP
-    * with continuous or implicit integer variables
-    */
-   if( nvars > nintvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
+   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   {
+      SCIP*                 subscip;            /* the subproblem created by zeroobj              */
+      SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+      SCIP_VAR**            subvars;            /* subproblem's variables                          */
+      SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
+
+      SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
+      SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
+      
+      SCIP_SOL* startsol;
+      SCIP_SOL** subsols;
+      int nsubsols;
+
+      if( !heurdata->beforepresol )
+         return SCIP_OKAY;
+
+      /* check whether there is enough time and memory left */
+      timelimit = 0.0;
+      memorylimit = 0.0;
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      if( !SCIPisInfinity(scip, timelimit) )
+         timelimit -= SCIPgetSolvingTime(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+      
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+      if( !SCIPisInfinity(scip, memorylimit) )
+      {
+         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+      }
+
+      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+         return SCIP_OKAY;
+
+      /* initialize the subproblem */
+      SCIP_CALL( SCIPcreate(&subscip) );
+      
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+      
+      /* copy complete SCIP instance */
+      valid = FALSE;
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, &valid) );
+      SCIP_CALL( SCIPtransformProb(subscip) );
+
+      /* get variable image */
+      for( i = 0; i < nvars; i++ )
+         subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+      /* copy the solution */
+      SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+      SCIP_CALL( SCIPgetSolVals(scip, bestsol, nvars, vars, subsolvals) );
+
+      /* create start solution for the subproblem */
+      SCIP_CALL( SCIPcreateOrigSol(subscip, &startsol, NULL) );
+      SCIP_CALL( SCIPsetSolVals(subscip, startsol, nvars, subvars, subsolvals) );
+
+      /* try to add new solution to sub-SCIP and free it immediately */
+      valid = FALSE;
+      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );      
+      SCIPfreeBufferArray(scip, &subsolvals);
+      SCIPhashmapFree(&varmapfw);
+
+      /* deactivate basically everything except oneopt in the sub-SCIP */
+      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+      SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+      if( valid )
+      {
+         retcode = SCIPsolve(subscip);
+
+         /* errors in solving the subproblem should not kill the overall solving process;
+          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+          */
+         if( retcode != SCIP_OKAY )
+         {
+#ifndef NDEBUG
+            SCIP_CALL( retcode );
+#endif
+            SCIPwarningMessage(scip, "Error while solving subproblem in zeroobj heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+         }
+         
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+      }
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      valid = FALSE;
+      for( i = 0; i < nsubsols && !valid; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &valid) );
+         if( valid )
+            *result = SCIP_FOUNDSOL;
+      }
+      
+      /* free subproblem */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL( SCIPfree(&subscip) );
+
+      return SCIP_OKAY;
+   }
+
+   /* we can only work on solutions valid in the transformed space */
+   if( SCIPsolIsOriginal(bestsol) )
       return SCIP_OKAY;
 
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPhasCurrentNodeLP(scip) )
+   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && (SCIPhasCurrentNodeLP(scip) || heurdata->forcelpconstruction) )
    {
       SCIP_Bool cutoff;
       cutoff = FALSE;
-      SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
       SCIP_CALL( SCIPflushLP(scip) ); 
    }
 
@@ -424,7 +588,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          localrows = TRUE;
    }
 
-   if(!valid)
+   if( !valid )
    {
       /** @todo try to correct lp rows */
       SCIPdebugMessage("Some global bound changes were not valid in lp rows.\n");
@@ -528,7 +692,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
        * variables to the best possible value
        */
-      if( nvars == nintvars )
+      if( nvars == nintvars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_Bool success;
 
@@ -669,5 +833,13 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
          "should the heuristic be called before and during the root node?",
          &heurdata->duringroot, TRUE, DEFAULT_DURINGROOT, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/forcelpconstruction",
+         "should the construction of the LP be forced even if LP solving is deactivated?",
+         &heurdata->forcelpconstruction, TRUE, DEFAULT_FORCELPCONSTRUCTION, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/beforepresol",
+         "should the heuristic be called before presolving?",
+         &heurdata->beforepresol, TRUE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
