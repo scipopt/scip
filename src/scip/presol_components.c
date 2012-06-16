@@ -605,26 +605,31 @@ SCIP_RETCODE fillDigraph(
       SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nvars, &requiredsize) );
       assert(requiredsize <= nvars);
 
-      idx1 = SCIPvarGetProbindex(consvars[0]);
-      assert(idx1 >= 0);
-
-      /* save index of the first variable for later component assignment */
-      firstvaridxpercons[c] = idx1;
-
-      if( nconsvars > 1 )
+      if( nconsvars > 0 )
       {
-         /* create sparse directed graph
-          * sparse means, to add only those edges necessary for component calculation
-          */
-         for( v = 1; v < nconsvars; ++v )
-         {
-            idx2 = SCIPvarGetProbindex(consvars[v]);
-            assert(idx2 >= 0);
+         idx1 = SCIPvarGetProbindex(consvars[0]);
+         assert(idx1 >= 0);
 
-            /* we add only one directed edge, because the other direction is automatically added for component computation */
-            SCIP_CALL( SCIPdigraphAddArc(digraph, idx1, idx2, NULL) );
+         /* save index of the first variable for later component assignment */
+         firstvaridxpercons[c] = idx1;
+
+         if( nconsvars > 1 )
+         {
+            /* create sparse directed graph
+             * sparse means, to add only those edges necessary for component calculation
+             */
+            for( v = 1; v < nconsvars; ++v )
+            {
+               idx2 = SCIPvarGetProbindex(consvars[v]);
+               assert(idx2 >= 0);
+
+               /* we add only one directed edge, because the other direction is automatically added for component computation */
+               SCIP_CALL( SCIPdigraphAddArc(digraph, idx1, idx2, NULL) );
+            }
          }
       }
+      else
+         firstvaridxpercons[c] = -1;
    }
 
    SCIPfreeBufferArray(scip, &consvars);
@@ -686,13 +691,16 @@ SCIP_RETCODE splitProblem(
     * actual variables and constraints belonging to one component
     */
    for( c = 0; c < nconss; c++ )
-      conscomponent[c] = components[firstvaridxpercons[c]];
+      conscomponent[c] = (firstvaridxpercons[c] == -1 ? -1 : components[firstvaridxpercons[c]]);
 
    SCIPsortIntPtr(components, (void**)vars, nvars);
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
    compvarsstart = 0;
    compconssstart = 0;
+
+   while( compconssstart < nconss && conscomponent[compconssstart] == -1 )
+      ++compconssstart;
 
    /* loop over all components */
    for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); comp++ )
