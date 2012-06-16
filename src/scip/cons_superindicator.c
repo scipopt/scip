@@ -143,7 +143,7 @@ SCIP_RETCODE consdataCheckSuperindicator(
    SCIP_Real binval;
 
    /* not to be called if infeasibility is already detected */
-   assert(*result == SCIP_FEASIBLE);
+   assert(*result == SCIP_FEASIBLE || *result == SCIP_DIDNOTRUN);
 
    binval = SCIPgetSolVal(scip, sol, consdata->binvar);
 
