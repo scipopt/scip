@@ -1712,10 +1712,10 @@ SCIP_RETCODE propagateVbounds(
          (lower ? "lower" : "upper"), startbound, SCIPvarGetName(startvar));
 
       /* there should be neither implications nor cliques for non-binary variables */
-      assert(SCIPvarGetType(startvar) == SCIP_VARTYPE_BINARY || SCIPvarGetNImpls(startvar, lower) == 0);
-      assert(SCIPvarGetType(startvar) == SCIP_VARTYPE_BINARY || SCIPvarGetNCliques(startvar, lower) == 0);
+      assert(SCIPvarIsBinary(startvar) || SCIPvarGetNImpls(startvar, lower) == 0);
+      assert(SCIPvarIsBinary(startvar) || SCIPvarGetNCliques(startvar, lower) == 0);
 
-      if( SCIPvarGetType(startvar) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarIsBinary(startvar) )
       {
          /* we only propagate binary variables if the lower bound changed to 1.0 or the upper bound changed to 0.0 */
          if( lower != (startbound > 0.5) )
