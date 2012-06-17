@@ -86,6 +86,7 @@ Lps* xlp_alloc(
    SCIP* scip;
    SCIP_READERDATA* readerdata;
    SCIP_Bool usestartsol;
+   SCIP_RETCODE retcode;
 
    readerdata = (SCIP_READERDATA*)user_data;
    assert(readerdata != NULL);
@@ -94,15 +95,30 @@ Lps* xlp_alloc(
    assert(scip != NULL);
 
    /* create problem */
-   SCIP_CALL_ABORT( SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   retcode = SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+   if ( retcode != SCIP_OKAY )
+   {
+      SCIPABORT();
+      return NULL;
+   }
 
    /* check if are interested in the primal solution candidate */
-   SCIP_CALL_ABORT( SCIPgetBoolParam(scip, "reading/zplreader/usestartsol", &usestartsol) );
+   retcode = SCIPgetBoolParam(scip, "reading/zplreader/usestartsol", &usestartsol);
+   if ( retcode != SCIP_OKAY )
+   {
+      SCIPABORT();
+      return NULL;
+   }
 
    if( usestartsol )
    {
       /* create primal solution */
-      SCIP_CALL_ABORT( SCIPcreateSol(scip, &readerdata->sol, NULL) );
+      retcode = SCIPcreateSol(scip, &readerdata->sol, NULL);
+      if ( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+         return NULL;
+      }
       readerdata->valid = TRUE;
    }
 
@@ -136,7 +152,7 @@ Bool xlp_conname_exists(
 
 /** method creates a constraint and is called directly from ZIMPL
  *
- *  @note this method is used by ZIMPL from version 3.00; 
+ *  @note this method is used by ZIMPL beginning from version 3.00
  */
 Bool xlp_addcon_term(
    Lps*                  data,               /**< pointer to reader data */
