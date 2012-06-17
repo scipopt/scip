@@ -1492,8 +1492,17 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   assert( lpi != NULL );
+   assert( lpi->clp != NULL );
+   assert( objsen != NULL );
+
+   // Clp direction of optimization (1 - minimize, -1 - maximize, 0 - ignore)
+   if ( lpi->clp->getObjSense() < 0 )
+      *objsen = SCIP_OBJSEN_MAXIMIZE;
+   else
+      *objsen = SCIP_OBJSEN_MINIMIZE;
+
+   return SCIP_OKAY;
 }
 
 
