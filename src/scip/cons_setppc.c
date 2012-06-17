@@ -5920,9 +5920,11 @@ SCIP_RETCODE branchLP(
    assert(varuses != NULL);
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
    if( nlpcands == 0 )
       return SCIP_OKAY;
+
+   assert(MINBRANCHWEIGHT <= MAXBRANCHWEIGHT);
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortcands, nlpcands) );
@@ -5954,57 +5956,60 @@ SCIP_RETCODE branchLP(
     */
    if( nsortcands > 0 )
    {
+      SCIP_Real cumprio = 0.0;
+      SCIP_Real minprio = SCIP_INVALID;
+      SCIP_Real minestzero = SCIP_INVALID;
+      SCIP_Real minestone = SCIP_INVALID;
+      SCIP_Real tmp;
+
       /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
        * then choose one less
        */
       branchweight = 0.0;
       solval = 0.0;
-      for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
+      for( nselcands = 0; nselcands < nsortcands; ++nselcands )
       {
          solval = SCIPgetVarSol(scip, sortcands[nselcands]);
          assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
          branchweight += solval;
+
+	 /* did we exceed the maximal weight */
+	 if( branchweight > MAXBRANCHWEIGHT )
+	    break;
+
+	 /* @todo instead of taking the minimum into account try other variants like the maximum and the average */
+	 /* calculate priorities and estimates by adding up/taking the minimum of all single priorities/estimates */
+	 cumprio += SCIPcalcNodeselPriority(scip, sortcands[nselcands], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
+	 tmp = SCIPcalcNodeselPriority(scip, sortcands[nselcands], SCIP_BRANCHDIR_UPWARDS, 1.0);
+	 minprio = MIN(minprio, tmp);
+	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 0.0);;
+	 minestzero = MIN(minestzero, tmp);
+	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 1.0);;
+	 minestone = MIN(minestone, tmp);
       }
+      assert(minestzero != SCIP_INVALID);
+      assert(minestone != SCIP_INVALID);
+      assert(minprio != SCIP_INVALID);
       assert(nselcands > 0);
-      nselcands--;
       branchweight -= solval;
 
       /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
       if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
       {
          SCIP_NODE* node;
-         SCIP_Real downprio;
 
          /* perform the binary set branching on the selected variables */
          assert(1 <= nselcands && nselcands <= nlpcands);
 
-         /* choose preferred branching direction */
-         switch( SCIPvarGetBranchDirection(branchcands[0]) )
-         {
-         case SCIP_BRANCHDIR_DOWNWARDS:
-            downprio = 1.0;
-            break;
-         case SCIP_BRANCHDIR_UPWARDS:
-            downprio = -1.0;
-            break;
-         case SCIP_BRANCHDIR_AUTO:
-            downprio = SCIPvarGetRootSol(branchcands[0]) - SCIPgetVarSol(scip, branchcands[0]);
-            break;
-         default:
-            SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n",
-               SCIPvarGetBranchDirection(branchcands[0]), SCIPvarGetName(branchcands[0]));
-            return SCIP_INVALIDDATA;
-         }
-
          /* create left child, fix x_i = 0 for all i \in S */
-         SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, cumprio, minestzero) );
          for( i = 0; i < nselcands; ++i )
          {
             SCIP_CALL( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
          }
 
          /* create right child: add constraint x(S) >= 1 */
-         SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, minprio, minestone) );
          if( nselcands == 1 )
          {
             /* only one candidate selected: fix it to 1.0 */
@@ -6020,7 +6025,7 @@ SCIP_RETCODE branchLP(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
             SCIP_CALL( SCIPaddConsNode(scip, node, newcons, NULL) );
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          }
@@ -6127,6 +6132,23 @@ SCIP_RETCODE branchPseudo(
     */
    if( nbranchcands > 0 )
    {
+      SCIP_Real* estone;
+      SCIP_Real minestzero = SCIP_INVALID;
+      SCIP_Real tmp;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &estone, nbranchcands) );
+
+      /* @todo instead of taking the minimum into account try other variants like the maximum and the average */
+      /* @todo calculate priorities instead of setting it to the number of branching candidates */
+      /* calculate estimates by taking the minimum over all single estimates */
+      for( i = 0; i < nbranchcands; ++i )
+      {
+	 tmp = SCIPcalcChildEstimate(scip, branchcands[i], 0.0);;
+	 minestzero = MIN(minestzero, tmp);
+	 estone[i] = SCIPcalcChildEstimate(scip, branchcands[i], 1.0);
+      }
+      assert(minestzero != SCIP_INVALID);
+
       /* branch on the first part of the sorted candidates:
        * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
        * - create an additional child node x_0 = ... = x_n-1 = 0
@@ -6134,7 +6156,7 @@ SCIP_RETCODE branchPseudo(
       for( i = 0; i < nbranchcands; ++i )
       {
          /* create child with x_0 = ... = x_i-1 = 0, x_i = 1 */
-         SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands, MIN(minestzero, estone[i])) );
          for( j = 0; j < i; ++j )
          {
             SCIP_CALL( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
@@ -6142,13 +6164,15 @@ SCIP_RETCODE branchPseudo(
          SCIP_CALL( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
       }
       /* create child with x_0 = ... = x_n = 0 */
-      SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)i) );
+      SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands, minestzero) );
       for( i = 0; i < nbranchcands; ++i )
       {
          SCIP_CALL( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
       }
 
       *result = SCIP_BRANCHED;
+
+      SCIPfreeBufferArray(scip, &estone);
 
 #ifdef SCIP_DEBUG
       {

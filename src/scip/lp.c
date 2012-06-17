@@ -12064,9 +12064,9 @@ SCIP_RETCODE lpLexDualSimplex(
                for( j = 0; j < lp->nlpicols; ++j )
                {
                   if( fixedc[j] )
-                  {
+		  {
                      SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
-                  }
+		  }
                   else
                   {
                      char cstart = '[';

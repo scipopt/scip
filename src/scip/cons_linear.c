@@ -9389,12 +9389,7 @@ SCIP_DECL_CONSEXIT(consExitLinear)
 
 }
 
-#ifndef WITH_PRINTORIGCONSTYPES
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLinear NULL
-
-#else
+#ifdef WITH_PRINTORIGCONSTYPES
 
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
@@ -9429,6 +9424,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 {  /*lint --e{715}*/
    int counter[SCIP_CONSTYPE_GENERAL + 1];
    int c;
+
+   assert(scip != NULL);
 
    /* initialize counter for constraint types to zero */
    BMSclearMemoryArray(counter, SCIP_CONSTYPE_GENERAL + 1);
@@ -11300,6 +11297,9 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinear) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitLinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinear) );
+#ifdef WITH_PRINTORIGCONSTYPES
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinear) );
+#endif
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinear) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinear) );
@@ -11309,10 +11309,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
-
-#ifdef WITH_PRINTORIGCONSTYPES
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinear) );
-#endif
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {

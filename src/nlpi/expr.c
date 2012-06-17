@@ -13965,7 +13965,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    {
       FILE* file;
       file = fopen("exprgraph_beforesimplify.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, messagehdlr, file, NULL) );
       fclose(file);
    }
 #endif
@@ -14111,7 +14111,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    {
       FILE* file;
       file = fopen("exprgraph_aftersimplify.dot", "w");
-      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, file, NULL) );
+      SCIP_CALL( SCIPexprgraphPrintDot(exprgraph, messagehdlr, file, NULL) );
       fclose(file);
    }
 #endif

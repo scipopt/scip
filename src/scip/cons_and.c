@@ -3659,8 +3659,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreAnd NULL
 #endif
 
 
@@ -4400,6 +4398,9 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
+#ifdef GMLGATEPRINTING
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAnd) );
+#endif
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );

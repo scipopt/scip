@@ -8032,6 +8032,9 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyCumulative, consCopyCumulative) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteCumulative) );
+#ifdef SCIP_STATISTIC
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreCumulative) );
+#endif
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolCumulative) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeCumulative) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsCumulative) );
