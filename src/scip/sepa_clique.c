@@ -1166,44 +1166,78 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
          SCIP_VAR** vars;
-#ifndef NDEBUG
-         int nvars;
-#endif
          SCIP_ROW* cut;
+         SCIP_RETCODE retcode;
          char cutname[SCIP_MAXSTRLEN];
 
-#ifndef NDEBUG
-         nvars = sepadata->tcliquegraph->nnodes;
-#endif
          vars = sepadata->tcliquegraph->vars;
-         assert(nvars > 0);
+         assert(sepadata->tcliquegraph->nnodes > 0);
          assert(vars != NULL);
 
-         /* create the cut */
+         /* create the cut (handle retcode since we do not have a backtrace) */
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
-         SCIP_CALL_ABORT( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+         retcode = SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE);
+         if ( retcode != SCIP_OKAY )
+         {
+            SCIPABORT();
+            return;
+         }
 
-         SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
-         assert(ncliquenodes <= nvars);
+         retcode = SCIPcacheRowExtensions(scip, cut);
+         if ( retcode != SCIP_OKAY )
+         {
+            /* try to free row */
+            retcode = SCIPreleaseRow(scip, &cut);
+            SCIPABORT();
+            return;
+         }
+
+         assert(ncliquenodes <= sepadata->tcliquegraph->nnodes);
          /*SCIPdebugMessage(" -> clique in graph:");*/
          for( i = 0; i < ncliquenodes; ++i )
          {
-            assert(cliquenodes[i] < nvars);
-            SCIP_CALL_ABORT( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
+            assert(cliquenodes[i] < sepadata->tcliquegraph->nnodes);
+            retcode = SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0);
+            if ( retcode != SCIP_OKAY )
+            {
+               retcode = SCIPreleaseRow(scip, &cut);
+               SCIPABORT();
+               return;
+            }
             /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
          }
          /*SCIPdebugPrintf("\n");*/
-         SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
+         retcode = SCIPflushRowExtensions(scip, cut);
+         if ( retcode != SCIP_OKAY )
+         {
+            retcode = SCIPreleaseRow(scip, &cut);
+            SCIPABORT();
+            return;
+         }
 
          SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
          /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-         SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
-         SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
+         retcode = SCIPaddCut(scip, sepadata->sol, cut, FALSE);
+         if ( retcode != SCIP_OKAY )
+         {
+            retcode = SCIPreleaseRow(scip, &cut);
+            SCIPABORT();
+            return;
+         }
+
+         retcode = SCIPaddPoolCut(scip, cut);
+         if ( retcode != SCIP_OKAY )
+         {
+            retcode = SCIPreleaseRow(scip, &cut);
+            SCIPABORT();
+            return;
+         }
          sepadata->ncuts++;
 
          /* release the row */
-         SCIP_CALL_ABORT( SCIPreleaseRow(scip, &cut) );
+         retcode = SCIPreleaseRow(scip, &cut);
+         /* ignore retcode */
 
          /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
           * such that only more violated cuts are generated afterwards
