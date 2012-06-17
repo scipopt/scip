@@ -985,6 +985,7 @@ int SCIPgetNParams(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of reader */
@@ -1072,6 +1073,7 @@ int SCIPgetNReaders(
  *              setter functions
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of variable pricer */
@@ -1223,6 +1225,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of constraint handler */
@@ -1528,6 +1531,7 @@ int SCIPgetNConshdlrs(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of conflict handler */
@@ -1643,6 +1647,7 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
  *              via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of presolver */
@@ -1760,6 +1765,7 @@ SCIP_RETCODE SCIPsetPresolPriority(
  *              callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of relaxation handler */
@@ -1876,6 +1882,7 @@ SCIP_RETCODE SCIPsetRelaxPriority(
  *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of separator */
@@ -2002,6 +2009,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of propagator */
@@ -2166,6 +2174,7 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of primal heuristic */
@@ -2294,6 +2303,7 @@ SCIP_RETCODE SCIPsetHeurPriority(
  *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
@@ -2406,6 +2416,7 @@ int SCIPgetNEventhdlrs(
  *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of node selector */
@@ -2538,6 +2549,7 @@ SCIP_NODESEL* SCIPgetNodesel(
  *              via corresponding setter methods.
  */
 extern
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of branching rule */
@@ -6536,7 +6548,8 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6597,7 +6610,8 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateEmptyRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
