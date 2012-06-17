@@ -2910,8 +2910,9 @@ int SCIPgetNVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return 0;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2930,8 +2931,9 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2950,8 +2952,9 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return SCIP_BOUNDTYPE_LOWER; /* arbitrarily return some boundtype */
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2970,8 +2973,9 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

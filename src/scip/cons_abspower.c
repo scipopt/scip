@@ -5943,7 +5943,9 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       default:
          SCIPerrorMessage("invalid result from checkFixedVariables\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       }  /*lint !e788*/
+
       if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
       {
          *result = SCIP_SUCCESS;
@@ -6551,6 +6553,7 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
          break;
       default:
          SCIPABORT(); /* checked above that this cannot happen */
+         return SCIP_INVALIDDATA;
       }
    }
 

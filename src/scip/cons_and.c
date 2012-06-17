@@ -3147,6 +3147,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             default:
                SCIPerrorMessage("invalid comparison result\n");
                SCIPABORT();
+               return SCIP_INVALIDDATA;
             }
          }
 
@@ -3161,7 +3162,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("equivalent and constraints <%s> and <%s>: aggregate resultants <%s> == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
                SCIPvarGetName(consdata1->resvar));
-         
+
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
