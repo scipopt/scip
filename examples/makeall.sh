@@ -42,7 +42,6 @@ do
 #	then
 #	    exit
 #        fi
-	echo
 	for LPS in ${LPSOLVERS[@]}
 	do
 	    LPILIB=../../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
