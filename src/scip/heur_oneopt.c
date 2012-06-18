@@ -300,7 +300,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
    /* create heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   heurdata->lastsolindex = -1;
 
    /* if the heuristic is called at the root node, we may want to be called during the cut-and-price loop and even before the first LP solve */
    if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
@@ -810,6 +809,7 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
 
    /* create Oneopt primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   heurdata->lastsolindex = -1;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
