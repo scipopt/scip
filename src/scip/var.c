@@ -439,6 +439,9 @@ SCIP_RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].inferencedata.var = infervar;
    var->lbchginfos[var->nlbchginfos].inferencedata.info = inferinfo;
 
+   /**@note The "pos" data member of the bound change info has a size of 27 bits */
+   assert(var->nlbchginfos < 1 << 27);
+
    switch( boundchgtype )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
@@ -511,6 +514,9 @@ SCIP_RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].inferboundtype = inferboundtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].inferencedata.var = infervar;
    var->ubchginfos[var->nubchginfos].inferencedata.info = inferinfo;
+
+   /**@note The "pos" data member of the bound change info has a size of 27 bits */
+   assert(var->nubchginfos < 1 << 27);
 
    switch( boundchgtype )
    {
