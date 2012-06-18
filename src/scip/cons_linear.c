@@ -4353,12 +4353,12 @@ SCIP_RETCODE addConflictBounds(
 
          if( !resactisinf )
          {
-            assert(vars != NULL); /* for flexelint */
-            assert(vals != NULL); /* for flexelint */
-
             /* now add bounds as reasons until the residual capacity is exceeded */
             for( i = 0; i < nvars; ++i )
             {
+               assert(vars != NULL); /* for flexelint */
+               assert(vals != NULL); /* for flexelint */
+
                /* zero coefficients and the infered variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;
