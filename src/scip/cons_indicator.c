@@ -250,6 +250,7 @@
 #define DEFAULT_TRYSOLUTIONS         TRUE    /**< Try to make solutions feasible by setting indicator variables? */
 #define DEFAULT_ENFORCECUTS         FALSE    /**< In enforcing try to generate cuts (only if sepaalternativelp is true)? */
 #define DEFAULT_DUALREDUCTIONS       TRUE    /**< Should dual reduction steps be performed? */
+#define DEFAULT_ADDOPPOSITE         FALSE    /**< Add opposite inequality in nodes in which the binary variable has been fixed to 0? */
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
 #define DEFAULT_FORCERESTART        FALSE    /**< force restart if we have a max FS instance and gap is 1? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
@@ -306,6 +307,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             trysolutions;       /**< Try to make solutions feasible by setting indicator variables? */
    SCIP_Bool             enforcecuts;        /**< in enforcing try to generate cuts (only if sepaalternativelp is true) */
    SCIP_Bool             dualreductions;     /**< should dual reduction steps be performed? */
+   SCIP_Bool             addopposite;        /**< Add opposite inequality in nodes in which the binary variable has been fixed to 0? */
    SCIP_Bool             generatebilinear;   /**< do not generate indicator constraint, but a bilinear constraint instead */
    SCIP_Bool             conflictsupgrade;   /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
@@ -3224,6 +3226,7 @@ SCIP_RETCODE propIndicator(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool             dualreductions,     /**< should dual reductions be performed? */
+   SCIP_Bool             addopposite,        /**< add opposite inequalities if binary var = 0? */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    int*                  nGen                /**< number of domain changes */
    )
@@ -3322,6 +3325,95 @@ SCIP_RETCODE propIndicator(
    }
    else
    {
+      /* if the binary variable is fixed to zero */
+      if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
+      {
+         if ( addopposite && consdata->linconsactive )
+         {
+            char name[SCIP_MAXSTRLEN];
+            SCIP_CONS* reversecons;
+            SCIP_VAR** linvars;
+            SCIP_Real* linvals;
+            SCIP_Bool allintegral = TRUE;
+            SCIP_VAR* slackvar;
+            SCIP_VAR** vars;
+            SCIP_Real* vals;
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+            int nlinvars;
+            int nvars = 0;
+            int j;
+
+            /* determine lhs/rhs (first exchange lhs/rhs) */
+            lhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            if ( SCIPisInfinity(scip, lhs) )
+               lhs = -SCIPinfinity(scip);
+            rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            if ( SCIPisInfinity(scip, -rhs) )
+               rhs = SCIPinfinity(scip);
+
+            assert( ! SCIPisInfinity(scip, lhs) );
+            assert( ! SCIPisInfinity(scip, -rhs) );
+
+            /* consider only finite lhs/rhs */
+            if ( ! SCIPisInfinity(scip, -lhs) || ! SCIPisInfinity(scip, rhs) )
+            {
+               /* ignore equations */
+               if ( ! SCIPisEQ(scip, lhs, rhs) )
+               {
+                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(lhs)) )
+                     lhs += 1.0;
+
+                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(rhs)) )
+                     rhs -= 1.0;
+
+                  assert( consdata->lincons != NULL );
+                  nlinvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+                  linvars = SCIPgetVarsLinear(scip, consdata->lincons);
+                  linvals = SCIPgetValsLinear(scip, consdata->lincons);
+                  slackvar = consdata->slackvar;
+                  assert( slackvar != NULL );
+
+                  SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
+
+                  /* copy data and check whether the linear constraint is integral */
+                  for (j = 0; j < nlinvars; ++j)
+                  {
+                     if ( linvars[j] != slackvar )
+                     {
+                        if (! SCIPvarIsIntegral(linvars[j]) || ! SCIPisIntegral(scip, linvals[j]) )
+                           allintegral = FALSE;
+
+                        vars[nvars] = linvars[j];
+                        vals[nvars++] = linvals[j];
+                     }
+                  }
+                  assert( nlinvars == nvars + 1 );
+
+                  /* create reverse constraint */
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "reverse_%s", SCIPconsGetName(consdata->lincons));
+
+                  /* constraint is initial, separated, not enforced, not checked, propagated, local, not modifiable, dynamic, removable */
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &reversecons, name, nvars, vars, vals, lhs, rhs,
+                        TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+                  SCIPdebugMessage("Binary variable <%s> fixed to 0. Adding opposite linear inequality.\n", SCIPvarGetName(consdata->binvar));
+                  SCIPdebugPrintCons(scip, reversecons, NULL);
+
+                  /* add constraint */
+                  SCIP_CALL( SCIPaddCons(scip, reversecons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &reversecons) );
+
+                  SCIPfreeBufferArray(scip, &vals);
+                  SCIPfreeBufferArray(scip, &vars);
+               }
+            }
+         }
+
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      }
+
       /* if the slack variable is fixed to zero */
       if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
@@ -3565,7 +3657,7 @@ SCIP_RETCODE enforceIndicators(
       }
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propIndicator(scip, conss[c], consdata, conshdlrdata->dualreductions, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, conss[c], consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
       if ( cutoff )
       {
          SCIPdebugMessage("propagation in enforcing <%s> detected cutoff.\n", SCIPconsGetName(conss[c]));
@@ -5099,7 +5191,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions, &cutoff, &nGen) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &nGen) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5854,6 +5946,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/dualreductions",
          "should dual reduction steps be performed?",
          &conshdlrdata->dualreductions, TRUE, DEFAULT_DUALREDUCTIONS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/addopposite",
+         "Add opposite inequality in nodes in which the binary variable has been fixed to 0?",
+         &conshdlrdata->addopposite, TRUE, DEFAULT_ADDOPPOSITE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/conflictsupgrade",
