@@ -435,7 +435,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
 {
    assert(sol != NULL);
    assert(lp != NULL);
-   assert(lp->solved);
+   assert(SCIPlpIsSolved(lp));
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, prob, tree, lp) );
@@ -767,7 +767,7 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 
    SCIPdebugMessage("linking solution to current solution\n");
 
-   if( SCIPtreeHasCurrentNodeLP(tree) )
+   if( SCIPtreeHasCurrentNodeLP(tree) && SCIPlpIsSolved(lp) )
    {
       SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, prob, tree, lp) );
    }
