@@ -20,10 +20,10 @@
  */
 
 /**@todo allow more types for slack constraint */
-/**@todo implement more upgrades, e.g., for nonlinear slack constraints; upgrades could also help to handle difficult
- *       slack constraints such as pseudoboolean or indicator
+/**@todo implement more upgrades, e.g., for nonlinear, quadratic, logicor slack constraints; upgrades could also help to
+ *       handle difficult slack constraints such as pseudoboolean or indicator
  */
-/**@todo unify enfolp and enfops callbacks */
+/**@todo unify enfolp and enfops, sepalp and sepaps callbacks */
 /**@todo enforce by branching on binary variable if slack constraint only returns SCIP_INFEASIBLE */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1906,13 +1906,14 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* add miniis dialog */
-   if( !SCIPdialogHasEntry(changemenu, "miniis") )
+   /* add minur dialog */
+   if( !SCIPdialogHasEntry(changemenu, "minur") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
-            SCIPdialogExecChangeMinIIS, NULL, NULL,
-            "miniis", "transforms the current problem into minimizing independent irreducible subset problem", FALSE, NULL) );
+            SCIPdialogExecChangeMinUR, NULL, NULL,
+            "minur", "transforms the current problem into a MinUR problem minimizing the number of unsatisfied constraints",
+            FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, changemenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -2093,8 +2094,10 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
  *  constraint-dependent SCIP methods
  */
 
-/** transforms the current problem into an IIS (independent irreducible subset) problem */
-SCIP_RETCODE SCIPtransformMinIIS(
+/** transforms the current problem into a MinUR problem (minimizing the number of unsatisfied constraints),
+ *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
+ */
+SCIP_RETCODE SCIPtransformMinUR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< could all constraints be transformed? */
    )
@@ -2116,7 +2119,7 @@ SCIP_RETCODE SCIPtransformMinIIS(
 
    if( SCIPgetStage(scip) !=  SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("method <SCIPtransformMinIIS> can only be called in problem stage\n");
+      SCIPerrorMessage("method <SCIPtransformMinUR> can only be called in problem stage\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -2227,8 +2230,8 @@ SCIP_RETCODE SCIPtransformMinIIS(
  *  constraint-dependent dialog entries
  */
 
-/** dialog execution method for the count command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
+/** dialog execution method for the SCIPtransformMinUR() method */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUR)
 {  /*lint --e{715}*/
    SCIP_Bool success;
 
@@ -2241,10 +2244,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
       SCIPdialogMessage(scip, NULL, "no problem exists\n");
       break;
    case SCIP_STAGE_PROBLEM:
-      SCIPdialogMessage(scip, NULL, "change problem to minIIS\n");
+      SCIPdialogMessage(scip, NULL, "change problem to MinUR\n");
       SCIPdialogMessage(scip, NULL, "==============\n");
 
-      SCIP_CALL( SCIPtransformMinIIS(scip, &success) );
+      SCIP_CALL( SCIPtransformMinUR(scip, &success) );
 
       if( !success )
       {
@@ -2271,7 +2274,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS)
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    case SCIP_STAGE_FREE:
-      SCIPdialogMessage(scip, NULL, "problem has to be in problem stage to create minIIS problem\n");
+      SCIPdialogMessage(scip, NULL, "problem has to be in problem stage to create MinUR problem\n");
       break;
    default:
       SCIPerrorMessage("invalid SCIP stage\n");

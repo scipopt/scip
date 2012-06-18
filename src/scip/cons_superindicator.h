@@ -112,9 +112,11 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
  *  constraint-dependent SCIP methods
  */
 
-/** transforms the current problem into an IIS (independent irreducible subset) problem */
+/** transforms the current problem into a MinUR problem (minimizing the number of unsatisfied constraints),
+ *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
+ */
 extern
-SCIP_RETCODE SCIPtransformMinIIS(
+SCIP_RETCODE SCIPtransformMinUR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< could all constraints be transformed? */
    );
@@ -125,9 +127,9 @@ SCIP_RETCODE SCIPtransformMinIIS(
  *  constraint-dependent dialog entries
  */
 
-/** dialog execution method for the SCIPtransformSlack() command */
+/** dialog execution method for the SCIPtransformMinUR() command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinIIS);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUR);
 
 #ifdef __cplusplus
 }
