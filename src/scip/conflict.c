@@ -2208,7 +2208,8 @@ static
 SCIP_RETCODE convertToActiveVar(
    SCIP_VAR**            var,                /**< pointer to variable */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound that was changed: lower or upper bound */
+   SCIP_BOUNDTYPE*       boundtype,          /**< pointer to type of bound that was changed: lower or upper bound */
+   SCIP_Real*            bound               /**< pointer to bound to convert, or NULL */
    )
 {
    SCIP_Real scalar;
@@ -2221,9 +2222,18 @@ SCIP_RETCODE convertToActiveVar(
    SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 
+   if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED )
+      return SCIP_OKAY;
+
    /* if the scalar of the aggregation is negative, we have to switch the bound type */
    if( scalar < 0.0 )
       (*boundtype) = SCIPboundtypeOpposite(*boundtype);
+
+   if( bound != NULL )
+   {
+      (*bound) -= constant;
+      (*bound) /= scalar;
+   }
 
    return SCIP_OKAY;
 }
@@ -2296,7 +2306,7 @@ SCIP_RETCODE SCIPconflictAddBound(
    assert(var != NULL);
 
    /* convert bound to active problem variable */
-   SCIP_CALL( convertToActiveVar(&var, set, &boundtype) );
+   SCIP_CALL( convertToActiveVar(&var, set, &boundtype, NULL) );
 
    /* we can ignore fixed variables */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
@@ -2351,6 +2361,7 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    )
 {
    SCIP_BDCHGINFO* bdchginfo;
+   int nbdchgs;
 
    assert(conflict != NULL);
    assert(stat != NULL);
@@ -2358,102 +2369,112 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
 
    if( !SCIPvarIsActive(var) )
    {
+      /* convert bound to active problem variable */
+      SCIP_CALL( convertToActiveVar(&var, set, &boundtype, &relaxedbd) );
+
+      /* we can ignore fixed variables */
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+         return SCIP_OKAY;
+
       SCIPdebugMessage("ignoring relaxed bound information since variable <%s> is not active\n", SCIPvarGetName(var));
 
-      SCIP_CALL( SCIPconflictAddBound(conflict, set, stat, var, boundtype, bdchgidx) );
+      /* if the variable is multi-aggregated, add the bounds of all aggregation variables */
+      if(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIP_CALL( SCIPconflictAddBound(conflict, set, stat, var, boundtype, bdchgidx) );
+
+         return SCIP_OKAY;
+      }
+   }
+   assert(SCIPvarIsActive(var));
+
+   /* get bound change information */
+   bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);
+
+   /* if bound of variable was not changed (this means it is still the global bound), we can ignore the conflicting
+    * bound
+    */
+   if( bdchginfo == NULL )
+      return SCIP_OKAY;
+
+   /* get the position of the bound change information within the bound change array of the variable */
+   nbdchgs = bdchginfo->pos;
+   assert(nbdchgs >= 0);
+
+   /* search for the bound change information which includes the relaxed bound */
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      /* check if relaxed lower bound is smaller or equal to global lower bound; if so we can ignore the conflicting
+       * bound
+       */
+      if( SCIPsetIsLE(set, relaxedbd, SCIPvarGetLbGlobal(var)) )
+         return SCIP_OKAY;
+
+      while( nbdchgs > 0 )
+      {
+         assert(SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+         /* check if the old lower bound is greater than or equal to relaxed lower bound; if not we found the bound
+          * change info which we need to report
+          */
+         if( SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
+            break;
+
+         bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
+
+         SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+            nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPbdchginfoIsRedundant(bdchginfo));
+
+         /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
+         if( SCIPbdchginfoIsRedundant(bdchginfo) )
+            return SCIP_OKAY;
+
+         nbdchgs--;
+      }
+      assert(SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
    }
    else
    {
-      int nbdchgs;
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
-      /* get bound change information */
-      bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);
-
-      /* if bound of variable was not changed (this means it is still the global bound), we can ignore the conflicting
+      /* check if relaxed upper bound is greater or equal to global upper bound; if so we can ignore the conflicting
        * bound
        */
-      if( bdchginfo == NULL )
+      if( SCIPsetIsGE(set, relaxedbd, SCIPvarGetUbGlobal(var)) )
          return SCIP_OKAY;
 
-      /* get the position of the bound change information within the bound change array of the variable */
-      nbdchgs = bdchginfo->pos;
-      assert(nbdchgs >= 0);
-
-      /* search for the bound change information which includes the relaxed bound */
-      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      while( nbdchgs > 0 )
       {
-         /* check if relaxed lower bound is smaller or equal to global lower bound; if so we can ignore the conflicting
-          * bound
+         assert(SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
+
+         /* check if the old upper bound is smaller than or equal to the relaxed upper bound; if not we found the
+          * bound change info which we need to report
           */
-         if( SCIPsetIsLE(set, relaxedbd, SCIPvarGetLbGlobal(var)) )
+         if( SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
+            break;
+
+         bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
+
+         SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
+            nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPbdchginfoIsRedundant(bdchginfo));
+
+         /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
+         if( SCIPbdchginfoIsRedundant(bdchginfo) )
             return SCIP_OKAY;
 
-         while( nbdchgs > 0 )
-         {
-            assert(SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-            /* check if the old lower bound is greater than or equal to relaxed lower bound; if not we found the bound
-             * change info which we need to report
-             */
-            if( SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
-               break;
-
-            bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
-
-            SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-               nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-               SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-               SCIPbdchginfoIsRedundant(bdchginfo));
-
-            /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
-            if( SCIPbdchginfoIsRedundant(bdchginfo) )
-               return SCIP_OKAY;
-
-            nbdchgs--;
-         }
-         assert(SCIPsetIsGT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
+         nbdchgs--;
       }
-      else
-      {
-         assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-
-         /* check if relaxed upper bound is greater or equal to global upper bound; if so we can ignore the conflicting
-          * bound
-          */
-         if( SCIPsetIsGE(set, relaxedbd, SCIPvarGetUbGlobal(var)) )
-            return SCIP_OKAY;
-
-         while( nbdchgs > 0 )
-         {
-            assert(SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-            /* check if the old upper bound is smaller than or equal to the relaxed upper bound; if not we found the
-             * bound change info which we need to report
-             */
-            if( SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)) )
-               break;
-
-            bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
-
-            SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-               nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-               SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-               SCIPbdchginfoIsRedundant(bdchginfo));
-
-            /* if bound change is redundant (this means it now a global bound), we can ignore the conflicting bound */
-            if( SCIPbdchginfoIsRedundant(bdchginfo) )
-               return SCIP_OKAY;
-
-            nbdchgs--;
-         }
-         assert(SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
-      }
-
-      assert(SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo), bdchgidx));
-
-      /* put bound change information into priority queue */
-      SCIP_CALL( conflictAddBound(conflict, set, stat, var, boundtype, bdchginfo, relaxedbd) );
+      assert(SCIPsetIsLT(set, relaxedbd, SCIPbdchginfoGetOldbound(bdchginfo)));
    }
+
+   assert(SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo), bdchgidx));
+
+   /* put bound change information into priority queue */
+   SCIP_CALL( conflictAddBound(conflict, set, stat, var, boundtype, bdchginfo, relaxedbd) );
 
    return SCIP_OKAY;
 }
@@ -2548,7 +2569,7 @@ SCIP_RETCODE SCIPconflictIsVarUsed(
    SCIP_Real newbound;
 
    /* convert bound to active problem variable */
-   SCIP_CALL( convertToActiveVar(&var, set, &boundtype) );
+   SCIP_CALL( convertToActiveVar(&var, set, &boundtype, NULL) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       *used = FALSE;
