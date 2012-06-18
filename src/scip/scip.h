@@ -2316,6 +2316,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
  */
+extern
 SCIP_RETCODE SCIPincludeEventhdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
@@ -2566,6 +2567,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
  */
+extern
 SCIP_RETCODE SCIPincludeBranchruleBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
@@ -6536,7 +6538,8 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6597,7 +6600,8 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateEmptyRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
