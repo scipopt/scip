@@ -4051,7 +4051,7 @@ SCIP_RETCODE SCIPsetSetLpfeastol(
 
    if( printnewvalue )
    {
-      SCIPinfoMessage(set->scip, NULL, "numerics/lpfeastol = %.15g\n", SCIPsetLpfeastol(set));
+      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "numerics/lpfeastol = %.15g\n", SCIPsetLpfeastol(set));
    }
 
    return retcode;
