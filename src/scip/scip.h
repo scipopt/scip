@@ -9687,7 +9687,8 @@ SCIP_RETCODE SCIPchgFeastol(
 extern
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets the feasibility tolerance for reduced costs */

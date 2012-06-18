@@ -957,7 +957,8 @@ SCIP_RETCODE SCIPsetSetFeastol(
 extern
 SCIP_RETCODE SCIPsetSetLpfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets feasibility tolerance for reduced costs in LP solution */

@@ -26024,7 +26024,8 @@ SCIP_RETCODE SCIPchgFeastol(
 /** sets the primal feasibility tolerance of LP solver */
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgLpfeastol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -26034,7 +26035,7 @@ SCIP_RETCODE SCIPchgLpfeastol(
       scip->lp->solved = FALSE;
 
    /* change the settings */
-   SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol) );
+   SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol, printnewvalue) );
 
    return SCIP_OKAY;
 }
