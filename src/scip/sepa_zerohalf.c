@@ -206,8 +206,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 
 #define ZEROHALFstatistics(x)                x                    /**< execute if ZEROHALF__PRINT_STATISTICS is defined */
 #define ZEROHALFstatisticsMessage            printf("####   ") ; printf                   /**< print statistics message */
-#define ZEROHALFcreateNewTimer(timervar)     SCIP_CLOCK* timervar; SCIP_CALL(SCIPcreateClock(scip, &timervar)) /* create
-                                                                                                                  new timer */
+#define ZEROHALFcreateNewTimer(timervar)     SCIP_CALL(SCIPcreateClock(scip, &timervar)) /**< create new timer */
 #define ZEROHALFcreateTimer(timervar)        SCIP_CALL(SCIPcreateClock(scip, &timervar)) /**< recreate existing timer */
 #define ZEROHALFfreeTimer(timervar)          SCIP_CALL(SCIPfreeClock(scip, &timervar))                /**< free timer */
 #define ZEROHALFresetTimer(timervar)         SCIP_CALL(SCIPresetClock(scip, timervar))               /**< reset timer */
@@ -4599,6 +4598,8 @@ SCIP_RETCODE preprocess(
    int                   nsepacutsinitial;
    int                   nzerohalfcutsbeforeppm;
    int                   nzerohalfcutsinitial;
+   SCIP_CLOCK* timer;
+   SCIP_CLOCK* pptimer;
 #endif
    char                  ppname[SCIP_MAXSTRLEN];
   
@@ -4668,6 +4669,7 @@ SCIP_RETCODE preprocess(
       *nsepacuts, *nzerohalfcuts, ZEROHALFevalTimer(sepadata->pptimers[sepadata->nppmethods]));
    ZEROHALFcreateNewTimer(timer);
    ZEROHALFstartTimer(timer);
+
    ZEROHALFcreateNewTimer(pptimer);  
 #endif
 
@@ -6470,6 +6472,8 @@ SCIP_RETCODE process(
    int                   nsepacutsinitial;
    int                   nzerohalfcutsbefore;
    int                   nzerohalfcutsinitial;
+   SCIP_CLOCK* timer;
+   SCIP_CLOCK* sepatimer;
 #endif
 
    int                   ncutsfoundbefore;
@@ -6543,6 +6547,7 @@ SCIP_RETCODE process(
 
    if( mod2data->nrowsind == 0 || mod2data->ncolsind == 0 )
       return SCIP_OKAY;
+
 #ifdef ZEROHALF__PRINT_STATISTICS
    ZEROHALFcreateNewTimer(timer);
    ZEROHALFcreateNewTimer(sepatimer);  
