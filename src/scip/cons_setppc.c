@@ -2720,7 +2720,7 @@ SCIP_RETCODE presolvePropagateCons(
    nvars = consdata->nvars;
 
    /* no variables left */
-   if( nvars == 0 && SCIPconsIsModifiable(cons) )
+   if( nvars == 0 && !SCIPconsIsModifiable(cons) )
    {
       if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
       {
@@ -2741,7 +2741,6 @@ SCIP_RETCODE presolvePropagateCons(
 	 return SCIP_OKAY;
       }
    }
-   assert(vars != NULL);
 
    /* more then two variables are fixed */
    if( consdata->nfixedones > 1 )
@@ -2750,10 +2749,10 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set covering constraint is feasible anyway and can be deleted
        * - a set partitioning or packing constraint is infeasible
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( (consdata->setppctype == SCIP_SETPPCTYPE_COVERING) && !SCIPconsIsModifiable(cons))
       {
 	 /* delete constraint */
-	 SCIPdebugMessage(" -> deleting set-packing constraint <%s>, at least two variables are fixed to 1 \n", SCIPconsGetName(cons));
+	 SCIPdebugMessage(" -> deleting set-covering constraint <%s>, at least two variables are fixed to 1\n", SCIPconsGetName(cons));
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
 	 ++(*ndelconss);
 
@@ -2774,6 +2773,8 @@ SCIP_RETCODE presolvePropagateCons(
        */
       if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING && consdata->nfixedzeros < nvars - 1 )
       {
+         assert(vars != NULL);
+
 	 for( v = nvars - 1; v >= 0; --v )
 	 {
 	    if( SCIPvarGetLbLocal(vars[v]) + 0.5 < SCIPvarGetUbLocal(vars[v]) )
@@ -2811,6 +2812,8 @@ SCIP_RETCODE presolvePropagateCons(
    /* other propagations can only be done on not modifiable constraints */
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
 
    /* all variables were fixed to zero then either delete the constraint or stop with infeasibility */
    if( consdata->nfixedzeros == nvars )
