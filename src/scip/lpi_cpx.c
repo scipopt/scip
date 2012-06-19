@@ -53,7 +53,7 @@
       }                                                                 \
    }
 
-#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2000000000          /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
