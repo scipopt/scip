@@ -641,23 +641,34 @@ SCIP_Longint consdataGetSignature(
 
 /** sorts setppc constraint's variables by non-decreasing variable index */
 static
-SCIP_RETCODE consdataSort(
-   SCIP*                 scip,               /**< SCIP data structure */
+void consdataSort(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
-      consdata->sorted = TRUE;
-   else if( !consdata->sorted )
+   if( !consdata->sorted )
    {
-      SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
-      consdata->sorted = TRUE;
+      if( consdata->nvars <= 1 )
+	 consdata->sorted = TRUE;
+      else
+      {
+	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+	 consdata->sorted = TRUE;
+      }
    }
    assert(consdata->sorted);
+#ifdef SCIP_DEBUG
+   /* check sorting */
+   {
+      int v;
 
-   return SCIP_OKAY;
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
+   }
+#endif
 }
 
 /** changes the type of a setppc constraint */
@@ -2129,7 +2140,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    assert(scip != NULL);
 
    /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata) );
+   consdataSort(consdata);
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
@@ -5214,7 +5225,7 @@ SCIP_RETCODE removeRedundantConstraints(
    assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
-   SCIP_CALL( consdataSort(scip, consdata0) );
+   consdataSort(consdata0);
 
    /* get the bit signature of the constraint */
    signature0 = consdataGetSignature(consdata0);
