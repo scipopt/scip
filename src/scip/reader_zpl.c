@@ -739,7 +739,7 @@ Bool xlp_addcon_term(
 {
    SCIP* scip;
    SCIP_READERDATA* readerdata;
-   SCIP_Bool created;
+   SCIP_Bool created = FALSE;
 
    readerdata = (SCIP_READERDATA*)data;
    assert(readerdata != NULL);

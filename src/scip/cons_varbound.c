@@ -376,7 +376,6 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* vbdvar;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -392,8 +391,7 @@ SCIP_RETCODE addRelaxation(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   vbdvar = consdata->vbdvar;
-   assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(consdata->vbdvar) != SCIP_VARTYPE_CONTINUOUS);
 
    /* check whether the coefficient is too large to put the row into the LP */
    if( SCIPisGT(scip, REALABS(consdata->vbdcoef), conshdlrdata->maxlpcoef) )
