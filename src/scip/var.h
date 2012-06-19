@@ -1026,7 +1026,7 @@ SCIP_RETCODE SCIPvarChgBranchFactor(
  *  with lower priority in selection of branching variable
  */
 extern
-void SCIPvarChgBranchPriority(
+SCIP_RETCODE SCIPvarChgBranchPriority(
    SCIP_VAR*             var,                /**< problem variable */
    int                   branchpriority      /**< branching priority of the variable */
    );

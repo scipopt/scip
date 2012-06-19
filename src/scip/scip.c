@@ -14917,7 +14917,7 @@ SCIP_RETCODE SCIPchgVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchPriority(var, branchpriority);
+   SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
 
    return SCIP_OKAY;
 }
@@ -14932,7 +14932,9 @@ SCIP_RETCODE SCIPupdateVarBranchPriority(
    SCIP_CALL( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( branchpriority > SCIPvarGetBranchPriority(var) )
-      SCIPvarChgBranchPriority(var, branchpriority);
+   {
+      SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
+   }
 
    return SCIP_OKAY;
 }
@@ -14946,7 +14948,7 @@ SCIP_RETCODE SCIPaddVarBranchPriority(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchPriority(var, addpriority + SCIPvarGetBranchPriority(var));
+   SCIP_CALL( SCIPvarChgBranchPriority(var, addpriority + SCIPvarGetBranchPriority(var)) );
 
    return SCIP_OKAY;
 }
