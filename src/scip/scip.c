@@ -1449,9 +1449,10 @@ SCIP_RETCODE SCIPgetVarCopy(
       return SCIP_OKAY;
    }
    default:
+      /* note that is in an internal SCIP error since the variable status is only handled by the core */
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      break;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    /* add the (new) target variable to the target problem */
@@ -7165,9 +7166,10 @@ SCIP_RETCODE SCIPsetProbData(
       return SCIP_OKAY;
 
    default:
+      /* note that is in an internal SCIP error since the problem stages are only handled by the core */
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
-   }  /*lint !e788*/
+   }
 }
 
 /** gets name of the current problem instance */
@@ -8693,7 +8695,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return SCIP_OKAY; /*lint !e527*/
+      return SCIP_INVALIDCALL; /*lint !e527*/
    }  /*lint !e788*/
 
    return SCIP_OKAY;
@@ -10166,7 +10168,7 @@ SCIP_RETCODE SCIPpresolve(
          default:
             SCIPerrorMessage("invalid SCIP status <%d>\n", scip->stat->status);
             SCIPABORT();
-            return SCIP_ERROR;
+            return SCIP_ERROR; /*lint !e527*/
          }
       }
       else if( scip->set->stage == SCIP_STAGE_PRESOLVED )
@@ -11874,7 +11876,7 @@ SCIP_Real SCIPgetVarRedcost(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -11912,7 +11914,7 @@ SCIP_Real SCIPgetVarImplRedcost(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -11953,7 +11955,7 @@ SCIP_Real SCIPgetVarFarkasCoef(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -12180,6 +12182,7 @@ SCIP_Real SCIPgetRelaxSolVal(
    {
       SCIPerrorMessage("Relaxation Solution is not valid!\n");
       SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
    }
 
    return SCIPvarGetRelaxSol(var, scip->set);
@@ -12198,6 +12201,7 @@ SCIP_Real SCIPgetRelaxSolObj(
    {
       SCIPerrorMessage("Relaxation Solution is not valid!\n");
       SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
    }
 
    return SCIPrelaxationGetSolObj(scip->relaxation);
@@ -17896,6 +17900,7 @@ SCIP_Real SCIPgetColRedcost(
    {
       SCIPerrorMessage("cannot get reduced costs, because node LP is not processed\n");
       SCIPABORT();
+      return 0.0; /*lint !e527*/
    }
 
    return SCIPcolGetRedcost(col, scip->stat, scip->lp);
@@ -17914,6 +17919,7 @@ SCIP_Real SCIPgetColFarkasCoef(
    {
       SCIPerrorMessage("cannot get Farkas coeff, because node LP is not processed\n");
       SCIPABORT();
+      return 0.0; /*lint !e527*/
    }
 
    return SCIPcolGetFarkasCoef(col, scip->stat, scip->lp);
@@ -18584,17 +18590,14 @@ SCIP_Bool SCIPhasNLPContinuousNonlinearity(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpHasContinuousNonlinearity(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been not constructed.\n");
       SCIPABORT();
+      return FALSE; /*lint !e527*/
    }
 
-   return FALSE;
+   return SCIPnlpHasContinuousNonlinearity(scip->nlp);
 }
 
 /** gets current NLP variables along with the current number of NLP variables */
@@ -18616,7 +18619,7 @@ SCIP_RETCODE SCIPgetNLPVarsData(
    else
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
 
    return SCIP_OKAY;
@@ -18629,17 +18632,14 @@ SCIP_VAR** SCIPgetNLPVars(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPVars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetVars(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
 
-   return NULL;
+   return SCIPnlpGetVars(scip->nlp);
 }
 
 /** gets current number of variables in NLP */
@@ -18649,17 +18649,14 @@ int SCIPgetNNLPVars(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNNLPVars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetNVars(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return 0; /*lint !e527*/
    }
 
-   return 0;
+   return SCIPnlpGetNVars(scip->nlp);
 }
 
 /** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
@@ -18690,17 +18687,14 @@ SCIP_Real* SCIPgetNLPVarsLbDualsol(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPVarsLbDualsol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetVarsLbDualsol(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
 
-   return NULL;
+   return SCIPnlpGetVarsLbDualsol(scip->nlp);
 }
 
 /** gives dual solution values associated with upper bounds of NLP variables */
@@ -18710,17 +18704,14 @@ SCIP_Real* SCIPgetNLPVarsUbDualsol(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPVarsUbDualsol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetVarsUbDualsol(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
 
-   return NULL;
+   return SCIPnlpGetVarsUbDualsol(scip->nlp);
 }
 
 /** gets current NLP nonlinear rows along with the current number of NLP nonlinear rows */
@@ -18755,17 +18746,14 @@ SCIP_NLROW** SCIPgetNLPNlRows(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPNlRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetNlRows(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return NULL; /*lint !e527*/
    }
 
-   return NULL;
+   return SCIPnlpGetNlRows(scip->nlp);
 }
 
 /** gets current number of nonlinear rows in NLP */
@@ -18775,17 +18763,14 @@ int SCIPgetNNLPNlRows(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNNLPNlRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetNNlRows(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return 0; /*lint !e527*/
    }
 
-   return 0;
+   return SCIPnlpGetNNlRows(scip->nlp);
 }
 
 /** adds a nonlinear row to the NLP
@@ -18904,17 +18889,14 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPSolstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetSolstat(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return SCIP_NLPSOLSTAT_UNKNOWN; /*lint !e527*/
    }
 
-   return SCIP_NLPSOLSTAT_UNKNOWN;
+   return SCIPnlpGetSolstat(scip->nlp);
 }
 
 /** gets termination status of last NLP solve */
@@ -18924,17 +18906,14 @@ SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPTermstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpGetTermstat(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return SCIP_NLPTERMSTAT_OTHER; /*lint !e527*/
    }
 
-   return SCIP_NLPTERMSTAT_OTHER;
+   return SCIPnlpGetTermstat(scip->nlp);
 }
 
 /** gives statistics (number of iterations, solving time, ...) of last NLP solve */
@@ -18980,17 +18959,14 @@ SCIP_Bool SCIPhasNLPSolution(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPhasNLPSolution", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      return SCIPnlpHasSolution(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
       SCIPABORT();
+      return FALSE; /*lint !e527*/
    }
 
-   return FALSE;
+   return SCIPnlpHasSolution(scip->nlp);
 }
 
 /** gets fractional variables of last NLP solution along with solution values and fractionalities */
@@ -20691,6 +20667,7 @@ SCIP_Real SCIPgetVarObjDive(
    {
       SCIPerrorMessage("not in diving mode\n");
       SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
    }
 
    return SCIPvarGetObjLP(var);
@@ -20711,6 +20688,7 @@ SCIP_Real SCIPgetVarLbDive(
    {
       SCIPerrorMessage("not in diving mode\n");
       SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
    }
 
    return SCIPvarGetLbLP(var, scip->set);
@@ -20731,6 +20709,7 @@ SCIP_Real SCIPgetVarUbDive(
    {
       SCIPerrorMessage("not in diving mode\n");
       SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
    }
 
    return SCIPvarGetUbLP(var, scip->set);
@@ -21250,6 +21229,7 @@ int SCIPgetNLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
    int nlpcands;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -21258,10 +21238,18 @@ int SCIPgetNLPBranchCands(
    {
       SCIPerrorMessage("LP not solved to optimality\n");
       SCIPABORT();
+      return 0; /*lint !e527*/
    }
 
-   SCIP_CALL_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-         NULL, NULL, NULL, &nlpcands, NULL) );
+   retcode = SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
+      NULL, NULL, NULL, &nlpcands, NULL);
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates\n", retcode);
+      SCIPABORT();
+      return 0; /*lint !e527*/
+   }
 
    return nlpcands;
 }
@@ -21271,6 +21259,7 @@ int SCIPgetNPrioLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
    int npriolpcands;
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -21279,10 +21268,18 @@ int SCIPgetNPrioLPBranchCands(
    {
       SCIPerrorMessage("LP not solved to optimality\n");
       SCIPABORT();
+      return 0; /*lint !e527*/
    }
 
-   SCIP_CALL_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-         NULL, NULL, NULL, NULL, &npriolpcands) );
+   retcode = SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
+      NULL, NULL, NULL, NULL, &npriolpcands);
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates with maximal priority\n", retcode);
+      SCIPABORT();
+      return 0; /*lint !e527*/
+   }
 
    return npriolpcands;
 }
