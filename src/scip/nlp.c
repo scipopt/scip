@@ -3800,7 +3800,7 @@ SCIP_RETCODE nlpAddVars(
        */
       if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
-         SCIPvarSetNLPSol(var, set, SCIPvarGetBestBoundLocal(var));
+         SCIP_CALL( SCIPvarSetNLPSol(var, set, SCIPvarGetBestBoundLocal(var)) );
          nlp->primalsolobjval += SCIPvarGetObj(var) * SCIPvarGetBestBoundLocal(var);
          nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
       }
@@ -4719,7 +4719,9 @@ SCIP_RETCODE nlpSolve(
       if( nlp->indiving && nlp->divingobj != NULL )
       {
          for( i = 0; i < nlp->nvars; ++i )
-            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
+         {
+            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]) );  /*lint !e613 */
+         }
 
          /* evaluate modified diving objective */
          SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
@@ -4730,7 +4732,7 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]);  /*lint !e613 */
+            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
          }
       }
