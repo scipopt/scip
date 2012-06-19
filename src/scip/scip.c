@@ -423,6 +423,7 @@ SCIP_RETCODE checkStage(
       return SCIP_OKAY;
 
    default:
+      /* note that this is in an internal SCIP error since all SCIP stages are covert in the switch above */
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }
@@ -1449,7 +1450,7 @@ SCIP_RETCODE SCIPgetVarCopy(
       return SCIP_OKAY;
    }
    default:
-      /* note that is in an internal SCIP error since the variable status is only handled by the core */
+      /* note that this is in an internal SCIP error since the variable status is only handled by the core */
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
       return SCIP_ERROR; /*lint !e527*/
@@ -7166,9 +7167,8 @@ SCIP_RETCODE SCIPsetProbData(
       return SCIP_OKAY;
 
    default:
-      /* note that is in an internal SCIP error since the problem stages are only handled by the core */
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
 }
 
@@ -7308,10 +7308,11 @@ SCIP_RETCODE SCIPsetObjlimit(
       SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob,
             scip->tree, scip->lp) );
       break;
+
    default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
-   }  /*lint !e788*/
+      SCIPerrorMessage("methed is not callable in SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   } /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -7347,9 +7348,9 @@ SCIP_RETCODE SCIPsetObjIntegral(
       return SCIP_OKAY;
 
    default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
-   }  /*lint !e788*/
+      SCIPerrorMessage("methed is not callable in SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   } /*lint !e788*/
 }
 
 /** returns whether the objective value is known to be integral in every feasible solution */
@@ -7376,7 +7377,7 @@ SCIP_Bool SCIPisObjIntegral(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
       return FALSE; /*lint !e527*/
-   }  /*lint !e788*/
+   } /*lint !e788*/
 }
 
 /** returns the Euclidean norm of the objective function vector (available only for transformed problem) */
@@ -7621,7 +7622,7 @@ SCIP_RETCODE SCIPgetVarsData(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -10166,6 +10167,7 @@ SCIP_RETCODE SCIPpresolve(
             break;
 
          default:
+            /* note that this is in an internal SCIP error since the status is corrupted */
             SCIPerrorMessage("invalid SCIP status <%d>\n", scip->stat->status);
             SCIPABORT();
             return SCIP_ERROR; /*lint !e527*/
@@ -10216,7 +10218,7 @@ SCIP_RETCODE SCIPpresolve(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
    /* release the CTRL-C interrupt */
@@ -10347,7 +10349,7 @@ SCIP_RETCODE SCIPsolve(
 
       default:
          SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-         return SCIP_ERROR;
+         return SCIP_INVALIDCALL;
       }  /*lint !e788*/
    }
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) 
@@ -10464,7 +10466,7 @@ SCIP_RETCODE SCIPfreeTransform(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -11320,7 +11322,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
       default:
          SCIPerrorMessage("unexpected state\n");
-         return SCIP_ERROR;
+         return SCIP_READERROR;
       }
    }
 
@@ -16336,7 +16338,7 @@ SCIP_RETCODE SCIPcreateCons(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -16443,7 +16445,7 @@ SCIP_RETCODE SCIPreleaseCons(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -18667,15 +18669,13 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPVarsNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, nlcount) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, nlcount) );
 
    return SCIP_OKAY;
 }
@@ -18723,18 +18723,16 @@ SCIP_RETCODE SCIPgetNLPNlRowsData(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPNlRowsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      if( nlrows != NULL )
-         *nlrows = SCIPnlpGetNlRows(scip->nlp);
-      if( nnlrows != NULL )
-         *nnlrows = SCIPnlpGetNNlRows(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   if( nlrows != NULL )
+      *nlrows = SCIPnlpGetNlRows(scip->nlp);
+   if( nnlrows != NULL )
+      *nnlrows = SCIPnlpGetNNlRows(scip->nlp);
 
    return SCIP_OKAY;
 }
@@ -18782,15 +18780,13 @@ SCIP_RETCODE SCIPaddNlRow(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpAddNlRow(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, nlrow) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpAddNlRow(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, nlrow) );
 
    return SCIP_OKAY;
 }
@@ -18802,15 +18798,13 @@ SCIP_RETCODE SCIPflushNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPflushNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -18823,15 +18817,13 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuess", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), initialguess) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), initialguess) );
 
    return SCIP_OKAY;
 }
@@ -18846,18 +18838,16 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
 
    SCIP_CALL( checkStage(scip, "SCIPsetNLPInitialGuessSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
-      SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
-      SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
-      SCIPfreeBufferArray(scip, &vals);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
@@ -18869,15 +18859,13 @@ SCIP_RETCODE SCIPsolveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -18924,13 +18912,13 @@ SCIP_RETCODE SCIPgetNLPStatistics(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
+   if( scip->nlp == NULL )
    {
-      return SCIPnlpGetStatistics(scip->nlp, statistics);
+      SCIPerrorMessage("NLP has not been constructed.\n");
+      return SCIP_INVALIDCALL;
    }
 
-   SCIPerrorMessage("NLP has not been constructed.\n");
-   return SCIP_ERROR;
+   return SCIPnlpGetStatistics(scip->nlp, statistics);
 }
 
 /** gets objective value of current NLP */
@@ -18981,15 +18969,13 @@ SCIP_RETCODE SCIPgetNLPFracVars(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPFracVars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetFracVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, fracvars, fracvarssol, fracvarsfrac, nfracvars, npriofracvars) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpGetFracVars(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, fracvars, fracvarssol, fracvarsfrac, nfracvars, npriofracvars) );
 
    return SCIP_OKAY;
 }
@@ -19003,15 +18989,13 @@ SCIP_RETCODE SCIPgetNLPIntPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPIntPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetIntPar(scip->nlp, type, ival) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpGetIntPar(scip->nlp, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -19025,15 +19009,13 @@ SCIP_RETCODE SCIPsetNLPIntPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNLPIntPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSetIntPar(scip->nlp, type, ival) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSetIntPar(scip->nlp, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -19047,15 +19029,13 @@ SCIP_RETCODE SCIPgetNLPRealPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPRealPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetRealPar(scip->nlp, type, dval) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpGetRealPar(scip->nlp, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -19069,15 +19049,13 @@ SCIP_RETCODE SCIPsetNLPRealPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNLPRealPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSetRealPar(scip->nlp, type, dval) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSetRealPar(scip->nlp, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -19091,15 +19069,13 @@ SCIP_RETCODE SCIPgetNLPStringPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetNLPStringPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpGetStringPar(scip->nlp, type, sval) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpGetStringPar(scip->nlp, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -19113,15 +19089,13 @@ SCIP_RETCODE SCIPsetNLPStringPar(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetNLPStringPar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSetStringPar(scip->nlp, type, sval) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSetStringPar(scip->nlp, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -19134,15 +19108,13 @@ SCIP_RETCODE SCIPwriteNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->set, scip->messagehdlr, filename) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->set, scip->messagehdlr, filename) );
 
    return SCIP_OKAY;
 }
@@ -19170,16 +19142,14 @@ SCIP_RETCODE SCIPgetNLPI(
 
    SCIP_CALL( checkStage(scip, "SCIPgetNLPI", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      *nlpi = SCIPnlpGetNLPI(scip->nlp);
-      *nlpiproblem = SCIPnlpGetNLPIProblem(scip->nlp);
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   *nlpi = SCIPnlpGetNLPI(scip->nlp);
+   *nlpiproblem = SCIPnlpGetNLPIProblem(scip->nlp);
 
    return SCIP_OKAY;
 }
@@ -19200,15 +19170,13 @@ SCIP_RETCODE SCIPstartDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPstartDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set) );
 
    return SCIP_OKAY;
 }
@@ -19221,15 +19189,13 @@ SCIP_RETCODE SCIPendDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPendDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set) );
 
    return SCIP_OKAY;
 }
@@ -19243,15 +19209,13 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarObjDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpChgVarObjDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, var, coef) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpChgVarObjDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, var, coef) );
 
    return SCIP_OKAY;
 }
@@ -19266,15 +19230,13 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBoundsDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->nlp, var, lb, ub) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->nlp, var, lb, ub) );
 
    return SCIP_OKAY;
 }
@@ -19290,15 +19252,13 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarsBoundsDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpChgVarsBoundsDive(scip->nlp, scip->set, nvars, vars, lbs, ubs) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpChgVarsBoundsDive(scip->nlp, scip->set, nvars, vars, lbs, ubs) );
 
    return SCIP_OKAY;
 }
@@ -19310,15 +19270,13 @@ SCIP_RETCODE SCIPsolveDiveNLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( scip->nlp != NULL )
-   {
-      SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
-   }
-   else
+   if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
+
+   SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -19662,7 +19620,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("do not have NLP for computing NLP activity\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
 
    SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->set, scip->stat, scip->nlp) );
@@ -19682,7 +19640,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("do not have NLP for computing NLP activity\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
 
    SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
@@ -19702,7 +19660,7 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("do not have NLP for computing NLP feasibility\n");
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }
 
    SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
@@ -21815,7 +21773,7 @@ SCIP_RETCODE SCIPcreateSol(
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDDATA;
    }  /*lint !e788*/
 }
 
@@ -21968,7 +21926,7 @@ SCIP_RETCODE SCIPcreateOrigSol(
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -22024,7 +21982,7 @@ SCIP_RETCODE SCIPfreeSol(
       break;
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
    return SCIP_OKAY;
@@ -22539,7 +22497,7 @@ int SCIPgetNSols(
    case SCIP_STAGE_FREETRANS:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -22732,6 +22690,7 @@ SCIP_RETCODE SCIPretransformSol(
       return SCIP_INVALIDCALL;
 
    default:
+      /* note that this is in an internal SCIP error since all solution origins are covert in the switch above */
       SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
       return SCIP_ERROR;
    }
@@ -22795,7 +22754,7 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_EXITSOLVE:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
@@ -22841,7 +22800,7 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_EXITSOLVE:
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
 
