@@ -138,6 +138,7 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for catching bound changes */
    int*                  topoorder;          /**< array mapping on the bounds of variables in topological order;
                                               *   or -1, if the bound that should be at that position has no outgoing
                                               *   implications, cliques, or vbounds;
@@ -283,7 +284,7 @@ SCIP_RETCODE catchEvents(
    assert(propdata->topoorder != NULL);
 
    /* catch variable events according to computed eventtypes */
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
    vars = SCIPgetVars(scip);
@@ -339,7 +340,7 @@ SCIP_RETCODE dropEvents(
 
    assert(propdata != NULL);
 
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
    vars = SCIPgetVars(scip);
@@ -1769,7 +1770,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecVbound, (SCIP_EVENTHDLRDATA*)propdata) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

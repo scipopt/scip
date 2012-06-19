@@ -1195,20 +1195,19 @@ SCIP_RETCODE evaluateCumulativeness(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
    /* create precedence constraint handler data */
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
+
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for updating linear constraint activity bounds */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for linear constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+   /* set event handler for checking if bounds of start time variables are tighten */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
 
 #ifdef SCIP_STATISTIC
    (*conshdlrdata)->nirrelevantjobs = 0;
@@ -7861,12 +7860,13 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCumulative, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCumulative, NULL) );
 
    /* create cumulative constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

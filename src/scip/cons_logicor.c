@@ -148,24 +148,22 @@ SCIP_RETCODE unlockRounding(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->nlastcliques = 0;
    (*conshdlrdata)->nlastimpls = 0;
 
-   /* get event handler for catching events on watched variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for logic or constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   
+   /* set event handler for catching events on watched variables */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
+
    return SCIP_OKAY;
 }
 
@@ -3387,9 +3385,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONFLICTHDLR* conflicthdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecLogicor, NULL) );
 
    /* create conflict handler for logic or constraints */
@@ -3397,7 +3396,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          conflictExecLogicor, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

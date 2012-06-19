@@ -459,24 +459,21 @@ void linconsupgradeFree(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
    (*conshdlrdata)->linconsupgrades = NULL;
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
 
-   /* get event handler for updating linear constraint activity bounds */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for linear constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+   /* set event handler for updating linear constraint activity bounds */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
 
    return SCIP_OKAY;
 }
@@ -11262,12 +11259,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONFLICTHDLR* conflicthdlr;
 
    assert(scip != NULL);
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecLinear, NULL) );
 
    /* create conflict handler for linear constraints */
@@ -11275,7 +11273,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          conflictExecLinear, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

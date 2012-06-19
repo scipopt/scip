@@ -94,6 +94,7 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Real             maxlpcoef;          /**< maximum coefficient in varbound constraint to be added as a row into LP */
 };
@@ -167,13 +168,17 @@ SCIP_DECL_SORTPTRCOMP(consVarboundComp)
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+
+   /* set event handler for bound change events */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
 
    return SCIP_OKAY;
 }
@@ -199,14 +204,11 @@ void conshdlrdataFree(
 static
 SCIP_RETCODE catchEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata            /**< variable bound constraint data */
+   SCIP_CONSDATA*        consdata,           /**< variable bound constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
-   SCIP_EVENTHDLR* eventhdlr;
-
    assert(consdata != NULL);
-
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
    /* catch bound change events on variables */
@@ -222,14 +224,11 @@ SCIP_RETCODE catchEvents(
 static
 SCIP_RETCODE dropEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata            /**< variable bound constraint data */
+   SCIP_CONSDATA*        consdata,           /**< variable bound constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
-   SCIP_EVENTHDLR* eventhdlr;
-
    assert(consdata != NULL);
-
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
 
    /* drop events on variables */
@@ -246,6 +245,7 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to store the variable bound constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
@@ -299,7 +299,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
 
       /* catch events for variables */
-      SCIP_CALL( catchEvents(scip, *consdata) );
+      SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
    }
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, 2) );  /*lint !e506*/
@@ -317,7 +317,8 @@ SCIP_RETCODE consdataCreate(
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata            /**< pointer to the variable bound constraint */
+   SCIP_CONSDATA**       consdata,           /**< pointer to the variable bound constraint */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
    assert(consdata != NULL);
@@ -332,7 +333,7 @@ SCIP_RETCODE consdataFree(
    /* drop events */
    if( SCIPisTransformed(scip) )
    {
-      SCIP_CALL( dropEvents(scip, *consdata) );
+      SCIP_CALL( dropEvents(scip, *consdata, eventhdlr) );
    }
 
    /* release variables */
@@ -2076,6 +2077,7 @@ static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_Bool*            cutoff,             /**< pointer to store whether an infeasibility was detected */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
@@ -2198,7 +2200,7 @@ SCIP_RETCODE applyFixings(
       /* if the variables should be replaced, drop the events and catch the events on the new variables afterwards */
       if( varschanged )
       {
-         SCIP_CALL( dropEvents(scip, consdata) );
+         SCIP_CALL( dropEvents(scip, consdata, eventhdlr) );
       }
 
       /* apply aggregation on x */
@@ -2379,7 +2381,7 @@ SCIP_RETCODE applyFixings(
       /* catch the events again on the new variables */
       if( varschanged )
       {
-         SCIP_CALL( catchEvents(scip, consdata) );
+         SCIP_CALL( catchEvents(scip, consdata, eventhdlr) );
       }
    }
 
@@ -2933,8 +2935,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
 static
 SCIP_DECL_CONSDELETE(consDeleteVarbound)
 {  /*lint --e{715}*/
-   SCIP_CALL( consdataFree(scip, consdata) );
-   
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+
    return SCIP_OKAY;
 }
 
@@ -2943,15 +2950,21 @@ SCIP_DECL_CONSDELETE(consDeleteVarbound)
 static
 SCIP_DECL_CONSTRANS(consTransVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
    /* create target constraint data */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->var, sourcedata->vbdvar, sourcedata->vbdcoef, 
-         sourcedata->lhs, sourcedata->rhs) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+         sourcedata->var, sourcedata->vbdvar, sourcedata->vbdcoef, sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -3194,7 +3207,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, conss[i], &cutoff, nchgbds, ndelconss, naddconss) );
+      SCIP_CALL( applyFixings(scip, conss[i], conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
       if( cutoff || !SCIPconsIsActive(conss[i]) )
          continue;
 
@@ -3586,11 +3599,15 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONSHDLR* conshdlr;
 
+   /* include event handler for bound change events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventExecVarbound, NULL) );
+
    /* create variable bound constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -3622,11 +3639,6 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
       /* include the linear constraint to varbound constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
-
-   /* include event handler for bound change events */
-   eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventExecVarbound, eventhdlrdata) );
 
    /* add varbound constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3680,6 +3692,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    /* find the variable bound constraint handler */
@@ -3690,8 +3703,11 @@ SCIP_RETCODE SCIPcreateConsVarbound(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, var, vbdvar, vbdcoef, lhs, rhs) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, var, vbdvar, vbdcoef, lhs, rhs) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
