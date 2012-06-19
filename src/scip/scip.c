@@ -14964,7 +14964,7 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchDirection", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchDirection(var, branchdirection);
+   SCIP_CALL( SCIPvarChgBranchDirection(var, branchdirection) );
 
    return SCIP_OKAY;
 }

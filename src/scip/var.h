@@ -1035,7 +1035,7 @@ SCIP_RETCODE SCIPvarChgBranchPriority(
  *  with lower direction in selection of branching variable
  */
 extern
-void SCIPvarChgBranchDirection(
+SCIP_RETCODE SCIPvarChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );

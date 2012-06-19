@@ -3480,8 +3480,8 @@ SCIP_RETCODE SCIPvarFix(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_FIXED:
-      SCIPABORT(); /* case is already handled in earlier if condition */
       SCIPerrorMessage("cannot fix a fixed variable again\n");  /*lint !e527*/
+      SCIPABORT(); /* case is already handled in earlier if condition */
       return SCIP_INVALIDDATA;  /*lint !e527*/
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -4414,20 +4414,32 @@ SCIP_RETCODE SCIPvarAggregate(
    if( scalar >= 0.0 )
    {
       if( (SCIP_BRANCHDIR)var->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(var, (SCIP_BRANCHDIR)aggvar->branchdirection);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var, (SCIP_BRANCHDIR)aggvar->branchdirection) );
+      }
       else if( (SCIP_BRANCHDIR)aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(aggvar, (SCIP_BRANCHDIR)var->branchdirection);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(aggvar, (SCIP_BRANCHDIR)var->branchdirection) );
+      }
       else if( var->branchdirection != aggvar->branchdirection )
-         SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO) );
+      }
    }
    else
    {
       if( (SCIP_BRANCHDIR)var->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(var, SCIPbranchdirOpposite((SCIP_BRANCHDIR)aggvar->branchdirection));
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var, SCIPbranchdirOpposite((SCIP_BRANCHDIR)aggvar->branchdirection)) );
+      }
       else if( (SCIP_BRANCHDIR)aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(aggvar, SCIPbranchdirOpposite((SCIP_BRANCHDIR)var->branchdirection));
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(aggvar, SCIPbranchdirOpposite((SCIP_BRANCHDIR)var->branchdirection)) );
+      }
       else if( var->branchdirection != aggvar->branchdirection )
-         SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO) );
+      }
    }
 
    if( var->probindex != -1 )
@@ -5095,9 +5107,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          if( (SCIP_BRANCHDIR)tmpvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( tmpscalars[v] >= 0.0 )
-               SCIPvarChgBranchDirection(tmpvars[v], branchdirection);
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(tmpvars[v], branchdirection) );
+            }
             else
-               SCIPvarChgBranchDirection(tmpvars[v], SCIPbranchdirOpposite(branchdirection));
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(tmpvars[v], SCIPbranchdirOpposite(branchdirection)) );
+            }
          }
       }
       SCIP_CALL( SCIPvarChgBranchFactor(var, set, branchfactor) );
@@ -10154,7 +10170,7 @@ SCIP_RETCODE SCIPvarChgBranchPriority(
 
 /** actually changes the branch direction of the variable and of all parent variables */
 static
-void varProcessChgBranchDirection(
+SCIP_RETCODE varProcessChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    )
@@ -10168,7 +10184,7 @@ void varProcessChgBranchDirection(
       var->name, var->branchdirection, branchdirection);
 
    if( branchdirection == (SCIP_BRANCHDIR)var->branchdirection )
-      return;
+      return SCIP_OKAY;
 
    /* change the branch direction */
    var->branchdirection = branchdirection; /*lint !e641*/
@@ -10191,30 +10207,37 @@ void varProcessChgBranchDirection(
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_AGGREGATED:
          if( parentvar->data.aggregate.scalar > 0.0 )
-            varProcessChgBranchDirection(parentvar, branchdirection);
+         {
+            SCIP_CALL( varProcessChgBranchDirection(parentvar, branchdirection) );
+         }
          else
-            varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection));
+         {
+            SCIP_CALL( varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection)) );
+         }
          break;
 
       case SCIP_VARSTATUS_NEGATED:
-         varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection));
+         SCIP_CALL( varProcessChgBranchDirection(parentvar, SCIPbranchdirOpposite(branchdirection)) );
          break;
 
       default:
          SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
+         return SCIP_ERROR;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** sets the branch direction of the variable; variables with higher branch direction are always preferred to variables
  *  with lower direction in selection of branching variable
  */
-void SCIPvarChgBranchDirection(
+SCIP_RETCODE SCIPvarChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    )
@@ -10226,14 +10249,16 @@ void SCIPvarChgBranchDirection(
    SCIPdebugMessage("changing branch direction of <%s> from %u to %d\n", var->name, var->branchdirection, branchdirection);
 
    if( (SCIP_BRANCHDIR)var->branchdirection == branchdirection )
-      return;
+      return SCIP_OKAY;
 
    /* change directions of attached variables */
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar != NULL )
-         SCIPvarChgBranchDirection(var->data.original.transvar, branchdirection);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var->data.original.transvar, branchdirection) );
+      }
       else
          var->branchdirection = branchdirection; /*lint !e641*/
       break;
@@ -10241,15 +10266,19 @@ void SCIPvarChgBranchDirection(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
-      varProcessChgBranchDirection(var, branchdirection);
+      SCIP_CALL( varProcessChgBranchDirection(var, branchdirection) );
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
       if( var->data.aggregate.scalar > 0.0 )
-         SCIPvarChgBranchDirection(var->data.aggregate.var, branchdirection);
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var->data.aggregate.var, branchdirection) );
+      }
       else
-         SCIPvarChgBranchDirection(var->data.aggregate.var, SCIPbranchdirOpposite(branchdirection));
+      {
+         SCIP_CALL( SCIPvarChgBranchDirection(var->data.aggregate.var, SCIPbranchdirOpposite(branchdirection)) );
+      }
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
@@ -10261,9 +10290,13 @@ void SCIPvarChgBranchDirection(
          if( (SCIP_BRANCHDIR)var->data.multaggr.vars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( var->data.multaggr.scalars[v] > 0.0 )
-               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], branchdirection);
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(var->data.multaggr.vars[v], branchdirection) );
+            }
             else
-               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], SCIPbranchdirOpposite(branchdirection));
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(var->data.multaggr.vars[v], SCIPbranchdirOpposite(branchdirection)) );
+            }
          }
       }
       break;
@@ -10272,13 +10305,16 @@ void SCIPvarChgBranchDirection(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIPvarChgBranchDirection(var->negatedvar, SCIPbranchdirOpposite(branchdirection));
+      SCIP_CALL( SCIPvarChgBranchDirection(var->negatedvar, SCIPbranchdirOpposite(branchdirection)) );
       break;
          
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
+      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** compares the index of two variables, only active, fixed or negated variables are allowed, if a variable
