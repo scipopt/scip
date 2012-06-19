@@ -112,11 +112,11 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
  *  constraint-dependent SCIP methods
  */
 
-/** transforms the current problem into a MinUR problem (minimizing the number of unsatisfied constraints),
+/** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
  *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
  */
 extern
-SCIP_RETCODE SCIPtransformMinUR(
+SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< could all constraints be transformed? */
    );
@@ -127,9 +127,9 @@ SCIP_RETCODE SCIPtransformMinUR(
  *  constraint-dependent dialog entries
  */
 
-/** dialog execution method for the SCIPtransformMinUR() command */
+/** dialog execution method for the SCIPtransformMinUC() command */
 extern
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUR);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
 
 #ifdef __cplusplus
 }
