@@ -19,14 +19,14 @@ SCIPDIR=..
 cd $SCIPDIR
 
 DEFS=`grep -h 'ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
-#echo "DEFS = \"$DEFS\""
-#echo
+# echo "DEFS = \"$DEFS\""
+# echo
 
+# IMPLINTSARECONT, BETTERWEIGHTFORDEMANDNODES, MAKECUTINTEGRAL, and SEPARATEROWS are defined by default
+# ALLDIFFERENT is excluded because it needs cons_alldifferent
 EXCLUDES=" __cplusplus CPX_VERSION_VERSION ___DEBUG _MSC_VER NDEBUG ___NDEBUG NO_NEXTAFTER NO_RAND_R NO_SIGACTION NO_STRERROR_R NO_STRTOK_R ROUNDING_FE ROUNDING_FP ROUNDING_MS SCIP_DEBUG_SOLUTION SORTTPL_BACKWARDS SORTTPL_EXPANDNAME SORTTPL_FIELD1TYPE SORTTPL_FIELD2TYPE SORTTPL_FIELD3TYPE SORTTPL_FIELD4TYPE SORTTPL_FIELD5TYPE SORTTPL_FIELD6TYPE SORTTPL_INDCOMP SORTTPL_NAME SORTTPL_PTRCOMP __sun _WIN32 WITH_GMP WITH_READLINE WITH_ZIMPL WITH_ZLIB QUADCONSUPGD_PRIORITY LINCONSUPGD_PRIORITY ALLDIFFERENT IMPLINTSARECONT BETTERWEIGHTFORDEMANDNODES MAKECUTINTEGRAL SEPARATEROWS "
-#IMPLINTSARECONT, BETTERWEIGHTFORDEMANDNODES, MAKECUTINTEGRAL, and SEPARATEROWS are included by standard
-#ALLDIFFERENT is excluded because it needs cons_alldifferent
-#echo "EXCLUDES = \"$EXCLUDES\""
-#echo
+# echo "EXCLUDES = \"$EXCLUDES\""
+# echo
 
 echo
 echo "gathering defines . . ."
@@ -48,12 +48,12 @@ do
 done
 echo
 
-LPSS=(cpx) # spx spx132 xprs msk clp grb qso none)
-OPTS=(dbg) # opt prf opt-gccold)
+LPSS=(cpx spx none) # spx132 xprs msk clp grb qso none)
+OPTS=(dbg opt prf opt-gccold)
 
-for i in $LPSS
+for i in ${LPSS[@]}
 do
-    for k in $OPTS
+    for k in ${OPTS[@]}
     do
 	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" clean"
 	echo
@@ -63,14 +63,16 @@ do
 	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\""
 	echo
 	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS"
-	if test "$?" = 0
-	then
-	    echo
+	echo
 
-	    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
-	    echo
-	    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
-	    echo
-	fi
+#	if test "$?" = 0
+#	then
+#	    echo
+#
+#	    echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" test"
+#	    echo
+#	    make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" test
+#	    echo
+#	fi
     done
 done
