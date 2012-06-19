@@ -615,6 +615,9 @@ void SCIPprobResortVars(
    nimplvars = prob->nimplvars;
    ncontvars = prob->ncontvars;
 
+   if( nvars == 0 )
+      return;
+
    assert(vars != NULL);
    assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
 
