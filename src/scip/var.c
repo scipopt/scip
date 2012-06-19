@@ -12140,7 +12140,7 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
 }
 
 /** stores the solution value as NLP solution in the problem variable */
-void SCIPvarSetNLPSol(
+SCIP_RETCODE SCIPvarSetNLPSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             solval              /**< solution value in the current NLP solution */
@@ -12152,7 +12152,7 @@ void SCIPvarSetNLPSol(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      SCIPvarSetNLPSol(var->data.original.transvar, set, solval);
+      SCIP_CALL( SCIPvarSetNLPSol(var->data.original.transvar, set, solval) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -12166,27 +12166,31 @@ void SCIPvarSetNLPSol(
          SCIPerrorMessage("cannot set NLP solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), var->glbdom.lb, solval);
          SCIPABORT();
+         return SCIP_INVALIDCALL;
       }
       break;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar);
+      SCIP_CALL( SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       SCIPABORT();
-      break;
+      return SCIP_INVALIDCALL;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIPvarSetNLPSol(var->negatedvar, set, var->data.negate.constant - solval);
+      SCIP_CALL( SCIPvarSetNLPSol(var->negatedvar, set, var->data.negate.constant - solval) );
       break;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
+      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */

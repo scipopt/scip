@@ -1155,7 +1155,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
 
 /** stores the solution value as NLP solution in the problem variable */
 extern
-void SCIPvarSetNLPSol(
+SCIP_RETCODE SCIPvarSetNLPSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             solval              /**< solution value in the current NLP solution */
