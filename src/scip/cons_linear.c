@@ -2879,7 +2879,7 @@ SCIP_RETCODE consdataSort(
    assert(consdata != NULL);
 
    /* check if there are variables for sorting */
-   if( consdata->nvars == 0 )
+   if( consdata->nvars <= 1 )
    {
       consdata->sorted = TRUE;
       consdata->binvarssorted = TRUE;
@@ -7933,9 +7933,10 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1->sorted);
    assert(consdata2->sorted);
-   scip = (SCIP*)userptr; 
+
+   scip = (SCIP*)userptr;
    assert(scip != NULL);
-   
+
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
@@ -7947,25 +7948,25 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    {
       SCIP_Real val1;
       SCIP_Real val2;
-      
+
       /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
-         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
          coefsequal = FALSE;
          coefsnegated = FALSE;
          break;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
-      
-      /* tests if coefficients are either equal or negated */  
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
+
+      /* tests if coefficients are either equal or negated */
       val1 = consdata1->vals[i];
       val2 = consdata2->vals[i];
       coefsequal = coefsequal && SCIPisEQ(scip, val1, val2);
       coefsnegated = coefsnegated && SCIPisEQ(scip, val1, -val2);
-   } 
-   
+   }
+
    return (coefsequal || coefsnegated);
 }
 
@@ -7974,7 +7975,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata;
    SCIP_Real maxabsrealval;
    unsigned int hashval;
@@ -7982,17 +7982,19 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int mididx;
    int maxidx;
    int maxabsval;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    assert(key != NULL);
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
-   scip = (SCIP*)userptr; 
-   assert(scip != NULL);
-
-   /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata) );
+   assert(consdata->sorted);
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
@@ -8095,23 +8097,29 @@ SCIP_RETCODE detectRedundantConstraints(
    {
       SCIP_CONS* cons0;
       SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata0;
 
       cons0 = conss[c];
 
       if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
 
+      /* sorts the constraint */
+      consdata0 = SCIPconsGetData(cons0);
+      assert(consdata0 != NULL);
+      SCIP_CALL( consdataSort(scip, consdata0) );
+      assert(consdata0->sorted);
+
       /* get constraint from current hash table with same variables as cons0 and with coefficients either equal or negated
        * to the ones of cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
- 
+
       if( cons1 != NULL )
       {
          SCIP_CONS* consstay;
          SCIP_CONS* consdel;
          SCIP_CONSDATA* consdatastay;
          SCIP_CONSDATA* consdatadel;
-         SCIP_CONSDATA* consdata0;
          SCIP_CONSDATA* consdata1;
 
          SCIP_Real lhs;
@@ -8123,13 +8131,12 @@ SCIP_RETCODE detectRedundantConstraints(
          /* constraint found: create a new constraint with same coefficients and best left and right hand side;
           * delete old constraints afterwards
           */
-         consdata0 = SCIPconsGetData(cons0);
          consdata1 = SCIPconsGetData(cons1);
 
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
-         assert(consdata0->sorted && consdata1->sorted);
+         assert(consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
          if( SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
@@ -8172,7 +8179,7 @@ SCIP_RETCODE detectRedundantConstraints(
             lhs = rhs;
          }
 
-         /* check which constraint has to stay; 
+         /* check which constraint has to stay;
           * changes applied to an upgraded constraint will not be considered in the instance */
          if( consdata1->upgraded && !consdata0->upgraded )
          {
@@ -8180,25 +8187,25 @@ SCIP_RETCODE detectRedundantConstraints(
             consdatastay = consdata0;
             consdel = cons1;
             consdatadel = consdata1;
-            
+
             /* exchange consdel with consstay in hashtable */
             SCIP_CALL( SCIPhashtableRemove(hashtable, (void*) consdel) );
             SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) consstay) );
          }
          else
          {
-            consstay = cons1; 
-            consdatastay = consdata1; 
-            consdel = cons0; 
-            consdatadel = consdata0; 
+            consstay = cons1;
+            consdatastay = consdata1;
+            consdel = cons0;
+            consdatadel = consdata0;
          }
-        
+
          /* update lhs and rhs of consstay */
          SCIP_CALL( chgLhs(scip, consstay, lhs) );
          SCIP_CALL( chgRhs(scip, consstay, rhs) );
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, consstay, consdel) ); 
+         SCIP_CALL( updateFlags(scip, consstay, consdel) );
 
          /* delete consdel */
          assert(!consdatastay->upgraded || (consdatastay->upgraded && consdatadel->upgraded));
@@ -8214,7 +8221,7 @@ SCIP_RETCODE detectRedundantConstraints(
       }
       else
       {
-         /* no such constraint in current hash table: insert cons0 into hash table */  
+         /* no such constraint in current hash table: insert cons0 into hash table */
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
