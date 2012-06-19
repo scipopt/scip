@@ -20,10 +20,11 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage example project using SCIP to solve a general slack problem
+/**@mainpage Example project using SCIP to solve a general slack problem
  * @version  0.1
  * @author   Frederic Pythoud
  * @author   Ambros Gleixner
  *
- * This example illustrate the use of the superindicator constraint to solve a slack problem with groups of constraint
+ * This example illustrate the use of the superindicator constraint handler to solve a slack problem with groups of
+ * constraints.
  */

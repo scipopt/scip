@@ -62,7 +62,7 @@ int findvarpos(
 
    for( c = nvars-1; c >= 0; c-- )
    {
-      if( vars[c] == var )6
+      if( vars[c] == var )
          return c;
    }
 
@@ -170,6 +170,16 @@ SCIP_RETCODE SCIPsolveSlack(
    assert(nconsgroups >= 0);
    assert(nvargroups >= 0);
 
+   copiedvargroups = NULL;
+   varboundconss = NULL;
+   supindvarboundgroups = NULL;
+   copiedconsgroups = NULL;
+   supindconsgroups = NULL;
+   copiedvargroupprios = NULL;
+   vargroupindices = NULL;
+   consgroupindices = NULL;
+   copiedconsgroupprios = NULL;
+
    /* testing whether we have correct set to work on */
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -262,17 +272,6 @@ SCIP_RETCODE SCIPsolveSlack(
    SCIP_CALL( SCIPallocMemoryArray(scip, &origvars, norigvars) );
    assert(origvars != NULL);
    assert(norigvars != 0);
-
-   /* allocating the Memory to avoid a warning */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedvargroups), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(varboundconss), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(supindvarboundgroups), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedconsgroups), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(supindconsgroups), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedvargroupprios), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(vargroupindices), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(consgroupindices), 0) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedconsgroupprios), 0) );
 
    /* copying the original objective function to solve the original problem */
    if(optorig)
@@ -407,7 +406,7 @@ SCIP_RETCODE SCIPsolveSlack(
       /* prepare array for later compilation of return value */
       if(consviols != NULL)
       {
-      countvar = 0;
+         countvar = 0;
 
          for(c = 0; c < nvargroups; ++c)
          {
@@ -925,7 +924,7 @@ SCIP_RETCODE SCIPsolveSlack(
    if(optorig)
       SCIPfreeMemoryArray(scip, &sols);
  TERMINATE1:
-   //   if(!vargroupisempty && consviols != NULL)
+   if(!vargroupisempty && consviols != NULL)
       SCIPfreeMemoryArray(scip, &varboundconss);
 
 
@@ -941,10 +940,10 @@ SCIP_RETCODE SCIPsolveSlack(
          SCIPfreeMemoryArray(scip, &(supindconsgroups[c]));
       }
 
-      // SCIPfreeMemoryArray(scip, &supindconsgroups);
-      // SCIPfreeMemoryArray(scip, &copiedconsgroups);
-      // SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
-      // SCIPfreeMemoryArray(scip, &consgroupindices);
+      SCIPfreeMemoryArray(scip, &supindconsgroups);
+      SCIPfreeMemoryArray(scip, &copiedconsgroups);
+      SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
+      SCIPfreeMemoryArray(scip, &consgroupindices);
    }
 
    if( !vargroupisempty )
@@ -959,21 +958,11 @@ SCIP_RETCODE SCIPsolveSlack(
          SCIPfreeMemoryArray(scip, &(supindvarboundgroups[c]));
       }
 
-      // SCIPfreeMemoryArray(scip, &supindvarboundgroups);
-      // SCIPfreeMemoryArray(scip, &copiedvargroups);
-      // SCIPfreeMemoryArray(scip, &copiedvargroupprios);
-      // SCIPfreeMemoryArray(scip, &vargroupindices);
+      SCIPfreeMemoryArray(scip, &supindvarboundgroups);
+      SCIPfreeMemoryArray(scip, &copiedvargroups);
+      SCIPfreeMemoryArray(scip, &copiedvargroupprios);
+      SCIPfreeMemoryArray(scip, &vargroupindices);
    }
-
-   SCIPfreeMemoryArray(scip, &supindconsgroups);
-   SCIPfreeMemoryArray(scip, &copiedconsgroups);
-   SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
-   SCIPfreeMemoryArray(scip, &consgroupindices);
-
-   SCIPfreeMemoryArray(scip, &supindvarboundgroups);
-   SCIPfreeMemoryArray(scip, &copiedvargroups);
-   SCIPfreeMemoryArray(scip, &copiedvargroupprios);
-   SCIPfreeMemoryArray(scip, &vargroupindices);
 
    SCIPfreeMemoryArray(scip, &origobjvals);
    SCIPfreeMemoryArray(scip, &origvars);
@@ -988,6 +977,7 @@ SCIP_RETCODE SCIPsolveSlack(
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
 {  /*lint --e{715}*/
+   SCIP_STATUS status;
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "solveslack called\n");
 
@@ -998,7 +988,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
       break;
 
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPsolveSlack(scip, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, FALSE, NULL) );
+      SCIP_CALL( SCIPsolveSlack(scip, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, &status) );
       break;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -1223,6 +1213,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTestslack)
 
    case SCIP_STAGE_PROBLEM:
       SCIPdialogMessage(scip, NULL, "unit test for SCIPsolveSlack() started\n");
+      /* NOTE: changing the two integer number below will change the solution (original values: 13, 17) */
       SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
       break;
 
