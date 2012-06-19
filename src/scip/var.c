@@ -2739,7 +2739,7 @@ SCIP_RETCODE SCIPvarPrint(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    /* name */
@@ -2836,7 +2836,7 @@ SCIP_RETCODE SCIPvarPrint(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
@@ -3030,7 +3030,7 @@ int SCIPvarGetNLocksDown(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return INT_MAX; /*lint !e527*/
    }
 }
 
@@ -3085,7 +3085,7 @@ int SCIPvarGetNLocksUp(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0; /*lint !e527*/
+      return INT_MAX; /*lint !e527*/
    }
 }
 
@@ -4405,9 +4405,9 @@ SCIP_RETCODE SCIPvarAggregate(
    /* update branching factors and priorities of both variables to be the maximum of both variables */
    branchfactor = MAX(aggvar->branchfactor, var->branchfactor);
    branchpriority = MAX(aggvar->branchpriority, var->branchpriority);
-   SCIPvarChgBranchFactor(aggvar, set, branchfactor);
+   SCIP_CALL( SCIPvarChgBranchFactor(aggvar, set, branchfactor) );
    SCIPvarChgBranchPriority(aggvar, branchpriority);
-   SCIPvarChgBranchFactor(var, set, branchfactor);
+   SCIP_CALL( SCIPvarChgBranchFactor(var, set, branchfactor) );
    SCIPvarChgBranchPriority(var, branchpriority);
 
    /* update branching direction of both variables to agree to a single direction */
@@ -5090,7 +5090,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       }
       for( v = 0; v < ntmpvars; ++v )
       {
-         SCIPvarChgBranchFactor(tmpvars[v], set, branchfactor);
+         SCIP_CALL( SCIPvarChgBranchFactor(tmpvars[v], set, branchfactor) );
          SCIPvarChgBranchPriority(tmpvars[v], branchpriority);
          if( (SCIP_BRANCHDIR)tmpvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
@@ -5100,7 +5100,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
                SCIPvarChgBranchDirection(tmpvars[v], SCIPbranchdirOpposite(branchdirection));
          }
       }
-      SCIPvarChgBranchFactor(var, set, branchfactor);
+      SCIP_CALL( SCIPvarChgBranchFactor(var, set, branchfactor) );
       SCIPvarChgBranchPriority(var, branchpriority);
 
       if( var->probindex != -1 )
@@ -9903,7 +9903,7 @@ SCIP_Bool SCIPvarsHaveCommonClique(
 
 /** actually changes the branch factor of the variable and of all parent variables */
 static
-void varProcessChgBranchFactor(
+SCIP_RETCODE varProcessChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             branchfactor        /**< factor to weigh variable's branching score with */
@@ -9923,7 +9923,7 @@ void varProcessChgBranchFactor(
    SCIPdebugMessage("process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
 
    if( SCIPsetIsEQ(set, branchfactor, var->branchfactor) )
-      return;
+      return SCIP_OKAY;
 
    /* change the branch factor */
    var->branchfactor = branchfactor;
@@ -9946,24 +9946,27 @@ void varProcessChgBranchFactor(
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
-         varProcessChgBranchFactor(parentvar, set, branchfactor);
+         SCIP_CALL( varProcessChgBranchFactor(parentvar, set, branchfactor) );
          break;
 
       default:
          SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
+         return SCIP_ERROR;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
-void SCIPvarChgBranchFactor(
+SCIP_RETCODE SCIPvarChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             branchfactor        /**< factor to weigh variable's branching score with */
@@ -9978,14 +9981,16 @@ void SCIPvarChgBranchFactor(
    SCIPdebugMessage("changing branch factor of <%s> from %g to %g\n", var->name, var->branchfactor, branchfactor);
 
    if( SCIPsetIsEQ(set, var->branchfactor, branchfactor) )
-      return;
+      return SCIP_OKAY;
 
    /* change priorities of attached variables */
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar != NULL )
-         SCIPvarChgBranchFactor(var->data.original.transvar, set, branchfactor);
+      {
+         SCIP_CALL( SCIPvarChgBranchFactor(var->data.original.transvar, set, branchfactor) );
+      }
       else
       {
          assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -9996,31 +10001,36 @@ void SCIPvarChgBranchFactor(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
-      varProcessChgBranchFactor(var, set, branchfactor);
+      SCIP_CALL( varProcessChgBranchFactor(var, set, branchfactor) );
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      SCIPvarChgBranchFactor(var->data.aggregate.var, set, branchfactor);
+      SCIP_CALL( SCIPvarChgBranchFactor(var->data.aggregate.var, set, branchfactor) );
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       assert(!var->donotmultaggr);
       for( v = 0; v < var->data.multaggr.nvars; ++v )
-         SCIPvarChgBranchFactor(var->data.multaggr.vars[v], set, branchfactor);
+      {
+         SCIP_CALL( SCIPvarChgBranchFactor(var->data.multaggr.vars[v], set, branchfactor) );
+      }
       break;
 
    case SCIP_VARSTATUS_NEGATED:
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIPvarChgBranchFactor(var->negatedvar, set, branchfactor);
+      SCIP_CALL( SCIPvarChgBranchFactor(var->negatedvar, set, branchfactor) );
       break;
          
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
+      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** actually changes the branch priority of the variable and of all parent variables */

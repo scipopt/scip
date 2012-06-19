@@ -1016,7 +1016,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-void SCIPvarChgBranchFactor(
+SCIP_RETCODE SCIPvarChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             branchfactor        /**< factor to weigh variable's branching score with */

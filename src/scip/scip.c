@@ -14871,7 +14871,7 @@ SCIP_RETCODE SCIPchgVarBranchFactor(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchFactor(var, scip->set, branchfactor);
+   SCIP_CALL( SCIPvarChgBranchFactor(var, scip->set, branchfactor) );
 
    return SCIP_OKAY;
 }
@@ -14885,7 +14885,7 @@ SCIP_RETCODE SCIPscaleVarBranchFactor(
 {
    SCIP_CALL( checkStage(scip, "SCIPscaleVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchFactor(var, scip->set, scale * SCIPvarGetBranchFactor(var));
+   SCIP_CALL( SCIPvarChgBranchFactor(var, scip->set, scale * SCIPvarGetBranchFactor(var)) );
 
    return SCIP_OKAY;
 }
@@ -14899,7 +14899,7 @@ SCIP_RETCODE SCIPaddVarBranchFactor(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchFactor(var, scip->set, addfactor + SCIPvarGetBranchFactor(var));
+   SCIP_CALL( SCIPvarChgBranchFactor(var, scip->set, addfactor + SCIPvarGetBranchFactor(var)) );
 
    return SCIP_OKAY;
 }
