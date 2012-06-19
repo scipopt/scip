@@ -5707,7 +5707,7 @@ SCIP_RETCODE SCIPnlpWrite(
    SCIPmessageFPrintInfo(messagehdlr, file, "VARIABLES\n");
    for( i = 0; i < nlp->nvars; ++i )
    {
-      SCIPvarPrint(nlp->vars[i], set, messagehdlr, file);
+      SCIP_CALL( SCIPvarPrint(nlp->vars[i], set, messagehdlr, file) );
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "NONLINEAR ROWS\n");

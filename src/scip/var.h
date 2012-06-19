@@ -1357,7 +1357,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
 
 /** outputs variable information into file stream */
 extern
-void SCIPvarPrint(
+SCIP_RETCODE SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */

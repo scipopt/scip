@@ -15942,7 +15942,7 @@ SCIP_RETCODE SCIPprintVar(
 {
    SCIP_CALL( checkStage(scip, "SCIPprintVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIPvarPrint(var, scip->set, scip->messagehdlr, file);
+   SCIP_CALL( SCIPvarPrint(var, scip->set, scip->messagehdlr, file) );
 
    return SCIP_OKAY;
 }

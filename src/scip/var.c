@@ -2707,7 +2707,7 @@ void printHolelist(
 }
 
 /** outputs variable information into file stream */
-void SCIPvarPrint(
+SCIP_RETCODE SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -2739,6 +2739,7 @@ void SCIPvarPrint(
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
+      return SCIP_ERROR;
    }
 
    /* name */
@@ -2835,9 +2836,12 @@ void SCIPvarPrint(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
+      return SCIP_ERROR;
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+
+   return SCIP_OKAY;
 }
 
 /** issues a VARUNLOCKED event on the given variable */
