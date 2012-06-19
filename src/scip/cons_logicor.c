@@ -1514,11 +1514,16 @@ void consdataSort(
 	 }
       }
    }
+
 #ifdef SCIP_DEBUG
    /* check sorting */
-   for( v = 0; v < consdata->nvars; ++v )
    {
-      assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      int v;
+
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
    }
 #endif
 }
