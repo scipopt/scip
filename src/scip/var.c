@@ -9962,7 +9962,7 @@ SCIP_RETCODE varProcessChgBranchFactor(
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA; /*lint !e527*/
 
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
@@ -9972,7 +9972,7 @@ SCIP_RETCODE varProcessChgBranchFactor(
       default:
          SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
-         return SCIP_ERROR;
+         return SCIP_ERROR; /*lint !e527*/
       }
    }
 
@@ -10043,7 +10043,7 @@ SCIP_RETCODE SCIPvarChgBranchFactor(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -10088,7 +10088,7 @@ SCIP_RETCODE varProcessChgBranchPriority(
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA; /*lint !e527*/
 
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
@@ -10162,7 +10162,7 @@ SCIP_RETCODE SCIPvarChgBranchPriority(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -10207,7 +10207,7 @@ SCIP_RETCODE varProcessChgBranchDirection(
       case SCIP_VARSTATUS_MULTAGGR:
          SCIPerrorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA; /*lint !e527*/
 
       case SCIP_VARSTATUS_AGGREGATED:
          if( parentvar->data.aggregate.scalar > 0.0 )
@@ -10227,7 +10227,7 @@ SCIP_RETCODE varProcessChgBranchDirection(
       default:
          SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
-         return SCIP_ERROR;
+         return SCIP_ERROR; /*lint !e527*/
       }
    }
 
@@ -10311,7 +10311,7 @@ SCIP_RETCODE SCIPvarChgBranchDirection(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -11332,14 +11332,14 @@ SCIP_Real SCIPvarGetLbLP(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         return SCIP_INVALID; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -11350,7 +11350,7 @@ SCIP_Real SCIPvarGetLbLP(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -11400,13 +11400,13 @@ SCIP_Real SCIPvarGetUbLP(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         return SCIP_INVALID; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -11417,7 +11417,7 @@ SCIP_Real SCIPvarGetUbLP(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -11489,7 +11489,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -11603,7 +11603,7 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -11757,7 +11757,7 @@ SCIP_Real SCIPvarGetRootSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -11795,6 +11795,7 @@ SCIP_Real SCIPvarGetRedcost(
       default:
          SCIPerrorMessage("invalid basis state\n");
          SCIPABORT();
+         return 0.0; /*lint !e527*/
       }
    }
 
@@ -11945,7 +11946,7 @@ SCIP_Real SCIPvarGetBestRootRedcost(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -12124,7 +12125,7 @@ SCIP_Real SCIPvarGetRelaxSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -12166,7 +12167,7 @@ SCIP_RETCODE SCIPvarSetNLPSol(
          SCIPerrorMessage("cannot set NLP solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), var->glbdom.lb, solval);
          SCIPABORT();
-         return SCIP_INVALIDCALL;
+         return SCIP_INVALIDCALL; /*lint !e527*/
       }
       break;
 
@@ -12178,7 +12179,7 @@ SCIP_RETCODE SCIPvarSetNLPSol(
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       SCIPABORT();
-      return SCIP_INVALIDCALL;
+      return SCIP_INVALIDCALL; /*lint !e527*/
 
    case SCIP_VARSTATUS_NEGATED:
       SCIP_CALL( SCIPvarSetNLPSol(var->negatedvar, set, var->data.negate.constant - solval) );
@@ -12187,7 +12188,7 @@ SCIP_RETCODE SCIPvarSetNLPSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -14171,13 +14172,13 @@ SCIP_Real SCIPvarGetLbAtIndex(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         return SCIP_INVALID; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -14188,7 +14189,7 @@ SCIP_Real SCIPvarGetLbAtIndex(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -14257,13 +14258,13 @@ SCIP_Real SCIPvarGetUbAtIndex(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         return SCIP_INVALID; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -14274,7 +14275,7 @@ SCIP_Real SCIPvarGetUbAtIndex(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0; /*lint !e527*/
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
