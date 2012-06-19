@@ -2837,6 +2837,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 	 default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2868,7 +2869,9 @@ SCIP_RETCODE SCIPlpiGetBase(
 	    else
 	       cstat[j] = SCIP_BASESTAT_UPPER;
 	    break;
-	 default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+	 default: SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2930,6 +2933,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2967,6 +2971,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3415,7 +3420,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_DEVEX:
          primalmode = 2; dualmode = 3; break;
       default:
-         SCIPerrorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
+         SCIPerrorMessage("unkown pricing parameter %d!\n", ival);
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);
@@ -3433,7 +3440,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
+      /* should not happen - see above */
       SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       /** Amount of print out:

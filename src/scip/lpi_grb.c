@@ -56,14 +56,6 @@
       }                                                                 \
    }
 
-#define ABORT_ZERO(x) { int _restat_;                                   \
-      if( (_restat_ = (x)) != 0 )                                       \
-      {                                                                 \
-         SCIPerrorMessage("Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(grbenv)); \
-         SCIPABORT();                                                   \
-      }                                                                 \
-   }
-
 #if( GRB_VERSION_MAJOR < 4 )
 #define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
 #define GRB_METHOD_PRIMAL  GRB_LPMETHOD_PRIMAL
@@ -3105,6 +3097,7 @@ SCIP_RETCODE SCIPlpiGetSol(
          default:
             SCIPerrorMessage("Unkown sense %c.\n", lpi->senarray[i]);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3254,6 +3247,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status %d\n", stat);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3290,6 +3284,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status %d\n", stat);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3342,6 +3337,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3367,6 +3363,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status %d\n", cstat[j]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 

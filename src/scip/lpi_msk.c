@@ -3099,12 +3099,12 @@ SCIP_RETCODE convertstat_mosek2scip(
    )
 {
    int i;
-   
+
    for( i = 0; i < n; i++ )
    {
       double sl;
       double su;
-      
+
       switch (sk[i])
       {
       case MSK_SK_BAS:
@@ -3137,6 +3137,7 @@ SCIP_RETCODE convertstat_mosek2scip(
          break;
       default:
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }  /*lint !e788*/
    }
 
@@ -3189,6 +3190,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       default:
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }  /*lint !e788*/
    }
 
@@ -3196,7 +3198,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 }
 
 /** convert SCIP to Mosek status */
-static 
+static
 void convertstat_scip2mosek(
    int*                  stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
