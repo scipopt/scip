@@ -2125,19 +2125,21 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSetppccons)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata;
    unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
-
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
 
    /* sorts the constraints */
    consdataSort(consdata);
