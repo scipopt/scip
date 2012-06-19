@@ -2796,6 +2796,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    )
 {
    SCIP_Bool primalfeasible;
+   SCIP_RETCODE retcode;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -2804,7 +2805,9 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIPdebugMessage("checking for primal unboundedness\n");
 
    primalfeasible = FALSE; /* to fix compiler warning */
-   SCIP_CALL_ABORT( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, NULL) );
+   retcode = SCIPlpiGetSolFeasibility(lpi, &primalfeasible, NULL);
+   if ( retcode != SCIP_OKAY )
+      return FALSE;
 
    /* Probably GRB_UNBOUNDED means that the problem has an unbounded ray, but not necessarily that a feasible primal solution exists. */
    return (primalfeasible && (lpi->solstat == GRB_UNBOUNDED || lpi->solstat == GRB_INF_OR_UNBD));
