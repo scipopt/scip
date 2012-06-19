@@ -668,95 +668,80 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** index comparison method of and constraints: compares two indices of the variable set in the and constraint */
-static
-SCIP_DECL_SORTINDCOMP(consdataCompVar)
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
-
-   assert(consdata != NULL);
-   assert(0 <= ind1 && ind1 < consdata->nvars);
-   assert(0 <= ind2 && ind2 < consdata->nvars);
-
-   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
-}
-
 /** sorts and constraint's variables by non-decreasing variable index */
 static
-SCIP_RETCODE consdataSort(
-   SCIP*                 scip,               /**< SCIP data structure */
+void consdataSort(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
-      consdata->sorted = TRUE;
-   else if( !consdata->sorted )
+   if( !consdata->sorted )
    {
-      SCIP_VAR* varv;
-      int* perm;
-      int v;
-      int i;
-      int nexti;
-
-      /* get temporary memory to store the sorted permutation */
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
-
-      /* call bubble sort */
-      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
-
-      /* permute the variables in the constraint according to the resulting permutation */
-      for( v = 0; v < consdata->nvars; ++v )
+      if( consdata->nvars <= 1 )
+	 consdata->sorted = TRUE;
+      else
       {
-         if( perm[v] != v )
-         {
-            SCIP_Bool iswatchedvar1;
-            SCIP_Bool iswatchedvar2;
+	 SCIP_VAR* var1 = NULL;
+	 SCIP_VAR* var2 = NULL;
 
-            varv = consdata->vars[v];
-            iswatchedvar1 = (consdata->watchedvar1 == v);
-            iswatchedvar2 = (consdata->watchedvar2 == v);
-            i = v;
-            do
-            {
-               assert(0 <= perm[i] && perm[i] < consdata->nvars);
-               assert(perm[i] != i);
-               consdata->vars[i] = consdata->vars[perm[i]];
-               if( consdata->watchedvar1 == perm[i] )
-                  consdata->watchedvar1 = i;
-               if( consdata->watchedvar2 == perm[i] )
-                  consdata->watchedvar2 = i;
-               nexti = perm[i];
-               perm[i] = i;
-               i = nexti;
-            }
-            while( perm[i] != v );
-            consdata->vars[i] = varv;
-            if( iswatchedvar1 )
-               consdata->watchedvar1 = i;
-            if( iswatchedvar2 )
-               consdata->watchedvar2 = i;
-            perm[i] = i;
-         }
-      }
-      consdata->sorted = TRUE;
+	 /* remember watch variables */
+	 if( consdata->watchedvar1 != -1 )
+	 {
+	    var1 = consdata->vars[consdata->watchedvar1];
+	    assert(var1 != NULL);
+	    consdata->watchedvar1 = -1;
+	    if( consdata->watchedvar2 != -1 )
+	    {
+	       var2 = consdata->vars[consdata->watchedvar2];
+	       assert(var2 != NULL);
+	       consdata->watchedvar2 = -1;
+	    }
+	 }
+	 assert(consdata->watchedvar1 == -1);
+	 assert(consdata->watchedvar2 == -1);
+	 assert(var1 != NULL || var2 == NULL);
 
-#ifdef SCIP_DEBUG
-      /* check sorting */
-      for( v = 0; v < consdata->nvars; ++v )
-      {
-         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
-         assert(perm[v] == v);
-      }
+	 /* sort variables after index */
+	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+	 consdata->sorted = TRUE;
+
+	 /* correct watched variables */
+	 if( var1 != NULL )
+	 {
+	    int pos;
+#ifndef NDEBUG
+	    SCIP_Bool found;
+
+	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    assert(found);
+#else
+	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 #endif
+	    assert(pos >= 0 && pos < consdata->nvars);
+	    consdata->watchedvar1 = pos;
 
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &perm);
+	    if( var2 != NULL )
+	    {
+#ifndef NDEBUG
+	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       assert(found);
+#else
+	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+#endif
+	       assert(pos >= 0 && pos < consdata->nvars);
+	       consdata->watchedvar2 = pos;
+	    }
+	 }
+      }
    }
-   assert(consdata->sorted);
-
-   return SCIP_OKAY;
+#ifdef SCIP_DEBUG
+   /* check sorting */
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+   }
+#endif
 }
 
 /** deletes all one-fixed variables and removes multiple entries */
@@ -853,7 +838,8 @@ SCIP_RETCODE applyFixings(
    }
 
    /* sort the variables in the constraint */
-   SCIP_CALL( consdataSort(scip, consdata) );
+   consdataSort(consdata);
+   assert(consdata->sorted);
 
    /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
     * variables
@@ -2805,24 +2791,29 @@ SCIP_DECL_HASHGETKEY(hashGetKeyAndcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqAndcons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
    SCIP_Bool coefsequal;
    int i;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
-   scip = (SCIP*)userptr; 
-   assert(scip != NULL);
-   
+
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
 
    /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
-   SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
+   consdataSort(consdata1);
+   consdataSort(consdata2);
+   assert(consdata1->sorted);
+   assert(consdata2->sorted);
 
    coefsequal = TRUE;
 
@@ -2831,14 +2822,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqAndcons)
       /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
-         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
          coefsequal = FALSE;
          break;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
-   } 
-   
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
+   }
+
    return coefsequal;
 }
 
@@ -2956,11 +2947,12 @@ SCIP_RETCODE detectRedundantConstraints(
 
       consdata0 = SCIPconsGetData(cons0);
       /* sort the constraint */
-      SCIP_CALL( consdataSort(scip, consdata0) );
+      consdataSort(consdata0);
+      assert(consdata0->sorted);
 
       /* get constraint from current hash table with same variables as cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
- 
+
       if( cons1 != NULL )
       {
          SCIP_CONSDATA* consdata1;
@@ -2969,25 +2961,25 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
          consdata1 = SCIPconsGetData(cons1);
-         
+
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+         SCIP_CALL( updateFlags(scip, cons1, cons0) );
          redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
          {
             SCIP_Bool aggregated;
-            
-            assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0); 
-         
+
+            assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0);
+
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   cutoff, &redundant, &aggregated) );
@@ -2998,7 +2990,7 @@ SCIP_RETCODE detectRedundantConstraints(
             if( *cutoff )
                goto TERMINATE;
          }
-         else 
+         else
             redundant = TRUE;
 
          /* delete consdel */
@@ -3016,7 +3008,7 @@ SCIP_RETCODE detectRedundantConstraints(
       }
       else
       {
-         /* no such constraint in current hash table: insert cons0 into hash table */  
+         /* no such constraint in current hash table: insert cons0 into hash table */
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
@@ -3065,11 +3057,12 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
-   SCIP_CALL( consdataSort(scip, consdata0) );
+   consdataSort(consdata0);
+   assert(consdata0->sorted);
 
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
-   
+
    if( SCIPconsIsActive(cons0) )
    {
       for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && !SCIPisStopped(scip); ++c )
@@ -3102,7 +3095,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          assert(consdata1->nvars >= 1);
 
          /* sort the constraint */
-         SCIP_CALL( consdataSort(scip, consdata1) );
+         consdataSort(consdata1);
+	 assert(consdata1->sorted);
 
          /* check consdata0 against consdata1:
           * - if they consist of the same operands, the resultants can be aggregated
@@ -3173,7 +3167,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                assert(redundant);
                (*naggrvars)++;
             }
-            
+
             if( redundant )
             {
                /* delete constraint */
