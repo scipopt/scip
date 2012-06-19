@@ -937,6 +937,35 @@ SCIP_RETCODE SCIPsolSetVal(
          return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
+      if ( SCIPvarGetMultaggrNVars(var) == 1 )
+      {
+         SCIP_VAR** multaggrvars;
+         SCIP_Real* multaggrscalars;
+         SCIP_Real multaggrconstant;
+
+         multaggrvars = SCIPvarGetMultaggrVars(var);
+         multaggrscalars = SCIPvarGetMultaggrScalars(var);
+         multaggrconstant = SCIPvarGetMultaggrConstant(var);
+
+         if( SCIPsetIsInfinity(set, multaggrconstant) || SCIPsetIsInfinity(set, -multaggrconstant) )
+         {
+            if( (SCIPsetIsInfinity(set, multaggrconstant) && !SCIPsetIsInfinity(set, val))
+               || (SCIPsetIsInfinity(set, -multaggrconstant) && !SCIPsetIsInfinity(set, -val)) )
+            {
+               SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
+                  SCIPvarGetName(var), multaggrconstant, val);
+               return SCIP_INVALIDDATA;
+            }
+            return SCIP_OKAY;
+         }
+         else
+         {
+            if( SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val) )
+               return SCIPsolSetVal(sol, set, stat, tree, multaggrvars[0],  multaggrscalars[0] > 0 ? val : -val);
+            else
+               return SCIPsolSetVal(sol, set, stat, tree, multaggrvars[0], (val - multaggrconstant)/multaggrscalars[0]);
+         }
+      }
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
