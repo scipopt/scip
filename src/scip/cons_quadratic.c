@@ -11829,7 +11829,8 @@ SCIP_Bool SCIPisConvexQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
 
    /* with FALSE, one should never get an error, since there is no memory allocated */
-   SCIP_CALL_ABORT( checkCurvature(scip, cons, FALSE) );
+   if( checkCurvature(scip, cons, FALSE) != SCIP_OKAY )
+      SCIPABORT();
 
    return SCIPconsGetData(cons)->isconvex;
 }
@@ -11845,7 +11846,8 @@ SCIP_Bool SCIPisConcaveQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
 
    /* with FALSE, one should never get an error, since there is no memory allocated */
-   SCIP_CALL_ABORT( checkCurvature(scip, cons, FALSE) );
+   if( checkCurvature(scip, cons, FALSE) != SCIP_OKAY )
+      SCIPABORT();
 
    return SCIPconsGetData(cons)->isconcave;
 }
