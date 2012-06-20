@@ -4184,6 +4184,71 @@ SCIP_RETCODE presolveApplyImplications(
 }
 #endif
 
+/** checks a quadratic constraint for convexity and/or concavity without checking multivariate functions */
+static
+void checkCurvatureEasy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< quadratic constraint */
+   SCIP_Bool*            determined,         /**< pointer to store whether the curvature could be determined */
+   SCIP_Bool             checkmultivariate   /**< whether curvature will be checked later on for multivariate functions */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int nquadvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(determined != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nquadvars = consdata->nquadvars;
+   *determined = TRUE;
+
+   if( consdata->iscurvchecked )
+      return;
+
+   SCIPdebugMessage("Checking curvature of constraint <%s> without multivariate functions\n", SCIPconsGetName(cons));
+
+   if( nquadvars == 1 )
+   {
+      assert(consdata->nbilinterms == 0);
+      consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
+      consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
+      consdata->iscurvchecked = TRUE;
+   }
+   else if( nquadvars == 0 )
+   {
+      consdata->isconvex = TRUE;
+      consdata->isconcave = TRUE;
+      consdata->iscurvchecked = TRUE;
+   }
+   else if( consdata->nbilinterms == 0 )
+   {
+      int v;
+
+      consdata->isconvex = TRUE;
+      consdata->isconcave = TRUE;
+
+      for( v = nquadvars - 1; v >= 0; --v )
+      {
+         consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
+         consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+      }
+
+      consdata->iscurvchecked = TRUE;
+   }
+   else if( !checkmultivariate )
+   {
+      consdata->isconvex  = FALSE;
+      consdata->isconcave = FALSE;
+      consdata->iscurvchecked = TRUE;
+   }
+   else
+      *determined = FALSE;
+}
+
 /** checks a quadratic constraint for convexity and/or concavity */
 static
 SCIP_RETCODE checkCurvature(
@@ -4201,6 +4266,7 @@ SCIP_RETCODE checkCurvature(
    int            row;
    int            col;
    double*        alleigval;
+   SCIP_Bool      determined;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4213,45 +4279,14 @@ SCIP_RETCODE checkCurvature(
    if( consdata->iscurvchecked )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Checking curvature of constraint <%s>\n", SCIPconsGetName(cons));
+   /* easy checks for curvature detection */
+   checkCurvatureEasy(scip, cons, &determined, checkmultivariate);
 
-   if( n == 1 )
-   {
-      assert(consdata->nbilinterms == 0);
-      consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
-      consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
-      consdata->iscurvchecked = TRUE;
+   /* if curvature was already detected stop */
+   if( determined )
       return SCIP_OKAY;
-   }
 
-   if( n == 0 )
-   {
-      consdata->isconvex = TRUE;
-      consdata->isconcave = TRUE;
-      consdata->iscurvchecked = TRUE;
-      return SCIP_OKAY;
-   }
-
-   if( consdata->nbilinterms == 0 )
-   {
-      consdata->isconvex = TRUE;
-      consdata->isconcave = TRUE;
-      for( i = 0; i < n; ++i )
-      {
-         consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[i].sqrcoef);
-         consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[i].sqrcoef);
-      }
-      consdata->iscurvchecked = TRUE;
-      return SCIP_OKAY;
-   }
-
-   if( !checkmultivariate )
-   {
-      consdata->isconvex  = FALSE;
-      consdata->isconcave = FALSE;
-      consdata->iscurvchecked = TRUE;
-      return SCIP_OKAY;
-   }
+   SCIPdebugMessage("Checking curvature of constraint <%s> with multivariate functions\n", SCIPconsGetName(cons));
 
    if( n == 2 )
    {
@@ -11825,14 +11860,15 @@ SCIP_Bool SCIPisConvexQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   SCIP_Bool determined;
+
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
-   /* with FALSE, one should never get an error, since there is no memory allocated */
-   if( checkCurvature(scip, cons, FALSE) != SCIP_OKAY )
-      SCIPABORT();
+   checkCurvatureEasy(scip, cons, &determined, FALSE);
+   assert(determined);
 
-   return SCIPconsGetData(cons)->isconvex;
+   return (SCIPconsGetData(cons)->isconvex);
 }
 
 /** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave.
@@ -11842,14 +11878,15 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   SCIP_Bool determined;
+
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
-   /* with FALSE, one should never get an error, since there is no memory allocated */
-   if( checkCurvature(scip, cons, FALSE) != SCIP_OKAY )
-      SCIPABORT();
+   checkCurvatureEasy(scip, cons, &determined, FALSE);
+   assert(determined);
 
-   return SCIPconsGetData(cons)->isconcave;
+   return (SCIPconsGetData(cons)->isconcave);
 }
 
 /** Computes the violation of a constraint by a solution */
