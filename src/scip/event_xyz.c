@@ -172,10 +172,7 @@ SCIP_RETCODE SCIPincludeEventHdlrXyz(
    eventhdlr = NULL;
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyXyz,
-         eventFreeXyz, eventInitXyz, eventExitXyz, 
-         eventInitsolXyz, eventExitsolXyz, eventDeleteXyz, eventExecXyz,
-         eventhdlrdata) );
+         eventExecXyz, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyXyz) );

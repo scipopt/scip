@@ -1506,11 +1506,12 @@ SCIP_RETCODE SCIPincludePropObbt(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecObbt, propRespropObbt, propdata) );
+         propExecObbt, propdata) );
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObbt) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropObbt) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/creategenvbounds",
          "should obbt try to provide genvbounds if possible?",

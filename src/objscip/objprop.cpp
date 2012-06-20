@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPincludeObjProp(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, objprop->scip_name_, objprop->scip_desc_,
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
          objprop->scip_timingmask_,
-         propExecObj, propRespropObj, propdata) ); /*lint !e429*/
+         propExecObj, propdata) ); /*lint !e429*/
    assert(prop != NULL);
 
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyObj) );
@@ -299,6 +299,7 @@ SCIP_RETCODE SCIPincludeObjProp(
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObj) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolObj, objprop->scip_presol_priority_,
          objprop->scip_presol_maxrounds_, objprop->scip_presol_delay_) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropObj) );
 
    return SCIP_OKAY; /*lint !e429*/
 }

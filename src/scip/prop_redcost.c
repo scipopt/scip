@@ -623,8 +623,7 @@ SCIP_RETCODE SCIPincludePropRedcost(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecRedcost, NULL,
-         propdata) );
+         propExecRedcost, propdata) );
 
    assert(prop != NULL);
 

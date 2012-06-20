@@ -1772,14 +1772,14 @@ SCIP_RETCODE SCIPincludePropVbounds(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecVbounds, propRespropVbounds,
-         propdata) );
+         propExecVbounds, propdata) );
    assert(prop != NULL);
 
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyVbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeVbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropVbounds) );
 
    /* include event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,

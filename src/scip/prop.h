@@ -258,6 +258,12 @@ void SCIPpropSetPresol(
    SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    );
 
+/** sets propagation conflict resolving callback of propagator */
+extern
+void SCIPpropSetResprop(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
+   );
 
 #ifdef __cplusplus
 }

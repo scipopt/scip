@@ -1233,8 +1233,7 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecProbing, propRespropProbing,
-         propdata) );
+         propExecProbing, propdata) );
 
    assert(prop != NULL);
 
@@ -1248,6 +1247,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
          PROP_PRESOL_DELAY) );
+   SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropProbing) );
 
    /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

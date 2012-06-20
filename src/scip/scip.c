@@ -4851,7 +4851,7 @@ SCIP_RETCODE SCIPincludeProp(
 /** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
  *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
- *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
  *
  *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
  */
@@ -4865,7 +4865,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
-   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -4883,7 +4882,7 @@ SCIP_RETCODE SCIPincludePropBasic(
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq, delay, timingmask, 0, -1, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, propexec, propresprop, propdata) );
+         NULL, propexec, NULL, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
 
    if( propptr != NULL )
@@ -5054,6 +5053,23 @@ SCIP_RETCODE SCIPsetPropPresol(
 
    return SCIP_OKAY;
 }
+
+/** sets propagation conflict resolving callback of propagator */
+SCIP_RETCODE SCIPsetPropResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetPropResprop", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(prop != NULL);
+
+   SCIPpropSetResprop(prop, propresprop);
+
+   return SCIP_OKAY;
+}
+
 
 /** returns the propagator of the given name, or NULL if not existing */
 SCIP_PROP* SCIPfindProp(
