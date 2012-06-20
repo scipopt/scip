@@ -663,6 +663,7 @@ FILE_PATTERNS          = scip.h \
                          lpi* \
                          exprinterpret* \
                          obj*.h \
+			 def.h \
                          xternal.c
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
