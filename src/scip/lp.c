@@ -18138,7 +18138,14 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
-   SCIP_CALL( SCIPlpiSolveDual(lpi) );  /* dual is usually faster */
+   retcode = SCIPlpiSolveDual(lpi);  /* dual is usually faster */
+
+   /* detect possible error in LP solver */
+   if ( retcode != SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+      return SCIP_OKAY;
+   }
 
    if( SCIPlpiIsOptimal(lpi) )
    {
