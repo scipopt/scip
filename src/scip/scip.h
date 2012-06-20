@@ -981,8 +981,9 @@ int SCIPgetNParams(
 
 /** creates a reader and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all reader callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludeReaderBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeReader(
@@ -1001,7 +1002,7 @@ SCIP_RETCODE SCIPincludeReader(
  *  Optional callbacks can be set via specific setter functions, see
  *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeReader() instead
  */
 extern
 SCIP_RETCODE SCIPincludeReaderBasic(
@@ -1068,8 +1069,9 @@ int SCIPgetNReaders(
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
  *
- *  @deprecated Please use method SCIPincludePricerBasic() instead and add non-fundamental callbacks via
- *              setter functions
+ *  @note method has all pricer callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludePricerBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludePricer(
@@ -1100,6 +1102,8 @@ SCIP_RETCODE SCIPincludePricer(
  *
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
+ *
+ * @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
  */
 extern
 SCIP_RETCODE SCIPincludePricerBasic(
@@ -1219,8 +1223,10 @@ SCIP_RETCODE SCIPdeactivatePricer(
 
 /** creates a constraint handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeConshdlrBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all constraint handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeConshdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeConshdlr(
@@ -1281,7 +1287,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
  *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
  *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConshdlr() instead
  */
 extern
 SCIP_RETCODE SCIPincludeConshdlrBasic(
@@ -1524,8 +1530,10 @@ int SCIPgetNConshdlrs(
 
 /** creates a conflict handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeConflicthdlrBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all conflict handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeConflicthdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlr(
@@ -1549,7 +1557,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
  *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
  *  and SCIPsetConflicthdlrExitsol()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConflicthdlr() instead
  */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlrBasic(
@@ -1639,8 +1647,10 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
 
 /** creates a presolver and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludePresolBasic() instead and add non-fundamental (optional) callbacks/methods
- *              via corresponding setter methods.
+ *  @note method has all presolver callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludePresolBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludePresol(
@@ -1665,7 +1675,7 @@ SCIP_RETCODE SCIPincludePresol(
  *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
  *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePresol() instead
  */
 extern
 SCIP_RETCODE SCIPincludePresolBasic(
@@ -1756,8 +1766,10 @@ SCIP_RETCODE SCIPsetPresolPriority(
 
 /** creates a relaxation handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
- *              callbacks/methods via corresponding setter methods.
+ *  @note method has all relaxation handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeRelaxBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeRelax(
@@ -1781,7 +1793,7 @@ SCIP_RETCODE SCIPincludeRelax(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), SCIPsetRelaxExit(),
  *  SCIPsetRelaxCopy(), SCIPsetRelaxFree(), SCIPsetRelaxInitsol(), and SCIPsetRelaxExitsol()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeRelax() instead
  */
 extern
 SCIP_RETCODE SCIPincludeRelaxBasic(
@@ -1872,8 +1884,10 @@ SCIP_RETCODE SCIPsetRelaxPriority(
 
 /** creates a separator and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeSepaBasic() instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all separator callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeSepaBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeSepa(
@@ -1902,7 +1916,7 @@ SCIP_RETCODE SCIPincludeSepa(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaCopy(), SCIPsetSepaFree(),
  *  SCIPsetSepaInit(), SCIPsetSepaExit(), SCIPsetSepaInitsol(), and SCIPsetSepaExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeSepa() instead
  */
 extern
 SCIP_RETCODE SCIPincludeSepaBasic(
@@ -1998,8 +2012,10 @@ SCIP_RETCODE SCIPsetSepaPriority(
 
 /** creates a propagator and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludePropBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all propagator callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludePropBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeProp(
@@ -2032,7 +2048,7 @@ SCIP_RETCODE SCIPincludeProp(
  *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
  *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
  */
 extern
 SCIP_RETCODE SCIPincludePropBasic(
@@ -2169,8 +2185,9 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
 
 /** creates a primal heuristic and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeHeurBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all heuristic callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeHeurBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeHeur(
@@ -2201,7 +2218,7 @@ SCIP_RETCODE SCIPincludeHeur(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurCopy(), SCIPsetHeurFree(),
  *  SCIPsetHeurInit(), SCIPsetHeurExit(), SCIPsetHeurInitsol(), and SCIPsetHeurExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+*  @note if you want to set all callbacks with a single method call, consider using SCIPincludeHeur() instead
  */
 extern
 SCIP_RETCODE SCIPincludeHeurBasic(
@@ -2298,7 +2315,9 @@ SCIP_RETCODE SCIPsetHeurPriority(
 
 /** creates an event handler and includes it in SCIP
  *
- *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
+ *  @note method has all event handler callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeEventhdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeEventhdlr(
@@ -2321,7 +2340,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
  *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
  *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeEventhdlr() instead
  */
 extern
 SCIP_RETCODE SCIPincludeEventhdlrBasic(
@@ -2410,8 +2429,9 @@ int SCIPgetNEventhdlrs(
 
 /** creates a node selector and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all node selector callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeNodeselBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeNodesel(
@@ -2436,7 +2456,7 @@ SCIP_RETCODE SCIPincludeNodesel(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetNodeselCopy(), SCIPsetNodeselFree(),
  *  SCIPsetNodeselInit(), SCIPsetNodeselExit(), SCIPsetNodeselInitsol(), and SCIPsetNodeselExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeNodesel().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeNodesel() instead
  */
 extern
 SCIP_RETCODE SCIPincludeNodeselBasic(
@@ -2542,8 +2562,9 @@ SCIP_NODESEL* SCIPgetNodesel(
 
 /** creates a branching rule and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
- *              via corresponding setter methods.
+ *  @note method has all branching rule callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeBranchruleBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeBranchrule(
@@ -2572,7 +2593,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
  *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
  *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBranchrule() instead
  */
 extern
 SCIP_RETCODE SCIPincludeBranchruleBasic(
