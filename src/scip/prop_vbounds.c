@@ -1029,6 +1029,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
    {
       SCIP_VAR* vbdvar;
       SCIP_Real relaxedbd;
+      SCIP_Real relaxedub;
       int pos;
 
       pos = inferInfoGetPos(inferinfo);
@@ -1042,15 +1043,20 @@ SCIP_RETCODE analyzeConflictLowerbound(
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      /* try to relax inference variable upper bound such that the infeasibility is still given */
-      assert(SCIPvarIsIntegral(infervar));
-      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, (SCIP_Real)(inferlb - 1.0)) );
+      /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedub = inferlb - 1.0;
+      else
+         relaxedub = inferlb - SCIPcutoffbounddelta(scip);
 
-      /* collect the bound which is reported to the conflict analysis */
-      relaxedbd = SCIPgetConflictVarRelaxedUb(scip, infervar);
+      /* try to relax inference variable upper bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
+
+      /* collect the relaxed upper bound which is reported to the conflict analysis */
+      relaxedub = SCIPgetConflictVarRelaxedUb(scip, infervar);
 
       /* compute how far the variable bound variable can be relaxed */
-      relaxedbd = (relaxedbd - constant) / coef;
+      relaxedbd = (relaxedub - constant) / coef;
 
       /* try to relax variable bound variable */
       SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
@@ -1111,6 +1117,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
    {
       SCIP_VAR* vbdvar;
       SCIP_Real relaxedbd;
+      SCIP_Real relaxedlb;
       int pos;
 
       pos = inferInfoGetPos(inferinfo);
@@ -1124,15 +1131,20 @@ SCIP_RETCODE analyzeConflictUpperbound(
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      /* try to relax inference variable lower bound such that the infeasibility is still given */
-      assert(SCIPvarIsIntegral(infervar));
-      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, (SCIP_Real)(inferub + 1.0)) );
+      /* compute a relaxed lower bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedlb = inferub + 1.0;
+      else
+         relaxedlb = inferub + SCIPcutoffbounddelta(scip);
 
-      /* collect the bound which is reported to the conflict analysis */
-      relaxedbd = SCIPgetConflictVarRelaxedLb(scip, infervar);
+      /* try to relax inference variable lower bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
+
+      /* collect the lower bound which is reported to the conflict analysis */
+      relaxedlb = SCIPgetConflictVarRelaxedLb(scip, infervar);
 
       /* compute how far the variable bound variable can be relaxed */
-      relaxedbd = (relaxedbd - constant) / coef;
+      relaxedbd = (relaxedlb - constant) / coef;
 
       /* try to relax variable bound variable */
       SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
