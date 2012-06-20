@@ -169,20 +169,40 @@ SCIP_RETCODE SCIPincludePresolXyz(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presolptr;
+   SCIP_PRESOL* presol;
 
    /* create xyz presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
 
+   presol = NULL;
+
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+#if 0
+   /* use SCIPincludePresol() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyXyz, presolFreeXyz, presolInitXyz, presolExitXyz, presolInitpreXyz, presolExitpreXyz, presolExecXyz,
+         presoldata) );
+#else
+   /* use SCIPincludePresolBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolExecXyz,
          presoldata) );
 
-   assert(presolptr != NULL);
+   assert(presol != NULL);
 
-   /* TODO: (optional) set presolver specific callbacks with SCIPsetPresolCALLBACK() here */
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyXyz) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeXyz) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitXyz) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitXyz) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreXyz) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreXyz) );
+#endif
 
    /* add xyz presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */

@@ -195,7 +195,21 @@ SCIP_RETCODE SCIPincludeSepaXyz(
    sepadata = NULL;
    /* TODO: (optional) create separator specific data here */
 
+   sepa = NULL;
+
    /* include separator */
+#if 0
+   /* use SCIPincludeSepa() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
+         SEPA_USESSUBSCIP, SEPA_DELAY,
+         sepaCopyXyz, sepaFreeXyz, sepaInitXyz, sepaExitXyz, sepaInitsolXyz, sepaExitsolXyz, sepaExeclpXyz, sepaExecsolXyz,
+         sepadata) );
+#else
+   /* use SCIPincludeSepaBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpXyz, sepaExecsolXyz,
@@ -203,8 +217,14 @@ SCIP_RETCODE SCIPincludeSepaXyz(
 
    assert(sepa != NULL);
 
-   /* set non-NULL pointers to callback methods */
-   /* TODO: (optional) set separator specific callbacks with SCIPsetSepaCallback() here
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyXyz) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeXyz) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitXyz) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitXyz) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolXyz) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolXyz) );
+#endif
 
    /* add xyz separator parameters */
    /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */

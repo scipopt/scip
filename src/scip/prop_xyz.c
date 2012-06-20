@@ -235,7 +235,22 @@ SCIP_RETCODE SCIPincludePropXyz(
    propdata = NULL;
    /* TODO: (optional) create propagator specific data here */
 
+   prop = NULL;
+
    /* include propagator */
+#if 0
+   /* use SCIPincludeProp() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         PROP_TIMING, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY,
+         propCopyXyz, propFreeXyz, propInitXyz, propExitXyz, propInitpreXyz, propExitpreXyz,
+         propInitsolXyz, propExitsolXyz, propPresolXyz, propExecXyz, propRespropXyz,
+         propdata) );
+#else
+   /* use SCIPincludePropBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecXyz, propdata) );
 
@@ -252,6 +267,7 @@ SCIP_RETCODE SCIPincludePropXyz(
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreXyz) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolXyz, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropXyz) );
+#endif
 
    /* add xyz propagator parameters */
    /* TODO: (optional) add propagator specific parameters with SCIPaddTypeParam() here */

@@ -129,7 +129,19 @@ SCIP_RETCODE SCIPincludeReaderXyz(
    readerdata = NULL;
    /* TODO: (optional) create reader specific data here */
    
+   reader = NULL;
+
    /* include reader */
+#if 0
+   /* use SCIPincludeReader() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+         readerCopyXyz, readerFreeXyz, readerReadXyz, readerWriteXyz, readerdata) );
+#else
+   /* use SCIPincludeReaderBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
    assert(reader != NULL);
@@ -139,6 +151,7 @@ SCIP_RETCODE SCIPincludeReaderXyz(
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeXyz) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadXyz) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteXyz) );
+#endif
 
    /* add xyz reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
