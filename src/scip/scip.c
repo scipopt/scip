@@ -12334,9 +12334,9 @@ SCIP_RETCODE analyzeStrongbranch(
 
       lpobjval =  SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
 
-      if( col->sbdownvalid && lpobjval < col->sbdown )
+      if( col->sbdownvalid && SCIPsetFeasCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5 && lpobjval < col->sbdown )
          SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetUbGlobal(var), -(col->sbdown - lpobjval), lpobjval);
-      if( col->sbupvalid && lpobjval < col->sbup )
+      if( col->sbupvalid && SCIPsetFeasFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5 && lpobjval < col->sbup )
          SCIPvarUpdateBestRootSol(var, scip->set, SCIPvarGetLbGlobal(var), col->sbup - lpobjval,  lpobjval);
    }
 
