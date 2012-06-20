@@ -564,9 +564,23 @@ void* hashtablelistRetrieve(
    if( h != NULL )
    {
 #ifndef NDEBUG
-      if( hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key) != NULL )
+      SCIP_HASHTABLELIST* h2;
+
+      h2 = hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+
+      if( h2 != NULL )
       {
-         SCIPerrorMessage("WARNING: hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
+         void* key1;
+         void* key2;
+
+         key1 = hashgetkey(userptr, h->element);
+         key2 = hashgetkey(userptr, h2->element);
+         assert(hashkeyval(userptr, key1) == hashkeyval(userptr, key2));
+
+         if( hashkeyeq(userptr, key1, key2) )
+         {
+            SCIPerrorMessage("WARNING: hashkey with same value exists multiple times (e.g. duplicate constraint/variable names), so the return value is maybe not correct\n");
+         }
       }
 #endif
 
