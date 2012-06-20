@@ -55,7 +55,7 @@
       }                                                                 \
    }
 
-#define CPX_INT_MAX      2000000000          /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -479,7 +479,8 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]);
+      assert(lpi->curparam.intparval[i] == par.intparval[i]
+         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
