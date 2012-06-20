@@ -5131,7 +5131,7 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler of target SCIP */
-   const char*           str,                /**< name of constraint */
+   const char*           str,                /**< string to parse for constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -5148,7 +5148,7 @@ SCIP_RETCODE SCIPconsParse(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -5161,16 +5161,12 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_CONSHDLR* conshdlr;
    char conshdlrname[SCIP_MAXSTRLEN];
    char consname[SCIP_MAXSTRLEN];
-   char* copystr;
-   char* token;
    char* saveptr;
-   int pos;
-   
+
    assert(cons != NULL);
 
    (*success) = FALSE;
-   pos = 0;
- 
+
    /* scan constant handler name */
    assert(str != NULL);
    SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &saveptr);
@@ -5181,13 +5177,13 @@ SCIP_RETCODE SCIPconsParse(
    SCIPstrCopySection(str, '<', '>', consname, SCIP_MAXSTRLEN, &saveptr);
    assert(saveptr != NULL);
    SCIPdebugMessage("constraint name <%s>\n", consname);
-   
+
    str = saveptr;
 
    /* skip colon */
    if( *str != ':' )
       return SCIP_OKAY;
-   
+
    str++;
 
    /* skip space */
@@ -5195,18 +5191,13 @@ SCIP_RETCODE SCIPconsParse(
       return SCIP_OKAY;
 
    str++;
-   
+
    /* check if a constraint handler with parsed name exists */
    conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, &str[pos], strlen(&str[pos])+1) );
-   
-   token = SCIPstrtok(copystr, ";", &saveptr);
-   assert(token != NULL);
-
    if( conshdlr != NULL && conshdlr->consparse != NULL )
    {
-      SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, token, 
+      SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, str,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
    }
    else
@@ -5221,8 +5212,6 @@ SCIP_RETCODE SCIPconsParse(
       }
    }
 
-   BMSfreeMemoryArray(&copystr);
-   
    return SCIP_OKAY;
 }
 

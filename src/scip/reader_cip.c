@@ -384,7 +384,7 @@ SCIP_RETCODE getConstraints(
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -392,6 +392,8 @@ SCIP_RETCODE getConstraints(
 {
    SCIP_CONS* cons;
    char* buf;
+   char* copybuf;
+   int len;
 
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -419,9 +421,24 @@ SCIP_RETCODE getConstraints(
    local = FALSE;
    modifiable = FALSE;
 
+   /* get length of line and check for correct ending of constraint line */
+   len = strlen(buf);
+   if( len < 1 || buf[len - 1] != ';' )
+   {
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* copy buffer for working purpose */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copybuf, buf, len) );
+   copybuf[len - 1] = '\0';
+
    /* parse the constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
+   SCIP_CALL( SCIPparseCons(scip, &cons, copybuf,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
+
+   /* free temporary buffer */
+   SCIPfreeMemoryArray(scip, &copybuf);
 
    if( !success )
    {
