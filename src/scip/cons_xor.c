@@ -2477,6 +2477,8 @@ SCIP_DECL_CONSPARSE(consParseXor)
       /* search for the equal symbol */
       while( *str != '=' )
          str++;
+      /* skip '=' character */
+      ++str;
 
       if( SCIPstrToRealValue(str, &rhs, &endptr) )
       {
@@ -2487,7 +2489,7 @@ SCIP_DECL_CONSPARSE(consParseXor)
 
          SCIPdebugPrintCons(scip, *cons, NULL);
       }
-      else 
+      else
          *success = FALSE;
    }
 

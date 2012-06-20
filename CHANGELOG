@@ -220,6 +220,7 @@ fixed bugs:
 - fixed bug that disabled multi-aggregation of two integer or implicit integer variables
 - fixed bug in sol.c with requesting values of transformed variables in original solution; previously this had only
   been handled in SCIPgetSolVal(), now the handling has been moved to SCIPsolGetVal()
+- fixed bug in cons_xor.c parsing a constraint
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
