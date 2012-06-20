@@ -5943,7 +5943,9 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       default:
          SCIPerrorMessage("invalid result from checkFixedVariables\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA;
       }  /*lint !e788*/
+
       if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
       {
          *result = SCIP_SUCCESS;
@@ -6551,6 +6553,7 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
          break;
       default:
          SCIPABORT(); /* checked above that this cannot happen */
+         return SCIP_INVALIDDATA;
       }
    }
 
@@ -6605,6 +6608,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create absolute power constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -6698,9 +6702,9 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, CONSHDLR_NAME, "signals a bound change on a variable to an absolute power constraint",
          processVarEvent, NULL) );
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
+   conshdlrdata->eventhdlr = eventhdlr;
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
          processNewSolutionEvent, NULL) );

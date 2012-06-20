@@ -276,10 +276,13 @@ SCIP_RETCODE unlockRounding(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 #ifdef VARUSES
@@ -287,13 +290,8 @@ SCIP_RETCODE conshdlrdataCreate(
 #endif
    (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
-   /* get event handler for bound change events */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for set partitioning / packing / covering constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+   /* set event handler for bound change events */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
 
    return SCIP_OKAY;
 }
@@ -643,23 +641,34 @@ SCIP_Longint consdataGetSignature(
 
 /** sorts setppc constraint's variables by non-decreasing variable index */
 static
-SCIP_RETCODE consdataSort(
-   SCIP*                 scip,               /**< SCIP data structure */
+void consdataSort(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
-      consdata->sorted = TRUE;
-   else if( !consdata->sorted )
+   if( !consdata->sorted )
    {
-      SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
-      consdata->sorted = TRUE;
+      if( consdata->nvars <= 1 )
+	 consdata->sorted = TRUE;
+      else
+      {
+	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+	 consdata->sorted = TRUE;
+      }
    }
    assert(consdata->sorted);
+#ifdef SCIP_DEBUG
+   /* check sorting */
+   {
+      int v;
 
-   return SCIP_OKAY;
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
+   }
+#endif
 }
 
 /** changes the type of a setppc constraint */
@@ -2116,22 +2125,24 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSetppccons)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata;
    unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
-   scip = (SCIP*)userptr;
-   assert(scip != NULL);
-
    /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata) );
+   consdataSort(consdata);
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
@@ -2722,7 +2733,7 @@ SCIP_RETCODE presolvePropagateCons(
    nvars = consdata->nvars;
 
    /* no variables left */
-   if( nvars == 0 && SCIPconsIsModifiable(cons) )
+   if( nvars == 0 && !SCIPconsIsModifiable(cons) )
    {
       if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
       {
@@ -2743,7 +2754,6 @@ SCIP_RETCODE presolvePropagateCons(
 	 return SCIP_OKAY;
       }
    }
-   assert(vars != NULL);
 
    /* more then two variables are fixed */
    if( consdata->nfixedones > 1 )
@@ -2752,10 +2762,10 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set covering constraint is feasible anyway and can be deleted
        * - a set partitioning or packing constraint is infeasible
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( (consdata->setppctype == SCIP_SETPPCTYPE_COVERING) && !SCIPconsIsModifiable(cons))
       {
 	 /* delete constraint */
-	 SCIPdebugMessage(" -> deleting set-packing constraint <%s>, at least two variables are fixed to 1 \n", SCIPconsGetName(cons));
+	 SCIPdebugMessage(" -> deleting set-covering constraint <%s>, at least two variables are fixed to 1\n", SCIPconsGetName(cons));
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
 	 ++(*ndelconss);
 
@@ -2776,6 +2786,8 @@ SCIP_RETCODE presolvePropagateCons(
        */
       if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING && consdata->nfixedzeros < nvars - 1 )
       {
+         assert(vars != NULL);
+
 	 for( v = nvars - 1; v >= 0; --v )
 	 {
 	    if( SCIPvarGetLbLocal(vars[v]) + 0.5 < SCIPvarGetUbLocal(vars[v]) )
@@ -2813,6 +2825,8 @@ SCIP_RETCODE presolvePropagateCons(
    /* other propagations can only be done on not modifiable constraints */
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
 
    /* all variables were fixed to zero then either delete the constraint or stop with infeasibility */
    if( consdata->nfixedzeros == nvars )
@@ -5213,7 +5227,7 @@ SCIP_RETCODE removeRedundantConstraints(
    assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
-   SCIP_CALL( consdataSort(scip, consdata0) );
+   consdataSort(consdata0);
 
    /* get the bit signature of the constraint */
    signature0 = consdataGetSignature(consdata0);
@@ -5920,9 +5934,11 @@ SCIP_RETCODE branchLP(
    assert(varuses != NULL);
 
    /* get fractional variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands, NULL) );
    if( nlpcands == 0 )
       return SCIP_OKAY;
+
+   assert(MINBRANCHWEIGHT <= MAXBRANCHWEIGHT);
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortcands, nlpcands) );
@@ -5954,57 +5970,60 @@ SCIP_RETCODE branchLP(
     */
    if( nsortcands > 0 )
    {
+      SCIP_Real cumprio = 0.0;
+      SCIP_Real minprio = SCIP_INVALID;
+      SCIP_Real minestzero = SCIP_INVALID;
+      SCIP_Real minestone = SCIP_INVALID;
+      SCIP_Real tmp;
+
       /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
        * then choose one less
        */
       branchweight = 0.0;
       solval = 0.0;
-      for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
+      for( nselcands = 0; nselcands < nsortcands; ++nselcands )
       {
          solval = SCIPgetVarSol(scip, sortcands[nselcands]);
          assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
          branchweight += solval;
+
+	 /* did we exceed the maximal weight */
+	 if( branchweight > MAXBRANCHWEIGHT )
+	    break;
+
+	 /* @todo instead of taking the minimum into account try other variants like the maximum and the average */
+	 /* calculate priorities and estimates by adding up/taking the minimum of all single priorities/estimates */
+	 cumprio += SCIPcalcNodeselPriority(scip, sortcands[nselcands], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
+	 tmp = SCIPcalcNodeselPriority(scip, sortcands[nselcands], SCIP_BRANCHDIR_UPWARDS, 1.0);
+	 minprio = MIN(minprio, tmp);
+	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 0.0);;
+	 minestzero = MIN(minestzero, tmp);
+	 tmp = SCIPcalcChildEstimate(scip, sortcands[nselcands], 1.0);;
+	 minestone = MIN(minestone, tmp);
       }
+      assert(minestzero != SCIP_INVALID);
+      assert(minestone != SCIP_INVALID);
+      assert(minprio != SCIP_INVALID);
       assert(nselcands > 0);
-      nselcands--;
       branchweight -= solval;
 
       /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
       if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
       {
          SCIP_NODE* node;
-         SCIP_Real downprio;
 
          /* perform the binary set branching on the selected variables */
          assert(1 <= nselcands && nselcands <= nlpcands);
 
-         /* choose preferred branching direction */
-         switch( SCIPvarGetBranchDirection(branchcands[0]) )
-         {
-         case SCIP_BRANCHDIR_DOWNWARDS:
-            downprio = 1.0;
-            break;
-         case SCIP_BRANCHDIR_UPWARDS:
-            downprio = -1.0;
-            break;
-         case SCIP_BRANCHDIR_AUTO:
-            downprio = SCIPvarGetRootSol(branchcands[0]) - SCIPgetVarSol(scip, branchcands[0]);
-            break;
-         default:
-            SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n",
-               SCIPvarGetBranchDirection(branchcands[0]), SCIPvarGetName(branchcands[0]));
-            return SCIP_INVALIDDATA;
-         }
-
          /* create left child, fix x_i = 0 for all i \in S */
-         SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, cumprio, minestzero) );
          for( i = 0; i < nselcands; ++i )
          {
             SCIP_CALL( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
          }
 
          /* create right child: add constraint x(S) >= 1 */
-         SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, minprio, minestone) );
          if( nselcands == 1 )
          {
             /* only one candidate selected: fix it to 1.0 */
@@ -6020,7 +6039,7 @@ SCIP_RETCODE branchLP(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
             SCIP_CALL( SCIPaddConsNode(scip, node, newcons, NULL) );
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          }
@@ -6127,6 +6146,23 @@ SCIP_RETCODE branchPseudo(
     */
    if( nbranchcands > 0 )
    {
+      SCIP_Real* estone;
+      SCIP_Real minestzero = SCIP_INVALID;
+      SCIP_Real tmp;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &estone, nbranchcands) );
+
+      /* @todo instead of taking the minimum into account try other variants like the maximum and the average */
+      /* @todo calculate priorities instead of setting it to the number of branching candidates */
+      /* calculate estimates by taking the minimum over all single estimates */
+      for( i = 0; i < nbranchcands; ++i )
+      {
+	 tmp = SCIPcalcChildEstimate(scip, branchcands[i], 0.0);;
+	 minestzero = MIN(minestzero, tmp);
+	 estone[i] = SCIPcalcChildEstimate(scip, branchcands[i], 1.0);
+      }
+      assert(minestzero != SCIP_INVALID);
+
       /* branch on the first part of the sorted candidates:
        * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
        * - create an additional child node x_0 = ... = x_n-1 = 0
@@ -6134,7 +6170,7 @@ SCIP_RETCODE branchPseudo(
       for( i = 0; i < nbranchcands; ++i )
       {
          /* create child with x_0 = ... = x_i-1 = 0, x_i = 1 */
-         SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands) );
+         SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands, MIN(minestzero, estone[i])) );
          for( j = 0; j < i; ++j )
          {
             SCIP_CALL( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
@@ -6142,13 +6178,15 @@ SCIP_RETCODE branchPseudo(
          SCIP_CALL( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
       }
       /* create child with x_0 = ... = x_n = 0 */
-      SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)i) );
+      SCIP_CALL( SCIPcreateChild(scip, &node, (SCIP_Real)nbranchcands, minestzero) );
       for( i = 0; i < nbranchcands; ++i )
       {
          SCIP_CALL( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
       }
 
       *result = SCIP_BRANCHED;
+
+      SCIPfreeBufferArray(scip, &estone);
 
 #ifdef SCIP_DEBUG
       {
@@ -7158,9 +7196,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecSetppc, NULL) );
 
    /* create conflict handler for setppc constraints */
@@ -7168,7 +7207,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          conflictExecSetppc, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

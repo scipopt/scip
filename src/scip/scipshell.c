@@ -55,6 +55,8 @@ SCIP_RETCODE fromCommandLine(
    const char*           filename            /**< input file name */
    )
 {
+   SCIP_RETCODE retcode;
+
    /********************
     * Problem Creation *
     ********************/
@@ -66,8 +68,24 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "read problem <%s>\n", filename);
    SCIPinfoMessage(scip, NULL, "============\n");
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
+
+   retcode = SCIPreadProb(scip, filename, NULL);
+
+   switch( retcode )
+   {
+   case SCIP_NOFILE:
+      SCIPinfoMessage(scip, NULL, "file <%s> not found\n", filename);
+      return SCIP_OKAY;
+   case SCIP_PLUGINNOTFOUND:
+      SCIPinfoMessage(scip, NULL, "no reader for input file <%s> available\n", filename);
+      return SCIP_OKAY;
+   case SCIP_READERROR:
+      SCIPinfoMessage(scip, NULL, "error reading file <%s>\n", filename);
+      return SCIP_OKAY;
+   default:
+      SCIP_CALL( retcode );
+   }
 
    /*******************
     * Problem Solving *

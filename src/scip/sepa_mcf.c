@@ -5842,7 +5842,7 @@ SCIP_RETCODE addCut(
    if( sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts, cutoff) );
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts, cutoff) );
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &cutvals);

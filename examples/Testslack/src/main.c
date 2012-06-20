@@ -46,6 +46,7 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
+#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -61,12 +62,13 @@ int findvarpos(
 
    for( c = nvars-1; c >= 0; c-- )
    {
-      if( vars[c] == var )
+      if( vars[c] == var )6
          return c;
    }
 
    return -1;
 }
+#endif
 
 /** copies an array of variables and objective values */
 static
@@ -155,13 +157,14 @@ SCIP_RETCODE SCIPsolveSlack(
    int nvars;
    int norigvars;
    int maxprio;
-   int minprio;
    int currprio;
    int currconsgroup;
    int currvarboundgroup;
    int c;
    int count;
-
+#ifndef NDEBUG
+   int minprio;
+#endif
    assert(scip != NULL);
    assert(status != NULL);
    assert(nconsgroups >= 0);
@@ -260,6 +263,17 @@ SCIP_RETCODE SCIPsolveSlack(
    assert(origvars != NULL);
    assert(norigvars != 0);
 
+   /* allocating the Memory to avoid a warning */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedvargroups), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(varboundconss), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(supindvarboundgroups), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedconsgroups), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(supindconsgroups), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedvargroupprios), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(vargroupindices), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(consgroupindices), 0) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(copiedconsgroupprios), 0) );
+
    /* copying the original objective function to solve the original problem */
    if(optorig)
    {
@@ -300,10 +314,12 @@ SCIP_RETCODE SCIPsolveSlack(
    else
       maxprio = copiedvargroupprios[0];
 
+#ifndef NDEBUG
    if( vargroupisempty || ( !consgroupisempty && copiedconsgroupprios[nconsgroups-1] < copiedvargroupprios[nvargroups-1] ))
       minprio = copiedconsgroupprios[nconsgroups-1];
    else
       minprio = copiedvargroupprios[nvargroups-1];
+#endif
 
    /* remember all the binvars that will be created to return value at the end of the function */
    SCIP_CALL( SCIPallocMemoryArray(scip, &allbinvars, nconsgroups + nvargroups) );
@@ -311,7 +327,7 @@ SCIP_RETCODE SCIPsolveSlack(
    /* create the superindicator constraints for the member of the consgroups array */
    if( !consgroupisempty )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&copiedconsgroups, consgroups, nconsgroups) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &copiedconsgroups, consgroups, nconsgroups) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(supindconsgroups), nconsgroups) );
 
       for( c = 0; c < nconsgroups; ++c)
@@ -401,7 +417,7 @@ SCIP_RETCODE SCIPsolveSlack(
       }
 
       /* duplicate the var groups to avoid any change in the original var groups */
-      SCIP_ALLOC( BMSduplicateMemoryArray(&copiedvargroups, vargroups, nvargroups) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &copiedvargroups, vargroups, nvargroups) );
 
       /* allocating the memory for the superindvargroups pointer */
       SCIP_CALL( SCIPallocMemoryArray(scip, &(supindvarboundgroups), nvargroups) );
@@ -909,7 +925,7 @@ SCIP_RETCODE SCIPsolveSlack(
    if(optorig)
       SCIPfreeMemoryArray(scip, &sols);
  TERMINATE1:
-   if(!vargroupisempty && consviols != NULL)
+   //   if(!vargroupisempty && consviols != NULL)
       SCIPfreeMemoryArray(scip, &varboundconss);
 
 
@@ -925,10 +941,10 @@ SCIP_RETCODE SCIPsolveSlack(
          SCIPfreeMemoryArray(scip, &(supindconsgroups[c]));
       }
 
-      SCIPfreeMemoryArray(scip, &supindconsgroups);
-      BMSfreeMemoryArray(&copiedconsgroups);
-      SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
-      SCIPfreeMemoryArray(scip, &consgroupindices);
+      // SCIPfreeMemoryArray(scip, &supindconsgroups);
+      // SCIPfreeMemoryArray(scip, &copiedconsgroups);
+      // SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
+      // SCIPfreeMemoryArray(scip, &consgroupindices);
    }
 
    if( !vargroupisempty )
@@ -943,11 +959,21 @@ SCIP_RETCODE SCIPsolveSlack(
          SCIPfreeMemoryArray(scip, &(supindvarboundgroups[c]));
       }
 
-      SCIPfreeMemoryArray(scip, &supindvarboundgroups);
-      BMSfreeMemoryArray(&copiedvargroups);
-      SCIPfreeMemoryArray(scip, &copiedvargroupprios);
-      SCIPfreeMemoryArray(scip, &vargroupindices);
+      // SCIPfreeMemoryArray(scip, &supindvarboundgroups);
+      // SCIPfreeMemoryArray(scip, &copiedvargroups);
+      // SCIPfreeMemoryArray(scip, &copiedvargroupprios);
+      // SCIPfreeMemoryArray(scip, &vargroupindices);
    }
+
+   SCIPfreeMemoryArray(scip, &supindconsgroups);
+   SCIPfreeMemoryArray(scip, &copiedconsgroups);
+   SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
+   SCIPfreeMemoryArray(scip, &consgroupindices);
+
+   SCIPfreeMemoryArray(scip, &supindvarboundgroups);
+   SCIPfreeMemoryArray(scip, &copiedvargroups);
+   SCIPfreeMemoryArray(scip, &copiedvargroupprios);
+   SCIPfreeMemoryArray(scip, &vargroupindices);
 
    SCIPfreeMemoryArray(scip, &origobjvals);
    SCIPfreeMemoryArray(scip, &origvars);

@@ -310,6 +310,7 @@ SCIP_RETCODE convertSides(
       default:
          SCIPerrorMessage("Error, constraint %d has no bounds!",i);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    return SCIP_OKAY;
@@ -1508,6 +1509,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          default:
             SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -1655,15 +1657,16 @@ SCIP_RETCODE SCIPlpiGetSides(
       default:
          SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
  CLEANUP:
    if( lsense != NULL )
       QSfree(lsense);
-   if( lrng != NULL ) 
+   if( lrng != NULL )
       QSfree(lrng);
-   if( lrhs != NULL ) 
+   if( lrhs != NULL )
       QSfree(lrhs);
 
    QS_RETURN(rval);
@@ -2338,6 +2341,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          case QS_COL_BSTAT_UPPER:
@@ -2345,6 +2349,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          case QS_COL_BSTAT_LOWER:
@@ -2352,11 +2357,13 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
                SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
             break;
          default:
             SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i]*sense);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2390,6 +2397,7 @@ SCIP_RETCODE SCIPlpiGetSol(
          default:
             SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2496,7 +2504,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("saving QSopt basis into %p/%p\n", cstat, rstat);
+   SCIPdebugMessage("saving QSopt basis into %p/%p\n", (void*)cstat, (void*)rstat);
 
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
@@ -2525,6 +2533,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       default:
          SCIPerrorMessage("Unknown row basic status %c", rstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2546,6 +2555,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       default:
          SCIPerrorMessage("Unknown column basic status %c", cstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    return SCIP_OKAY;
@@ -2565,7 +2575,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("loading basis %p/%p into QSopt\n", cstat, rstat);
+   SCIPdebugMessage("loading basis %p/%p into QSopt\n", (void*)cstat, (void*)rstat);
 
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
@@ -2592,6 +2602,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("Unknown row basic status %d", rstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2613,6 +2624,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2764,7 +2776,7 @@ SCIP_RETCODE SCIPlpiGetState(
 
    /* allocate lpistate data */
    SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows));
-   SCIPdebugMessage("storing QSopt LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
+   SCIPdebugMessage("storing QSopt LPI state in %p (%d cols, %d rows)\n", (void*)*lpistate, ncols, nrows);
 
    /* get unpacked basis information from QSopt */
    SCIP_CALL( ensureColMem(lpi, ncols) );
@@ -2811,7 +2823,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->ncols <= ncols);
    assert(lpistate->nrows <= nrows);
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt LP with %d cols and %d rows\n", lpistate, lpistate->ncols,
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into QSopt LP with %d cols and %d rows\n", (void*)lpistate, lpistate->ncols,
       lpistate->nrows, ncols, nrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
@@ -2867,7 +2879,7 @@ SCIP_RETCODE SCIPlpiSetState(
       default:
          SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    for( i = 0; i < ncols; ++i )
@@ -2889,7 +2901,7 @@ SCIP_RETCODE SCIPlpiSetState(
       default:
          SCIPerrorMessage("Unknown column basic status %d", lpi->iccnt[i]);
          SCIPABORT();
-         break;
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 

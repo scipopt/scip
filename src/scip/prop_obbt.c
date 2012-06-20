@@ -216,7 +216,7 @@ SCIP_RETCODE addObjCutoff(
 
    /* create objective cutoff row; set local flag to FALSE since primal cutoff is globally valid */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "obbt_objcutoff");
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, rowname, -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for( i = 0; i < nvars; i++ )

@@ -123,9 +123,10 @@ interface
 - added basic creation methods for all constraint handlers
 - added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions for
   non-fundamental callbacks of variables and problems.
-- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), SCIPcreateRowSepa() that allow
-  to set the originating constraint handler or separator of a row respectively; this is, for instance, needed for
-  statistics on the number of applied cuts.
+- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), and SCIPcreateRowSepa() that allow to
+  set the originating constraint handler or separator of a row respectively; this is, for instance, needed for statistics on
+  the number of applied cuts. If rows are created outside a constraint handler or separator use SCIPcreateRowUnspec() and
+  SCIPcreateEmptyRowUnspec(). The use of SCIPcreateEmptyRow() and SCIPcreateRow() is deprecated;
 - new functions SCIProwGetOrigintype and SCIProwGetOriginCons SCIProwGetOriginSepa to obtain the originator that created a row
 - new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)

@@ -1303,16 +1303,18 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_CALL( SCIPexprintFree(&exprint) );
 
    SCIPstatistic(
-      int nnonzs;
-      nnonzs = 0;
-      for( i = 0; i < nvars; ++i)
-         nnonzs += termcounter[i];
-      SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
-      nnonzs = 0;
-      for( i = 0; i < nvars; ++i)
-         if( conscounter[i] > 0 )
-            nnonzs++;
-      SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
+      {
+	 int nnonzs;
+	 nnonzs = 0;
+	 for( i = 0; i < nvars; ++i)
+	    nnonzs += termcounter[i];
+	 SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
+	 nnonzs = 0;
+	 for( i = 0; i < nvars; ++i)
+	    if( conscounter[i] > 0 )
+	       nnonzs++;
+	 SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
+      }
       );
 
    /* free counter arrays for weighted objectives */

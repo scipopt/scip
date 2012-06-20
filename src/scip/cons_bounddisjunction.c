@@ -206,21 +206,19 @@ SCIP_RETCODE dropEvents(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for catching events on watched variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for bound disjunction constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   
+   /* set event handler for catching events on watched variables */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
+
    return SCIP_OKAY;
 }
 
@@ -2754,11 +2752,12 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata;
    SCIP_CONFLICTHDLR* conflicthdlr;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecBounddisjunction, NULL) );
-   
+
    /* allocate memory for conflict handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
 
@@ -2774,7 +2773,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConflicthdlrFree(scip, conflicthdlr, conflictFreeBounddisjunction) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -2910,8 +2909,9 @@ int SCIPgetNVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return 0;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2930,8 +2930,9 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2950,8 +2951,9 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return SCIP_BOUNDTYPE_LOWER; /* arbitrarily return some boundtype */
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2970,8 +2972,9 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
+      return NULL;
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

@@ -45,15 +45,17 @@
       }                                                                 \
    }
 
+/* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
 #define ABORT_ZERO(x) { int _restat_;                                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPerrorMessage("LP Error: CPLEX returned %d\n", _restat_);   \
          SCIPABORT();                                                   \
+         return FALSE;                                                  \
       }                                                                 \
    }
 
-#define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
+#define CPX_INT_MAX      2000000000          /* CPLEX doesn't accept larger values in integer parameters */
 
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
@@ -553,8 +555,10 @@ int getIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
          return lpi->cpxparam.intparval[i];
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -791,7 +795,7 @@ void reconvertBothSides(
             rhs[i] = lpi->rhsarray[i];
          }
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -840,7 +844,7 @@ void reconvertLhs(
          else
             lhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -888,7 +892,7 @@ void reconvertRhs(
          else
             rhs[i] = lpi->rhsarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();

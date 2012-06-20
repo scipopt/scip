@@ -11871,7 +11871,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   type = 'b';
                   break;
                default:
-                  SCIPerrorMessage("unknown base state type %c\n", type);
+                  SCIPerrorMessage("unknown base stat %d\n", cstat[j]);
                   SCIPABORT();
                }
                SCIPdebugMessage("%f (%d) [%c] ", primsol[j], j, type);
@@ -12064,9 +12064,9 @@ SCIP_RETCODE lpLexDualSimplex(
                for( j = 0; j < lp->nlpicols; ++j )
                {
                   if( fixedc[j] )
-                  {
+		  {
                      SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
-                  }
+		  }
                   else
                   {
                      char cstart = '[';
@@ -12094,7 +12094,7 @@ SCIP_RETCODE lpLexDualSimplex(
                         type = 'b'; 
                         break;
                      default: 
-                        SCIPerrorMessage("unknown base state type %c\n", type);
+                        SCIPerrorMessage("unknown base state %d\n", cstat[j]);
                         SCIPABORT();
                      }
                      SCIPdebugMessage("%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);

@@ -148,24 +148,22 @@ SCIP_RETCODE unlockRounding(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->nlastcliques = 0;
    (*conshdlrdata)->nlastimpls = 0;
 
-   /* get event handler for catching events on watched variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for logic or constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   
+   /* set event handler for catching events on watched variables */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
+
    return SCIP_OKAY;
 }
 
@@ -1451,72 +1449,90 @@ SCIP_RETCODE enforcePseudo(
 
 /** sorts logicor constraint's variables by non-decreasing variable index */
 static
-SCIP_RETCODE consdataSort(
-   SCIP*                 scip,               /**< SCIP data structure */
+void consdataSort(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
-      consdata->sorted = TRUE;
-   else if( !consdata->sorted )
+   if( !consdata->sorted )
    {
-      SCIP_VAR* tmp1 = NULL;
-      SCIP_VAR* tmp2 = NULL;
-      
-      if( consdata->watchedvar1 != -1 )
+      if( consdata->nvars <= 1 )
+	 consdata->sorted = TRUE;
+      else
       {
-         tmp1 = consdata->vars[consdata->watchedvar1];
-         assert(tmp1 != NULL);
-         consdata->watchedvar1 = -1;
-         if( consdata->watchedvar2 != -1 )
-         {
-            tmp2 = consdata->vars[consdata->watchedvar2];
-            assert(tmp2 != NULL);
-            consdata->watchedvar2 = -1;
-         }
-      }
-      
-      assert(consdata->watchedvar1 == -1);
-      assert(consdata->watchedvar2 == -1);
+	 SCIP_VAR* var1 = NULL;
+	 SCIP_VAR* var2 = NULL;
 
-      SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
-      consdata->sorted = TRUE;
-      if( tmp1 != NULL )
-      {
-         int v;
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            if( consdata->vars[v] == tmp1 )
-            {
-               assert(consdata->watchedvar1 == -1);
-               consdata->watchedvar1 = v;
-               if (tmp2 == NULL || consdata->watchedvar2 != -1)
-                  break;
-            }
-            else if( consdata->vars[v] == tmp2 )
-            {
-               assert(consdata->watchedvar2 == -1);
-               assert(consdata->vars[v] != NULL);
-               consdata->watchedvar2 = v;
-               if( consdata->watchedvar1 != -1 )
-                  break;
-            }
-         }
-      }
+	 /* remember watch variables */
+	 if( consdata->watchedvar1 != -1 )
+	 {
+	    var1 = consdata->vars[consdata->watchedvar1];
+	    assert(var1 != NULL);
+	    consdata->watchedvar1 = -1;
+	    if( consdata->watchedvar2 != -1 )
+	    {
+	       var2 = consdata->vars[consdata->watchedvar2];
+	       assert(var2 != NULL);
+	       consdata->watchedvar2 = -1;
+	    }
+	 }
+	 assert(consdata->watchedvar1 == -1);
+	 assert(consdata->watchedvar2 == -1);
+	 assert(var1 != NULL || var2 == NULL);
 
+	 /* sort variables after index */
+	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+	 consdata->sorted = TRUE;
+
+	 /* correct watched variables */
+	 if( var1 != NULL )
+	 {
+	    int pos;
+#ifndef NDEBUG
+	    SCIP_Bool found;
+
+	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    assert(found);
+#else
+	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+#endif
+	    assert(pos >= 0 && pos < consdata->nvars);
+	    consdata->watchedvar1 = pos;
+
+	    if( var2 != NULL )
+	    {
+#ifndef NDEBUG
+	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       assert(found);
+#else
+	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+#endif
+	       assert(pos >= 0 && pos < consdata->nvars);
+	       consdata->watchedvar2 = pos;
+	    }
+	 }
+      }
    }
-   assert(consdata->sorted);
 
-   return SCIP_OKAY;
+#ifdef SCIP_DEBUG
+   /* check sorting */
+   {
+      int v;
+
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
+      }
+   }
+#endif
 }
 
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyLogicorcons)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
@@ -1524,24 +1540,29 @@ SCIP_DECL_HASHGETKEY(hashGetKeyLogicorcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqLogicorcons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
    SCIP_Bool coefsequal;
    int i;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
-   scip = (SCIP*)userptr; 
-   assert(scip != NULL);
-   
+
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
 
    /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
-   SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
+   consdataSort(consdata1);
+   consdataSort(consdata2);
+   assert(consdata1->sorted);
+   assert(consdata2->sorted);
 
    coefsequal = TRUE;
 
@@ -1550,14 +1571,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLogicorcons)
       /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
-         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
          coefsequal = FALSE;
          break;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
-   } 
-   
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
+   }
+
    return coefsequal;
 }
 
@@ -1670,7 +1691,8 @@ SCIP_RETCODE detectRedundantConstraints(
 
       consdata0 = SCIPconsGetData(cons0);
       /* sort the constraint */
-      SCIP_CALL( consdataSort(scip, consdata0) );
+      consdataSort(consdata0);
+      assert(consdata0->sorted);
 
       /* get constraint from current hash table with same variables as cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
@@ -1736,7 +1758,7 @@ SCIP_RETCODE removeRedundantCons(
    SCIPdebugPrintCons(scip, cons1, NULL);
 
    /* update flags of cons0 */
-   SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
+   SCIP_CALL( updateFlags(scip, cons0, cons1) );
 
    /* delete cons1 */
    SCIP_CALL( SCIPdelCons(scip, cons1) );
@@ -1773,7 +1795,8 @@ SCIP_RETCODE removeRedundantConstraints(
    assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
-   SCIP_CALL( consdataSort(scip, consdata0) );
+   consdataSort(consdata0);
+   assert(consdata0->sorted);
 
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
@@ -1801,7 +1824,8 @@ SCIP_RETCODE removeRedundantConstraints(
       assert(consdata1 != NULL);
 
       /* sort the constraint */
-      SCIP_CALL( consdataSort(scip, consdata1) );
+      consdataSort(consdata1);
+      assert(consdata1->sorted);
 
       if( consdata0->nvars <= consdata1->nvars )
       {
@@ -3366,9 +3390,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONFLICTHDLR* conflicthdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for events on watched variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecLogicor, NULL) );
 
    /* create conflict handler for logic or constraints */
@@ -3376,7 +3401,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          conflictExecLogicor, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

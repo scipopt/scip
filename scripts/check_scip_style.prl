@@ -19,6 +19,8 @@
 #
 # Known issues: Does not check indentation of enums or unions correctly.
 #
+# todo: check for printf
+# todo: check for SCIPABORT, SCIP_CALL_ABORT
 my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )

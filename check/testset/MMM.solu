@@ -30,7 +30,7 @@
 =opt=  dcmulti                      1.8818200000e+05
 =opt=  dfn-gwin-UUM                  38752.000000000
 =opt=  disctom                     -5.0000000000e+03
-=best= ds                           9.3520000000e+01
+=opt=  ds                           9.3520000000e+01
 =opt=  dsbmip                      -3.0519817501e+02
 =opt=  egout                        5.6810070000e+02
 =opt=  eil33-2                            934.007916
@@ -152,7 +152,7 @@
 =opt=  sp98ir                    219676790.400000006
 =opt=  stein27                      1.8000000000e+01
 =opt=  stein45                      3.0000000000e+01
-=best= stp3d                        4.9371965000e+02
+=opt=  stp3d                        4.9371965000e+02
 =opt=  swath                          4.67407491e+02
 =opt=  tanglegram1                    5182.000000000
 =opt=  tanglegram2                     443.000000000

@@ -1632,6 +1632,7 @@ SCIP_RETCODE applyGenVBounds(
    return SCIP_OKAY;
 }
 
+/** initialize propagator data */
 static
 SCIP_RETCODE initPropdata(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1642,6 +1643,7 @@ SCIP_RETCODE initPropdata(
 
    assert(scip != NULL);
    assert(propdata != NULL);
+   assert(propdata->eventhdlr != NULL);
 
    SCIPdebugMessage("init propdata\n");
 
@@ -1655,10 +1657,6 @@ SCIP_RETCODE initPropdata(
    /* init genvboundstore hashmaps */
    SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
    SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-
-   /* get event handler */
-   propdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   assert(propdata->eventhdlr != NULL);
 
    return SCIP_OKAY;
 }
@@ -1907,7 +1905,6 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->genvboundstoresize = 0;
    propdata->lbevents = NULL;
    propdata->ubevents = NULL;
-   propdata->eventhdlr = NULL;
    propdata->lbgenvbounds = NULL;
    propdata->ubgenvbounds = NULL;
    propdata->lbeventsmap = NULL;
@@ -2242,7 +2239,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
          PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
 
    /* include event handler */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );
 
    return SCIP_OKAY;
 }

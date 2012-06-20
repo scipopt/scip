@@ -3708,6 +3708,7 @@ static
 SCIP_RETCODE focusnodeToSubroot(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -4042,7 +4043,7 @@ SCIP_RETCODE SCIPnodeFocus(
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
-            SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
+            SCIP_CALL( focusnodeToSubroot(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, tree, lp, branchcand) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
                && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
                subroot = tree->focusnode;

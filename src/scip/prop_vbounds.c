@@ -138,6 +138,7 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for catching bound changes */
    int*                  topoorder;          /**< array mapping on the bounds of variables in topological order;
                                               *   or -1, if the bound that should be at that position has no outgoing
                                               *   implications, cliques, or vbounds;
@@ -283,7 +284,7 @@ SCIP_RETCODE catchEvents(
    assert(propdata->topoorder != NULL);
 
    /* catch variable events according to computed eventtypes */
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
    vars = SCIPgetVars(scip);
@@ -339,7 +340,7 @@ SCIP_RETCODE dropEvents(
 
    assert(propdata != NULL);
 
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlr = propdata->eventhdlr;
    assert(eventhdlr != NULL);
 
    vars = SCIPgetVars(scip);
@@ -968,257 +969,6 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** relax lower bound of give variable as long as the given inference upper bound still leads to a cutoff and add that
- *  bound change to the conflict set
- */
-static
-SCIP_RETCODE relaxInfervarLowerbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the lower bound should be relaxed */
-   SCIP_Real             inferub,            /**< upper bound which led to infeasibility */
-   SCIP_Real*            newlb               /**< pointer to store the reached relaxed lower bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosLb(var);
-   bdchgidx = NULL;
-
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoLb(var, nbdchgs-1))));
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d try to relax lower bound to %.15g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, inferub);
-
-   /* try to relax lower bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
-      assert(SCIPisEQ(scip, *newlb, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-      SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-
-      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference upper bound is
-       * greater equal to the next possible relaxed lower bound, then we have to break since in this case the inference
-       * upper bound does not lead to a cutoff anymore
-       * @todo better use SCIPisFeasGE()?
-       */
-      if( SCIPisGE(scip, inferub, SCIPbdchginfoGetOldbound(bdchginfo)) )
-         break;
-
-      SCIPdebugMessage("***** relaxed lower bound of inference variable <%s> from <%g> to <%g>\n",
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *newlb = SCIPbdchginfoGetOldbound(bdchginfo);
-      nbdchgs--;
-   }
-
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
-
-   SCIPdebugMessage("relaxed lower bound to %.15g\n", *newlb);
-
-   return SCIP_OKAY;
-}
-
-/** relax lower bound of give variable as long as the given inference bound still leads to a cutoff and add that bound
- *  change to the conflict set
- */
-static
-SCIP_RETCODE relaxVbdvarLowerbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosLb(var);
-   bdchgidx = NULL;
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g], coef=%.15g, constant=%.15g: nbdchgs %d try to relax lower bound to %.15g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), coef, constant, nbdchgs, bound);
-
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoLb(var, nbdchgs-1))));
-
-   /* try to relax lower bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoLb(var, nbdchgs-1);
-
-      SCIPdebugMessage("lower bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-
-      /* check if the old lower bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relaxed lower bound, then we have to break since in this case the inference bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
-         break;
-
-      SCIPdebugMessage("***** relaxed lower bound of vbound variable <%s> from <%g> to <%g>\n",
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *inferbound = coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant;
-      nbdchgs--;
-   }
-
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add lower bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
-
-   return SCIP_OKAY;
-}
-
-/** relax upper bound of give variable as long as the given inference lower bound still leads to a cutoff and add that
- *  bound change to the conflict set
- */
-static
-SCIP_RETCODE relaxInfervarUpperbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             inferlb,            /**< lower bound which led to infeasibility */
-   SCIP_Real*            newub               /**< pointer to store the reached relaxed upper bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosUb(var);
-   bdchgidx = NULL;
-
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoUb(var, nbdchgs-1))));
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g]: nbdchgs %d try to relax upper bound to %.15g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), nbdchgs, inferlb);
-
-   /* try to relax upper bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
-      assert(SCIPisEQ(scip, *newub, SCIPbdchginfoGetNewbound(bdchginfo)));
-
-      SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-
-      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference lower bound is less
-       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference lower bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisLE(scip, inferlb, SCIPbdchginfoGetOldbound(bdchginfo)) )
-         break;
-
-      SCIPdebugMessage("***** relaxed upper bound of inference variable <%s> from <%g> to <%g>\n",
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *newub = SCIPbdchginfoGetOldbound(bdchginfo);
-      nbdchgs--;
-   }
-
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
-
-   SCIPdebugMessage("relaxed upper bound to %.15g\n", *newub);
-
-   return SCIP_OKAY;
-}
-
-/** relax upper bound of give variable as long as the given inference bound still leads to a cutoff and add that bound
- *  change to the conflict set
- */
-static
-SCIP_RETCODE relaxVbdvarUpperbound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
-   )
-{
-   SCIP_BDCHGINFO* bdchginfo;
-   SCIP_BDCHGIDX* bdchgidx;
-   int nbdchgs;
-
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-   /* get number of bound changes */
-   nbdchgs = SCIPvarGetNBdchgInfosUb(var);
-   bdchgidx = NULL;
-
-   SCIPdebugMessage("variable <%s>[%.15g,%.15g], coef=%.15g, constant=%.15g: nbdchgs %d try to relax upper bound to %.15g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), coef, constant, nbdchgs, bound);
-
-   assert(nbdchgs > 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
-   assert(nbdchgs == 0 || SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPbdchginfoGetNewbound(SCIPvarGetBdchgInfoUb(var, nbdchgs-1))));
-
-   /* try to relax upper bound */
-   while( nbdchgs > 0 )
-   {
-      bdchginfo = SCIPvarGetBdchgInfoUb(var, nbdchgs-1);
-
-      SCIPdebugMessage("upper bound change %d oldbd=%.15g, newbd=%.15g, depth=%d, pos=%d, redundant=%u\n",
-         nbdchgs, SCIPbdchginfoGetOldbound(bdchginfo), SCIPbdchginfoGetNewbound(bdchginfo),
-         SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), SCIPbdchginfoIsRedundant(bdchginfo));
-
-      /* check if the old upper bound is sufficient to prove infeasibility; in case the inference bound is greater
-       * equal to the next possible relaxed upper bound, then we have to break since in this case the inference bound
-       * does not lead to a cutoff anymore
-       */
-      if( SCIPisGE(scip, bound, coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant) )
-         break;
-
-      SCIPdebugMessage("***** relaxed upper bound of vbound variable <%s> from <%g> to <%g>\n",
-         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetOldbound(bdchginfo));
-
-      bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-      *inferbound = coef * SCIPbdchginfoGetOldbound(bdchginfo) + constant;
-      nbdchgs--;
-   }
-
-   /* if the nbdchgs is zero then the local bound matches the global bound, therefore bdchgidx equal to NULL represents
-    * the right time point and SCIP finds out that this bound is redundant since it is global
-    */
-   SCIPdebugMessage("add upper bound of bound change info %d to conflict set\n", nbdchgs);
-   SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
-
-   return SCIP_OKAY;
-}
-
 /** relaxes bound of give variable as long as the given inference bound still leads to a cutoff and add that bound
  *  change to the conflict set
  */
@@ -1227,20 +977,17 @@ SCIP_RETCODE relaxVbdvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype used for the variable bound variable */
-   SCIP_Real             coef,               /**< variable bound coefficient */
-   SCIP_Real             constant,           /**< variable bound constant */
-   SCIP_Real             bound,              /**< bound to exceed */
-   SCIP_Real*            inferbound          /**< pointer to store the relaxed inferbound bound */
+   SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( relaxVbdvarLowerbound(scip, var, coef, constant, bound, inferbound) );
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, relaxedbd) );
    }
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      SCIP_CALL( relaxVbdvarUpperbound(scip, var, coef, constant, bound, inferbound) );
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, relaxedbd) );
    }
 
    return SCIP_OKAY;
@@ -1281,8 +1028,8 @@ SCIP_RETCODE analyzeConflictLowerbound(
    if( canwide && propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;
-      SCIP_Real newub;
-      SCIP_Real previnferlb;
+      SCIP_Real relaxedbd;
+      SCIP_Real relaxedub;
       int pos;
 
       pos = inferInfoGetPos(inferinfo);
@@ -1290,50 +1037,32 @@ SCIP_RETCODE analyzeConflictLowerbound(
       assert(pos < propdata->nbounds);
 
       vbdvar = vars[getVarIndex(pos)];
-      newub = SCIPvarGetUbLocal(infervar);
-      previnferlb = inferlb;
 
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      /* try to relax inference variable upper bound bounds */
-      SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferlb, &newub) );
+      /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedub = inferlb - 1.0;
+      else
+         relaxedub = inferlb - SCIPcutoffbounddelta(scip);
+
+      /* try to relax inference variable upper bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
+
+      /* collect the relaxed upper bound which is reported to the conflict analysis */
+      relaxedub = SCIPgetConflictVarRelaxedUb(scip, infervar);
+
+      /* compute how far the variable bound variable can be relaxed */
+      relaxedbd = (relaxedub - constant) / coef;
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), coef, constant, newub, &previnferlb) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-
-      /* if the upper bound relaxation was successful we try to create another conflict by relaxing the bound of the
-       * variable bound variable first
-       */
-      if( SCIPisGT(scip, newub, SCIPvarGetUbLocal(infervar)) )
-      {
-         SCIPdebugMessage("try to create conflict using bound widening order: variable bound variable, inference variable\n");
-
-         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         newub = SCIPvarGetUbLocal(infervar);
-
-         /* try to relax variable bound variable */
-         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), coef, constant, newub, &inferlb) );
-
-         /* continue conflict analysis only if we improved the inference lower bound; otherwise we end up with previous
-          * conflict set
-          */
-         if( SCIPisLT(scip, inferlb, previnferlb ) )
-         {
-            /* try to relax inference variable upper bound bounds */
-            SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferlb, &newub) );
-
-            /* analyze the conflict */
-            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-         }
-      }
    }
    else
    {
@@ -1387,8 +1116,8 @@ SCIP_RETCODE analyzeConflictUpperbound(
    if( canwide && propdata->usebdwidening )
    {
       SCIP_VAR* vbdvar;
-      SCIP_Real newlb;
-      SCIP_Real previnferub;
+      SCIP_Real relaxedbd;
+      SCIP_Real relaxedlb;
       int pos;
 
       pos = inferInfoGetPos(inferinfo);
@@ -1396,50 +1125,32 @@ SCIP_RETCODE analyzeConflictUpperbound(
       assert(pos < propdata->nbounds);
 
       vbdvar = vars[getVarIndex(pos)];
-      newlb = SCIPvarGetLbLocal(infervar);
-      previnferub = inferub;
 
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
-      /* try to relax inference variable lower bound bounds */
-      SCIP_CALL( relaxInfervarLowerbound(scip, infervar, inferub, &newlb) );
+      /* compute a relaxed lower bound which would be sufficient to be still infeasible */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedlb = inferub + 1.0;
+      else
+         relaxedlb = inferub + SCIPcutoffbounddelta(scip);
+
+      /* try to relax inference variable lower bound such that the infeasibility is still given */
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
+
+      /* collect the lower bound which is reported to the conflict analysis */
+      relaxedlb = SCIPgetConflictVarRelaxedLb(scip, infervar);
+
+      /* compute how far the variable bound variable can be relaxed */
+      relaxedbd = (relaxedlb - constant) / coef;
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &previnferub) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-
-      /* if the lower bound relaxation was successful we try to create another conflict by relaxing the bound of the
-       * variable bound variable first
-       */
-      if( SCIPisLT(scip, newlb, SCIPvarGetLbLocal(infervar)) )
-      {
-         SCIPdebugMessage("try to create conflict using bound widening order: variable bound variable, inference variable\n");
-
-         /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         newlb = SCIPvarGetLbLocal(infervar);
-
-         /* try to relax variable bound variable */
-         SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), -coef, -constant, -newlb, &inferub) );
-
-         /* continue conflict analysis only if we improved the inference upper bound w.r.t. the previous conflict
-          * analysis run; otherwise we end up with previous conflict set
-          */
-         if( SCIPisGT(scip, inferub, previnferub ) )
-         {
-            /* try to relax inference variable upper bound bounds */
-            SCIP_CALL( relaxInfervarUpperbound(scip, infervar, inferub, &newlb) );
-
-            /* analyze the conflict */
-            SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-         }
-      }
    }
    else
    {
@@ -2071,7 +1782,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecVbound, (SCIP_EVENTHDLRDATA*)propdata) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

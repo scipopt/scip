@@ -114,6 +114,9 @@ SCIP_RETCODE computeFixingrate(
    int nbinvars;
    int i;
 
+   *fixingrate = 1.0;
+   *success = FALSE;
+
    fixingcounter = 0;
 
    /* if there is no NLP relaxation available (e.g., because the presolved problem is linear), use LP relaxation */
@@ -177,9 +180,6 @@ SCIP_RETCODE computeFixingrate(
       /* compute the number of variables which have an integral solution value in the LP */
       fixingcounter = SCIPgetNPseudoBranchCands(scip) - SCIPgetNLPBranchCands(scip);
    }
-
-   *fixingrate = 1.0;
-   *success = FALSE;
 
    /* abort, if all integer variables were fixed (which should not happen for MIP),
     * but frequently happens for MINLPs using an LP relaxation

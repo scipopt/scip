@@ -1492,8 +1492,17 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   assert( lpi != NULL );
+   assert( lpi->clp != NULL );
+   assert( objsen != NULL );
+
+   // Clp direction of optimization (1 - minimize, -1 - maximize, 0 - ignore)
+   if ( lpi->clp->getObjSense() < 0 )
+      *objsen = SCIP_OBJSEN_MAXIMIZE;
+   else
+      *objsen = SCIP_OBJSEN_MINIMIZE;
+
+   return SCIP_OKAY;
 }
 
 
@@ -2828,6 +2837,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 	 default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2859,7 +2869,9 @@ SCIP_RETCODE SCIPlpiGetBase(
 	    else
 	       cstat[j] = SCIP_BASESTAT_UPPER;
 	    break;
-	 default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+	 default: SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
 	 }
       }
    }
@@ -2921,6 +2933,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2958,6 +2971,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3406,7 +3420,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_DEVEX:
          primalmode = 2; dualmode = 3; break;
       default:
-         SCIPerrorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
+         SCIPerrorMessage("unkown pricing parameter %d!\n", ival);
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);
@@ -3424,7 +3440,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
+      /* should not happen - see above */
       SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       /** Amount of print out:

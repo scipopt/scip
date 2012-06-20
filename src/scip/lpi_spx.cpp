@@ -3554,7 +3554,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
          case SPxSolver::ON_LOWER:
             rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
@@ -3568,6 +3568,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3581,7 +3582,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
 	    /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
 	     * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
@@ -3606,6 +3607,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3656,6 +3658,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3678,6 +3681,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );

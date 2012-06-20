@@ -1016,7 +1016,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-void SCIPvarChgBranchFactor(
+SCIP_RETCODE SCIPvarChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             branchfactor        /**< factor to weigh variable's branching score with */
@@ -1026,7 +1026,7 @@ void SCIPvarChgBranchFactor(
  *  with lower priority in selection of branching variable
  */
 extern
-void SCIPvarChgBranchPriority(
+SCIP_RETCODE SCIPvarChgBranchPriority(
    SCIP_VAR*             var,                /**< problem variable */
    int                   branchpriority      /**< branching priority of the variable */
    );
@@ -1035,7 +1035,7 @@ void SCIPvarChgBranchPriority(
  *  with lower direction in selection of branching variable
  */
 extern
-void SCIPvarChgBranchDirection(
+SCIP_RETCODE SCIPvarChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
    );
@@ -1155,7 +1155,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
 
 /** stores the solution value as NLP solution in the problem variable */
 extern
-void SCIPvarSetNLPSol(
+SCIP_RETCODE SCIPvarSetNLPSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             solval              /**< solution value in the current NLP solution */
@@ -1357,7 +1357,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
 
 /** outputs variable information into file stream */
 extern
-void SCIPvarPrint(
+SCIP_RETCODE SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */

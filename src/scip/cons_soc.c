@@ -4176,16 +4176,17 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->trysolheur = NULL;
 
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_boundchange",
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, CONSHDLR_NAME"_boundchange",
          "signals a bound change to a second order cone constraint",
          processVarEvent, NULL) );
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+   conshdlrdata->eventhdlr = eventhdlr;
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution",
          "handles the event that a new primal solution has been found",
