@@ -330,43 +330,57 @@ SCIP_RETCODE addLocalBranchingConstraint(
    return SCIP_OKAY;
 }
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
+/** creates new solutions for the original problem by copying the solutions of the subproblem */
 static
-SCIP_RETCODE createNewSol(
+SCIP_RETCODE createNewSols(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< RENS heuristic structure                            */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
+   SCIP_HASHMAP*         varmapfw,           /**< mapping of SCIP variables to sub-SCIP variables     */
+   SCIP_HEUR*            heur,               /**< heuristic structure                                 */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
+   SCIP_SOL** subsols;
+   int nsubsols;
+   SCIP_VAR** subvars;
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   int i;
 
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
-
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert( nvars == SCIPgetNOrigVars(subscip) );
+   assert(nvars == SCIPgetNOrigVars(subscip));
 
+   /* for copying a solution we need an explicit mapping */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   for( i = 0; i < nvars; i++ )
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+   
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+   
+   nsubsols = SCIPgetNSols(subscip);
+   subsols = SCIPgetSols(subscip);
+   *success = FALSE;
+   
+   for( i = 0; i < nsubsols && !(*success); ++i )
+   {
+      /* copy the solution */
+      SCIP_CALL( SCIPgetSolVals(subscip, subsols[i], nvars, subvars, subsolvals) );
 
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+      /* create new solution for the original problem */
+      SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+      SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
-
+      /* try to add new solution to scip and free it immediately */
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+   }
+   
+   SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -637,26 +651,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* memory allocation */
-   SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvars, maxflips) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvals, maxflips) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lastroundedsols, heurdata->cyclelength) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lastalphas, heurdata->cyclelength) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cycles, heurdata->cyclelength) );
-
-   for( j = 0; j < heurdata->cyclelength; j++ )
-   {
-      SCIP_CALL( SCIPcreateSol(scip, &lastroundedsols[j], heur) );
-   }
-
-   closestsol = NULL;
-   if( heurdata->stage3 )
-   {
-      SCIP_CALL( SCIPcreateSol(scip, &closestsol, heur) );
-   }
-
-   mindistance = SCIPinfinity(scip);
-
    probingscip = NULL;
    varmapfw = NULL;
 
@@ -683,6 +677,23 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
          SCIP_CALL( SCIPsolve(probingscip) );
+         if( SCIPgetStage(probingscip) != SCIP_STAGE_SOLVING)
+         {
+            SCIP_STATUS probingstatus = SCIPgetStatus(probingscip);
+            
+            if( probingstatus == SCIP_STATUS_OPTIMAL )
+            {
+               assert( SCIPgetNSols(probingscip) > 0 );
+               SCIP_CALL( createNewSols(scip, probingscip, varmapfw, heur, &success) );
+               if( success )
+                  *result = SCIP_FOUNDSOL;
+            }
+            
+            /* free hash map and copied SCIP */
+            SCIPhashmapFree(&varmapfw);
+            SCIP_CALL( SCIPfree(&probingscip) );
+            return SCIP_OKAY;
+         }
          SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 2LL) );
 
          /* set SCIP into probing mode and create root node of the probing tree */
@@ -692,7 +703,25 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
       }
    }
+   
+   /* memory allocation */
+   SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvars, maxflips) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mostfracvals, maxflips) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lastroundedsols, heurdata->cyclelength) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lastalphas, heurdata->cyclelength) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cycles, heurdata->cyclelength) );
 
+   for( j = 0; j < heurdata->cyclelength; j++ )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &lastroundedsols[j], heur) );
+   }
+
+   closestsol = NULL;
+   if( heurdata->stage3 )
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &closestsol, heur) );
+   }
+   
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
@@ -718,6 +747,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
    bestnfracs = INT_MAX;
+   mindistance = SCIPinfinity(scip);
 
    /* pumping loop */
    while( nfracs > 0
@@ -832,6 +862,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          }
 
          assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), solval) && SCIPisFeasLE(scip, solval, SCIPvarGetUbLocal(var)));
+         assert(SCIPisIntegral(scip,solval));
          SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
 
          /* variables which are already integral, are treated separately */
@@ -865,7 +896,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
 
       }
-
+      
       if( heurdata->usefp20 )
       {
          SCIP_CALL( SCIPbacktrackProbing(probingscip, 1) );
@@ -938,6 +969,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
       SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
 
+      if( heurdata->stage3 )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
+      }
+      
       retcode = SCIPsolveDiveLP(scip, iterlimit, &lperror);
       lpsolstat = SCIPgetLPSolstat(scip);
 
@@ -988,6 +1024,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          {
             for( i = 0; i < nbinvars+nintvars; i++ )
             {
+               assert(SCIPisIntegral(scip,SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])));
                SCIP_CALL( SCIPsetSolVal(scip, closestsol, vars[i], SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])) );
             }
             mindistance = distance;
@@ -1054,7 +1091,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( heurdata->usefp20 )
       {
          assert(probingscip != NULL);
-         SCIP_CALL( SCIPrestartSolve(probingscip) );
+         SCIP_CALL( SCIPfreeTransform(probingscip) );
       }
       else
       {
@@ -1140,33 +1177,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* check, whether a solution was found */
          if( SCIPgetNSols(probingscip) > 0 )
          {
-            SCIP_SOL** subsols;
-            SCIP_VAR** subvars;
-            int nsubsols;
-
-            /* for copying a solution we need an explicit mapping */
-            SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-
-            for( i = 0; i < nvars; i++ )
-               subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-            nsubsols = SCIPgetNSols(probingscip);
-            subsols = SCIPgetSols(probingscip);
             success = FALSE;
-
-            /* check, whether a solution was found;
-             * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-             */
-            for( i = 0; i < nsubsols && !success; ++i )
-            {
-               SCIP_CALL( createNewSol(scip, probingscip, subvars, heur, subsols[i], &success) );
-            }
+            SCIP_CALL( createNewSols(scip, probingscip, varmapfw, heur, &success) );
             if( success )
                *result = SCIP_FOUNDSOL;
-
-            SCIPfreeBufferArray(scip, &subvars);
          }
-
       }
    }
 
