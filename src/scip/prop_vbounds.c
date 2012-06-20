@@ -1020,6 +1020,9 @@ SCIP_RETCODE analyzeConflictLowerbound(
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+      /* adjust lower bound */
+      inferlb = SCIPadjustedVarLb(scip, infervar, inferlb);
+
       /* compute a relaxed upper bound which would be sufficient to be still infeasible */
       if( SCIPvarIsIntegral(infervar) )
          relaxedub = inferlb - 1.0;
@@ -1096,6 +1099,9 @@ SCIP_RETCODE analyzeConflictUpperbound(
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      /* adjust upper bound */
+      inferub = SCIPadjustedVarUb(scip, infervar, inferub);
 
       /* compute a relaxed lower bound which would be sufficient to be still infeasible */
       if( SCIPvarIsIntegral(infervar) )
