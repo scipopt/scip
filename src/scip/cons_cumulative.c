@@ -3770,8 +3770,6 @@ SCIP_RETCODE checkOverload(
 
             (*initialized) = TRUE;
          }
-         else
-            assert((SCIPgetDepth(scip) == 0 || SCIPgetStage(scip) != SCIP_STAGE_SOLVING) && !SCIPinProbing(scip));
       }
    }
 
