@@ -208,11 +208,12 @@ extern "C" {
  * Defines for handling SCIP return codes
  */
 
-#ifndef NDEBUG
+/** this macro is used to stop SCIP in debug mode such that errors can be debugged;
+ *
+ *  @note In optimized mode this macro has no effect. That means, in case of an error it has to be ensured that code
+ *        terminates with an error code or continues safely.
+ */
 #define SCIPABORT() assert(FALSE)
-#else
-#define SCIPABORT() abort()
-#endif
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
