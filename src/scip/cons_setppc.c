@@ -2762,7 +2762,7 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set covering constraint is feasible anyway and can be deleted
        * - a set partitioning or packing constraint is infeasible
        */
-      if( (consdata->setppctype == SCIP_SETPPCTYPE_COVERING) && !SCIPconsIsModifiable(cons))
+      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
       {
 	 /* delete constraint */
 	 SCIPdebugMessage(" -> deleting set-covering constraint <%s>, at least two variables are fixed to 1\n", SCIPconsGetName(cons));
