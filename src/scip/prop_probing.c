@@ -543,8 +543,7 @@ SCIP_RETCODE applyProbing(
          }
 
          /* display probing status */
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE && (i+1) % 100 == 0 )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (i+1) % 100 == 0 )
          {
             SCIP_VERBLEVEL verblevel;
 
@@ -695,9 +694,7 @@ SCIP_RETCODE applyProbing(
             "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
          i = 0;
 
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE
-            && SCIPgetNBinVars(scip) != nbinvars )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPgetNBinVars(scip) != nbinvars )
          {
             SCIP_VAR** probvars;
             int nnewvars;
@@ -755,8 +752,7 @@ SCIP_RETCODE applyProbing(
             }
          }
 
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
             /* resorting here might lead to probing a second time on the same variable */
             SCIP_CALL( sortVariables(scip, propdata, propdata->sortedvars, propdata->nsortedbinvars, 0) );
@@ -1467,8 +1463,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
           * case leftproplbs[j] = 1, rightproblbs[j] = 0, i.e., vars[j] and probingvar are fixed to opposite values
           *    -> aggregation is 1 * vars[j] + 1 * probingvar = 1 * 1 - 0 * 0 = 0 -> correct
           */
-         /**@todo maybe only in SCIP_STAGE_PRESOLVING ? */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
             SCIP_Bool aggregated;
             SCIP_Bool redundant;
