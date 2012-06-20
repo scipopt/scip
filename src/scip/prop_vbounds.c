@@ -123,10 +123,13 @@
  */
 #define getLbIndex(idx) (2*(idx))
 #define getUbIndex(idx) (2*(idx)+1)
+#define varGetLbIndex(var) (getLbIndex(SCIPvarGetProbindex(var)))
+#define varGetUbIndex(var) (getUbIndex(SCIPvarGetProbindex(var)))
 #define getVarIndex(idx) ((idx)/2)
 #define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
 #define getBoundString(lower) ((lower) ? "lb" : "ub")
+#define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
 #define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
 
 /**@} */
@@ -524,11 +527,9 @@ SCIP_RETCODE dfs(
                   continue;
 
                if( cliquevals[i] )
-                  idx = getUbIndex(SCIPvarGetProbindex(cliquevars[i]));
+                  idx = varGetUbIndex(cliquevars[i]);
                else
-               {
-                  idx = getLbIndex(SCIPvarGetProbindex(cliquevars[i]));
-               }
+                  idx = varGetLbIndex(cliquevars[i]);
 
                /* break when the first unvisited node is reached */
                if( !visited[idx] )
@@ -599,7 +600,7 @@ SCIP_RETCODE dfs(
                if( propdata->usecliques && !propdata->sortcliques && implids[i] < 0 )
                   continue;
 
-               idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? getLbIndex(SCIPvarGetProbindex(implvars[i])) : getUbIndex(SCIPvarGetProbindex(implvars[i])));
+               idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(implvars[i]) : varGetUbIndex(implvars[i]));
                assert(idx >= 0);
 
                /* break when the first unvisited node is reached */
@@ -855,9 +856,9 @@ SCIP_RETCODE initData(
 
          /* if the coefficient is positive, the type of bound is the same for the bounded and the bounding variable */
          if( SCIPisPositive(scip, coef) )
-            startidx = (lower ? getLbIndex(SCIPvarGetProbindex(vbvar)) : getUbIndex(SCIPvarGetProbindex(vbvar)));
+            startidx = (lower ? varGetLbIndex(vbvar) : varGetUbIndex(vbvar));
          else
-            startidx = (lower ? getUbIndex(SCIPvarGetProbindex(vbvar)) : getLbIndex(SCIPvarGetProbindex(vbvar)));
+            startidx = (lower ? varGetUbIndex(vbvar) : varGetLbIndex(vbvar));
 
          /* If the vbvar is binary, the vbound should be stored as an implication already.
           * However, it might happen that vbvar was integer when the variable bound was added, but was converted
@@ -928,29 +929,16 @@ static
 SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
-   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_VAR*             var,                /**< variable to be reported */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound to be reported */
    SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_VAR* var;
-   SCIP_BOUNDTYPE boundtype;
-   int pos;
-
    assert(propdata != NULL);
-
-   boundtype = inferInfoGetBoundtype(inferinfo);
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
 
-   pos = inferInfoGetPos(inferinfo);
-   assert(pos >= 0);
-   assert(pos < propdata->nbounds);
-
-   vars = SCIPgetVars(scip);
-   var = vars[getVarIndex(pos)];
-
    SCIPdebugMessage(" -> add %s bound of variable <%s> as reason\n",
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(var));
+      getBoundtypeString(boundtype), SCIPvarGetName(var));
 
    switch( boundtype )
    {
@@ -1003,14 +991,13 @@ SCIP_RETCODE analyzeConflictLowerbound(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             infervar,           /**< variable which led to a cutoff */
    SCIP_Real             inferlb,            /**< lower bound which led to infeasibility */
-   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the lower bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant,           /**< inference variable bound constant used */
    SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
-   SCIP_VAR** vars;
-
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(infervar != NULL);
@@ -1023,20 +1010,10 @@ SCIP_RETCODE analyzeConflictLowerbound(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   vars = SCIPgetVars(scip);
-
    if( canwide && propdata->usebdwidening )
    {
-      SCIP_VAR* vbdvar;
       SCIP_Real relaxedbd;
       SCIP_Real relaxedub;
-      int pos;
-
-      pos = inferInfoGetPos(inferinfo);
-      assert(pos >= 0);
-      assert(pos < propdata->nbounds);
-
-      vbdvar = vars[getVarIndex(pos)];
 
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
@@ -1059,7 +1036,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
       relaxedbd = (relaxedub - constant) / coef;
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1073,7 +1050,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
       SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
 
       /* add (correct) bound of the variable which let to the new lower bound */
-      SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+      SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1091,14 +1068,13 @@ SCIP_RETCODE analyzeConflictUpperbound(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             infervar,           /**< variable which led to a cutoff */
    SCIP_Real             inferub,            /**< upper bound which led to infeasibility */
-   INFERINFO             inferinfo,          /**< inference information */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the upper bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the upper bound change */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant,           /**< inference variable bound constant used */
    SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
    )
 {
-   SCIP_VAR** vars;
-
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(infervar != NULL);
@@ -1111,20 +1087,10 @@ SCIP_RETCODE analyzeConflictUpperbound(
    if( !SCIPisConflictAnalysisApplicable(scip) )
       return SCIP_OKAY;
 
-   vars = SCIPgetVars(scip);
-
    if( canwide && propdata->usebdwidening )
    {
-      SCIP_VAR* vbdvar;
       SCIP_Real relaxedbd;
       SCIP_Real relaxedlb;
-      int pos;
-
-      pos = inferInfoGetPos(inferinfo);
-      assert(pos >= 0);
-      assert(pos < propdata->nbounds);
-
-      vbdvar = vars[getVarIndex(pos)];
 
       SCIPdebugMessage("try to create conflict using bound widening order: inference variable, variable bound variable\n");
 
@@ -1147,7 +1113,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       relaxedbd = (relaxedlb - constant) / coef;
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, inferInfoGetBoundtype(inferinfo), relaxedbd) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1161,7 +1127,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
 
       /* add (correct) bound of the variable which let to the new upper bound */
-      SCIP_CALL( resolvePropagation(scip, propdata, inferinfo, NULL) );
+      SCIP_CALL( resolvePropagation(scip, propdata, vbdvar, boundtype, NULL) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1180,7 +1146,8 @@ SCIP_RETCODE tightenVarLb(
    SCIP_VAR*             var,                /**< variable whose lower bound should be tightened */
    SCIP_Real             newlb,              /**< new lower bound for the variable */
    SCIP_Bool             global,             /**< is the bound globally valid? */
-   INFERINFO             inferinfo,          /**< inference information storing variable and boundtype causing the propagation */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the lower bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
    SCIP_Bool             force,              /**< should domain changes be forced */
    SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
@@ -1191,6 +1158,7 @@ SCIP_RETCODE tightenVarLb(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
+   INFERINFO inferinfo;
    SCIP_Bool tightened;
    SCIP_Bool infeasible;
 
@@ -1208,6 +1176,8 @@ SCIP_RETCODE tightenVarLb(
    }
    else
    {
+      inferinfo = getInferInfo(boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(vbdvar) : varGetUbIndex(vbdvar), boundtype);
+
       SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
    }
 
@@ -1218,9 +1188,7 @@ SCIP_RETCODE tightenVarLb(
       assert(!global || SCIPisGT(scip, newlb, SCIPvarGetUbGlobal(var)));
 
       SCIPdebugMessage("tightening%s lower bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
-         (global ? " global" : ""), SCIPvarGetName(var), newlb,
-         inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
-         SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(inferInfoGetPos(inferinfo))]));
+         (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
 
       if( global )
       {
@@ -1230,16 +1198,14 @@ SCIP_RETCODE tightenVarLb(
       else
       {
          /* analyzes a infeasibility via conflict analysis */
-         SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newlb, inferinfo, coef, constant, canwide) );
+         SCIP_CALL( analyzeConflictLowerbound(scip, propdata, var, newlb, vbdvar, boundtype, coef, constant, canwide) );
       }
       *result = SCIP_CUTOFF;
    }
    else if( tightened )
    {
       SCIPdebugMessage("tightened%s lower bound of variable <%s> to %g due the %s bound of variable <%s>\n",
-         (global ? " global" : ""), SCIPvarGetName(var), newlb,
-         inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
-         SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(inferInfoGetPos(inferinfo))]));
+         (global ? " global" : ""), SCIPvarGetName(var), newlb, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
       (*nchgbds)++;
    }
 
@@ -1255,7 +1221,8 @@ SCIP_RETCODE tightenVarUb(
    SCIP_VAR*             var,                /**< variable whose upper bound should be tightened */
    SCIP_Real             newub,              /**< new upper bound of the variable */
    SCIP_Bool             global,             /**< is the bound globally valid? */
-   INFERINFO             inferinfo,          /**< inference information storing variable and boundtype causing the propagation */
+   SCIP_VAR*             vbdvar,             /**< variable which is the reason for the upper bound change */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the upper bound change */
    SCIP_Bool             force,              /**< should domain changes be forced */
    SCIP_Real             coef,               /**< coefficient in vbound constraint causing the propagation;
                                               *   or 0.0 if propagation is caused by clique or implication */
@@ -1266,6 +1233,7 @@ SCIP_RETCODE tightenVarUb(
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation */
    )
 {
+   INFERINFO inferinfo;
    SCIP_Bool tightened;
    SCIP_Bool infeasible;
 
@@ -1283,6 +1251,8 @@ SCIP_RETCODE tightenVarUb(
    }
    else
    {
+      inferinfo = getInferInfo(boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(vbdvar) : varGetUbIndex(vbdvar), boundtype);
+
       SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, inferInfoToInt(inferinfo), force, &infeasible, &tightened) );
    }
 
@@ -1293,9 +1263,7 @@ SCIP_RETCODE tightenVarUb(
       assert(!global || SCIPisLT(scip, newub, SCIPvarGetLbGlobal(var)));
 
       SCIPdebugMessage("tightening%s upper bound of variable <%s> to %g due the %s bound of variable <%s> led to infeasibility\n",
-         (global ? " global" : ""), SCIPvarGetName(var), newub,
-         inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_UPPER ? "upper" : "lower",
-         SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(inferInfoGetPos(inferinfo))]));
+         (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
 
       if( global )
       {
@@ -1305,16 +1273,14 @@ SCIP_RETCODE tightenVarUb(
       else
       {
          /* analyzes a infeasibility via conflict analysis */
-         SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newub, inferinfo, coef, constant, canwide) );
+         SCIP_CALL( analyzeConflictUpperbound(scip, propdata, var, newub, vbdvar, boundtype, coef, constant, canwide) );
       }
       *result = SCIP_CUTOFF;
    }
    else if( tightened )
    {
       SCIPdebugMessage("tightened%s upper bound of variable <%s> to %g due the %s bound of variable <%s>\n",
-         (global ? " global" : ""), SCIPvarGetName(var), newub,
-         inferInfoGetBoundtype(inferinfo) == SCIP_BOUNDTYPE_UPPER ? "upper" : "lower",
-         SCIPvarGetName(SCIPgetVars(scip)[getVarIndex(inferInfoGetPos(inferinfo))]));
+         (global ? " global" : ""), SCIPvarGetName(var), newub, getBoundtypeString(boundtype), SCIPvarGetName(vbdvar));
       (*nchgbds)++;
    }
 
@@ -1336,7 +1302,6 @@ SCIP_RETCODE propagateVbounds(
    SCIP_BOUNDTYPE starttype;
    SCIP_Real startbound;
    SCIP_Real globalbound;
-   INFERINFO inferinfo;
    int startpos;
    int topopos;
    int v;
@@ -1417,10 +1382,8 @@ SCIP_RETCODE propagateVbounds(
       globalbound = ( lower ? SCIPvarGetLbGlobal(startvar) : SCIPvarGetUbGlobal(startvar));
       global = SCIPisEQ(scip, startbound, globalbound);
 
-      inferinfo = getInferInfo(startpos, starttype);
-
       SCIPdebugMessage("propagate new %s bound of %g of variable <%s>:\n",
-         (lower ? "lower" : "upper"), startbound, SCIPvarGetName(startvar));
+         getBoundtypeString(starttype), startbound, SCIPvarGetName(startvar));
 
       /* there should be neither implications nor cliques for non-binary variables */
       assert(SCIPvarIsBinary(startvar) || SCIPvarGetNImpls(startvar, lower) == 0);
@@ -1471,13 +1434,13 @@ SCIP_RETCODE propagateVbounds(
 
                   if( impltypes[n] == SCIP_BOUNDTYPE_LOWER )
                   {
-                     SCIP_CALL( tightenVarLb(scip, prop, propdata, implvars[n], implbounds[n], global, inferinfo,
-                           force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                     SCIP_CALL( tightenVarLb(scip, prop, propdata, implvars[n], implbounds[n], global, startvar,
+                           starttype, force, 0.0, 0.0, FALSE, &nchgbds, result) );
                   }
                   else
                   {
-                     SCIP_CALL( tightenVarUb(scip, prop, propdata, implvars[n], implbounds[n], global, inferinfo,
-                           force, 0.0, 0.0, FALSE, &nchgbds, result) );
+                     SCIP_CALL( tightenVarUb(scip, prop, propdata, implvars[n], implbounds[n], global, startvar,
+                           starttype, force, 0.0, 0.0, FALSE, &nchgbds, result) );
                   }
 
                   if( *result == SCIP_CUTOFF )
@@ -1524,14 +1487,14 @@ SCIP_RETCODE propagateVbounds(
                      if( cliquevals[n] )
                      {
                         /* unnegated variable is in clique, so it has to be fixed to 0.0 */
-                        SCIP_CALL( tightenVarUb(scip, prop, propdata, cliquevars[n], 0.0, global, inferinfo, force,
-                              0.0, 0.0, FALSE, &nchgbds, result) );
+                        SCIP_CALL( tightenVarUb(scip, prop, propdata, cliquevars[n], 0.0, global, startvar, starttype,
+                              force, 0.0, 0.0, FALSE, &nchgbds, result) );
                      }
                      else
                      {
                         /* negated variable is in clique, so it has to be fixed to 1.0 */
-                        SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, inferinfo, force,
-                              0.0, 0.0, FALSE, &nchgbds, result) );
+                        SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, startvar, starttype,
+                              force, 0.0, 0.0, FALSE, &nchgbds, result) );
                      }
                      if( *result == SCIP_CUTOFF )
                         return SCIP_OKAY;
@@ -1562,11 +1525,13 @@ SCIP_RETCODE propagateVbounds(
             /* try to tighten the bound */
             if( isIndexLowerbound(propdata->vboundboundedidx[startpos][n]) )
             {
-               SCIP_CALL( tightenVarLb(scip, prop, propdata, boundedvar, newbound, global, inferinfo, force, coef, constant, TRUE, &nchgbds, result) );
+               SCIP_CALL( tightenVarLb(scip, prop, propdata, boundedvar, newbound, global, startvar, starttype, force,
+                     coef, constant, TRUE, &nchgbds, result) );
             }
             else
             {
-               SCIP_CALL( tightenVarUb(scip, prop, propdata, boundedvar, newbound, global, inferinfo, force, coef, constant, TRUE, &nchgbds, result) );
+               SCIP_CALL( tightenVarUb(scip, prop, propdata, boundedvar, newbound, global, startvar, starttype, force,
+                     coef, constant, TRUE, &nchgbds, result) );
             }
 
             if( *result == SCIP_CUTOFF )
@@ -1687,14 +1652,64 @@ static
 SCIP_DECL_PROPRESPROP(propRespropVbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* startvar;
+   SCIP_BOUNDTYPE starttype;
+   int pos;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPdebugMessage("explain %s bound change of variable <%s>\n",
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
+   starttype = inferInfoGetBoundtype(intToInferInfo(inferinfo));
+   pos = inferInfoGetPos(intToInferInfo(inferinfo));
+   assert(pos >= 0);
+   assert(pos < propdata->nbounds);
 
-   SCIP_CALL( resolvePropagation(scip, propdata, intToInferInfo(inferinfo), bdchgidx) );
+   vars = SCIPgetVars(scip);
+   assert(vars != NULL);
+   startvar = vars[getVarIndex(pos)];
+   assert(startvar != NULL);
+
+   SCIPdebugMessage("explain %s bound change of variable <%s>\n",
+      getBoundtypeString(boundtype), SCIPvarGetName(infervar));
+
+   if( !SCIPvarIsBinary(startvar) && propdata->usebdwidening )
+   {
+      int* vboundboundedidx;
+      SCIP_Real constant;
+      SCIP_Real coef;
+      int inferidx;
+      int nvbounds;
+      int b;
+
+      nvbounds = propdata->nvbounds[pos];
+      vboundboundedidx = propdata->vboundboundedidx[pos];
+
+      inferidx = boundtype == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(infervar) : varGetUbIndex(infervar);
+
+      for( b = 0; b < nvbounds; ++b )
+      {
+         if( vboundboundedidx[b] == inferidx )
+            break;
+      }
+      assert(b < nvbounds);
+
+      coef = propdata->vboundcoefs[pos][b];
+      constant = propdata->vboundconstants[pos][b];
+      assert(!SCIPisZero(scip, coef));
+
+      /* compute how far the variable bound variable can be relaxed such that the given relaxed bound is still
+       * reached
+       */
+      relaxedbd = (relaxedbd - constant) / coef;
+
+      /* try to relax variable bound variable */
+      SCIP_CALL( relaxVbdvar(scip, startvar, boundtype, relaxedbd) );
+   }
+   else
+   {
+      SCIP_CALL( resolvePropagation(scip, propdata, startvar, starttype, bdchgidx) );
+   }
 
    (*result) = SCIP_SUCCESS;
 
