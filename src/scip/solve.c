@@ -3637,6 +3637,8 @@ SCIP_RETCODE solveNode(
                }
                else
                {
+                  SCIP_VERBLEVEL verblevel;
+
                   if( pricingaborted )
                   {
                      SCIPerrorMessage("pricing was aborted, but no branching could be created!\n");
@@ -3650,7 +3652,19 @@ SCIP_RETCODE solveNode(
                      return SCIP_INVALIDRESULT;
                   }
 
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                  verblevel = SCIP_VERBLEVEL_FULL;
+
+                  if( !tree->forcinglpmessage && set->disp_verblevel == SCIP_VERBLEVEL_HIGH )
+                  {
+                     verblevel = SCIP_VERBLEVEL_HIGH;
+
+                     /* remember that the forcing LP solving message was posted and do only post it again if the
+                      * verblevel is SCIP_VERBLEVEL_FULL
+                      */
+                     tree->forcinglpmessage = TRUE;
+                  }
+
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel,
                      "(node %"SCIP_LONGINT_FORMAT") forcing the solution of an LP (last LP %"SCIP_LONGINT_FORMAT")...\n", stat->nnodes, stat->nlps);
 
                   /* solve the LP in the next loop */
