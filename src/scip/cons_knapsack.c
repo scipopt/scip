@@ -1556,7 +1556,7 @@ SCIP_Bool checkSolveKnapsack(
 static
 void GUBsetPrint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_GUBSET*          gubset,	     /**< GUB set data structure */
+   SCIP_GUBSET*          gubset,             /**< GUB set data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    SCIP_Real*            solvals             /**< solution values of variables in knapsack constraint */
    )
@@ -1606,8 +1606,8 @@ void GUBsetPrint(
 /** creates an empty GUB constraint */
 static
 SCIP_RETCODE GUBconsCreate(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_GUBCONS**        gubcons            /**< pointer to store GUB constraint data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_GUBCONS**        gubcons             /**< pointer to store GUB constraint data */
    )
 {
    assert(scip != NULL);
@@ -3870,7 +3870,7 @@ void computeMinweightsGUB(
 static
 SCIP_RETCODE sequentialUpAndDownLiftingGUB(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_GUBSET*          gubset,	     /**< GUB set data structure */
+   SCIP_GUBSET*          gubset,             /**< GUB set data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    int                   ngubconscapexceed,  /**< number of GUBs with only capacity exceeding variables */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
@@ -4727,7 +4727,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    int                   nmincovervars,      /**< number of mincover variables */
    int                   nnonmincovervars,   /**< number of nonmincover variables */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
-   SCIP_GUBSET*          gubset,  	     /**< GUB set data structure, NULL if no GUB information should be used */
+   SCIP_GUBSET*          gubset,             /**< GUB set data structure, NULL if no GUB information should be used */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {

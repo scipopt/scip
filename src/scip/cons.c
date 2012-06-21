@@ -3551,7 +3551,7 @@ void SCIPconshdlrSetFree(
 /** sets initialization method of constraint handler */
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    )
 {
    assert(conshdlr != NULL);
@@ -3584,7 +3584,7 @@ void SCIPconshdlrSetInitsol(
 /** sets solving process deinitialization method of constraint handler */
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    )
 {
    assert(conshdlr != NULL);
@@ -3632,7 +3632,7 @@ void SCIPconshdlrSetPresol(
 /** sets method of constraint handler to free specific constraint data */
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSDELETE  ((*consdelete))    /**< free specific constraint data */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    )
 {
    assert(conshdlr != NULL);

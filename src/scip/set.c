@@ -2016,7 +2016,7 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    return SCIP_OKAY;
 }
 
-/**< sets the default value of an existing SCIP_Bool parameter */
+/** sets the default value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetSetDefaultBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */

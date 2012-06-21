@@ -2911,7 +2911,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
    return SCIP_OKAY;
 }
 
-/**< set copy method of reader */
+/** set copy method of reader */
 SCIP_RETCODE SCIPsetReaderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2927,7 +2927,7 @@ SCIP_RETCODE SCIPsetReaderCopy(
    return SCIP_OKAY;
 }
 
-/**< set deinitialization method of reader */
+/** set deinitialization method of reader */
 SCIP_RETCODE SCIPsetReaderFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2943,7 +2943,7 @@ SCIP_RETCODE SCIPsetReaderFree(
    return SCIP_OKAY;
 }
 
-/**< set read method of reader */
+/** set read method of reader */
 SCIP_RETCODE SCIPsetReaderRead(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2959,7 +2959,7 @@ SCIP_RETCODE SCIPsetReaderRead(
    return SCIP_OKAY;
 }
 
-/**< set write method of reader */
+/** set write method of reader */
 SCIP_RETCODE SCIPsetReaderWrite(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
