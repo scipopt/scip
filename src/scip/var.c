@@ -3617,6 +3617,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &activeconstant) );
       assert(var != NULL);
 
+      assert(SCIPsetIsInfinity(set, activeconstant) == (activeconstant == SCIPsetInfinity(set)));
+      assert(SCIPsetIsInfinity(set, -activeconstant) == (activeconstant == -SCIPsetInfinity(set)));
+
+      activeconstantinf = SCIPsetIsInfinity(set, activeconstant) || SCIPsetIsInfinity(set, -activeconstant);
+
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
