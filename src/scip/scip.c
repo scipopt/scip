@@ -11547,6 +11547,40 @@ SCIP_RETCODE SCIPreleaseVar(
    }  /*lint !e788*/
 }
 
+/** change variable name */
+SCIP_RETCODE SCIPchgVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgVarName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE , FALSE, FALSE, FALSE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("variable names can only be changed in problem creation stage\n");
+      SCIPABORT();
+      return SCIP_INVALIDCALL;
+   }
+
+   /* remove variable's name from the namespace if the variable was already added */
+   if( SCIPvarGetProbindex(var) != -1 )
+   {
+      SCIP_CALL( SCIPprobRemoveVarName(scip->origprob, var) );
+   }
+
+   /* change variable name */
+   SCIP_CALL( SCIPvarChgName(var, SCIPblkmem(scip), name) );
+
+   /* add variable's name to the namespace if the variable was already added */
+   if( SCIPvarGetProbindex(var) != -1 )
+   {
+      SCIP_CALL( SCIPprobAddVarName(scip->origprob, var) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
@@ -16489,6 +16523,40 @@ SCIP_RETCODE SCIPreleaseCons(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
+}
+
+/** change constraint name */
+SCIP_RETCODE SCIPchgConsName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgConsName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE , FALSE, FALSE, FALSE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("constraint names can only be changed in problem creation stage\n");
+      SCIPABORT();
+      return SCIP_INVALIDCALL;
+   }
+
+   /* remove constraint's name from the namespace if the constraint was already added */
+   if( SCIPconsIsAdded(cons) )
+   {
+      SCIP_CALL( SCIPprobRemoveConsName(scip->origprob, cons) );
+   }
+
+   /* change constraint name */
+   SCIP_CALL( SCIPconsChgName(cons, SCIPblkmem(scip), name) );
+
+   /* add constraint's name to the namespace if the constraint was already added */
+   if( SCIPconsIsAdded(cons) )
+   {
+      SCIP_CALL( SCIPprobAddConsName(scip->origprob, cons) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** sets the initial flag of the given constraint */

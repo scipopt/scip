@@ -1765,6 +1765,36 @@ SCIP_RETCODE varRemoveImplicsVbs(
    return SCIP_OKAY;
 }
 
+/** sets the variable name */
+static
+SCIP_RETCODE varSetName(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics, or NULL */
+   const char*           name                /**< name of variable, or NULL for automatic name creation */
+   )
+{
+   assert(blkmem != NULL);
+   assert(var != NULL);
+
+   if( name == NULL )
+   {
+      char s[SCIP_MAXSTRLEN];
+
+      assert(stat != NULL);
+
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "_var%d_", stat->nvaridx);
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->name, s, strlen(s)+1) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->name, name, strlen(name)+1) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** creates variable; if variable is of integral type, fractional bounds are automatically rounded; an integer variable
  *  with bounds zero and one is automatically converted into a binary variable
  */
@@ -1807,16 +1837,9 @@ SCIP_RETCODE varCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
-   if( name == NULL )
-   {
-      char s[SCIP_MAXSTRLEN];
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "_var%d_", stat->nvaridx);
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*var)->name, s, strlen(s)+1) );
-   }
-   else
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*var)->name, name, strlen(name)+1) );
-   }
+   /* set variable's name */
+   SCIP_CALL( varSetName(*var, blkmem, stat, name) );
+
 #ifndef NDEBUG
    (*var)->scip = set->scip;
 #endif
@@ -2626,6 +2649,24 @@ SCIP_RETCODE SCIPvarRelease(
    }
 
    *var = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** change variable name */
+SCIP_RETCODE SCIPvarChgName(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name                /**< name of variable */
+   )
+{
+   assert(name != NULL);
+
+   /* remove old variable name */
+   BMSfreeBlockMemoryArray(blkmem, &var->name, strlen(var->name)+1);
+
+   /* set new variable name */
+   SCIP_CALL( varSetName(var, blkmem, NULL, name) );
 
    return SCIP_OKAY;
 }

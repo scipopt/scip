@@ -845,6 +845,37 @@ SCIP_RETCODE probRemoveVar(
    return SCIP_OKAY;
 }
 
+/** adds variable's name to the namespace */
+SCIP_RETCODE SCIPprobAddVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   assert(SCIPvarGetProbindex(var) != -1);
+
+   if( varHasName(var) && prob->varnames != NULL )
+   {
+      SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes variable's name from the namespace */
+SCIP_RETCODE SCIPprobRemoveVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   if( varHasName(var) && prob->varnames != NULL )
+   {
+      assert(SCIPhashtableExists(prob->varnames, (void*)var));
+      SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds variable to the problem and captures it */
 SCIP_RETCODE SCIPprobAddVar(
    SCIP_PROB*            prob,               /**< problem data */
@@ -886,10 +917,7 @@ SCIP_RETCODE SCIPprobAddVar(
    probInsertVar(prob, var);
 
    /* add variable's name to the namespace */
-   if( varHasName(var) && prob->varnames != NULL )
-   {
-      SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
-   }
+   SCIP_CALL( SCIPprobAddVarName(prob, var) );
 
    /* update branching candidates and pseudo and loose objective value in the LP */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
@@ -1026,13 +1054,9 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
             SCIP_CALL( SCIPlpUpdateDelVar(lp, set, var) );
             SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
          }
-         
+
          /* remove variable's name from the namespace */
-         if( varHasName(var) && prob->varnames != NULL )
-         {
-            assert(SCIPhashtableExists(prob->varnames, (void*)var));
-            SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
-         }
+         SCIP_CALL( SCIPprobRemoveVarName(prob, var) );
 
          /* remove variable from vars array and mark it to be not in problem */
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
@@ -1151,6 +1175,37 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    return SCIP_OKAY;
 }
 
+/** adds constraint's name to the namespace */
+SCIP_RETCODE SCIPprobAddConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   /* add constraint's name to the namespace */
+   if( consHasName(cons) && prob->consnames != NULL )
+   {
+      SCIP_CALL( SCIPhashtableInsert(prob->consnames, (void*)cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** remove constraint's name from the namespace */
+SCIP_RETCODE SCIPprobRemoveConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   /* remove constraint's name from the namespace */
+   if( consHasName(cons) && prob->consnames != NULL )
+   {
+      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
+      SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds constraint to the problem and captures it;
  *  a local constraint is automatically upgraded into a global constraint
  */
@@ -1197,10 +1252,7 @@ SCIP_RETCODE SCIPprobAddCons(
    SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
-   if( consHasName(cons) && prob->consnames != NULL )
-   {
-      SCIP_CALL( SCIPhashtableInsert(prob->consnames, (void*)cons) );
-   }
+   SCIP_CALL( SCIPprobAddConsName(prob, cons) );
 
    /* if the problem is the transformed problem, activate and lock constraint */
    if( prob->transformed )
@@ -1261,11 +1313,7 @@ SCIP_RETCODE SCIPprobDelCons(
    assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
-   if( consHasName(cons) && prob->consnames != NULL )
-   {
-      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
-      SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
-   }
+   SCIP_CALL( SCIPprobRemoveConsName(prob, cons) );
 
    /* remove the constraint from the problem's constraint array */
    arraypos = cons->addarraypos;

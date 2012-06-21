@@ -5215,6 +5215,25 @@ SCIP_RETCODE SCIPconsParse(
    return SCIP_OKAY;
 }
 
+/** change name of given constraint */
+SCIP_RETCODE SCIPconsChgName(
+   SCIP_CONS*            cons,               /**< problem constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->name != NULL);
+
+   /* free old constraint name */
+   BMSfreeBlockMemoryArray(blkmem, &cons->name, strlen(cons->name)+1);
+
+   /* copy new constraint name */
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &cons->name, name, strlen(name)+1) );
+
+   return SCIP_OKAY;
+}
+
 
 /** frees a constraint and removes it from the conss array of its constraint handler */
 SCIP_RETCODE SCIPconsFree(

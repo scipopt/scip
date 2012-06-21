@@ -3909,6 +3909,14 @@ SCIP_RETCODE SCIPreleaseVar(
    SCIP_VAR**            var                 /**< pointer to variable */
    );
 
+/** change variable name */
+extern
+SCIP_RETCODE SCIPchgVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   const char*           name                /**< new name of constraint */
+   );
+
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
@@ -5702,6 +5710,14 @@ extern
 SCIP_RETCODE SCIPreleaseCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons                /**< pointer to constraint */
+   );
+
+/** change constraint name */
+extern
+SCIP_RETCODE SCIPchgConsName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
    );
 
 /** sets the initial flag of the given constraint */
