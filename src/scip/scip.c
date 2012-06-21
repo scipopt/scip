@@ -12440,8 +12440,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
       return SCIP_OKAY;
    }
 
-   /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranchFrac(col, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   /* call strong branching for column with fractional value */
+   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12519,7 +12519,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    }
 
    /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranchInt(col, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12615,8 +12615,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    }
    else
    {
-      /* call strong branching for columns */
-      SCIP_CALL( SCIPcolGetStrongbranchesFrac(cols, nvars, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+      /* call strong branching for columns with fractional value */
+      SCIP_CALL( SCIPcolGetStrongbranches(cols, nvars, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
             down, up, downvalid, upvalid, lperror) );
 
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12718,7 +12718,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    else
    {
       /* call strong branching for columns */
-      SCIP_CALL( SCIPcolGetStrongbranchesInt(cols, nvars, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+      SCIP_CALL( SCIPcolGetStrongbranches(cols, nvars, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
             down, up, downvalid, upvalid, lperror) );
 
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
