@@ -914,7 +914,7 @@ Var* xlp_addvar(
 
    zplvar = NULL;
 
-   if( readerdata->retcode != SCIP_OKAY || !readerdata->readerror )
+   if( readerdata->retcode != SCIP_OKAY || readerdata->readerror )
       return NULL;
 
    readerdata->retcode = addVar(scip, readerdata, name, usevarclass, lower, upper, priority, startval, &zplvar);
@@ -1243,6 +1243,7 @@ void xlp_addtocost(
       return;
 
    scipvar = (SCIP_VAR*)var;
+   assert(scipvar != NULL);
    scipval = numb_todbl(cost);
 
    readerdata->retcode = SCIPchgVarObj(scip, scipvar, SCIPvarGetObj(scipvar) + scipval);
