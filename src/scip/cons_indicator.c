@@ -271,6 +271,7 @@ struct SCIP_ConsData
    int                   colindex;           /**< column index in alternative LP */
    unsigned int          linconsactive:1;    /**< whether linear constraint and slack variable are active */
    unsigned int          implicationadded:1; /**< whether corresponding implication has been added */
+   unsigned int          slacktypechecked:1; /**< whether it has been checked to convert the slack variable to be implicit integer */
 };
 
 
@@ -2868,6 +2869,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->slackvar = slackvar;
    (*consdata)->lincons = lincons;
    (*consdata)->implicationadded = FALSE;
+   (*consdata)->slacktypechecked = FALSE;
 
    /* if we are transformed, obtain transformed variables and catch events */
    if ( SCIPisTransformed(scip) )
@@ -4593,43 +4595,6 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
          SCIP_CALL( SCIPcaptureCons(scip, translincons) );
          consdata->lincons = translincons;
       }
-
-      /* check if slack variable can be made implicit integer. We repeat the check from
-       * SCIPcreateConsIndicator(), since when reading files in LP-format the type is only determined
-       * after creation of the constraint. */
-      if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
-      {
-         SCIP_Real* vals;
-         SCIP_VAR** vars;
-         SCIP_VAR* slackvar;
-         SCIP_Bool foundslackvar;
-         int nvars;
-         int i;
-
-         vars = SCIPgetVarsLinear(scip, consdata->lincons);
-         vals = SCIPgetValsLinear(scip, consdata->lincons);
-         nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
-         slackvar = consdata->slackvar;
-         foundslackvar = FALSE;
-         for (i = 0; i < nvars; ++i)
-         {
-            if ( vars[i] == slackvar )
-               foundslackvar = TRUE;
-            else
-            {
-               if ( ! SCIPvarIsIntegral(vars[i]) || ! SCIPisIntegral(scip, vals[i]))
-                  break;
-            }
-         }
-         /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
-         if ( i == nvars && foundslackvar )
-         {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-            /* don't assert feasibility here because the presolver should detect infeasibility */
-         }
-      }
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4710,7 +4675,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
          assert( SCIPconsIsTransformed(consdata->lincons) );
 
-         /* add implications if not yed done */
+         /* add implications if not yet done */
          if ( ! consdata->implicationadded )
          {
             SCIP_CALL( SCIPaddVarImplication(scip, consdata->binvar, TRUE, consdata->slackvar, SCIP_BOUNDTYPE_UPPER, 0.0,
@@ -4722,6 +4687,48 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
             {
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
+            }
+         }
+
+         /* check type of slack variable if not yet done */
+         if ( ! consdata->slacktypechecked )
+         {
+            consdata->slacktypechecked = TRUE;
+            /* check if slack variable can be made implicit integer. */
+            if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+            {
+               SCIP_Real* vals;
+               SCIP_VAR** vars;
+               SCIP_VAR* slackvar;
+               SCIP_Bool foundslackvar;
+               int nvars;
+               int j;
+
+               assert( consdata->lincons != NULL );
+               vars = SCIPgetVarsLinear(scip, consdata->lincons);
+               vals = SCIPgetValsLinear(scip, consdata->lincons);
+               nvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+               slackvar = consdata->slackvar;
+               assert( slackvar != NULL );
+               foundslackvar = FALSE;
+               for (j = 0; j < nvars; ++j)
+               {
+                  if ( vars[j] == slackvar )
+                     foundslackvar = TRUE;
+                  else
+                  {
+                     if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]))
+                        break;
+                  }
+               }
+               /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
+               if ( j == nvars && foundslackvar )
+               {
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+                  /* don't assert feasibility here because the presolver should detect infeasibility */
+               }
             }
          }
 
