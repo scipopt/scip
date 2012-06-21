@@ -18,9 +18,6 @@
 # complementary to the existing methods.
 #
 # Known issues: Does not check indentation of enums or unions correctly.
-#
-# todo: check for printf
-# todo: check for SCIPABORT, SCIP_CALL_ABORT
 my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )
@@ -36,6 +33,7 @@ if ( $narg < 1 || $ARGV[0] eq "-h" )
 my $checktabs = 0;
 my $checkbrackets = 0;
 my $checkindent = 1;
+my $checkothers = 1;
 
 # parse command line arguments (including switches and files)
 for (my $i = 0; $i < $narg; ++$i)
@@ -232,6 +230,27 @@ for (my $i = 0; $i < $narg; ++$i)
 	       }
 	    }
 	 }
+      }
+
+      # ----------------------------------------
+      # check other stuff
+      if ( $checkothers )
+      {
+	  # check for printfs
+	  if ( $_ =~ / printf\(/ )
+	  {
+	      printf("%d: printf found: %s\n\n", $line, $_);
+	  }
+
+	  # check for SCIP_CALL_ABORT
+	  if ( $_ =~ /SCIP\_CALL\_ABORT\(/ )
+	  {
+	      # SCIP_CALL_ABORT allowed for checkStage in scip.c
+	      if ( ! ($_ =~ /SCIP\_CALL\_ABORT\( checkStage/) )
+	      {
+		  printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
+	      }
+	  }
       }
    }
 }
