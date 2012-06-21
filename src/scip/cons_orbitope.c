@@ -218,22 +218,22 @@ void printMatrix(
    assert( consdata->vars != NULL );
 
    for (j = 0; j < consdata->nblocks; ++j)
-      printf("-");
-   printf("\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
    for (i = 0; i < consdata->nspcons; ++i)
    {
       for (j = 0; j < consdata->nblocks; ++j)
       {
          if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            printf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
+            SCIPinfoMessage(scip, NULL, "%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
          else
-            printf(" ");
+            SCIPinfoMessage(scip, NULL, " ");
       }
-      printf("|\n");
+      SCIPinfoMessage(scip, NULL, "|\n");
    }
    for (j = 0; j < consdata->nblocks; ++j)
-      printf("-");
-   printf("\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 }
 #endif
 
@@ -299,27 +299,27 @@ SCIP_RETCODE printSCI(
 
    /* now output matrix M */
    for (l = 0; l < q; ++l)
-      SCIPinfoMessage(scip, 0, "-");
-   SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 
    for (k = 0; k < p; ++k)
    {
       for (l = 0; l < q; ++l)
       {
          if ( l > k )
-            SCIPinfoMessage(scip, 0, "*");
+            SCIPinfoMessage(scip, NULL, "*");
          else
          {
             switch (M[k][l])
             {
             case 1: 
-               SCIPinfoMessage(scip, 0, "+"); 
+               SCIPinfoMessage(scip, NULL, "+"); 
                break;
             case -1: 
-               SCIPinfoMessage(scip, 0, "-");
+               SCIPinfoMessage(scip, NULL, "-");
                break;
             case 0: 
-               SCIPinfoMessage(scip, 0, "#");
+               SCIPinfoMessage(scip, NULL, "#");
                break;
             default:
                SCIPerrorMessage("unexpected matrix entry <%d>: should be -1, 0 or +1\n", M[k][l]);
@@ -327,12 +327,12 @@ SCIP_RETCODE printSCI(
             }
          }
       }
-      SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "\n");
    }
 
    for (l = 0; l < q; ++l)
-      SCIPinfoMessage(scip, 0, "-");
-   SCIPinfoMessage(scip, 0, "\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 
    for (k = 0; k < p; ++k)
       SCIPfreeBufferArray(scip, &M[k]);
