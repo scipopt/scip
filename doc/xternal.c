@@ -117,7 +117,7 @@
  * - <a class="el" href="AUTHORS.html#further">Further developers</a>
  * - <a class="el" href="AUTHORS.html#contributors">Contributors</a>
  *
- * @version  3.0.0
+ * @version  3.0.0.1
  *
  *     </td>
  *     <td valign="bottom" width="200">
