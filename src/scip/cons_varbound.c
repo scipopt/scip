@@ -438,7 +438,8 @@ SCIP_Bool checkCons(
       sum = SCIPgetSolVal(scip, sol, consdata->var);
       sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
 
-      return SCIPisFeasGE(scip, sum, consdata->lhs) && SCIPisFeasLE(scip, sum, consdata->rhs);
+      return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
+         && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
    }
    else
       return TRUE;
