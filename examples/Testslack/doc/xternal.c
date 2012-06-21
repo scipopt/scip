@@ -25,6 +25,6 @@
  * @author   Frederic Pythoud
  * @author   Ambros Gleixner
  *
- * This example illustrate the use of the superindicator constraint handler to solve a slack problem with groups of
+ * This example illustrates the use of the superindicator constraint handler to solve a slack problem with groups of
  * constraints.
  */
