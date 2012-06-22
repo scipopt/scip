@@ -64,10 +64,12 @@
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT      50 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXRANK               0 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
+#define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
-#define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still use the cut */
+#define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 
@@ -90,13 +92,60 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
+   int                   maxrank;            /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
+   int                   maxrankintegral;    /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             makeintegral;       /**< try to scale all cuts to integral coefficients */
-   SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still use the cut */
+   SCIP_Bool             forcecuts;          /**< if conversion to integral coefficients failed still consider the cut */
    SCIP_Bool             separaterows;       /**< separate rows with integral slack */
    SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
 };
+
+
+/** returns TRUE if the cut can be taken, otherwise FALSE if there some numerical evidences */
+static
+SCIP_RETCODE evaluateCutNumerics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< data of the separator */
+   SCIP_ROW*             cut,                /**< cut to check */
+   SCIP_Longint          maxdnom,            /**< maximal denominator to use for scaling */
+   SCIP_Real             maxscale,           /**< maximal scaling factor */
+   SCIP_Bool*            useful              /**< pointer to store if the cut is useful */
+   )
+{
+   SCIP_Bool madeintegral;
+
+   madeintegral = FALSE;
+   (*useful) = FALSE;
+
+   if( sepadata->makeintegral )
+   {
+      /* try to scale the cut to integral values */
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+            maxdnom, maxscale, MAKECONTINTEGRAL, &madeintegral) );
+
+      if( !madeintegral && !sepadata->forcecuts )
+         return SCIP_OKAY;
+
+      /* in case the right hand side is plus infinity (due to scaling) the cut is useless so we are not taking it at all
+       */
+      if( madeintegral && SCIPisInfinity(scip, SCIProwGetRhs(cut)) )
+         return SCIP_OKAY;
+   }
+
+   /* discard integral cut if the rank is too high */
+   if( madeintegral && sepadata->maxrankintegral != -1 && (SCIProwGetRank(cut) > sepadata->maxrankintegral) )
+      return SCIP_OKAY;
+
+   /* discard cut if the rank is too high */
+   if( !madeintegral && (sepadata->maxrank != -1) && (SCIProwGetRank(cut) > sepadata->maxrank) )
+      return SCIP_OKAY;
+
+   (*useful) = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -395,36 +444,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                 */
                if( SCIPisCutEfficacious(scip, NULL, cut) )
                {
+                  SCIP_Bool useful;
+
                   assert(success == TRUE);
+                  assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
+                  assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
 
                   SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                      c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                      cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
-                  if( sepadata->makeintegral )
-                  {
-                     /* try to scale the cut to integral values */
-                     SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+                  SCIP_CALL( evaluateCutNumerics(scip, sepadata, cut, maxdnom, maxscale, &useful) );
 
-                     if( sepadata->forcecuts )
-                        success = TRUE;
-
-                     /* in case the left hand side in minus infinity and the right hand side is plus infinity the cut is
-                      * useless so we are not taking it at all
-                      */
-                     if( (SCIPisInfinity(scip, -SCIProwGetLhs(cut)) && SCIPisInfinity(scip, SCIProwGetRhs(cut))) )
-                        success = FALSE;
-
-                     /* @todo Trying to make the Gomory cut integral might fail. Due to numerical reasons/arguments we
-                      *       currently ignore such cuts. If the cut, however, has small support (let's say smaller or equal to
-                      *       5), we might want to add that cut (even it does not have integral coefficients). To be able to
-                      *       do that we need to add a rank to the data structure of a row. The rank of original rows are
-                      *       zero and for aggregated rows it is the maximum over all used rows plus one.
-                      */
-                  }
-
-                  if( success )
+                  if( useful )
                   {
                      SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
@@ -530,6 +562,14 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/maxsepacutsroot",
          "maximal number of gomory cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/gomory/maxrank",
+         "maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited)",
+         &sepadata->maxrank, FALSE, DEFAULT_MAXRANK, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/gomory/maxrankintegral",
+         "maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited)",
+         &sepadata->maxrankintegral, FALSE, DEFAULT_MAXRANKINTEGRAL, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
@@ -544,7 +584,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          &sepadata->makeintegral, TRUE, DEFAULT_MAKEINTEGRAL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/forcecuts",
-         "if conversion to integral coefficients failed still use the cut",
+         "if conversion to integral coefficients failed still consider the cut",
          &sepadata->forcecuts, TRUE, DEFAULT_FORCECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/separaterows",
