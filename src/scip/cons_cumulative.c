@@ -3346,7 +3346,7 @@ SCIP_RETCODE propagateCoretimes(
          {
             int pos;
 
-            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): remove core [%d,%d)\n",
+            SCIPdebugMessage("variable <%s>[%d,%d] (duration %d, demand %d): add core [%d,%d)\n",
                SCIPvarGetName(var), est, lst, duration, demand, starts[j], ends[j]);
 
             SCIP_CALL( SCIPprofileInsertCore(profile, starts[j], ends[j], demand, &pos, &infeasible) );
@@ -3386,7 +3386,6 @@ SCIP_RETCODE propagateCoretimes(
 
 struct SCIP_Envelop
 {
-   SCIP_VAR*             var;                /**< start time variable of the job */
    SCIP_Real             key;                /**< key which is to insert the corresponding search node */
    int                   envelop;            /**< envelop of ?????????????? */
    int                   energy;             /**< energy of the job */
@@ -3419,7 +3418,6 @@ SCIP_RETCODE updateEnvelop(
       if( nodedata == NULL )
       {
          SCIP_CALL( SCIPallocBuffer(scip, &nodedata) );
-         nodedata->var = NULL;
          nodedata->key = SCIP_INVALID;
          nodedata->envelop = 0;
          nodedata->energy = 0;
@@ -3575,10 +3573,13 @@ SCIP_RETCODE checkOverload(
    SCIP_ENVELOP** nodedatas;
    SCIP_BST* bsttree;
 
+   int* leftadjusts;
+   int* rightadjusts;
    int* ests;
    int* lcts;
    int* perm;
 
+   int totalenergy;
    int nnodedatas;
    int ncands;
 
@@ -3588,15 +3589,19 @@ SCIP_RETCODE checkOverload(
    assert(cons != NULL);
    assert(initialized != NULL);
    assert(cutoff != NULL);
+   assert(*cutoff == FALSE);
 
    SCIPdebugMessage("check overload of cumulative condition of constraint <%s> (capacity %d)\n", SCIPconsGetName(cons), capacity);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &leftadjusts, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rightadjusts, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ests, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lcts, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodedatas, 2*nvars) );
 
    ncands = 0;
+   totalenergy = 0;
 
    SCIP_CALL( SCIPbstCreate(&bsttree, SCIPblkmem(scip), thetatreeInsert, NULL, thetatreeComp) );
 
@@ -3606,32 +3611,55 @@ SCIP_RETCODE checkOverload(
    for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
+      int duration;
+      int energy;
       int est;
       int lct;
-      int energy;
 
       var = vars[j];
       assert(var != NULL);
 
-      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
-      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + durations[j];
+      duration = durations[j];
+      assert(duration > 0);
 
-      /* ignore jobs which do not lie completely in the effective horizon [hmin,hmax) */
-      if( est < hmin || lct > hmax )
+      leftadjusts[j] = 0;
+      rightadjusts[j] = 0;
+
+      est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
+      lct = convertBoundToInt(scip, SCIPvarGetUbLocal(var)) + duration;
+
+      /* adjust the duration, earliest start time, and latest completion time of jobs which do not lie completely in the
+       * effective horizon [hmin,hmax)
+       */
+      if( est < hmin )
+      {
+         leftadjusts[j] = (hmin - est);
+         est = hmin;
+      }
+      if( lct > hmax )
+      {
+         rightadjusts[j] = (lct - hmax);
+         lct = hmax;
+      }
+
+      /* only consider jobs which have a (adjusted) duration greater than zero (the amound which will run defenetly with
+       * the effective time horizon
+       */
+      if( duration - leftadjusts[j] - rightadjusts[j] <= 0 )
       {
          nodedatas[j] = NULL;
          continue;
       }
 
-      energy = demands[j] * durations[j];
+      energy = demands[j] * (duration - leftadjusts[j] - rightadjusts[j]);
       assert(energy > 0);
+
+      totalenergy += energy;
 
       /* create search node data */
       SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[j]) );
 
       /* initialize search node data */
-      nodedatas[j]->var = var;
-
       /* adjust earliest start time to make it unique in case several jobs have the same earliest start time */
       nodedatas[j]->key = est + j / (2.0 * nvars);
 
@@ -3653,10 +3681,11 @@ SCIP_RETCODE checkOverload(
    /* sort the latest completion times */
    SCIPsortIntIntInt(lcts, ests, perm, ncands);
 
-   /* iterate over all jobs in non-decreasing order of their latest completion times */
-   for( j = 0; j < ncands && !(*cutoff); ++j )
+   /* iterate over all jobs in non-decreasing order of their latest completion times and add them to the theta tree
+    * until the root envelop detects an overload
+    */
+   for( j = 0; j < ncands; ++j )
    {
-      SCIP_VAR* var;
       SCIP_BSTNODE* root;
       SCIP_BSTNODE* node;
       SCIP_ENVELOP* data;
@@ -3664,6 +3693,16 @@ SCIP_RETCODE checkOverload(
       int idx;
 
       idx = perm[j];
+
+      /* check if the new job opens a time window which size is so large that it offers more energy than the total
+       * energy of all candidate jobs. If so we skip that one.
+       */
+      if( (lcts[j] - ests[j]) * capacity >= totalenergy )
+      {
+         /* set the earliest start time to minus one to mark that candidate to be not used */
+         ests[j] = -1;
+         continue;
+      }
 
       /* create search node */
       SCIP_CALL( SCIPbstnodeCreate(bsttree, &node, (void*)nodedatas[idx], (void*)nodedatas[idx]) );
@@ -3682,96 +3721,141 @@ SCIP_RETCODE checkOverload(
       /* check for overload */
       if( data->envelop > capacity * lcts[j] )
       {
+         SCIPdebugMessage("detects cutoff due to overload in time window [?,%d) (ncands %d)\n", lcts[j], ncands+1);
          (*cutoff) = TRUE;
-
-         /* check if the conflict analysis is applicable */
-         if( SCIPisConflictAnalysisApplicable(scip) )
-         {
-            int reportedenergy;
-            int energy;
-            int est;
-            int lct;
-            int c;
-
-            /* collect the earliest and latest completion time of the last job which lead to the overload detection */
-            est = ests[j];
-            lct = lcts[j];
-
-            /* adjust number of candidates to the once we added to the search tree */
-            ncands = j+1;
-
-            /* sort the start time variables which were added to search tree w.r.t. earliest start time */
-            SCIPsortDownIntIntInt(ests, lcts, perm, ncands);
-
-            energy = (lct - est) * capacity;
-            reportedenergy = 0;
-            c = 0;
-
-            /* collect the energy of those jobs which run within the time frame [est,lct) of the job which led to
-             * infeasibility
-             */
-            for( c = 0; c < ncands && ests[c] >= est && reportedenergy <= energy; ++c )
-            {
-               assert(lcts[c] <= lct);
-
-               idx = perm[c];
-               var = vars[idx];
-
-               /* collect energy which is contributed by the start time variable */
-               reportedenergy += demands[idx] * durations[idx];
-
-               SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[idx], demands[idx]);
-            }
-
-            /* continue with remaining candidates and adjust the earliest start time */
-            for( ; c < ncands && reportedenergy <= energy; ++c )
-            {
-               assert(lcts[c] <= lct);
-
-               idx = perm[c];
-               var = vars[idx];
-
-               reportedenergy += demands[idx] * durations[idx];
-
-               SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
-                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), durations[idx], demands[idx]);
-
-               /* adjust energy */
-               est = ests[c];
-               assert(energy <= (lct - est) * capacity);
-               energy = (lct - est) * capacity;
-            }
-            assert(reportedenergy > energy);
-
-            /* shrink number of candidates to once we need to report */
-            ncands = c;
-
-            /* initialize conflict analysis */
-            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-            /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to
-             * be overloaded
-             */
-            for( c = 0; c < ncands; ++c )
-            {
-               idx = perm[c];
-               var = vars[idx];
-               assert(var != NULL);
-
-               SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, (SCIP_Real)est) );
-               SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, (SCIP_Real)(lct - durations[idx])) );
-
-               if( explanation != NULL )
-                  explanation[idx] = TRUE;
-            }
-
-            (*initialized) = TRUE;
-         }
+         break;
       }
    }
+
+   /* in case an overload was detected and the conflict analysis is applicable, create an initialize explanation */
+   if( *cutoff && SCIPisConflictAnalysisApplicable(scip) )
+   {
+      SCIP_VAR* var;
+      int ninsertcands;
+      int reportedenergy;
+      int energy;
+      int est;
+      int lct;
+      int idx;
+
+      /* store the number if candidate inserted into the theta tree (including the once we skipped) */
+      ninsertcands = j+1;
+
+      /* collect the earliest and latest completion time of the last job which led to the overload detection */
+      est = ests[j];
+      lct = lcts[j];
+      energy = (lct - est) * capacity;
+      reportedenergy = 0;
+
+      /* scan the remaining candidates for a global contributions within the time window of the last inserted candidate
+       * which led to an overload
+       */
+      for( j = ninsertcands; j < ncands; ++j )
+      {
+         int duration;
+         int glbest;
+         int glblct;
+
+         idx = perm[j];
+         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
+
+
+         /* get latest start time */
+         glbest = convertBoundToInt(scip, SCIPvarGetLbGlobal(vars[idx]));
+         glblct = convertBoundToInt(scip, SCIPvarGetUbGlobal(vars[idx])) + duration;
+
+         /* check if parts of the jobs run with the time window defined by the last inserted job */
+         if( glbest < est )
+            duration -= (est - glbest);
+
+         if( glblct > lct )
+            duration -= (glblct - lct);
+
+         if( duration > 0 )
+         {
+            reportedenergy +=  duration * demands[idx];
+
+            if( explanation != NULL )
+               explanation[idx] = TRUE;
+         }
+      }
+
+      /* sort the start time variables which were added to search tree w.r.t. earliest start time */
+      SCIPsortDownIntIntInt(ests, lcts, perm, ninsertcands);
+
+      /* collect the energy of those jobs which run within the time frame [est,lct) of the job which led to
+       * infeasibility
+       */
+      for( j = 0; j < ninsertcands && ests[j] >= est && reportedenergy <= energy; ++j )
+      {
+         int duration;
+
+         assert(lcts[j] <= lct);
+
+         idx = perm[j];
+         var = vars[idx];
+
+         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
+
+         /* collect energy which is contributed by the start time variable */
+         reportedenergy += demands[idx] * duration;
+
+         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[idx]);
+      }
+
+      /* continue with remaining candidates and adjust the earliest start time */
+      for( ; j < ninsertcands && reportedenergy <= energy; ++j )
+      {
+         int duration;
+
+         assert(lcts[j] <= lct);
+
+         idx = perm[j];
+         var = vars[idx];
+         duration = durations[idx] - leftadjusts[idx] - rightadjusts[idx];
+
+         reportedenergy += demands[idx] * duration;
+
+         SCIPdebugMessage("variable <%s>: loc=[%g,%g] glb=[%g,%g] (duration %d, demand %d)\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), duration, demands[idx]);
+
+         est = ests[j];
+         assert(est >= 0);
+
+         /* adjust energy */
+         energy = (lct - est) * capacity;
+
+      }
+      assert(reportedenergy > energy);
+
+      /* shrink number of candidates to once we need to report */
+      ncands = j;
+
+      /* initialize conflict analysis */
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      /* report the variables and relax their bounds to final time interval [est,lct) which was been detected to be
+       * overloaded
+       */
+      for( j = 0; j < ncands; ++j )
+      {
+         idx = perm[j];
+         var = vars[idx];
+         assert(var != NULL);
+
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, (SCIP_Real)(est  - leftadjusts[idx])) );
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, (SCIP_Real)(lct - durations[idx])) );
+
+         if( explanation != NULL )
+            explanation[idx] = TRUE;
+      }
+
+      (*initialized) = TRUE;
+   }
+
 
    /* free the search nodes data */
    for( j = nnodedatas - 1; j >= 0; --j )
@@ -3787,9 +3871,12 @@ SCIP_RETCODE checkOverload(
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &lcts);
    SCIPfreeBufferArray(scip, &ests);
+   SCIPfreeBufferArray(scip, &rightadjusts);
+   SCIPfreeBufferArray(scip, &leftadjusts);
 
    return SCIP_OKAY;
 }
+
 /** checks if the constraint is redundant; that is if its capacity can never be exceeded; therefore we check with
  *  respect to the lower and upper bounds of the integer variables the maximum capacity usage for all event points
  */
@@ -4003,7 +4090,7 @@ SCIP_RETCODE propagateCons(
    }
    else
    {
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && initialized && !SCIPisStopped(scip) )
+      if( initialized )
       {
          /* run conflict analysis since it was initialized */
          assert(*cutoff == TRUE);
@@ -4133,6 +4220,7 @@ SCIP_RETCODE computeAlternativeBounds(
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
+         /* create worst case resource profile */
          SCIP_CALL( createWorstCaseProfile(scip, profile, consdata) );
 
          hmin = computeHmin(scip, profile, consdata->capacity);
@@ -7410,13 +7498,13 @@ SCIP_DECL_CONSPROP(consPropCumulative)
       if( SCIPgetDepth(scip) == 0 )
       {
          SCIP_CALL( presolveCons(scip, cons, conshdlrdata, &nchgbds, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
+
+         if( cutoff )
+            break;
+
+         if( SCIPconsIsDeleted(cons) )
+            continue;
       }
-
-      if( cutoff )
-         break;
-
-      if( SCIPconsIsDeleted(cons) )
-         continue;
 
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata, &nchgbds, &ndelconss, &cutoff) );
    }
