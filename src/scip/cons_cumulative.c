@@ -2096,35 +2096,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
       /* check if the inference peak is part of the core */
       if( inferpeak < ect && lst <= inferpeak )
       {
-         int aggrpeak;
-
-         /* check the current status of the variable in */
-         SCIPdebugMessage("variable <%s> (durations %d demands %d) loc=[%g,%g] glb=[%g,%g] conflict=[%g,%g]\n",
-            SCIPvarGetName(var), duration, demands[j],
-            SCIPvarGetLbAtIndex (var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
-            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-            SCIPgetConflictVarLb(scip, var), SCIPgetConflictVarUb(scip, var));
-
-         aggrpeak = inferpeak;
-
-         if( !SCIPvarIsActive(var) )
-         {
-            SCIP_Real scalar;
-            SCIP_Real constant;
-
-            scalar = 1.0;
-            constant = 0.0;
-
-            SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
-            assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN);
-            assert(!SCIPisZero(scip, scalar));
-
-            /* compute inference peak w.r.t. aggregation */
-            aggrpeak = convertBoundToInt(scip, (aggrpeak - constant) / scalar);
-         }
-
-         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(aggrpeak - duration + 1)) );
-         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)aggrpeak) );
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, (SCIP_Real)(inferpeak - duration + 1)) );
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, (SCIP_Real)inferpeak) );
 
          capacity -= demands[j];
 
