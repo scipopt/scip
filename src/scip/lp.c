@@ -4523,6 +4523,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
    (*row)->age = 0;
+   (*row)->rank = 0;
    (*row)->obsoletenode = -1;
    (*row)->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    (*row)->lpcolssorted = TRUE;
@@ -8693,10 +8694,12 @@ void sumMIRRow(
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
+   SCIP_Bool*            rowtoolong,         /**< pointer to store whether the aggregated row is too long and thus invalid */
+   int*                  cutrank             /**< pointer to store the rank of the returned aggregation; or NULL */
    )
 {
    SCIP_Real maxweight;
+   int maxrank = 0;
    int rowlensum;
    int i;
 
@@ -8749,7 +8752,7 @@ void sumMIRRow(
       int r;
 
       r = rowinds[i];
-      assert(0 <= i && i < lp->nrows);
+      assert(0 <= r && r < lp->nrows);
       assert(weights[r] != 0.0);
 
       row = lp->rows[r];
@@ -8787,6 +8790,9 @@ void sumMIRRow(
             scale, weights[r], slacksign[r], *mirrhs);
          debugRowPrint(row);
 
+         /* update the rank of the aggregation */
+         maxrank = MAX(maxrank, row->rank);
+
          ++i; /* handle next row */
       }
       else
@@ -8803,6 +8809,10 @@ void sumMIRRow(
    /* check if the total number of non-zeros is too large */
    if( *nvarinds > maxmksetcoefs )
       *rowtoolong = TRUE;
+
+   /* set rank of the aggregated cut */
+   if( cutrank != NULL )
+      *cutrank = maxrank + 1;
 }
 
 /** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
@@ -9979,7 +9989,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    )
 {
    int* slacksign;
@@ -10029,7 +10040,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
       maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused, &rowtoolong);
+      &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
    if( emptyrow || rowtoolong )
@@ -16735,6 +16746,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetName
 #undef SCIProwGetIndex
 #undef SCIProwGetAge
+#undef SCIProwGetRank
 #undef SCIProwIsIntegral
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
@@ -16746,6 +16758,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
 #undef SCIProwIsInLP
+#undef SCIProwChgRank
 #undef SCIPlpGetCols
 #undef SCIPlpGetNCols
 #undef SCIPlpGetRows
@@ -17169,6 +17182,16 @@ int SCIProwGetAge(
    return row->age;
 }
 
+/** gets rank of row */
+int SCIProwGetRank(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rank;
+}
+
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
@@ -17290,6 +17313,17 @@ SCIP_Bool SCIProwIsInLP(
    assert((row->lppos == -1) == (row->lpdepth == -1));
 
    return (row->lppos >= 0);
+}
+
+/** changes the rank of LP row */
+void SCIProwChgRank(
+   SCIP_ROW*             row,                /**< LP row */
+   int                   rank                /**< new value for rank */
+   )
+{
+   assert(row != NULL);
+
+   row->rank = rank;
 }
 
 /** gets array with columns of the LP */

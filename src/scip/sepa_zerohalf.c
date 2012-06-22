@@ -3176,14 +3176,14 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
             BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
             weights, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-            &(cutdata->success), &(cutdata->islocal)) );
+            &(cutdata->success), &(cutdata->islocal), NULL) );
      
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
                weights, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-               &(cutdata->success), &(cutdata->islocal)) );
+               &(cutdata->success), &(cutdata->islocal), NULL) );
       }
    }
    else
@@ -3226,7 +3226,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
                weights, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-               &(cutdata->success), &(cutdata->islocal)) );
+               &(cutdata->success), &(cutdata->islocal), NULL) );
       }
    }
    assert(ALLOWLOCAL || !cutdata->islocal);

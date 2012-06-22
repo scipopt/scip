@@ -2239,7 +2239,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
       SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal) );
+            &cutrhs, &cutact, &success, &cutislocal, NULL) );
       assert(ALLOWLOCAL || !cutislocal);
       
       /* delta leads to c-MIRFCI which is more violated */
@@ -2287,7 +2287,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal) );
+            &cutrhs, &cutact, &success, &cutislocal, NULL) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
       

@@ -69,7 +69,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
-
+#include "scip/pub_lp.h"
 
 #define SEPA_NAME              "cgmip"
 #define SEPA_DESC              "Chvatal-Gomory cuts via MIPs separator"
@@ -2593,6 +2593,7 @@ SCIP_RETCODE createCGCutCMIR(
    int nrows;
    int nvars;
    int k;
+   int cutrank;
 
    assert( scip != NULL );
    assert( sepadata != NULL );
@@ -2717,7 +2718,7 @@ SCIP_RETCODE createCGCutCMIR(
    cutrhs = -1.0;
    SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans, boundtypesfortrans,
          (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+         weights, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
    SCIPdebugMessage("CMIR: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success, 
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
@@ -2749,6 +2750,9 @@ SCIP_RETCODE createCGCutCMIR(
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
             assert( success );
+
+            /* set cut rank */
+            SCIProwChgRank(cut, cutrank);
 
 #ifdef SCIP_DEBUG
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -2797,9 +2801,9 @@ SCIP_RETCODE createCGCutCMIR(
                      prevrows[*nprevrows] = cut;
                      ++(*nprevrows);
 
-                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%f)\n",
                         name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut),
+                        SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                         SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 #ifdef SCIP_OUTPUT

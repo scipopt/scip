@@ -22123,7 +22123,8 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -22131,7 +22132,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob, sol,
          boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs, 
          maxweightrange, minfrac, maxfrac, weights, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity, 
-         success, cutislocal) );
+         success, cutislocal, cutrank) );
 
    return SCIP_OKAY;
 }

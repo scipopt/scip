@@ -395,6 +395,12 @@ int SCIProwGetAge(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** gets rank of row */
+extern
+int SCIProwGetRank(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 EXTERN
 SCIP_Bool SCIProwIsIntegral(
@@ -461,6 +467,13 @@ SCIP_Bool SCIProwIsInLP(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** changes the rank of LP row */
+extern
+void SCIProwChgRank(
+   SCIP_ROW*             row,                /**< LP row */
+   int                   rank                /**< new value for rank */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -482,6 +495,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
 #define SCIProwGetAge(row)              (row)->age
+#define SCIProwGetRank(row)             (row)->rank
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
@@ -493,6 +507,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)
+#define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
 

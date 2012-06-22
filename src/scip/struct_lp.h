@@ -229,6 +229,7 @@ struct SCIP_Row
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
+   int                   rank;               /**< rank of the row (upper bound, to be precise) */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
    unsigned int          lpcolssorted:1;     /**< are the linked LP columns in the cols array sorted by non-decreasing index? */
    unsigned int          nonlpcolssorted:1;  /**< are the non-LP/not linked columns sorted by non-decreasing index? */

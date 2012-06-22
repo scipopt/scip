@@ -376,7 +376,7 @@ SCIP_RETCODE tryDelta(
       /* create a MIR cut out of the weighted LP rows */
       SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, maxmksetcoefs, 
             maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact, 
-            &success, &cutislocal) );
+            &success, &cutislocal, NULL) );
       assert(allowlocal || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
@@ -583,7 +583,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
          /* generate cut with bestdelta and best boundswitch value */
          SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, 
                maxmksetcoefs, maxweightrange, minfrac, maxfrac, rowweights, bestdelta, NULL, NULL, cutcoefs, 
-               &cutrhs, &cutact, &success, &cutislocal) );
+               &cutrhs, &cutact, &success, &cutislocal, NULL) );
          assert(allowlocal || !cutislocal);
          assert(success); 
          

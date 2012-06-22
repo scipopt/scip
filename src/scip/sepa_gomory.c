@@ -26,7 +26,7 @@
  *
  * @todo Also try negative basis inverse row?
  *
- * @todo It happends that the SICPcalcMir() function returns with the same cut for different calls. Check if this is a
+ * @todo It happens that the SCIPcalcMIR() function returns with the same cut for different calls. Check if this is a
  *       bug or do not use it for the MIP below and turn off presolving and all heuristics:
  *
  *  Max y
@@ -50,7 +50,7 @@
 
 #include "scip/sepa_gomory.h"
 #include "scip/pub_misc.h"
-
+#include "scip/pub_lp.h"
 
 #define SEPA_NAME              "gomory"
 #define SEPA_DESC              "Gomory MIR cuts separator"
@@ -321,6 +321,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          SCIP_Real cutact;
          SCIP_Bool success;
          SCIP_Bool cutislocal;
+         int cutrank;
 
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
@@ -331,7 +332,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
 
          /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
@@ -357,6 +358,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                   cutislocal, FALSE, sepadata->dynamiccuts) );
+
+            /* set cut rank */
+            SCIProwChgRank(cut, cutrank);
 
             /* cache the row extension and only flush them if the cut gets added */
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -553,4 +557,3 @@ SCIP_RETCODE SCIPincludeSepaGomory(
 
    return SCIP_OKAY;
 }
-
