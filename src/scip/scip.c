@@ -12458,7 +12458,12 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    return SCIP_OKAY;
 }
 
-/** gets strong branching information on column variable with integral value */
+/** gets strong branching information on column variable x with integral LP solution value (val); that is, the down branch
+ *  is (val -1.0) and the up brach ins (val +1.0)
+ *
+ *  @note If the integral LP solution is the lower or upper bound of the variable, the corresponding branch will be
+ *        marked as infeasible. That is, the valid pointer and the infeasible pointer are set to TRUE.
+ */
 SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */

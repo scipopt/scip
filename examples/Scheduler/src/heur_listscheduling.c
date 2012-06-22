@@ -14,8 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_listscheduling.c
- * @brief  scheduling specific primal heuristic which is based on ???????? elsf
+ * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Jens Schulz
+ *
+ * Bidirectional serial generation scheme.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -27,7 +29,7 @@
 #include "scip/pub_misc.h"
 
 #define HEUR_NAME             "listscheduling"
-#define HEUR_DESC             "primal heuristic for scheduling problems"
+#define HEUR_DESC             "scheduling specific primal heuristic which is based on bidirectional serial generation scheme"
 #define HEUR_DISPCHAR         'x'
 #define HEUR_PRIORITY         10000
 #define HEUR_FREQ             1
@@ -553,7 +555,7 @@ SCIP_RETCODE performBackwardScheduling(
 }
 
 static
-SCIP_RETCODE getEstPermuataion(
+SCIP_RETCODE getEstPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  starttimes,         /**< array of start times for each job */
    int*                  ests,               /**< earliest start times */
@@ -647,7 +649,7 @@ SCIP_RETCODE executeHeuristic(
       /* in case the LP relaxation was solved to optimality we use the LP solution as initialized permutation */
       for( v = 0; v < njobs; ++v )
       {
-         solvals[v] = (int)(SCIPgetSolVal(scip, NULL, vars[v]) + 0.5);
+         solvals[v] = SCIPgetSolVal(scip, NULL, vars[v]);
          perm[v] = v;
       }
       SCIPsortRealInt(solvals, perm, njobs);
@@ -690,7 +692,7 @@ SCIP_RETCODE executeHeuristic(
       if( !infeasible )
       {
          /* get permutation w.r.t. earliest start time given by the starttimes and reset the start time to the earliest start time */
-         SCIP_CALL( getEstPermuataion(scip, starttimes, ests, heurdata->durations, perm, njobs) );
+         SCIP_CALL( getEstPermutation(scip, starttimes, ests, heurdata->durations, perm, njobs) );
 
          SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &makespan, &infeasible) );
 

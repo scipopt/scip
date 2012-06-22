@@ -121,7 +121,7 @@ int SCIPsolGetIndex(
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
 #define SCIPsolGetIndex(sol)            (sol)->index
-#define SCIPsolSetHeur(sol,heur)        { (sol)->heur = heur; }
+#define SCIPsolSetHeur(sol,newheur)     { (sol)->heur = (newheur); }
 #endif
 
 #ifdef __cplusplus

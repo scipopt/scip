@@ -14,10 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_listscheduling.h
- * @brief  scheduling specific primal heuristic which is based on ???????? elsf
+ * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Eamonn Coughlan
  *
- * Blalal
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
