@@ -31,6 +31,10 @@
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 
+/**@name Constraint handler properties
+ *
+ * @{
+ */
 
 #define CONSHDLR_NAME          "bounddisjunction"
 #define CONSHDLR_DESC          "bound disjunction constraints"
@@ -49,17 +53,44 @@
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
+#define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+
+/**@} */
+
+/**@name Event handler properties
+ *
+ * @{
+ */
+
 #define EVENTHDLR_NAME         "bounddisjunction"
 #define EVENTHDLR_DESC         "event handler for bound disjunction constraints"
+
+/**@} */
+
+/**@name Conflict handler properties
+ *
+ * @{
+ */
 
 #define CONFLICTHDLR_NAME      "bounddisjunction"
 #define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
 #define CONFLICTHDLR_PRIORITY  -3000000
 
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
 #define DEFAULT_CONTINUOUSFRAC      0.4 /**< maximal percantage of continuous variables within a conflict */
 
-#define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+/**@} */
 
+/**@name Age increase defines
+ *
+ * @{
+ */
 
 /* @todo make this a parameter setting */
 #if 1 /* @todo test which AGEINCREASE formula is better! */
@@ -67,6 +98,22 @@
 #else
 #define AGEINCREASE(n) (0.1*n)
 #endif
+
+/**@} */
+
+
+/**@name Comparison for two values
+ *
+ * @{
+ */
+
+/** use defines for numeric compare methods to be slightly faster for integral values */
+#define isFeasLT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) >  0.5 : SCIPisFeasLT(scip, val1, val2))
+#define isFeasLE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) > -0.5 : SCIPisFeasLE(scip, val1, val2))
+#define isFeasGT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) >  0.5 : SCIPisFeasGT(scip, val1, val2))
+#define isFeasGE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) > -0.5 : SCIPisFeasGE(scip, val1, val2))
+
+/**@} */
 
 
 /** constraint handler data */
@@ -89,16 +136,8 @@ struct SCIP_ConsData
    int                   filterpos2;         /**< event filter position of second watched variable */
 };
 
-
-/** use defines for numeric compare methods to be slightly faster for integral values */
-#define isFeasLT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) >  0.5 : SCIPisFeasLT(scip, val1, val2))
-#define isFeasLE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) > -0.5 : SCIPisFeasLE(scip, val1, val2))
-#define isFeasGT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) >  0.5 : SCIPisFeasGT(scip, val1, val2))
-#define isFeasGE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) > -0.5 : SCIPisFeasGE(scip, val1, val2))
-
-
-/*
- * Local methods
+/**@name  Local methods
+ *
  */
 
 /** adds rounding locks for the given variable in the given bound disjunction constraint */
@@ -1313,6 +1352,12 @@ SCIP_RETCODE createNAryBranch(
    return SCIP_OKAY;
 }
 
+/**@} */
+
+/**@name Upgrading methods for special quadratic constraint
+ *
+ */
+
 /** upgrades quadratic complementarity constraints into a bounddisjunction constraint
  * If constraint is of form (x - a) * (y - b) = 0 with x >= a and y >= b for some a and b,
  * then upgrade to bounddisjunction constraint "x <= a or y <= b".
@@ -1712,8 +1757,11 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of constraint handler
+/**@} */
+
+/**@name Callback methods of constraint handler
+ *
+ * @{
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -2619,9 +2667,10 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * Callback methods of event handler
+/**@name Callback methods of event handler
+ *
  */
 
 static
@@ -2646,9 +2695,11 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * Callback methods of conflict handler
+/**@name Callback methods of conflict handler
+ *
+ * @{
  */
 
 /** conflict handler data struct */
@@ -2760,9 +2811,11 @@ SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * constraint specific interface methods
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
@@ -3003,3 +3056,4 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    return consdata->bounds;
 }
 
+/**@} */
