@@ -829,7 +829,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", TRUE, FALSE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", TRUE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

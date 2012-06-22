@@ -1114,6 +1114,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  Note that in this case dual reductions might be invalid. 
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyPlugins(
@@ -2072,9 +2073,10 @@ int SCIPgetSubscipDepth(
  *  4) copy all active variables
  *  5) copy all constraints
  *
- *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopy(
@@ -2084,12 +2086,13 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */          
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
@@ -2118,13 +2121,13 @@ SCIP_RETCODE SCIPcopy(
    SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
 
    /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP 
+    * SCIP
     */
    (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
 
    /* copy all plugins */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
 
    SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
 

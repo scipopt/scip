@@ -799,7 +799,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_clique", FALSE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_clique", FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

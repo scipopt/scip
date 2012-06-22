@@ -268,8 +268,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    success = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, &success) );
-   
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rapid", FALSE, FALSE, TRUE, &success) );
+
    if( sepadata->copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
