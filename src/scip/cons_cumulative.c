@@ -773,7 +773,7 @@ void createSortedEventpointsSol(
    int*                  starttimes,         /**< array to store sorted start events */
    int*                  endtimes,           /**< array to store sorted end events */
    int*                  startindices,       /**< permutation with rspect to the start times */
-   int*                  endindices         /**< permutation with rspect to the end times */
+   int*                  endindices          /**< permutation with rspect to the end times */
    )
 {
    SCIP_VAR* var;
@@ -4370,10 +4370,10 @@ SCIP_RETCODE propagateAllConss(
 /** creates covering cuts for jobs violating resource constraints */
 static
 SCIP_RETCODE createCoverCutsTimepoint(
-   SCIP*            scip,                 /**< SCIP data structure */
-   SCIP_CONS*       cons,                 /**< constraint to be checked */
-   int*             startvalues,          /**< upper bounds on finishing time per job for activities from 0,..., nactivities -1 */
-   int              time                  /**< at this point in time covering constraints are valid */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be checked */
+   int*                  startvalues,        /**< upper bounds on finishing time per job for activities from 0,..., nactivities -1 */
+   int                   time                /**< at this point in time covering constraints are valid */
    )
 {
    SCIP_VAR** binvars;    /* binary variables of some integer variable */
@@ -4607,8 +4607,8 @@ SCIP_RETCODE createCoverCutsTimepoint(
 /** method to construct cover cuts for all points in time */
 static
 SCIP_RETCODE createCoverCuts(
-   SCIP*            scip,                      /**< SCIP data structure */
-   SCIP_CONS*       cons                       /**< constraint to be separated */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be separated */
    )
 {
    SCIP_CONSDATA* consdata;

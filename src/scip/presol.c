@@ -483,8 +483,8 @@ void SCIPpresolSetData(
 
 /** sets copy method of presolver */
 void SCIPpresolSetCopy(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(presol != NULL);
@@ -494,8 +494,8 @@ void SCIPpresolSetCopy(
 
 /** sets destructor method of presolver */
 void SCIPpresolSetFree(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLFREE ((*presolfree))     /**< destructor of presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLFREE  ((*presolfree))     /**< destructor of presolver */
    )
 {
    assert(presol != NULL);
@@ -505,8 +505,8 @@ void SCIPpresolSetFree(
 
 /** sets initialization method of presolver */
 void SCIPpresolSetInit(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLINIT ((*presolinit))     /**< initialize presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
    )
 {
    assert(presol != NULL);
@@ -516,8 +516,8 @@ void SCIPpresolSetInit(
 
 /** sets deinitialization method of presolver */
 void SCIPpresolSetExit(
-   SCIP_PRESOL*         presol,             /**< presolver */
-   SCIP_DECL_PRESOLEXIT ((*presolexit))     /**< deinitialize presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit))     /**< deinitialize presolver */
    )
 {
    assert(presol != NULL);
@@ -527,7 +527,7 @@ void SCIPpresolSetExit(
 
 /** sets solving process initialization method of presolver */
 void SCIPpresolSetInitpre(
-   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_DECL_PRESOLINITPRE ((*presolinitpre))/**< solving process initialization method of presolver */
    )
 {
@@ -538,7 +538,7 @@ void SCIPpresolSetInitpre(
 
 /** sets solving process deinitialization method of presolver */
 void SCIPpresolSetExitpre(
-   SCIP_PRESOL*         presol,             /**< presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_DECL_PRESOLEXITPRE ((*presolexitpre))/**< solving process deinitialization method of presolver */
    )
 {

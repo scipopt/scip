@@ -476,7 +476,7 @@ SCIP_RETCODE SCIPapplyRens(
       valid = FALSE;
 
       /* copy complete SCIP instance */
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

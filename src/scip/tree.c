@@ -4321,6 +4321,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probingloadlpistate = FALSE;
    (*tree)->probinglpwasrelax = FALSE;
    (*tree)->probingsolvedlp = FALSE;
+   (*tree)->forcinglpmessage = FALSE;
 
    return SCIP_OKAY;
 }

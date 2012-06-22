@@ -157,8 +157,8 @@ struct SCIP_ConsData
  */
 static
 int setppcCompare(
-   SCIP_CONS*const        cons1,               /**< first problem variable */
-   SCIP_CONS*const        cons2                /**< second problem variable */
+   SCIP_CONS*const       cons1,              /**< first problem variable */
+   SCIP_CONS*const       cons2               /**< second problem variable */
    )
 {
    SCIP_CONSDATA* consdata1;

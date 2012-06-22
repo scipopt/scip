@@ -424,7 +424,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_Bool valid;
       valid = FALSE;
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

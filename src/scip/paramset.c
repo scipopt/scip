@@ -3449,9 +3449,6 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* set priority for depth first search to highest possible value */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
 
-      /* turn off pseudo cost propagation  */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/pseudoobj/freq", -1, quiet) );
-
       break;
 
    case SCIP_PARAMEMPHASIS_EASYCIP:

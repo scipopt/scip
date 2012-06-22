@@ -452,7 +452,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "localbranchsub", TRUE, FALSE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "localbranchsub", TRUE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

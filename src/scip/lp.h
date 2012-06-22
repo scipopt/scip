@@ -217,9 +217,10 @@ SCIP_RETCODE SCIPlpEndStrongbranch(
    SCIP_LP*              lp                  /**< LP data */
    );
 
-/** gets strong branching information on a column variable with fractional value */
-SCIP_RETCODE SCIPcolGetStrongbranchFrac(
+/** gets strong branching information on a column variable */
+SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_COL*             col,                /**< LP column */
+   SCIP_Bool             integral,           /**< should integral strong branching be performed? */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -234,47 +235,12 @@ SCIP_RETCODE SCIPcolGetStrongbranchFrac(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
-/** gets strong branching information on a column variable with integral value */
-SCIP_RETCODE SCIPcolGetStrongbranchInt(
-   SCIP_COL*             col,                /**< LP column */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< LP data */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bound after branching column down */
-   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
-                                              *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
-   );
-
-/** gets strong branching information on column variables with fractional values */
+/** gets strong branching information on column variables */
 extern
-SCIP_RETCODE SCIPcolGetStrongbranchesFrac(
+SCIP_RETCODE SCIPcolGetStrongbranches(
    SCIP_COL**            cols,               /**< LP columns */
    int                   ncols,              /**< number of columns */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< LP data */
-   int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Real*            down,               /**< stores dual bounds after branching columns down */
-   SCIP_Real*            up,                 /**< stores dual bounds after branching columns up */
-   SCIP_Bool*            downvalid,          /**< stores whether the returned down values are valid dual bounds, or NULL;
-                                              *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            upvalid,            /**< stores whether the returned up values are valid dual bounds, or NULL;
-                                              *   otherwise, they can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
-   );
-
-/** gets strong branching information on column variables with integral values */
-extern
-SCIP_RETCODE SCIPcolGetStrongbranchesInt(
-   SCIP_COL**            cols,               /**< LP columns */
-   int                   ncols,              /**< number of columns */
+   SCIP_Bool             integral,           /**< should integral strong branching be performed? */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */

@@ -144,6 +144,11 @@ interface
 - forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE
 - new parameter numerics/lpfeastol for primal feasibility tolerance used in LP solver
 - new macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set
+- new method SCIPchgVarName() and SCIPchgConsName() which can be used to change name of variables and
+  constraints in problem creation stage
+- new parameter in SCIPcopy() to indicate whether the message handler from the source SCIP should be passed to the
+  target SCIP (only the pointer is copied and the usage counter of the message handler is increased), in multi theaded
+  enviroment this parameter needs to be set to FALSE
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

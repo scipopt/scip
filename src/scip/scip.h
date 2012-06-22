@@ -368,6 +368,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  Note that in this case dual reductions might be invalid.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -581,6 +582,7 @@ int SCIPgetSubscipDepth(
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -591,12 +593,13 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
+   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
@@ -3909,6 +3912,14 @@ SCIP_RETCODE SCIPreleaseVar(
    SCIP_VAR**            var                 /**< pointer to variable */
    );
 
+/** change variable name */
+extern
+SCIP_RETCODE SCIPchgVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   const char*           name                /**< new name of constraint */
+   );
+
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
@@ -5702,6 +5713,14 @@ extern
 SCIP_RETCODE SCIPreleaseCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons                /**< pointer to constraint */
+   );
+
+/** change constraint name */
+extern
+SCIP_RETCODE SCIPchgConsName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
    );
 
 /** sets the initial flag of the given constraint */

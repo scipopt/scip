@@ -1027,8 +1027,8 @@ SCIP_NODESELDATA* SCIPnodeselGetData(
 
 /** sets user data of node selector; user has to free old data in advance! */
 void SCIPnodeselSetData(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_NODESELDATA*    nodeseldata         /**< new node selector user data */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_NODESELDATA*     nodeseldata         /**< new node selector user data */
    )
 {
    assert(nodesel != NULL);
@@ -1040,8 +1040,8 @@ void SCIPnodeselSetData(
 
 /** sets copy method of node selector */
 void SCIPnodeselSetCopy(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELCOPY ((*nodeselcopy))   /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy))    /**< copy method of node selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(nodesel != NULL);
@@ -1051,8 +1051,8 @@ void SCIPnodeselSetCopy(
 
 /** sets destructor method of node selector */
 void SCIPnodeselSetFree(
-   SCIP_NODESEL*         nodesel,           /**< node selector */
-   SCIP_DECL_NODESELFREE ((*nodeselfree))   /**< destructor of node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELFREE ((*nodeselfree))    /**< destructor of node selector */
    )
 {
    assert(nodesel != NULL);
@@ -1062,8 +1062,8 @@ void SCIPnodeselSetFree(
 
 /** sets initialization method of node selector */
 void SCIPnodeselSetInit(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELINIT ((*nodeselinit))   /**< initialize node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit))    /**< initialize node selector */
    )
 {
    assert(nodesel != NULL);
@@ -1073,8 +1073,8 @@ void SCIPnodeselSetInit(
 
 /** sets deinitialization method of node selector */
 void SCIPnodeselSetExit(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
-   SCIP_DECL_NODESELEXIT ((*nodeselexit))   /**< deinitialize node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit))    /**< deinitialize node selector */
    )
 {
    assert(nodesel != NULL);
@@ -1084,7 +1084,7 @@ void SCIPnodeselSetExit(
 
 /** sets solving process initialization method of node selector */
 void SCIPnodeselSetInitsol(
-   SCIP_NODESEL*        nodesel,            /**< node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
    SCIP_DECL_NODESELINITSOL ((*nodeselinitsol))/**< solving process initialization method of node selector */
    )
 {
@@ -1095,7 +1095,7 @@ void SCIPnodeselSetInitsol(
 
 /** sets solving process deinitialization method of node selector */
 void SCIPnodeselSetExitsol(
-   SCIP_NODESEL*         nodesel,           /**< node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
    SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
    )
 {

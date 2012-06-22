@@ -188,6 +188,20 @@ void SCIPprobSetData(
    SCIP_PROBDATA*        probdata            /**< user problem data to use */
    );
 
+/** adds variable's name to the namespace */
+extern
+SCIP_RETCODE SCIPprobAddVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
+/** removes variable's name from the namespace */
+extern
+SCIP_RETCODE SCIPprobRemoveVarName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var                 /**< variable */
+   );
+
 /** adds variable to the problem and captures it */
 extern
 SCIP_RETCODE SCIPprobAddVar(
@@ -243,6 +257,20 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** adds constraint's name to the namespace */
+extern
+SCIP_RETCODE SCIPprobAddConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** remove constraint's name from the namespace */
+extern
+SCIP_RETCODE SCIPprobRemoveConsName(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** adds constraint to the problem and captures it;

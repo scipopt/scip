@@ -3551,7 +3551,7 @@ void SCIPconshdlrSetFree(
 /** sets initialization method of constraint handler */
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSINIT    ((*consinit))   /**< initialize constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    )
 {
    assert(conshdlr != NULL);
@@ -3584,7 +3584,7 @@ void SCIPconshdlrSetInitsol(
 /** sets solving process deinitialization method of constraint handler */
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSEXITSOL ((*consexitsol))/**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    )
 {
    assert(conshdlr != NULL);
@@ -3632,7 +3632,7 @@ void SCIPconshdlrSetPresol(
 /** sets method of constraint handler to free specific constraint data */
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSDELETE  ((*consdelete))    /**< free specific constraint data */
+   SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    )
 {
    assert(conshdlr != NULL);
@@ -5211,6 +5211,25 @@ SCIP_RETCODE SCIPconsParse(
          SCIPmessagePrintWarning(messagehdlr, "constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** change name of given constraint */
+SCIP_RETCODE SCIPconsChgName(
+   SCIP_CONS*            cons,               /**< problem constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->name != NULL);
+
+   /* free old constraint name */
+   BMSfreeBlockMemoryArray(blkmem, &cons->name, strlen(cons->name)+1);
+
+   /* copy new constraint name */
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &cons->name, name, strlen(name)+1) );
 
    return SCIP_OKAY;
 }

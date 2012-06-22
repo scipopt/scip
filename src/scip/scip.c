@@ -1114,6 +1114,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  Note that in this case dual reductions might be invalid. 
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopyPlugins(
@@ -2072,9 +2073,10 @@ int SCIPgetSubscipDepth(
  *  4) copy all active variables
  *  5) copy all constraints
  *
- *  @note all variables and constraints which are created in the target-SCIP are not (user) captured 
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 SCIP_RETCODE SCIPcopy(
@@ -2084,12 +2086,13 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */          
+   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
@@ -2118,13 +2121,13 @@ SCIP_RETCODE SCIPcopy(
    SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
 
    /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP 
+    * SCIP
     */
    (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
 
    /* copy all plugins */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, 
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, valid) );
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
 
    SCIPdebugMessage("Copying plugins was%s valid.\n", *valid ? "" : " not");
 
@@ -2911,7 +2914,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
    return SCIP_OKAY;
 }
 
-/**< set copy method of reader */
+/** set copy method of reader */
 SCIP_RETCODE SCIPsetReaderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2927,7 +2930,7 @@ SCIP_RETCODE SCIPsetReaderCopy(
    return SCIP_OKAY;
 }
 
-/**< set deinitialization method of reader */
+/** set deinitialization method of reader */
 SCIP_RETCODE SCIPsetReaderFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2943,7 +2946,7 @@ SCIP_RETCODE SCIPsetReaderFree(
    return SCIP_OKAY;
 }
 
-/**< set read method of reader */
+/** set read method of reader */
 SCIP_RETCODE SCIPsetReaderRead(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -2959,7 +2962,7 @@ SCIP_RETCODE SCIPsetReaderRead(
    return SCIP_OKAY;
 }
 
-/**< set write method of reader */
+/** set write method of reader */
 SCIP_RETCODE SCIPsetReaderWrite(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -11547,6 +11550,40 @@ SCIP_RETCODE SCIPreleaseVar(
    }  /*lint !e788*/
 }
 
+/** change variable name */
+SCIP_RETCODE SCIPchgVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgVarName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE , FALSE, FALSE, FALSE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("variable names can only be changed in problem creation stage\n");
+      SCIPABORT();
+      return SCIP_INVALIDCALL;
+   }
+
+   /* remove variable's name from the namespace if the variable was already added */
+   if( SCIPvarGetProbindex(var) != -1 )
+   {
+      SCIP_CALL( SCIPprobRemoveVarName(scip->origprob, var) );
+   }
+
+   /* change variable name */
+   SCIP_CALL( SCIPvarChgName(var, SCIPblkmem(scip), name) );
+
+   /* add variable's name to the namespace if the variable was already added */
+   if( SCIPvarGetProbindex(var) != -1 )
+   {
+      SCIP_CALL( SCIPprobAddVarName(scip->origprob, var) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
@@ -12406,8 +12443,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
       return SCIP_OKAY;
    }
 
-   /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranchFrac(col, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   /* call strong branching for column with fractional value */
+   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12485,7 +12522,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    }
 
    /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranchInt(col, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12581,8 +12618,8 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    }
    else
    {
-      /* call strong branching for columns */
-      SCIP_CALL( SCIPcolGetStrongbranchesFrac(cols, nvars, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+      /* call strong branching for columns with fractional value */
+      SCIP_CALL( SCIPcolGetStrongbranches(cols, nvars, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
             down, up, downvalid, upvalid, lperror) );
 
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -12684,7 +12721,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    else
    {
       /* call strong branching for columns */
-      SCIP_CALL( SCIPcolGetStrongbranchesInt(cols, nvars, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+      SCIP_CALL( SCIPcolGetStrongbranches(cols, nvars, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
             down, up, downvalid, upvalid, lperror) );
 
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -16489,6 +16526,40 @@ SCIP_RETCODE SCIPreleaseCons(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
+}
+
+/** change constraint name */
+SCIP_RETCODE SCIPchgConsName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgConsName", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE , FALSE, FALSE, FALSE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("constraint names can only be changed in problem creation stage\n");
+      SCIPABORT();
+      return SCIP_INVALIDCALL;
+   }
+
+   /* remove constraint's name from the namespace if the constraint was already added */
+   if( SCIPconsIsAdded(cons) )
+   {
+      SCIP_CALL( SCIPprobRemoveConsName(scip->origprob, cons) );
+   }
+
+   /* change constraint name */
+   SCIP_CALL( SCIPconsChgName(cons, SCIPblkmem(scip), name) );
+
+   /* add constraint's name to the namespace if the constraint was already added */
+   if( SCIPconsIsAdded(cons) )
+   {
+      SCIP_CALL( SCIPprobAddConsName(scip->origprob, cons) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** sets the initial flag of the given constraint */

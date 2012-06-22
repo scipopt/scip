@@ -324,6 +324,15 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
+/** change variable name */
+extern
+/** change variable name */
+SCIP_RETCODE SCIPvarChgName(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name                /**< name of variable */
+   );
+
 /** initializes variable data structure for solving */
 extern
 void SCIPvarInitSolve(

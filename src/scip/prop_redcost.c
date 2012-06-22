@@ -534,6 +534,10 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   /* chack if all integral variables are fixed and the continuous variables should not be propagated */
+   if( !propdata->continuous && SCIPgetNPseudoBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
 
