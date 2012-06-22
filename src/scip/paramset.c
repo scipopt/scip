@@ -3449,6 +3449,9 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* set priority for depth first search to highest possible value */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "nodeselection/dfs/stdpriority", INT_MAX/4, quiet) );
 
+      /* set priority for depth first search to highest possible value */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/boundstreps", 1e-6, quiet) );
+
       break;
 
    case SCIP_PARAMEMPHASIS_EASYCIP:
