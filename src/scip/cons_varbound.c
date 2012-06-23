@@ -68,6 +68,7 @@
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_MAXLPCOEF         1e+06 /**< maximum coefficient in varbound constraint to be added as a row into LP */
+#define DEFAULT_USEBDWIDENING      TRUE /**< should bound widening be used to initialize conflict analysis? */
 
 
 #define MAXSCALEDCOEF            1000LL /**< maximal coefficient value after scaling */
@@ -97,6 +98,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Real             maxlpcoef;          /**< maximum coefficient in varbound constraint to be added as a row into LP */
+   SCIP_Bool             usebdwidening;      /**< should bound widening be used to in conflict analysis? */
 };
 
 /*
@@ -452,8 +454,6 @@ SCIP_Bool checkCons(
  *   (2) left hand side and upper bound on x -> bound on y
  *   (3) right hand side and bounds on y -> upper bound on x
  *   (4) right hand side and lower bound on x -> bound on y
- *
- *  @todo do bound widening like in vbound propagator
  */
 static
 SCIP_RETCODE resolvePropagation(
@@ -462,59 +462,221 @@ SCIP_RETCODE resolvePropagation(
    SCIP_VAR*             infervar,           /**< variable that was deduced */
    PROPRULE              proprule,           /**< propagation rule that deduced the bound change */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_Real             inferbd,            /**< inference bound which needs to be explained */
+   SCIP_Bool             usebdwidening       /**< should bound widening be used to in conflict analysis? */
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* vbdvar;
+   SCIP_VAR* var;
+   SCIP_Real vbdcoef;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(!SCIPisZero(scip, consdata->vbdcoef));
 
+   var = consdata->var;
+   assert(var != NULL);
+
+   vbdvar = consdata->vbdvar;
+   assert(vbdvar != NULL);
+
+   vbdcoef = consdata->vbdcoef;
+   assert(!SCIPisZero(scip, vbdcoef));
+
    switch( proprule )
    {
    case PROPRULE_1:
       /* lhs <= x + c*y: left hand side and bounds on y -> lower bound on x */
-      assert(infervar == consdata->var);
+      assert(infervar == var);
       assert(boundtype == SCIP_BOUNDTYPE_LOWER);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      if( consdata->vbdcoef > 0.0 )
+
+      if( usebdwidening )
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+         SCIP_Real relaxedbd;
+
+         if( SCIPvarIsIntegral(var) )
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip))) / vbdcoef;
+         else
+            relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
+
+         if( vbdcoef > 0.0 )
+         {
+            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
+
+            relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
+         }
+         else
+         {
+            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
+
+            relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+         if( vbdcoef > 0.0 )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx) );
+         }
       }
+
       break;
 
    case PROPRULE_2:
       /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
-      assert(infervar == consdata->vbdvar);
+      assert(infervar == vbdvar);
+      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->var, bdchgidx) );
+
+      if( usebdwidening )
+      {
+         SCIP_Real relaxedub;
+
+         /* compute the relaxed upper bound of the variable which would be sufficient to reach one less (greater) than the
+          * inference bound
+          */
+         if( vbdcoef > 0.0 )
+         {
+            relaxedub = consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+
+            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
+         }
+         else
+         {
+            relaxedub = consdata->lhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+
+            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
+         }
+
+         /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+          * to the integral condition of the variable bound variable
+          */
+         relaxedub -= SCIPfeastol(scip);
+
+         /* adjust the relaxed upper bound w.r.t. variable type */
+         relaxedub = SCIPadjustedVarUb(scip, var, relaxedub);
+
+         /* due to numericis we compare the compute relaxed upper bound to the one present at the particular time point and
+          * take the better one
+          */
+         relaxedub = MAX(relaxedub, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedub) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
+      }
+
       break;
 
    case PROPRULE_3:
       /* x + c*y <= rhs: right hand side and bounds on y -> upper bound on x */
-      assert(infervar == consdata->var);
+      assert(infervar == var);
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
       assert(!SCIPisInfinity(scip, consdata->rhs));
-      if( consdata->vbdcoef > 0.0 )
+
+      if( usebdwidening )
       {
-         SCIP_CALL( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+         SCIP_Real relaxedbd;
+
+         if( SCIPvarIsIntegral(var) )
+            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip))) / vbdcoef;
+         else
+            relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
+
+         if( vbdcoef > 0.0 )
+         {
+            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+
+            relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
+         }
+         else
+         {
+            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+
+            relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+         if( vbdcoef > 0.0 )
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, vbdvar, bdchgidx) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vbdvar, bdchgidx) );
+         }
       }
+
       break;
 
    case PROPRULE_4:
       /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
-      assert(infervar == consdata->vbdvar);
+      assert(infervar == vbdvar);
+      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, consdata->rhs));
-      SCIP_CALL( SCIPaddConflictLb(scip, consdata->var, bdchgidx) );
+
+      if( usebdwidening )
+      {
+         SCIP_Real relaxedlb;
+
+         /* compute the relaxed lower bound of the variable which would be sufficient to reach one greater (less) than the
+          * inference bound
+          */
+         if( vbdcoef > 0.0 )
+         {
+            relaxedlb = consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+
+            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
+         }
+         else
+         {
+            relaxedlb = consdata->rhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+
+            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
+         }
+
+         /* inccrease the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
+          * to the integral condition of the variable bound variable
+          */
+         relaxedlb += SCIPfeastol(scip);
+
+         /* due to numericis we compare the compute relaxed lower bound to the one present at the particular time point and
+          * take the better one
+          */
+         relaxedlb = MIN(relaxedlb, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
+
+         /* adjust the relaxed lower bound w.r.t. variable type */
+         relaxedlb = SCIPadjustedVarLb(scip, var, relaxedlb);
+
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedlb) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
+      }
+
       break;
 
    case PROPRULE_INVALID:
@@ -532,8 +694,10 @@ SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_VAR*             infervar,           /**< variable that was deduced */
+   SCIP_Real             inferbd,            /**< bound which led to infeasibility */
    PROPRULE              proprule,           /**< propagation rule that deduced the bound change */
-   SCIP_BOUNDTYPE        boundtype           /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_Bool             usebdwidening       /**< should bound widening be used to in conflict analysis? */
    )
 {
    /* conflict analysis can only be applied in solving stage and if it is applicable */
@@ -546,16 +710,73 @@ SCIP_RETCODE analyzeConflict(
    /* add the bound which got violated */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
+      if( usebdwidening )
+      {
+         SCIP_Real relaxedub;
+
+         /* adjust lower bound */
+         inferbd = SCIPadjustedVarLb(scip, infervar, inferbd);
+
+         /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+         if( SCIPvarIsIntegral(infervar) )
+            relaxedub = inferbd - 1.0;
+         else
+            relaxedub = inferbd - 2*SCIPfeastol(scip);
+
+         /* try to relax inference variable upper bound such that the infeasibility is still given */
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
+
+         /* collect the upper bound which is reported to the conflict analysis */
+         inferbd = SCIPgetConflictVarRelaxedUb(scip, infervar);
+
+         /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
+         if( SCIPvarIsIntegral(infervar) )
+            inferbd = inferbd + 1.0;
+         else
+            inferbd = inferbd + 2*SCIPfeastol(scip);
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
+      }
    }
    else
    {
-      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
+      if( usebdwidening )
+      {
+         SCIP_Real relaxedlb;
+
+         assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+         /* adjust upper bound */
+         inferbd = SCIPadjustedVarUb(scip, infervar, inferbd);
+
+         /* compute a relaxed upper bound which would be sufficient to be still infeasible */
+         if( SCIPvarIsIntegral(infervar) )
+            relaxedlb = inferbd + 1.0;
+         else
+            relaxedlb = inferbd + 2*SCIPfeastol(scip);
+
+         /* try to relax inference variable upper bound such that the infeasibility is still given */
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
+
+         /* collect the lower bound which is reported to the conflict analysis */
+         inferbd = SCIPgetConflictVarRelaxedLb(scip, infervar);
+
+         /* adjust inference bound with respect to the lower bound reported to the conflict analysis */
+         if( SCIPvarIsIntegral(infervar) )
+            inferbd = inferbd - 1.0;
+         else
+            inferbd = inferbd - 2*SCIPfeastol(scip);
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );
+      }
    }
 
    /* add the reason for the violated of the bound */
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, proprule, boundtype, NULL) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, proprule, boundtype, NULL, inferbd, usebdwidening) );
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -568,6 +789,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used to in conflict analysis? */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -617,14 +839,14 @@ SCIP_RETCODE separateCons(
          newlb = consdata->lhs - vbdcoef * SCIPvarGetLbLocal(vbdvar);
 
          SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, TRUE,
-                  &cutoff, &tightened) );
+               &cutoff, &tightened) );
 
          if( cutoff )
          {
             assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
 
             /* analyze infeasibility */
-            SCIP_CALL( analyzeConflict(scip, cons, var, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+            SCIP_CALL( analyzeConflict(scip, cons, var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
             *result = SCIP_CUTOFF;
 
             return SCIP_OKAY;
@@ -644,14 +866,14 @@ SCIP_RETCODE separateCons(
          newub = consdata->rhs - vbdcoef * SCIPvarGetLbLocal(vbdvar);
 
          SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_3, TRUE,
-                  &cutoff, &tightened) );
+               &cutoff, &tightened) );
 
          if( cutoff )
          {
             assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
 
             /* analyze infeasibility */
-            SCIP_CALL( analyzeConflict(scip, cons, var, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+            SCIP_CALL( analyzeConflict(scip, cons, var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
             *result = SCIP_CUTOFF;
 
             return SCIP_OKAY;
@@ -857,6 +1079,7 @@ static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_Bool             usebdwidening,      /**< should bound widening be used to in conflict analysis? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  ndelconss           /**< pointer to count number of deleted constraints, or NULL */
@@ -935,7 +1158,7 @@ SCIP_RETCODE propagateCons(
                assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
                /* analyze infeasibility */
-               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_1, SCIP_BOUNDTYPE_LOWER) );
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                break;
             }
 
@@ -969,7 +1192,7 @@ SCIP_RETCODE propagateCons(
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
-                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_2, SCIP_BOUNDTYPE_LOWER) );
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_2, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                      break;
                   }
 
@@ -996,7 +1219,7 @@ SCIP_RETCODE propagateCons(
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
-                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_2, SCIP_BOUNDTYPE_UPPER) );
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_2, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
                   }
 
@@ -1046,7 +1269,7 @@ SCIP_RETCODE propagateCons(
                assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
                /* analyze infeasibility */
-               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, PROPRULE_3, SCIP_BOUNDTYPE_UPPER) );
+               SCIP_CALL( analyzeConflict(scip, cons, consdata->var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                break;
             }
 
@@ -1080,7 +1303,7 @@ SCIP_RETCODE propagateCons(
                      assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
-                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_4, SCIP_BOUNDTYPE_UPPER) );
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newub, PROPRULE_4, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
                      break;
                   }
 
@@ -1107,7 +1330,7 @@ SCIP_RETCODE propagateCons(
                      assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
-                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, PROPRULE_4, SCIP_BOUNDTYPE_LOWER) );
+                     SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_4, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
                      break;
                   }
 
@@ -2998,20 +3221,26 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 static
 SCIP_DECL_CONSSEPALP(consSepalpVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
    /* separate useful constraints */
    for( i = 0; i < nusefulconss; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], NULL, result) );
+      SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
    }
 
    /* separate remaining constraints */
    for( i = nusefulconss; i < nconss && *result == SCIP_DIDNOTFIND; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], NULL, result) );
+      SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
    }
 
    return SCIP_OKAY;
@@ -3022,20 +3251,26 @@ SCIP_DECL_CONSSEPALP(consSepalpVarbound)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
    /* separate useful constraints */
    for( i = 0; i < nusefulconss; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], sol, result) );
+      SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, sol, result) );
    }
 
    /* separate remaining constraints */
    for( i = nusefulconss; i < nconss && *result == SCIP_DIDNOTFIND; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], sol, result) );
+      SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, sol, result) );
    }
 
    return SCIP_OKAY;
@@ -3046,7 +3281,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolVarbound)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *result = SCIP_FEASIBLE;
 
@@ -3057,7 +3298,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
          assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
          (*result) = SCIP_INFEASIBLE;
 
-         SCIP_CALL( separateCons(scip, conss[i], NULL, result) );
+         SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, NULL, result) );
          assert((*result) != SCIP_FEASIBLE);
 
          if( (*result) != SCIP_INFEASIBLE )
@@ -3136,16 +3377,22 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
 static
 SCIP_DECL_CONSPROP(consPropVarbound)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    int nchgbds;
    int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
    nchgbds = 0;
 
    for( i = 0; i < nusefulconss && !cutoff; i++ )
    {
-      SCIP_CALL( propagateCons(scip, conss[i], &cutoff, &nchgbds, NULL) );
+      SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, &nchgbds, NULL) );
    } 
 
    if( cutoff )
@@ -3213,7 +3460,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          continue;
 
       /* propagate constraint */
-      SCIP_CALL( propagateCons(scip, conss[i], &cutoff, nchgbds, ndelconss) );
+      SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, nchgbds, ndelconss) );
       if( cutoff || !SCIPconsIsActive(conss[i]) )
          continue;
 
@@ -3292,7 +3539,14 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 static
 SCIP_DECL_CONSRESPROP(consRespropVarbound)
 {  /*lint --e{715}*/
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx) );
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, relaxedbd, conshdlrdata->usebdwidening) );
 
    *result = SCIP_SUCCESS;
 
@@ -3650,6 +3904,9 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          "constraints/"CONSHDLR_NAME"/maxlpcoef",
          "maximum coefficient in varbound constraint to be added as a row into LP",
          &conshdlrdata->maxlpcoef, TRUE, DEFAULT_MAXLPCOEF, 0.0, 1e+20, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/usebdwidening", "should bound widening be used in conflict analysis?",
+         &conshdlrdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
 
    return SCIP_OKAY;
 }
