@@ -5114,14 +5114,14 @@ void SCIPdigraphPrintComponents(
 }
 
 /*
- * Binary search tree
+ * Binary tree
  */
 
-/** creates a search node for a binary search tree */
+/** creates a node for a binary tree */
 static
-SCIP_RETCODE bstnodeCreateEmpty(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node                /**< pointer to store the created search node */
+SCIP_RETCODE btnodeCreateEmpty(
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE**         node                /**< pointer to store the created node */
    )
 {
    SCIP_ALLOC( BMSallocBlockMemory(tree->blkmem, node) );
@@ -5129,41 +5129,38 @@ SCIP_RETCODE bstnodeCreateEmpty(
    (*node)->parent = NULL;
    (*node)->left = NULL;
    (*node)->right = NULL;
-   (*node)->key = NULL;
    (*node)->dataptr = NULL;
 
    return SCIP_OKAY;
 }
 
-/** creates a search tree node with (optinal) sorting value and user data */
-SCIP_RETCODE SCIPbstnodeCreate(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node,               /**< pointer to store the created search node */
-   void*                 key,                /**< sorting key, or NULL */
+/** creates a tree node with (optinal) user data */
+SCIP_RETCODE SCIPbtnodeCreate(
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE**         node,               /**< pointer to store the created node */
    void*                 dataptr             /**< user node data pointer, or NULL */
    )
 {
    assert(tree != NULL);
    assert(node != NULL);
 
-   SCIP_CALL( bstnodeCreateEmpty(tree, node) );
+   SCIP_CALL( btnodeCreateEmpty(tree, node) );
 
    assert((*node)->parent == NULL);
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
-   /* initialize search key and user data */
-   (*node)->key = key;
+   /* initialize user data */
    (*node)->dataptr = dataptr;
 
    return SCIP_OKAY;
 }
 
-/** frees a search tree leaf */
+/** frees a tree leaf */
 static
-void bstnodeFreeLeaf(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node                /**< pointer to search node which has to be freed */
+void btnodeFreeLeaf(
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE**         node                /**< pointer to node which has to be freed */
    )
 {
    assert(tree != NULL);
@@ -5198,13 +5195,13 @@ void bstnodeFreeLeaf(
    assert(*node == NULL);
 }
 
-/** frees the search node including the rooted subtree
+/** frees the node including the rooted subtree
  *
  *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
  */
-void SCIPbstnodeFree(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE**        node                /**< search node to be freed */
+void SCIPbtnodeFree(
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE**         node                /**< node to be freed */
    )
 {
    assert(tree != NULL);
@@ -5213,17 +5210,17 @@ void SCIPbstnodeFree(
 
    if( (*node)->left != NULL )
    {
-      SCIPbstnodeFree(tree, &(*node)->left);
+      SCIPbtnodeFree(tree, &(*node)->left);
       assert((*node)->left == NULL);
    }
 
    if( (*node)->right != NULL )
    {
-      SCIPbstnodeFree(tree, &(*node)->right);
+      SCIPbtnodeFree(tree, &(*node)->right);
       assert((*node)->right == NULL);
    }
 
-   bstnodeFreeLeaf(tree, node);
+   btnodeFreeLeaf(tree, node);
    assert(*node == NULL);
 }
 
@@ -5235,16 +5232,16 @@ void SCIPbstnodeFree(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
-#undef SCIPbstnodeIsLeaf
-#undef SCIPbstnodeGetData
-#undef SCIPbstnodeGetKey
-#undef SCIPbstnodeGetParent
-#undef SCIPbstnodeGetLeftchild
-#undef SCIPbstnodeGetRightchild
+#undef SCIPbtnodeIsLeaf
+#undef SCIPbtnodeGetData
+#undef SCIPbtnodeGetKey
+#undef SCIPbtnodeGetParent
+#undef SCIPbtnodeGetLeftchild
+#undef SCIPbtnodeGetRightchild
 
-/** returns whether the search node is a leaf */
-SCIP_Bool SCIPbstnodeIsLeaf(
-   SCIP_BSTNODE*         node                /**< search node */
+/** returns whether the node is a leaf */
+SCIP_Bool SCIPbtnodeIsLeaf(
+   SCIP_BTNODE*          node                /**< node */
    )
 {
    assert(node != NULL);
@@ -5252,9 +5249,9 @@ SCIP_Bool SCIPbstnodeIsLeaf(
    return (node->left == NULL && node->right == NULL);
 }
 
-/** returns the user data pointer stored in that search node */
-void* SCIPbstnodeGetData(
-   SCIP_BSTNODE*         node                /**< search node */
+/** returns the user data pointer stored in that node */
+void* SCIPbtnodeGetData(
+   SCIP_BTNODE*          node                /**< node */
    )
 {
    assert(node != NULL);
@@ -5262,19 +5259,9 @@ void* SCIPbstnodeGetData(
    return node->dataptr;
 }
 
-/** returns the key of the search node */
-void* SCIPbstnodeGetKey(
-   SCIP_BSTNODE*         node                /**< search node */
-   )
-{
-   assert(node != NULL);
-
-   return node->key;
-}
-
 /** returns the parent which can be NULL if the given node is the root */
-SCIP_BSTNODE* SCIPbstnodeGetParent(
-   SCIP_BSTNODE*         node                /**< search node */
+SCIP_BTNODE* SCIPbtnodeGetParent(
+   SCIP_BTNODE*          node                /**< node */
    )
 {
    assert(node != NULL);
@@ -5283,8 +5270,8 @@ SCIP_BSTNODE* SCIPbstnodeGetParent(
 }
 
 /** returns left child which can be NULL if the given node is a leaf */
-SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
-   SCIP_BSTNODE*         node                /**< search node */
+SCIP_BTNODE* SCIPbtnodeGetLeftchild(
+   SCIP_BTNODE*          node                /**< node */
    )
 {
    assert(node != NULL);
@@ -5293,8 +5280,8 @@ SCIP_BSTNODE* SCIPbstnodeGetLeftchild(
 }
 
 /** returns right child which can be NULL if the given node is a leaf */
-SCIP_BSTNODE* SCIPbstnodeGetRightchild(
-   SCIP_BSTNODE*         node                /**< search node */
+SCIP_BTNODE* SCIPbtnodeGetRightchild(
+   SCIP_BTNODE*          node                /**< node */
    )
 {
    assert(node != NULL);
@@ -5306,8 +5293,8 @@ SCIP_BSTNODE* SCIPbstnodeGetRightchild(
  *
  *  @note The old user pointer is not freed.
  */
-void SCIPbstnodeSetData(
-   SCIP_BSTNODE*         node,               /**< search node */
+void SCIPbtnodeSetData(
+   SCIP_BTNODE*          node,               /**< node */
    void*                 dataptr             /**< node user data pointer */
    )
 {
@@ -5316,27 +5303,13 @@ void SCIPbstnodeSetData(
    node->dataptr = dataptr;
 }
 
-/** sets the key to the search node
- *
- *  @note The old key pointer is not freed.
- */
-void SCIPbstnodeSetKey(
-   SCIP_BSTNODE*         node,               /**< search node */
-   void*                 key                 /**< key value */
-   )
-{
-   assert(node != NULL);
-
-   node->key = key;
-}
-
 /** sets parent node
  *
  *  @note The old parent including the rooted subtree is not delete.
  */
-void SCIPbstnodeSetParent(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         parent              /**< new parent node, or NULL */
+void SCIPbtnodeSetParent(
+   SCIP_BTNODE*          node,               /**< node */
+   SCIP_BTNODE*          parent              /**< new parent node, or NULL */
    )
 {
    assert(node != NULL);
@@ -5348,9 +5321,9 @@ void SCIPbstnodeSetParent(
  *
  *  @note The old left child including the rooted subtree is not delete.
  */
-void SCIPbstnodeSetLeftchild(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         left                /**< new left child, or NULL */
+void SCIPbtnodeSetLeftchild(
+   SCIP_BTNODE*          node,               /**< node */
+   SCIP_BTNODE*          left                /**< new left child, or NULL */
    )
 {
    assert(node != NULL);
@@ -5362,9 +5335,9 @@ void SCIPbstnodeSetLeftchild(
  *
  *  @note The old right child including the rooted subtree is not delete.
  */
-void SCIPbstnodeSetRightchild(
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_BSTNODE*         right               /**< new right child, or NULL */
+void SCIPbtnodeSetRightchild(
+   SCIP_BTNODE*          node,               /**< node */
+   SCIP_BTNODE*          right               /**< new right child, or NULL */
    )
 {
    assert(node != NULL);
@@ -5372,13 +5345,10 @@ void SCIPbstnodeSetRightchild(
    node->right = right;
 }
 
-/** creates an binary search tree */
-SCIP_RETCODE SCIPbstCreate(
-   SCIP_BST**            tree,               /**< pointer to store the created binary search tree */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to create search node */
-   SCIP_DECL_BSTINSERT   ((*inserter)),      /**< inserter used to insert a new search node */
-   SCIP_DECL_BSTDELETE   ((*deleter)),       /**< deleter used to delete new search node */
-   SCIP_DECL_SORTPTRCOMP ((*comparer))       /**< comparer used to compares two search keys */
+/** creates an binary tree */
+SCIP_RETCODE SCIPbtCreate(
+   SCIP_BT**             tree,               /**< pointer to store the created binary tree */
+   BMS_BLKMEM*           blkmem              /**< block memory used to createnode */
    )
 {
    assert(tree != NULL);
@@ -5387,41 +5357,38 @@ SCIP_RETCODE SCIPbstCreate(
    SCIP_ALLOC( BMSallocMemory(tree) );
    (*tree)->blkmem = blkmem;
    (*tree)->root = NULL;
-   (*tree)->inserter = inserter;
-   (*tree)->deleter = deleter;
-   (*tree)->comparer = comparer;
 
    return SCIP_OKAY;
 }
 
-/** frees binary search tree
+/** frees binary tree
  *
- *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
+ *  @note The user pointers (object) of the nodes are not freed. If needed, it has to be done by the user.
  */
-void SCIPbstFree(
-   SCIP_BST**            tree                /**< pointer to binary search tree */
+void SCIPbtFree(
+   SCIP_BT**             tree                /**< pointer to binary tree */
    )
 {
    assert(tree != NULL);
 
    if( (*tree)->root != NULL )
    {
-      SCIPbstnodeFree(*tree, &((*tree)->root));
+      SCIPbtnodeFree(*tree, &((*tree)->root));
    }
 
    BMSfreeMemory(tree);
 }
 
-/** prints the rooted subtree of the given binary search tree node in GML format into the given file */
+/** prints the rooted subtree of the given binary tree node in GML format into the given file */
 static
-void bstPrintSubtree(
-   SCIP_BSTNODE*         node,               /**< binary search tree node */
+void btPrintSubtree(
+   SCIP_BTNODE*          node,               /**< binary tree node */
    FILE*                 file,               /**< file to write to */
    int*                  nnodes              /**< pointer to count the number of nodes */
    )
 {
-   SCIP_BSTNODE* left;
-   SCIP_BSTNODE* right;
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
    char label[SCIP_MAXSTRLEN];
 
    assert(node != NULL);
@@ -5431,44 +5398,44 @@ void bstPrintSubtree(
 
    SCIPgmlWriteNode(file, (unsigned int)(size_t)node, label, "circle", NULL, NULL);
 
-   left = SCIPbstnodeGetLeftchild(node);
-   right = SCIPbstnodeGetRightchild(node);
+   left = SCIPbtnodeGetLeftchild(node);
+   right = SCIPbtnodeGetRightchild(node);
 
    if( left != NULL )
    {
-      bstPrintSubtree(left, file, nnodes);
+      btPrintSubtree(left, file, nnodes);
 
       SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)left, NULL, NULL);
    }
 
    if( right != NULL )
    {
-      bstPrintSubtree(right, file, nnodes);
+      btPrintSubtree(right, file, nnodes);
 
       SCIPgmlWriteArc(file, (unsigned int)(size_t)node, (unsigned int)(size_t)right, NULL, NULL);
    }
 }
 
-/** prints the binary search tree in GML format into the given file */
-void SCIPbstPrintGml(
-   SCIP_BST*             tree,               /**< binary search tree */
+/** prints the binary tree in GML format into the given file */
+void SCIPbtPrintGml(
+   SCIP_BT*              tree,               /**< binary tree */
    FILE*                 file                /**< file to write to */
    )
 {
    /* write GML opening */
    SCIPgmlWriteOpening(file, TRUE);
 
-   if( !SCIPbstIsEmpty(tree) )
+   if( !SCIPbtIsEmpty(tree) )
    {
-      SCIP_BSTNODE* root;
+      SCIP_BTNODE* root;
       int nnodes;
 
-      root = SCIPbstGetRoot(tree);
+      root = SCIPbtGetRoot(tree);
       assert(root != NULL);
 
       nnodes = 0;
 
-      bstPrintSubtree(root, file, &nnodes);
+      btPrintSubtree(root, file, &nnodes);
    }
 
    /* write GML closing */
@@ -5476,12 +5443,12 @@ void SCIPbstPrintGml(
 }
 
 /* some simple variable functions implemented as defines */
-#undef SCIPbstIsEmpty
-#undef SCIPbstGetRoot
+#undef SCIPbtIsEmpty
+#undef SCIPbtGetRoot
 
-/** returns whether the binary search tree is empty (has no nodes) */
-SCIP_Bool SCIPbstIsEmpty(
-   SCIP_BST*             tree                /**< binary search tree */
+/** returns whether the binary tree is empty (has no nodes) */
+SCIP_Bool SCIPbtIsEmpty(
+   SCIP_BT*              tree                /**< binary tree */
    )
 {
    assert(tree != NULL);
@@ -5489,9 +5456,9 @@ SCIP_Bool SCIPbstIsEmpty(
    return (tree->root == NULL);
 }
 
-/** returns the the root node of the binary search or NULL if the binary search tree is empty */
-SCIP_BSTNODE* SCIPbstGetRoot(
-   SCIP_BST*             tree                /**< tree to be evaluated */
+/** returns the the root node of the binary or NULL if the binary tree is empty */
+SCIP_BTNODE* SCIPbtGetRoot(
+   SCIP_BT*              tree                /**< tree to be evaluated */
    )
 {
    assert(tree != NULL);
@@ -5503,9 +5470,9 @@ SCIP_BSTNODE* SCIPbstGetRoot(
  *
  *  @note The old root including the rooted subtree is not delete.
  */
-void SCIPbstSetRoot(
-   SCIP_BST*             tree,               /**< tree to be evaluated */
-   SCIP_BSTNODE*         root                /**< new root, or NULL */
+void SCIPbtSetRoot(
+   SCIP_BT*              tree,               /**< tree to be evaluated */
+   SCIP_BTNODE*          root                /**< new root, or NULL */
    )
 {
    assert(tree != NULL);
@@ -5513,122 +5480,6 @@ void SCIPbstSetRoot(
    tree->root = root;
 }
 
-/** inserts the given node into the binary search tree; uses the given SCIP_DECL_BSTINSERT() method; */
-SCIP_RETCODE SCIPbstInsert(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_Bool*            inserted            /**< pointer to store whether the node was inserted */
-   )
-{
-   assert(tree != NULL);
-   assert(node != NULL);
-   assert(node->key != NULL);
-   assert(inserted != NULL);
-
-   (*inserted) = FALSE;
-
-   if( tree->inserter != NULL )
-   {
-      SCIP_CALL( (*tree->inserter)(tree, node, inserted) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** deletes the given node from the binary search tree; uses the given SCIP_DECL_BSTDELETE() method */
-SCIP_RETCODE SCIPbstDelete(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node */
-   SCIP_Bool*            deleted             /**< pointer to store whether the node was deleted */
-   )
-{
-   assert(tree != NULL);
-   assert(node != NULL);
-   assert(deleted != NULL);
-
-   (*deleted) = FALSE;
-
-   if( tree->deleter != NULL )
-   {
-      SCIP_CALL( (*tree->deleter)(tree, node, deleted) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** compares to search nodes using the search tree comparer */
-int SCIPbstComp(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node1,              /**< search node 1 */
-   SCIP_BSTNODE*         node2               /**< search node 2 */
-   )
-{
-   assert(tree != NULL);
-   assert(node1 != NULL);
-   assert(node2 != NULL);
-   assert(tree->comparer != NULL);
-
-   return (*tree->comparer)(node1->key, node2->key);
-}
-
-/** Finds the position at which the given node is located in the search tree or has to be inserted. If the search tree
- *  is empty NULL is return. If a search node with the same node key exists, the method returns the last search node and
- *  sets the found pointer to TRUE. If the element does not exist, the method returns the search node with the last
- *  highest node key value which is smaller than the given one and sets the found pointer to FALSE.
- */
-SCIP_BSTNODE* SCIPbstFindInsertNode(
-   SCIP_BST*             tree,               /**< binary search tree */
-   SCIP_BSTNODE*         node,               /**< search node to find */
-   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
-   )
-{
-   return SCIPbstFindKey(tree, node->key, found);
-}
-
-/** Finds the position at which the given key is located in the search tree. If the search tree is empty NULL is
- *  return. If a search node with the same key exists, the method returns the last search node and sets the found
- *  pointer to TRUE. If the element does not exist, the method returns the search node with the last highest key value
- *  which is smaller than the given one and sets the found pointer to FALSE.
- */
-SCIP_BSTNODE* SCIPbstFindKey(
-   SCIP_BST*             tree,               /**< binary search tree */
-   void*                 key,                /**< key value */
-   SCIP_Bool*            found               /**< pointer to store if a search node with the given key was found */
-   )
-{
-   SCIP_BSTNODE* node;
-
-   assert(tree != NULL);
-   assert(key != NULL);
-   assert(found != NULL);
-
-   (*found) = FALSE;
-
-   if(!SCIPbstIsEmpty(tree) )
-      return NULL;
-
-   node = tree->root;
-
-   while( !SCIPbstnodeIsLeaf(node) )
-   {
-      if( (*tree->comparer)(key, node->key) < 0 )
-      {
-         if( node->left == NULL )
-            break;
-
-         node = node->left;
-      }
-      else
-      {
-         if( node->right == NULL )
-            break;
-
-         node = node->right;
-      }
-   }
-
-   return node;
-}
 
 /*
  * Numerical methods

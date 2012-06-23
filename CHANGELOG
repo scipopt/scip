@@ -97,7 +97,7 @@ interface
   explaining/resolving this relaxed bound is sufficient
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
-- data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
+- data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
 - renamed data structure SCIP_STAIRMAP to SCIP_PROFILE

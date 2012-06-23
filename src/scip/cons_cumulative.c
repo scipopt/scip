@@ -3369,51 +3369,35 @@ typedef struct SCIP_Envelop SCIP_ENVELOP;
 static
 SCIP_RETCODE updateEnvelop(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BSTNODE*         node,               /**< search node which inserted */
+   SCIP_BTNODE*          node,               /**< search node which inserted */
    SCIP_ENVELOP**        nodedatas,          /**< array with search node data */
    int*                  nnodedatas          /**< pointer to store the number of search node data structure */
    )
 {
-   SCIP_BSTNODE* left;
-   SCIP_BSTNODE* right;
+   SCIP_BTNODE* left;
+   SCIP_BTNODE* right;
    SCIP_ENVELOP* nodedata;
    SCIP_ENVELOP* leftdata;
    SCIP_ENVELOP* rightdata;
 
-   node = SCIPbstnodeGetParent(node);
+   node = SCIPbtnodeGetParent(node);
 
    while( node != NULL )
    {
       /* get node data */
-      nodedata = (SCIP_ENVELOP*)SCIPbstnodeGetData(node);
-
-      /* if the node data is NULL, we have an internal node which was created due to inserting a new search node */
-      if( nodedata == NULL )
-      {
-         SCIP_CALL( SCIPallocBuffer(scip, &nodedata) );
-         nodedata->key = SCIP_INVALID;
-         nodedata->envelop = 0;
-         nodedata->energy = 0;
-
-         /* attach the node data to the search node */
-         SCIPbstnodeSetData(node, (void*)nodedata);
-
-         /* store node data to be able to delete them latter */
-         nodedatas[*nnodedatas] = nodedata;
-         (*nnodedatas)++;
-      }
+      nodedata = (SCIP_ENVELOP*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
 
       /* collect node data from left node */
-      left = SCIPbstnodeGetLeftchild(node);
+      left = SCIPbtnodeGetLeftchild(node);
       assert(left != NULL);
-      leftdata = (SCIP_ENVELOP*)SCIPbstnodeGetData(left);
+      leftdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(left);
       assert(leftdata != NULL);
 
       /* collect node data from right node */
-      right = SCIPbstnodeGetRightchild(node);
+      right = SCIPbtnodeGetRightchild(node);
       assert(right != NULL);
-      rightdata = (SCIP_ENVELOP*)SCIPbstnodeGetData(right);
+      rightdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(right);
       assert(rightdata != NULL);
 
       /* update envelop and energy */
@@ -3421,104 +3405,113 @@ SCIP_RETCODE updateEnvelop(
       nodedata->energy = leftdata->energy + rightdata->energy;
 
       /* go to parent */
-      node = SCIPbstnodeGetParent(node);
+      node = SCIPbtnodeGetParent(node);
    }
 
    return SCIP_OKAY;
 }
 
-/** insert mmethod for theta trees */
+/** insert mmethod for theta tree */
 static
-SCIP_DECL_BSTINSERT(thetatreeInsert)
+SCIP_RETCODE thetatreeInsert(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BT*              tree,               /**< binary tree */
+   SCIP_BTNODE*          node,               /**< node to insert */
+   SCIP_ENVELOP**        nodedatas,          /**< array of node datas */
+   int*                  nnodedatas          /**< pointer to number of node datas */
+   )
 {
-   (*inserted) = TRUE;
-
    /* if the tree is empty the node will be the root node */
-   if( SCIPbstIsEmpty(tree) )
+   if( SCIPbtIsEmpty(tree) )
    {
-      SCIPbstSetRoot(tree, node);
+      SCIPbtSetRoot(tree, node);
    }
    else
    {
-      SCIP_BSTNODE* leaf;
-      SCIP_BSTNODE* newnode;
-      SCIP_BSTNODE* parent;
+      SCIP_ENVELOP* newnodedata;
+      SCIP_ENVELOP* leafdata;
+      SCIP_ENVELOP* nodedata;
+      SCIP_BTNODE* leaf;
+      SCIP_BTNODE* newnode;
+      SCIP_BTNODE* parent;
 
-      leaf = SCIPbstGetRoot(tree);
+      leaf = SCIPbtGetRoot(tree);
       assert(leaf != NULL);
 
+      leafdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(leaf);
+      assert(leafdata != NULL);
+
+      nodedata = (SCIP_ENVELOP*)SCIPbtnodeGetData(node);
+      assert(nodedata != NULL);
+
       /* find the position to insert the node */
-      while( !SCIPbstnodeIsLeaf(leaf) )
+      while( !SCIPbtnodeIsLeaf(leaf) )
       {
-         if( SCIPbstComp(tree, node, leaf) <= 0 )
-            leaf = SCIPbstnodeGetLeftchild(leaf);
+         if( nodedata->key < leafdata->key )
+            leaf = SCIPbtnodeGetLeftchild(leaf);
          else
-            leaf = SCIPbstnodeGetRightchild(leaf);
+            leaf = SCIPbtnodeGetRightchild(leaf);
+
+         leafdata = (SCIP_ENVELOP*)SCIPbtnodeGetData(leaf);
+         assert(leafdata != NULL);
       }
+
       assert(leaf != NULL);
       assert(leaf != node);
 
+      /* create node data */
+      SCIP_CALL( SCIPallocBuffer(scip, &newnodedata) );
+      newnodedata->key = SCIP_INVALID;
+      newnodedata->envelop = 0;
+      newnodedata->energy = 0;
+
       /* create a new node */
-      SCIP_CALL( SCIPbstnodeCreate(tree, &newnode, NULL, NULL) );
+      SCIP_CALL( SCIPbtnodeCreate(tree, &newnode, newnodedata) );
       assert(newnode != NULL);
 
-      parent = SCIPbstnodeGetParent(leaf);
+      /* store node data to be able to delete them latter */
+      nodedatas[*nnodedatas] = newnodedata;
+      (*nnodedatas)++;
+
+      parent = SCIPbtnodeGetParent(leaf);
 
       if( parent != NULL )
       {
-         SCIPbstnodeSetParent(newnode, parent);
+         SCIPbtnodeSetParent(newnode, parent);
 
          /* check if the node is the left child */
-         if( SCIPbstnodeGetLeftchild(parent) == leaf )
+         if( SCIPbtnodeGetLeftchild(parent) == leaf )
          {
-            SCIPbstnodeSetLeftchild(parent, newnode);
+            SCIPbtnodeSetLeftchild(parent, newnode);
          }
          else
          {
-            SCIPbstnodeSetRightchild(parent, newnode);
+            SCIPbtnodeSetRightchild(parent, newnode);
          }
       }
       else
-         SCIPbstSetRoot(tree, newnode);
+         SCIPbtSetRoot(tree, newnode);
 
-      if( SCIPbstComp(tree, node, leaf) <= 0 )
+      if( nodedata->key < leafdata->key )
       {
          /* node is on the left */
-         SCIPbstnodeSetLeftchild(newnode, node);
-         SCIPbstnodeSetRightchild(newnode, leaf);
-         SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(node));
+         SCIPbtnodeSetLeftchild(newnode, node);
+         SCIPbtnodeSetRightchild(newnode, leaf);
+         newnodedata->key = nodedata->key;
       }
       else
       {
          /* leaf is on the left */
-         SCIPbstnodeSetLeftchild(newnode, leaf);
-         SCIPbstnodeSetRightchild(newnode, node);
-         SCIPbstnodeSetKey(newnode, SCIPbstnodeGetKey(leaf));
+         SCIPbtnodeSetLeftchild(newnode, leaf);
+         SCIPbtnodeSetRightchild(newnode, node);
+         newnodedata->key = leafdata->key;
       }
 
-      SCIPbstnodeSetParent(leaf, newnode);
-      SCIPbstnodeSetParent(node, newnode);
+      SCIPbtnodeSetParent(leaf, newnode);
+      SCIPbtnodeSetParent(node, newnode);
    }
 
    return SCIP_OKAY;
-}
-
-/** compare the keys of the search nodes belonging to a theta tree */
-static
-SCIP_DECL_SORTPTRCOMP(thetatreeComp)
-{
-   SCIP_Real key1;
-   SCIP_Real key2;
-
-   key1 = ((SCIP_ENVELOP*)elem1)->key;
-   key2 = ((SCIP_ENVELOP*)elem2)->key;
-
-   if( key1 < key2 )
-      return -1;
-   else if( key1 > key2 )
-      return 1;
-
-   return 0;
 }
 
 /** checks whether the instance is infeasible due to a overload within a certain time frame
@@ -3544,7 +3537,7 @@ SCIP_RETCODE checkOverload(
    )
 {
    SCIP_ENVELOP** nodedatas;
-   SCIP_BST* bsttree;
+   SCIP_BT* tree;
 
    int* leftadjusts;
    int* rightadjusts;
@@ -3576,7 +3569,7 @@ SCIP_RETCODE checkOverload(
    ncands = 0;
    totalenergy = 0;
 
-   SCIP_CALL( SCIPbstCreate(&bsttree, SCIPblkmem(scip), thetatreeInsert, NULL, thetatreeComp) );
+   SCIP_CALL( SCIPbtCreate(&tree, SCIPblkmem(scip)) );
 
    /* collect earliest and latest completion times and ignore jobs which do not run completion within the effective
     * horizon
@@ -3659,10 +3652,9 @@ SCIP_RETCODE checkOverload(
     */
    for( j = 0; j < ncands; ++j )
    {
-      SCIP_BSTNODE* root;
-      SCIP_BSTNODE* node;
+      SCIP_BTNODE* root;
+      SCIP_BTNODE* node;
       SCIP_ENVELOP* data;
-      SCIP_Bool inserted;
       int idx;
 
       idx = perm[j];
@@ -3678,18 +3670,17 @@ SCIP_RETCODE checkOverload(
       }
 
       /* create search node */
-      SCIP_CALL( SCIPbstnodeCreate(bsttree, &node, (void*)nodedatas[idx], (void*)nodedatas[idx]) );
+      SCIP_CALL( SCIPbtnodeCreate(tree, &node, (void*)nodedatas[idx]) );
 
       /* insert new search node */
-      SCIP_CALL( SCIPbstInsert(bsttree, node, &inserted) );
-      assert(inserted);
+      SCIP_CALL( thetatreeInsert(scip, tree, node, nodedatas, &nnodedatas) );
 
       /* update envelop */
       SCIP_CALL( updateEnvelop(scip, node, nodedatas, &nnodedatas) );
       assert(nnodedatas <= 2*nvars);
 
-      root = SCIPbstGetRoot(bsttree);
-      data = SCIPbstnodeGetData(root);
+      root = SCIPbtGetRoot(tree);
+      data = SCIPbtnodeGetData(root);
 
       /* check for overload */
       if( data->envelop > capacity * lcts[j] )
@@ -3837,7 +3828,7 @@ SCIP_RETCODE checkOverload(
    }
 
    /* free theta tree */
-   SCIPbstFree(&bsttree);
+   SCIPbtFree(&tree);
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &nodedatas);
