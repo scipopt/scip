@@ -3702,7 +3702,7 @@ SCIP_RETCODE checkOverload(
       int lct;
       int idx;
 
-      /* store the number if candidate inserted into the theta tree (including the once we skipped) */
+      /* store the number of candidate inserted into the theta tree (including the once we skipped) */
       ninsertcands = j+1;
 
       /* collect the earliest and latest completion time of the last job which led to the overload detection */
@@ -3736,12 +3736,7 @@ SCIP_RETCODE checkOverload(
             duration -= (glblct - lct);
 
          if( duration > 0 )
-         {
             reportedenergy +=  duration * demands[idx];
-
-            if( explanation != NULL )
-               explanation[idx] = TRUE;
-         }
       }
 
       /* sort the start time variables which were added to search tree w.r.t. earliest start time */
@@ -3791,7 +3786,6 @@ SCIP_RETCODE checkOverload(
 
          /* adjust energy */
          energy = (lct - est) * capacity;
-
       }
       assert(reportedenergy > energy);
 
@@ -3810,8 +3804,8 @@ SCIP_RETCODE checkOverload(
          var = vars[idx];
          assert(var != NULL);
 
-         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, (SCIP_Real)(est  - leftadjusts[idx])) );
-         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, (SCIP_Real)(lct - durations[idx])) );
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, (SCIP_Real)(est - leftadjusts[idx])) );
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, (SCIP_Real)(lct - durations[idx] + rightadjusts[idx])) );
 
          if( explanation != NULL )
             explanation[idx] = TRUE;
