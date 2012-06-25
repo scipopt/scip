@@ -66,6 +66,7 @@
 #define DEFAULT_MAXSEPACUTSROOT      50 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+#define DEFAULT_AWAY               0.05 /**< minimal integrality violation of a basis variable in order to try Gomory cut */
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS         FALSE /**< if conversion to integral coefficients failed still use the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
@@ -76,8 +77,6 @@
 #define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
-#define MINFRAC                    0.05 /**< minimal fractionality of a basis variable in order to try Gomory cut */
-#define MAXFRAC                    0.95 /**< maximal fractionality of a basis variable in order to try Gomory cut */
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
@@ -86,6 +85,7 @@
 struct SCIP_SepaData
 {
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
@@ -148,6 +148,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
    SCIP_Real maxscale;
+   SCIP_Real minfrac;
+   SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
    int* basisind;
@@ -174,6 +176,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+   minfrac = sepadata->away;
+   maxfrac = 1.0 - sepadata->away;
 
    /* only call separator, if we are not close to terminating */
    if( SCIPisStopped(scip) )
@@ -289,7 +294,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
-            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
+            if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
                SCIPdebugMessage("trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
                tryrow = TRUE;
@@ -307,7 +312,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             SCIP_Real primsol;
 
             primsol = SCIPgetRowActivity(scip, row);
-            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
+            if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
                SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                tryrow = TRUE;
@@ -330,7 +335,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
-               (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
+               (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, minfrac, maxfrac,
                binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
 
@@ -526,6 +531,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/maxsepacutsroot",
          "maximal number of gomory cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/gomory/away",
+         "minimal integrality violation of a basis variable in order to try Gomory cut",
+         &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
