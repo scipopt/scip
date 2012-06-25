@@ -3869,7 +3869,7 @@ SCIP_RETCODE consCheckRedundancy(
    int freecapacity;             /* remaining capacity */
    int curtime;                  /* point in time which we are just checking */
    int endindex;                 /* index of endsolvalues with: endsolvalues[endindex] > curtime */
-
+   int njobs;
    int j;
 
    assert(scip != NULL);
@@ -3888,6 +3888,8 @@ SCIP_RETCODE consCheckRedundancy(
    SCIP_CALL( SCIPallocBufferArray(scip, &startindices, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &endindices, nvars) );
 
+   njobs = 0;
+
    /* assign variables, start and endpoints to arrays */
    for( j = 0; j < nvars; ++j )
    {
@@ -3897,22 +3899,28 @@ SCIP_RETCODE consCheckRedundancy(
       lb = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
       ub = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
-      starttimes[j] = MAX(lb, hmin);
-      startindices[j] = j;
+      /* check if jobs runs completely outside of the effective time horizon */
+      if( lb >= hmax || ub + durations[j] <= hmin )
+         continue;
 
-      endtimes[j] =  ub + durations[j];
-      endindices[j] = j;
+      starttimes[njobs] = MAX(lb, hmin);
+      startindices[njobs] = j;
+
+      endtimes[njobs] =  MIN(ub + durations[j], hmax);
+      endindices[njobs] = j;
+      assert(starttimes[njobs] <= endtimes[njobs]);
+      njobs++;
    }
 
    /* sort the arrays not-decreasing according to startsolvalues and endsolvalues (and sort the indices in the same way) */
-   SCIPsortIntInt(starttimes, startindices, nvars);
-   SCIPsortIntInt(endtimes, endindices, nvars);
+   SCIPsortIntInt(starttimes, startindices, njobs);
+   SCIPsortIntInt(endtimes, endindices, njobs);
 
    endindex = 0;
    freecapacity = capacity;
 
    /* check each start point of a job whether the capacity is violated or not */
-   for( j = 0; j < nvars; ++j )
+   for( j = 0; j < njobs; ++j )
    {
       curtime = starttimes[j];
 
@@ -3922,7 +3930,7 @@ SCIP_RETCODE consCheckRedundancy(
 
       /* subtract all capacity needed up to this point */
       freecapacity -= demands[startindices[j]];
-      while( j+1 < nvars && starttimes[j+1] == curtime )
+      while( j+1 < njobs && starttimes[j+1] == curtime )
       {
          ++j;
          freecapacity -= demands[startindices[j]];
