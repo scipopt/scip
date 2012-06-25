@@ -2888,7 +2888,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPerrorMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
       return SCIP_LPERROR;
    }
 
@@ -2910,8 +2910,17 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2932,6 +2941,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -2947,7 +2958,14 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
    return SCIP_OKAY;
 }
@@ -2967,9 +2985,18 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
+
    return SCIP_OKAY;
 }
 
@@ -2989,6 +3016,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -3004,8 +3033,16 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
+
    return SCIP_OKAY;
 }
 /**@} */

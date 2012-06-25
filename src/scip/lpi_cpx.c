@@ -3451,10 +3451,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
        */
       CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
 
-      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 10);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
+      /* In a numerical perfect world, the 50 below should be zero. However, due to numerical inaccuracies after refactorization,
+       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */
+      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 50);
+      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 50);
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );

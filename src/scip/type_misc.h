@@ -78,14 +78,14 @@ typedef struct SCIP_Profile SCIP_PROFILE;
  */
 typedef struct SCIP_Digraph SCIP_DIGRAPH;
 
-/** Binary search tree data structure
+/** Binary tree data structure
  *
- *  - \ref BinarySearchTree "List of all available methods"
+ *  - \ref BinaryTree "List of all available methods"
  */
-typedef struct SCIP_Bst SCIP_BST;
+typedef struct SCIP_Bt SCIP_BT;
 
-/** search node of \ref SCIP_BST "binary search tree" */
-typedef struct SCIP_BstNode SCIP_BSTNODE;
+/** search node of \ref SCIP_BT "binary tree" */
+typedef struct SCIP_BtNode SCIP_BTNODE;
 
 /** compares two element indices
  *  result:
@@ -111,28 +111,6 @@ typedef struct SCIP_BstNode SCIP_BSTNODE;
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
-
-/** method used to insert a search into a binary search tree
- *
- *  input:
- *  - tree            : binary search tree
- *  - node            : search node to be inserted
- *
- *  output:
- *  - inserted        : pointer to store whether the node was inserted
- */
-#define SCIP_DECL_BSTINSERT(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* inserted)
-
-/** method used to delete from a binarysearch tree
- *
- *  input:
- *  - tree            : binary search tree
- *  - node            : pointer to the search node to be deleted
- *
- *  output:
- *  - inserted        : pointer to store whether the node was deleted
- */
-#define SCIP_DECL_BSTDELETE(x) SCIP_RETCODE x (SCIP_BST* tree, SCIP_BSTNODE* node, SCIP_Bool* deleted)
 
 #ifdef __cplusplus
 }

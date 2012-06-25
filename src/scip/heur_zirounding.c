@@ -167,14 +167,11 @@ void calculateBounds(
          return;
       }
 
-
       SCIPdebugMessage("colval: %15.8f, downslack: %15.8f, upslack: %5.2f, lb: %5.2f, ub: %5.2f\n", colvals[i], downslacks[rowpos], upslacks[rowpos],
          *lowerbound, *upperbound);
 
       /* if coefficient > 0, rounding up might violate up slack and rounding down might violate down slack
-       * thus search for the minimum so that no constraint is violated;
-       * if coefficient < 0, it is the other way around unless at least one row slack is infinity
-       * which has to be excluded explicitly so as not to corrupt calculations
+       * thus search for the minimum so that no constraint is violated; vice versa for coefficient < 0
        */
       if( colvals[i] > 0 )
       {
@@ -291,8 +288,8 @@ SCIP_RETCODE updateSlacks(
          if( !SCIPisInfinity(scip, -downslacks[rowpos]) )
             downslacks[rowpos] += val;
 
-         assert(!SCIPisNegative(scip, upslacks[rowpos]));
-         assert(!SCIPisNegative(scip, downslacks[rowpos]));
+         assert(!SCIPisFeasNegative(scip, upslacks[rowpos]));
+         assert(!SCIPisFeasNegative(scip, downslacks[rowpos]));
       }
    }
    return SCIP_OKAY;
@@ -691,9 +688,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    improvementfound = TRUE;
    *result = SCIP_DIDNOTFIND;
 
-   /* check if fractional rounding candidates are left in each round,
-    * whereas number of rounds is limited by parameter maxroundingloops
-    */
+   /* iterate over variables as long as there are fractional variables left */
    while( currentlpcands > 0 && improvementfound && (heurdata->maxroundingloops == -1 || nroundings < heurdata->maxroundingloops) )
    {  /*lint --e{850}*/
       improvementfound = FALSE;
