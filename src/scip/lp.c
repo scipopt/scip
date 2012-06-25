@@ -13704,13 +13704,17 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
    assert(lp->glbpseudoobjvalinf >= 0);
    assert(set != NULL);
 
-   if( lp->glbpseudoobjvalinf > 0 ||  set->nactivepricers > 0 )
+   if( lp->glbpseudoobjvalinf > 0 || set->nactivepricers > 0 )
       return -SCIPsetInfinity(set);
    else
    {
       /* recalculate the global pseudo solution value, if needed */
       if( !lp->glbpseudoobjvalid )
          recomputeGlbPseudoObjectiveValue(lp, set, prob);
+
+      /* if the global pseudo objective value is smaller than -infinity, we just return -infinity */
+      if( SCIPsetIsInfinity(set, -lp->glbpseudoobjval) )
+         return -SCIPsetInfinity(set);
 
       return lp->glbpseudoobjval;
    }
@@ -13729,13 +13733,17 @@ SCIP_Real SCIPlpGetPseudoObjval(
    assert(lp->pseudoobjvalinf >= 0);
    assert(set != NULL);
 
-   if( lp->pseudoobjvalinf > 0 ||  set->nactivepricers > 0 )
+   if( lp->pseudoobjvalinf > 0 || set->nactivepricers > 0 )
       return -SCIPsetInfinity(set);
    else
    {
       /* recalculate the pseudo solution value, if needed */
       if( !lp->pseudoobjvalid )
          recomputePseudoObjectiveValue(lp, set, prob);
+
+      /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
+      if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )
+         return -SCIPsetInfinity(set);
 
       return lp->pseudoobjval;
    }
