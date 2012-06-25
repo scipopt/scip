@@ -5307,6 +5307,20 @@ void SCIProwSort(
 
    /* sort non-LP columns */
    rowSortNonLP(row);
+
+#ifdef MORE_DEBUG
+   /* check the sorting */
+   {
+      int c;
+      if( !row->delaysort )
+      {
+         for( c = 1; c < row->nlpcols; ++c )
+            assert(SCIPcolGetIndex(row->cols[c]) > SCIPcolGetIndex(row->cols[c-1]));
+         for( c = row->nlpcols + 1; c < row->len; ++c )
+            assert(SCIPcolGetIndex(row->cols[c]) > SCIPcolGetIndex(row->cols[c-1]));
+      }
+   }
+#endif
 }
 
 /** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
@@ -6190,13 +6204,21 @@ SCIP_Real SCIProwGetScalarProduct(
    )
 {
    SCIP_Real scalarprod;
-   int i1;
-   int i2;
 
    assert(row1 != NULL);
    assert(row2 != NULL);
 
-   /* make sure, the rows are sorted */
+   /* Sort the column indices of both rows.
+    *
+    * The columns in a row are divided into two parts: LP columns, which are currently in the LP and non-LP columns;
+    * we sort the rows, but that only ensures that within these two parts, columns are sorted w.r.t. their index.
+    * Normally, this should be suficient, because a column contained in both rows should either be one of the LP columns
+    * for both or one of the non-LP columns for both.
+    * However, directly after a row was created, before a row is added to the LP, the row is not linked to all its
+    * columns and all columns are treated as non-LP columns.
+    * Therefore, if exactly one of the rows has no LP columns, we cannot rely on the partition, because this row might
+    * just have been created and also columns that are in the LP might be in the non-LP columns part.
+    */
    SCIProwSort(row1);
    assert(row1->lpcolssorted);
    assert(row1->nonlpcolssorted);
@@ -6204,24 +6226,143 @@ SCIP_Real SCIProwGetScalarProduct(
    assert(row2->lpcolssorted);
    assert(row2->nonlpcolssorted);
 
-   /* calculate the scalar product */
-   scalarprod = 0.0;
-   i1 = 0;
-   i2 = 0;
-   while( i1 < row1->len && i2 < row2->len )
+   /* currently we are only handling rows which are completely linked or not linked at all */
+   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
+   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
+
+   /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
+    * so we can rely on the sorting of the columns
+    */
+   if( (row1->nlpcols == 0) == (row2->nlpcols == 0)
+      || (row1->nlpcols == 0 && row2->nlpcols == row2->len)
+      || (row1->nlpcols == row1->len && row2->nlpcols == 0) )
    {
-      assert(row1->cols[i1]->index == row1->cols_index[i1]);
-      assert(row2->cols[i2]->index == row2->cols_index[i2]);
-      assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
-      if( row1->cols_index[i1] < row2->cols_index[i2] )
-         i1++;
-      else if( row1->cols_index[i1] > row2->cols_index[i2] )
-         i2++;
-      else
+      int i1;
+      int i2;
+
+#ifndef NDEBUG
+      if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
       {
-         scalarprod += row1->vals[i1] * row2->vals[i2];
-         i1++;
-         i2++;
+         /* check that we can rely on the partition into LP columns and non-LP columns */
+         for( i1 = 0; i1 < row1->nlpcols; ++i1 )
+            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
+               assert(row1->cols[i1] != row2->cols[i2]);
+         for( i1 = row1->nlpcols; i1 < row1->len; ++i1 )
+            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
+               assert(row1->cols[i1] != row2->cols[i2]);
+      }
+#endif
+
+      /* calculate the scalar product */
+      scalarprod = 0.0;
+      i1 = 0;
+      i2 = 0;
+      while( i1 < row1->len && i2 < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[i2]->index == row2->cols_index[i2]);
+         assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
+         if( row1->cols_index[i1] < row2->cols_index[i2] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[i2] )
+            i2++;
+         else
+         {
+            scalarprod += row1->vals[i1] * row2->vals[i2];
+            i1++;
+            i2++;
+         }
+      }
+   }
+   /* one row has columns in the LP, but the other not, that could be because the one without was just created and isn't
+    * linked yet; in this case, one column could be an LP column in one row and a non-LP column in the other row, so we
+    * cannot rely on the partition into LP columns and non-LP columns;
+    */
+   else
+   {
+      int i1;
+      int ilp;
+      int inlp;
+
+      /* ensure that row1 is the row without LP columns, switch the rows, if neccessary */
+      if( row2->nlpcols == 0 )
+      {
+         SCIP_ROW* tmprow;
+         tmprow = row2;
+         row2 = row1;
+         row1 = tmprow;
+      }
+      assert(row1->nlpcols == 0 && row2->nlpcols > 0);
+
+      scalarprod = 0;
+      i1 = 0;
+      ilp = 0;
+      inlp = row2->nlpcols;
+
+      /* for each column of row1, we look for the first LP and non-LP column in row2 with index >= the index of the
+       * current column in row1; if one of both row2 columns is the same as the current row1 column, add the product of
+       * their coefficients to the scalar product and increase the iterators, otherwise go to the next column of row1
+       */
+      while( i1 < row1->len && ilp < row2->nlpcols && inlp < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
+         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
+         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
+         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+
+         if( row1->cols_index[i1] > row2->cols_index[ilp] )
+            ++ilp;
+         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
+            ++inlp;
+         else if( row1->cols_index[i1] == row2->cols_index[ilp] )
+         {
+            scalarprod += row1->vals[i1] * row2->vals[ilp];
+            ++i1;
+            ++ilp;
+         }
+         else if( row1->cols_index[i1] == row2->cols_index[inlp] )
+         {
+            scalarprod += row1->vals[i1] * row2->vals[inlp];
+            ++i1;
+            ++inlp;
+         }
+         else
+            i1++;
+      }
+      /* there are only LP columns left, iterate over them */
+      while( ilp < row2->nlpcols && i1 < row1->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
+         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
+         if( row1->cols_index[i1] < row2->cols_index[ilp] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[ilp] )
+            ilp++;
+         else
+         {
+            scalarprod += row1->vals[i1] * row2->vals[ilp];
+            i1++;
+            ilp++;
+         }
+      }
+      /* there are only non-LP columns left, iterate over them */
+      while( inlp < row2->nlpcols && i1 < row1->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
+         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+         if( row1->cols_index[i1] < row2->cols_index[inlp] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
+            inlp++;
+         else
+         {
+            scalarprod += row1->vals[i1] * row2->vals[inlp];
+            i1++;
+            inlp++;
+         }
       }
    }
 
@@ -6236,8 +6377,6 @@ int SCIProwGetDiscreteScalarProduct(
    )
 {
    int prod;
-   int i1;
-   int i2;
 
    assert(row1 != NULL);
    assert(row2 != NULL);
@@ -6250,24 +6389,130 @@ int SCIProwGetDiscreteScalarProduct(
    assert(row2->lpcolssorted);
    assert(row2->nonlpcolssorted);
 
-   /* calculate the scalar product */
-   prod = 0;
-   i1 = 0;
-   i2 = 0;
-   while( i1 < row1->len && i2 < row2->len )
+   /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
+    * so we can rely on the sorting of the columns
+    */
+   if( (row1->nlpcols == 0) == (row2->nlpcols == 0)
+      || (row1->nlpcols == 0 && row2->nlpcols == row2->len)
+      || (row1->nlpcols == row1->len && row2->nlpcols == 0) )
    {
-      assert(row1->cols[i1]->index == row1->cols_index[i1]);
-      assert(row2->cols[i2]->index == row2->cols_index[i2]);
-      assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
-      if( row1->cols_index[i1] < row2->cols_index[i2] )
-         i1++;
-      else if( row1->cols_index[i1] > row2->cols_index[i2] )
-         i2++;
-      else
+      int i1;
+      int i2;
+#ifndef NDEBUG
+      if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
       {
-         prod++;
-         i1++;
-         i2++;
+         /* check that we can rely on the partition into LP columns and non-LP columns */
+         for( i1 = 0; i1 < row1->nlpcols; ++i1 )
+            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
+               assert(row1->cols[i1] != row2->cols[i2]);
+         for( i1 = row1->nlpcols; i1 < row1->len; ++i1 )
+            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
+               assert(row1->cols[i1] != row2->cols[i2]);
+      }
+#endif
+      /* calculate the scalar product */
+      prod = 0;
+      i1 = 0;
+      i2 = 0;
+      while( i1 < row1->len && i2 < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[i2]->index == row2->cols_index[i2]);
+         assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
+         if( row1->cols_index[i1] < row2->cols_index[i2] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[i2] )
+            i2++;
+         else
+         {
+            prod++;
+            i1++;
+            i2++;
+         }
+      }
+   }
+   /* one row has columns in the LP, but the other not, that could be because the one without was just created and
+    * columns aren't linked yet; in this case, one column could be an lpcolumn in one row and a non-lpcolumn in the
+    * other row, so we cannot rely on the partition into lpcolumns and non-lpcolumns
+    */
+   else
+   {
+      int i1;
+      int ilp;
+      int inlp;
+
+      if( row2->nlpcols == 0 )
+      {
+         SCIP_ROW* tmprow;
+         tmprow = row2;
+         row2 = row1;
+         row1 = tmprow;
+      }
+      assert(row1->nlpcols == 0 && row2->nlpcols > 0);
+
+      prod = 0;
+      i1 = 0;
+      ilp = 0;
+      inlp = row2->nlpcols;
+
+      while( i1 < row1->len && ilp < row2->nlpcols && inlp < row2->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
+         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
+         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
+         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+
+         if( row1->cols_index[i1] > row2->cols_index[ilp] )
+            ++ilp;
+         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
+            ++inlp;
+         else if( row1->cols_index[i1] == row2->cols_index[ilp] )
+         {
+            ++prod;
+            ++i1;
+            ++ilp;
+         }
+         else if( row1->cols_index[i1] == row2->cols_index[inlp] )
+         {
+            ++prod;
+            ++i1;
+            ++inlp;
+         }
+         else
+            i1++;
+      }
+      while( ilp < row2->nlpcols && i1 < row1->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[ilp]->index == row2->cols_index[ilp]);
+         assert((row1->cols[i1] == row2->cols[ilp]) == (row1->cols_index[i1] == row2->cols_index[ilp]));
+         if( row1->cols_index[i1] < row2->cols_index[ilp] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[ilp] )
+            ilp++;
+         else
+         {
+            prod++;
+            i1++;
+            ilp++;
+         }
+      }
+      while( inlp < row2->nlpcols && i1 < row1->len )
+      {
+         assert(row1->cols[i1]->index == row1->cols_index[i1]);
+         assert(row2->cols[inlp]->index == row2->cols_index[inlp]);
+         assert((row1->cols[i1] == row2->cols[inlp]) == (row1->cols_index[i1] == row2->cols_index[inlp]));
+         if( row1->cols_index[i1] < row2->cols_index[inlp] )
+            i1++;
+         else if( row1->cols_index[i1] > row2->cols_index[inlp] )
+            inlp++;
+         else
+         {
+            prod++;
+            i1++;
+            inlp++;
+         }
       }
    }
 

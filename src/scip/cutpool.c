@@ -61,9 +61,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    /* Warning: The comparison of real values is made against default epsilon.
     *          This is ugly, but we have no settings at hand.
     */
-
-   int i;
-
    SCIP_ROW* row1;
    SCIP_ROW* row2;
 
@@ -72,7 +69,17 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    assert(row1 != NULL);
    assert(row2 != NULL);
 
-   /* sort the column indices of a row */
+   /* Sort the column indices of both rows.
+    *
+    * The columns in a row are divided into two parts: LP columns, which are currently in the LP and non-LP columns;
+    * we sort the rows, but that only ensures that within these two parts, columns are sorted w.r.t. their index.
+    * Normally, this should be suficient, because a column contained in both rows should either be one of the LP columns
+    * for both or one of the non-LP columns for both.
+    * However, directly after a row was created, before it is added to the LP, the row is not linked to all its
+    * columns and all columns are treated as non-LP columns.
+    * Therefore, if exactly one of the rows has no LP columns, we cannot rely on the partition, because this row might
+    * just have been created and also columns that are in the LP might be in the non-LP columns part.
+    */
    SCIProwSort(row1);
    SCIProwSort(row2);
    assert(row1->lpcolssorted);
@@ -81,6 +88,10 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    assert(row2->lpcolssorted);
    assert(row2->nonlpcolssorted);
    assert(row2->validminmaxidx);
+
+   /* currently we are only handling rows which are completely linked or not linked at all */
+   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
+   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
 
    /* compare the trivial characteristics of the rows */
    if( row1->len != row2->len
@@ -95,18 +106,93 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
        )
       return FALSE;
 
-   /* compare the columns of the rows */
-   for( i = 0; i < row1->len; ++i )
+   /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
+    * so we can rely on the sorting of the columns
+    */
+   if( (row1->nlpcols == 0) == (row2->nlpcols == 0)
+      || (row1->nlpcols == 0 && row2->nlpcols == row2->len)
+      || (row1->nlpcols == row1->len && row2->nlpcols == 0) )
    {
-      if( row1->cols[i] != row2->cols[i] )
-         return FALSE;
-   }
+      int i;
 
-   /* compare the coefficients of the rows */
-   for( i = 0; i < row1->len; ++i )
+      if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
+      {
+#ifndef NDEBUG
+         /* in debug mode, we check that we can rely on the partition into LP columns and non-LP columns */
+         int i2;
+
+         for( i = 0; i < row1->nlpcols; ++i )
+            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
+               assert(row1->cols[i] != row2->cols[i2]);
+         for( i = row1->nlpcols; i < row1->len; ++i )
+            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
+               assert(row1->cols[i] != row2->cols[i2]);
+#endif
+
+         /* both rows are linked and the number of lpcolumns is not equal so they cannot be equal */
+         if( row1->nlpcols != row2->nlpcols )
+            return FALSE;
+      }
+
+      /* compare the columns of the rows */
+      for( i = 0; i < row1->len; ++i )
+      {
+         if( row1->cols[i] != row2->cols[i] )
+            return FALSE;
+      }
+
+      /* compare the coefficients of the rows */
+      for( i = 0; i < row1->len; ++i )
+      {
+         if( REALABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
+            return FALSE;
+      }
+   }
+   /* one row has LP columns, but the other not, that could be because the one without was just created and isn't
+    * linked yet; in this case, one column could be an LP column in one row and a non-LP column in the other row, so we
+    * cannot rely on the partition; thus, we iteratively check whether the next column of row1 is either the next LP
+    * column of row2 or the next non-LP column of row2 and the coefficients are equal
+    */
+   else
    {
-      if( REALABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
-         return FALSE;
+      int i1;
+      int ilp;
+      int inlp;
+
+      /* ensure that row1 is the row without LP columns, switch the rows, if neccessary */
+      if( row2->nlpcols == 0 )
+      {
+         SCIP_ROW* tmprow;
+         tmprow = row2;
+         row2 = row1;
+         row1 = tmprow;
+      }
+      assert(row1->nlpcols == 0 && row2->nlpcols > 0);
+
+      i1 = 0;
+      ilp = 0;
+      inlp = row2->nlpcols;
+
+      /* compare the columns and coefficients of the rows */
+      for( i1 = 0; i1 < row1->len; ++i1 )
+      {
+         if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
+         {
+            if( REALABS(row1->vals[i1] - row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
+               return FALSE;
+            else
+               ++ilp;
+         }
+         else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
+         {
+            if( REALABS(row1->vals[i1] - row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
+               return FALSE;
+            else
+               ++inlp;
+         }
+         else
+            return FALSE;
+      }
    }
 
    return TRUE;
