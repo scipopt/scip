@@ -29,8 +29,8 @@
  * with coefficient \f$c \in Q\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
  * and decision variables \f$x\f$ (non-binary) and \f$y\f$ (binary or integer).
  *
- * @note: Although x must be non-binary when the constraint is created, it can happen that x is upgraded to a binary
- *        variable, e.g. due to aggregations or bound changes in presolving.
+ * @note Although x must be non-binary when the constraint is created, it can happen that x is upgraded to a binary
+ *       variable, e.g. due to aggregations or bound changes in presolving.
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -42,6 +42,11 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_linear.h"
 
+
+/**@name Constraint handler properties
+ *
+ * @{
+ */
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "varbound"
@@ -66,6 +71,13 @@
 
 #define LINCONSUPGD_PRIORITY     +50000 /**< priority of the constraint handler for upgrading of linear constraints */
 
+/**@} */
+
+/**@name Default parameter values
+ *
+ * @{
+ */
+
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_MAXLPCOEF         1e+06 /**< maximum coefficient in varbound constraint to be added as a row into LP */
 #define DEFAULT_USEBDWIDENING      TRUE /**< should bound widening be used to initialize conflict analysis? */
@@ -73,6 +85,7 @@
 
 #define MAXSCALEDCOEF            1000LL /**< maximal coefficient value after scaling */
 
+/**@} */
 
 /** variable bound constraint data */
 struct SCIP_ConsData
@@ -101,22 +114,19 @@ struct SCIP_ConshdlrData
    SCIP_Bool             usebdwidening;      /**< should bound widening be used to in conflict analysis? */
 };
 
-/*
- * Propagation rules
- */
+/** Propagation rules */
 enum Proprule
 {
    PROPRULE_1,                          /**< left hand side and bounds on y -> lower bound on x */
    PROPRULE_2,                          /**< left hand side and upper bound on x -> bound on y */
    PROPRULE_3,                          /**< right hand side and bounds on y -> upper bound on x */
-   PROPRULE_4,                          /**< right hand side and lower bound on x -> bound on y */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_4                           /**< right hand side and lower bound on x -> bound on y */
 };
 typedef enum Proprule PROPRULE;
 
 
-/*
- * Local methods
+/**@name Local methods
+ *
  */
 
 /** compares two varbound constraints   cons1: lhs1 \le x1 + c1 y1 \le rhs1   and   cons2: lhs2 \le x2 + c2 y2 \le rhs2
@@ -679,7 +689,6 @@ SCIP_RETCODE resolvePropagation(
 
       break;
 
-   case PROPRULE_INVALID:
    default:
       SCIPerrorMessage("invalid inference information %d in variable bound constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
@@ -3018,9 +3027,13 @@ SCIP_RETCODE tightenCoefs(
    return SCIP_OKAY;
 }
 
-/*
- * Linear constraint upgrading
+/**@} */
+
+
+/**@name Linear constraint upgrading
+ *
  */
+
 /** tries to upgrade a linear constraint into a variable bound constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
@@ -3090,9 +3103,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * Callback methods of constraint handler
+
+/**@name Callback methods
+ *
+ * @{
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -3843,9 +3859,12 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * constraint specific interface methods
+
+/**@name Interface methods
+ *
+ * @{
  */
 
 /** creates the handler for variable bound constraints and includes it in SCIP */
@@ -4164,3 +4183,4 @@ SCIP_ROW* SCIPgetRowVarbound(
    return consdata->row;
 }
 
+/**@} */
