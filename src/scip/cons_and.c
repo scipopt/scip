@@ -1715,6 +1715,7 @@ SCIP_RETCODE dualPresolve(
 	       }
 	    }
 	 }
+	 assert(nimpoperands >= 0 && nimpoperands <= nvars);
 
 	 /* no dual fixable variables found */
 	 if( nimpoperands == 0 )
@@ -1824,7 +1825,7 @@ SCIP_RETCODE dualPresolve(
 	    {
 	       SCIP_Real fixval = (SCIPisLE(scip, REALABS(maxobj), resobj) ? 0.0 : 1.0);
 
-	       SCIPdebugMessage("dual-fixing variable <%s> in constraint <%s> to %g, because the contribution is not enough to nullify/exceed the contribution of the resultant \n", SCIPvarGetName(impoperands[maxpos]), SCIPconsGetName(cons), fixval);
+	       SCIPdebugMessage("dual-fixing variable <%s> in constraint <%s> to %g, because the contribution is%s enough to nullify/exceed the contribution of the resultant \n", SCIPvarGetName(impoperands[maxpos]), SCIPconsGetName(cons), fixval, (fixval < 0.5) ? " not" : "");
 
 	       SCIP_CALL( SCIPfixVar(scip, impoperands[maxpos], fixval, &infeasible, &fixed) );
 	       zerofix = (fixval < 0.5);
@@ -1834,7 +1835,7 @@ SCIP_RETCODE dualPresolve(
 		  ++(*nfixedvars);
 	    }
 
-	    SCIPdebugMessage("dual-fixing all variables except the variable with the highest contribution to the objective in constraint <%s> with positive contribution to 0 and with negative contribution to 1\n", SCIPconsGetName(cons));
+	    SCIPdebugMessage("dual-fixing all variables, except the variable with the highest contribution to the objective, in constraint <%s> with positive contribution to 0 and with negative contribution to 1\n", SCIPconsGetName(cons));
 
 	    for( v = nimpoperands - 1; v >= 0 && !(*cutoff); --v )
 	    {
@@ -1859,8 +1860,8 @@ SCIP_RETCODE dualPresolve(
 		  ++(*nfixedvars);
 	    }
 	    assert(*nfixedvars - oldnfixedvars <= nimpoperands);
-	    /* iff we have fixed all variables all variables needed to be stored in the impoperands array */
-	    assert((*nfixedvars - oldnfixedvars == nimpoperands) == (nimpoperands == nvars));
+	    /* iff we have fixed all variables, all variables needed to be stored in the impoperands array */
+	    assert((*nfixedvars - oldnfixedvars == nvars) == (nimpoperands == nvars));
 
 	    if( *nfixedvars - oldnfixedvars == nvars )
 	    {
