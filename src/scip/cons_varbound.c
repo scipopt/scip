@@ -549,6 +549,7 @@ SCIP_RETCODE resolvePropagation(
       if( usebdwidening )
       {
          SCIP_Real relaxedub;
+         SCIP_Real ub;
 
          /* compute the relaxed upper bound of the variable which would be sufficient to reach one less (greater) than the
           * inference bound
@@ -579,7 +580,8 @@ SCIP_RETCODE resolvePropagation(
          /* due to numericis we compare the compute relaxed upper bound to the one present at the particular time point and
           * take the better one
           */
-         relaxedub = MAX(relaxedub, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
+         ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+         relaxedub = MAX(relaxedub, ub);
 
          SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedub) );
       }
@@ -642,6 +644,7 @@ SCIP_RETCODE resolvePropagation(
       if( usebdwidening )
       {
          SCIP_Real relaxedlb;
+         SCIP_Real lb;
 
          /* compute the relaxed lower bound of the variable which would be sufficient to reach one greater (less) than the
           * inference bound
@@ -669,7 +672,8 @@ SCIP_RETCODE resolvePropagation(
          /* due to numericis we compare the compute relaxed lower bound to the one present at the particular time point and
           * take the better one
           */
-         relaxedlb = MIN(relaxedlb, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
+         lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
+         relaxedlb = MIN(relaxedlb, lb);
 
          /* adjust the relaxed lower bound w.r.t. variable type */
          relaxedlb = SCIPadjustedVarLb(scip, var, relaxedlb);
