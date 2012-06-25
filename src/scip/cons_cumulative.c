@@ -3215,9 +3215,9 @@ SCIP_RETCODE propagateCoretimes(
 
       ignorejobs[j] = FALSE;
 
-      /* compute core intervall */
-      starts[j] = lst;
-      ends[j] = est + duration;
+      /* compute core interval w.r.t. effective time horizon */
+      starts[j] = MAX(hmin, lst);
+      ends[j] = MIN(hmax, est + duration);
 
       /* check if a core exists */
       if( starts[j] < ends[j] )
@@ -3310,9 +3310,9 @@ SCIP_RETCODE propagateCoretimes(
          est = convertBoundToInt(scip, SCIPvarGetLbLocal(var));
          lst = convertBoundToInt(scip, SCIPvarGetUbLocal(var));
 
-         /* compute core intervall */
-         starts[j] = lst;
-         ends[j] = est + duration;
+         /* compute core interval w.r.t. effective time horizon */
+         starts[j] = MAX(hmin, lst);
+         ends[j] = MIN(hmax, est + duration);
 
          /* after updating the bound we might have a new core */
          if( starts[j] < ends[j] )
