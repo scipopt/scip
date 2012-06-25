@@ -512,19 +512,16 @@ SCIP_RETCODE resolvePropagation(
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
+         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
+
          if( vbdcoef > 0.0 )
          {
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
-
             relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
-
             relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
@@ -608,19 +605,16 @@ SCIP_RETCODE resolvePropagation(
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
+         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+
          if( vbdcoef > 0.0 )
          {
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
-
             relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
-
             relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
