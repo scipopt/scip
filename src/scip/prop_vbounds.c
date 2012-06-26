@@ -971,13 +971,11 @@ SCIP_RETCODE relaxVbdvar(
 {
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      relaxedbd = SCIPadjustedVarLb(scip, var, relaxedbd);
       SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedbd) );
    }
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      relaxedbd = SCIPadjustedVarUb(scip, var, relaxedbd);
       SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedbd) );
    }
 
