@@ -1057,7 +1057,7 @@ SCIP_RETCODE analyzeConflictLowerbound(
       SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
 
       /* collect the upper bound which is reported to the conflict analysis */
-      relaxedub = SCIPgetConflictVarRelaxedUb(scip, infervar);
+      relaxedub = SCIPgetConflictVarUb(scip, infervar);
 
       /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
       if( SCIPvarIsIntegral(infervar) )
@@ -1166,7 +1166,7 @@ SCIP_RETCODE analyzeConflictUpperbound(
       SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
 
       /* collect the lower bound which is reported to the conflict analysis */
-      relaxedlb = SCIPgetConflictVarRelaxedLb(scip, infervar);
+      relaxedlb = SCIPgetConflictVarLb(scip, infervar);
 
       /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
       if( SCIPvarIsIntegral(infervar) )

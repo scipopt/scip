@@ -2050,8 +2050,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
        * hence these bound are already reported by other resolve propation steps. In case a bound (lower or upper) is
        * not part of the conflict yet we get the global bounds back.
        */
-      ect = convertBoundToInt(scip, SCIPgetConflictVarRelaxedLb(scip, var)) + duration;
-      lst = convertBoundToInt(scip, SCIPgetConflictVarRelaxedUb(scip, var));
+      ect = convertBoundToInt(scip, SCIPgetConflictVarLb(scip, var)) + duration;
+      lst = convertBoundToInt(scip, SCIPgetConflictVarUb(scip, var));
 
       /* check if the inference peak is part of the global/conflict bound core; if so we decreasing the capacity by the
        * demand of that job without adding anything to the explanation

@@ -5562,24 +5562,6 @@ SCIP_Real SCIPgetConflictVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-extern
-SCIP_Real SCIPgetConflictVarRelaxedLb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
- *  global upper bound
- */
-extern
-SCIP_Real SCIPgetConflictVarRelaxedUb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
  *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
  *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
