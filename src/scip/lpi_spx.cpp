@@ -191,6 +191,8 @@ class SPxSCIP : public SPxSolver
    bool                  m_fromscratch;      /**< use old basis indicator */
    bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
+   Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
+   Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
    Real                  m_objLoLimit;       /**< lower objective limit */
    Real                  m_objUpLimit;       /**< upper objective limit */
    Status                m_stat;             /**< solving status */
@@ -267,23 +269,41 @@ public:
 #endif
    }
 
-   /* the following methods are provided for comptability with earlier SoPlex versions */
-#if (SOPLEX_VERSION < 160 || (SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION < 5))
+   /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
-      return delta();
+      return m_lpifeastol;
    }
 
-   Real opttol()
-   {
-      return delta();
-   }
-
+   /**< set feastol and store value in case SoPlex only accepts a larger tolerance */
    void setFeastol(
       const Real d
       )
    {
-      return setDelta(d);
+      m_lpifeastol = d;
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+      SPxSolver::setFeastol(d);
+#else
+      SPxSolver::setDelta(d);
+#endif
+   }
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+   /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   Real opttol()
+   {
+      return m_lpiopttol;
+   }
+
+   /**< set opttol and store value in case SoPlex only accepts a larger tolerance */
+   void setOpttol(
+      const Real d
+      )
+   {
+      m_lpiopttol = d;
+
+      SPxSolver::setOpttol(d);
    }
 #endif
 
