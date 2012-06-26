@@ -3167,7 +3167,8 @@ SCIP_RETCODE propagateCoretimes(
    assert(*cutoff ==  FALSE);
    assert(*initialized ==  FALSE);
 
-   SCIPdebugMessage("check/propagate cores of cumulative condition of constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("check/propagate cores of cumulative condition of constraint <%s>[%d,%d) <= %d\n",
+      SCIPconsGetName(cons), hmin, hmax, capacity);
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &cores, nvars) );
@@ -4839,7 +4840,7 @@ SCIP_RETCODE createCapacityRestriction(
    {
       SCIP_CONS* lincons;
 
-      /* create linear constraint for the linking between the binary variables and the integer variable */
+      /* create knapsack constraint for the given time point */
       SCIP_CALL( SCIPcreateConsKnapsack(scip, &lincons, name, 0, NULL, NULL, (SCIP_Longint)(capacity),
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
 
@@ -4848,6 +4849,7 @@ SCIP_RETCODE createCapacityRestriction(
          SCIP_CALL( SCIPaddCoefKnapsack(scip, lincons, binvars[b], (SCIP_Longint)coefs[b]) );
       }
 
+      /* add and release the new constraint */
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    }
@@ -5665,12 +5667,14 @@ SCIP_RETCODE adjustOversizedJobBounds(
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s<=%d or %s >= %d",
          SCIPvarGetName(var), leftbound, SCIPvarGetName(var), rightbound);
 
-      /* creat bounddisjunction constraint */
+      /* create and add bounddisjunction constraint */
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, vartuple, boundtypetuple, boundtuple,
             TRUE, FALSE, TRUE, TRUE /*check*/, TRUE/*prop*/, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIPdebugPrintCons(scip, cons, NULL);
 
+      /* add and release the new constraint */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       (*naddconss)++;
    }
@@ -7708,7 +7712,7 @@ SCIP_DECL_CONSCOPY(consCopyCumulative)
       else
          consname = SCIPconsGetName(sourcecons);
 
-      /* copy the logic using the linear constraint copy method */
+      /* create a copy of the cumulative constraint */
       SCIP_CALL( SCIPcreateConsCumulative(scip, cons, consname, nvars, vars,
             sourceconsdata->durations, sourceconsdata->demands, sourceconsdata->capacity,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
