@@ -907,7 +907,7 @@ SCIP_RETCODE applyFixings(
 }
 
 /** creates a linearization of the and constraint */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -954,7 +954,7 @@ SCIP_RETCODE createRelaxation(
 }
 
 /** adds linear relaxation of and constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -964,7 +964,7 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONSDATA* consdata;
 
    char rowname[SCIP_MAXSTRLEN];
-   
+
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
@@ -1135,7 +1135,7 @@ SCIP_RETCODE separateCons(
             SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
             *separated = TRUE;
          }
-      }            
+      }
    }
 
    return SCIP_OKAY;
@@ -3754,7 +3754,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAnd)
       SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -3778,7 +3778,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
       SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -3809,9 +3809,22 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
       {
          if( conshdlrdata->enforcecuts )
          {
-            
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
-            assert(separated); /* because the solution is integral, the separation always finds a cut */
+	    SCIP_Bool consseparated;
+
+            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated) );
+	    separated = separated || consseparated;
+
+	    /* following assert is wrong in the case some variables were not in LP (dynamic columns),
+	     *
+	     * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
+	     * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
+	     * thereby creating the column, changes the solution value (variable than has status column, and the
+	     * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
+	     * rows, which then are not seperated into the lp
+	     */
+#if 0
+	    assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+#endif
          }
          else
          {
@@ -3819,7 +3832,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
             return SCIP_OKAY;
          }
       }
-   } 
+   }
 
    if( separated )
       *result = SCIP_SEPARATED;
@@ -3846,7 +3859,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAnd)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;

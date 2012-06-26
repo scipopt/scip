@@ -6697,7 +6697,17 @@ SCIP_RETCODE SCIPflushRowExtensions(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** resolves variable to columns and adds them with the coefficient to the row */
+/** resolves variable to columns and adds them with the coefficient to the row
+ *
+ *  @note In case calling this method in the enforcement process of an lp solution, it might be that some variables,
+ *        that were not yet in the LP (e.g. dynamic columns) will change there lp solution value returned by SCIP.
+ *
+ *        e.g. A variable, which has a negative objective value, that has no column in the lp yet, is in the lp solution
+ *        on its upper bound (variables with status SCIP_VARSTATUS_LOOSE are in an lp solution on it's best bound), but
+ *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
+ *        initialization sets the lp solution value) to 0.0 . ( This leads to the conclusion that, if a constraint was
+ *        violated, the linear relaxation might not be violated anymore.)
+ */
 extern
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
