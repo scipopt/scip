@@ -823,7 +823,5 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &jobs);
 
-   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
-
    return SCIP_OKAY;
 }
