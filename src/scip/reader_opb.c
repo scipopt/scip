@@ -3300,13 +3300,24 @@ SCIP_RETCODE writeOpbConstraints(
          /* get artificial binary indicator variables */
          indvar = SCIPgetBinaryVarIndicator(cons);
          assert(indvar != NULL);
-         assert(SCIPvarGetStatus(indvar) == SCIP_VARSTATUS_NEGATED);
-         indvar = SCIPvarGetNegationVar(indvar);
-         assert(indvar != NULL);
-         
-         /* get the soft cost of this constraint */
-         weight = (SCIP_Longint) SCIPvarGetObj(indvar);
-         
+
+         if( SCIPvarGetStatus(indvar) == SCIP_VARSTATUS_NEGATED )
+	 {
+	    indvar = SCIPvarGetNegationVar(indvar);
+	    assert(indvar != NULL);
+	    assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
+
+	    /* get the soft cost of this constraint */
+	    weight = (SCIP_Longint) SCIPvarGetObj(indvar);
+	 }
+	 else
+	 {
+	    assert(SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(indvar) != SCIP_VARSTATUS_MULTAGGR);
+
+	    /* get the soft cost of this constraint */
+	    weight = -(SCIP_Longint) SCIPvarGetObj(indvar);
+	 }
+
          /* get artificial slack variable */
          slackvar = SCIPgetSlackVarIndicator(cons);
          assert(slackvar != NULL);
