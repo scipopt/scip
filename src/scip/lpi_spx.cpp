@@ -72,10 +72,28 @@
 #undef SCIP_DEBUG
 #endif
 
+/* include SoPlex solver */
 #include "spxsolver.h"
+
+/* define subversion for versions <= 1.5.0.1 */
+#ifndef SOPLEX_SUBVERSION
+#define SOPLEX_SUBVERSION 0
+#endif
+
+/* check version */
+#if (SOPLEX_VERSION < 133)
+#error "This interface is not compatible with SoPlex versions prior to 1.4"
+#endif
+
+/* get githash of SoPlex */
+#if (SOPLEX_VERSION >= 160)
+#include "spxgithash.h"
+#endif
+
+/* include SoPlex components */
 #include "slufactor.h"
 #include "spxsteeppr.h"
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
 #include "spxsteepexpr.h"
 #endif
 #include "spxparmultpr.h"
@@ -86,21 +104,6 @@
 
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
-#endif
-
-/* check version */
-#if (SOPLEX_VERSION < 133)
-#error "This interface is not compatible with SoPlex versions prior to 1.4"
-#endif
-
-/* define subversion for versions <= 1.5.0.1 */
-#ifndef SOPLEX_SUBVERSION
-#define SOPLEX_SUBVERSION 0
-#endif
-
-/* get githash of SoPlex */
-#if (SOPLEX_VERSION > 150)
-#include "spxgithash.h"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -172,7 +175,7 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
    SPxSteepExPR          m_price_steep_ex;   /**< steepest edge with exact weight initialization */
 #else
    SPxSteepPR            m_price_steep_ex;   /**< fallback to quick start pricer */
@@ -265,7 +268,7 @@ public:
    }
 
    /* the following methods are provided for comptability with earlier SoPlex versions */
-#if (SOPLEX_VERSION < 160 || SOPLEX_SUBVERSION < 5)
+#if (SOPLEX_VERSION < 160 || (SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION < 5))
    Real feastol()
    {
       return delta();
@@ -787,7 +790,7 @@ public:
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? 3 : 0);
          SCIPdebugMessage("simplifying LP\n");
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
 #else
          result = simplifier->simplify(*this, epsilon(), delta());
@@ -1425,7 +1428,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#if (SOPLEX_VERSION > 150)
+#if (SOPLEX_VERSION >= 160)
    sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
 #endif
 #ifdef WITH_LPSCHECK
@@ -3117,7 +3120,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
 #else
    return FALSE;
@@ -3415,7 +3418,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
    {
       Vector tmp(lpi->spx->nCols(), ray);
@@ -4400,7 +4403,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->spx->feastol();
       break;
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
@@ -4441,7 +4444,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       lpi->spx->setFeastol(dval);
       break;
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;
