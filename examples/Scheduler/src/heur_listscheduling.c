@@ -91,8 +91,6 @@ SCIP_RETCODE heurdataInit(
    }
    else
    {
-      int* component;
-
       /* copy precedence graph */
       SCIP_CALL( SCIPdigraphCopy(&heurdata->precedencegraph, precedencegraph) );
 
@@ -103,9 +101,6 @@ SCIP_RETCODE heurdataInit(
       /* use the topological sorted for the variables */
       SCIP_CALL( SCIPdigraphTopoSortComponents(heurdata->precedencegraph) );
       SCIPdebug( SCIPdigraphPrintComponents(heurdata->precedencegraph, SCIPgetMessagehdlr(scip), NULL) );
-      SCIPdigraphPrintComponents(heurdata->precedencegraph, SCIPgetMessagehdlr(scip), NULL);
-
-      SCIPdigraphGetComponent(heurdata->precedencegraph, 0, &component, NULL);
 
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->capacities, capacities, nresources) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->vars, vars, njobs) );
@@ -116,9 +111,9 @@ SCIP_RETCODE heurdataInit(
       {
          SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );
       }
-   }
 
-   heurdata->initialized = TRUE;
+      heurdata->initialized = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -154,6 +149,7 @@ SCIP_RETCODE heurdataFree(
    }
 
    heurdata->initialized = FALSE;
+   heurdata->njobs = 0;
 
    return SCIP_OKAY;
 }
@@ -737,6 +733,8 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   SCIP_CALL( heurdataFree(scip, heurdata) );
+
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -748,17 +746,7 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
 #define heurInitListScheduling NULL
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitListScheduling)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   SCIP_CALL( heurdataFree(scip, heurdata) );
-   return SCIP_OKAY;
-}
+#define heurExitListScheduling NULL
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #define heurInitsolListScheduling NULL
@@ -824,7 +812,6 @@ SCIP_RETCODE SCIPincludeHeurListScheduling(
    assert(heur != NULL);
 
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeListScheduling) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitListScheduling) );
 
    return SCIP_OKAY;
 }
