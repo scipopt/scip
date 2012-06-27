@@ -1505,15 +1505,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    *result = SCIP_DELAYED;
-#if 0
-   /* only call heuristic, if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
 
-   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
-   if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-#endif
    /* don't dive two times at the same node */
    if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
@@ -2033,7 +2025,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             /* for pseudo-cost computation */
-            if( heurdata->varselrule == 'd' )
+            if( heurdata->varselrule == 'd' && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
                assert(pseudocandsnlpsol != NULL);
                assert(0 <= bestcand && bestcand < npseudocands);
@@ -2121,7 +2113,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          }
 
          /* resolve the diving LP */
-         if( !cutoff && !lperror && (heurdata->lp || heurdata->varselrule == 'd') )
+         if( !cutoff && !lperror && (heurdata->lp || heurdata->varselrule == 'd')
+            && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && SCIPisLPSolBasic(scip) )
          {
             SCIP_CALL( SCIPsolveProbingLP(scip, 100, &lperror) );
 
