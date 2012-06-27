@@ -143,40 +143,49 @@ GENVBOUND* getGenVBound(
 }
 
 #ifdef SCIP_DEBUG
-/** prints a genvbound to stdout */
+/** prints a genvbound as debug message */
 static
 void printGenVBound(
    SCIP*                 scip,               /**< SCIP data structure */
    GENVBOUND*            genvbound           /**< genvbound to be printed */
    )
 {
-   int i;
    SCIP_Bool first;
+   int i;
 
    assert(genvbound != NULL);
 
    if( genvbound->boundtype == SCIP_BOUNDTYPE_UPPER )
-      printf("- ");
+   {
+      SCIPdebugPrintf("- ");
+   }
 
-   printf("<%s> >= ", SCIPvarGetName(genvbound->var));
+   SCIPdebugPrintf("<%s> >= ", SCIPvarGetName(genvbound->var));
 
    first = TRUE;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {
       if( !first )
       {
-         printf(" + ");
+         SCIPdebugPrintf(" + ");
       }
-      printf("%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
+
+      SCIPdebugPrintf("%g * <%s>", genvbound->coefs[i], SCIPvarGetName(genvbound->vars[i]));
 
       first = FALSE;
    }
 
    if( !SCIPisZero(scip, genvbound->cutoffcoef) )
-      printf(" + %g * cutoff_bound", genvbound->cutoffcoef);
+   {
+      SCIPdebugPrintf(" + %g * cutoff_bound", genvbound->cutoffcoef);
+   }
 
    if( !SCIPisZero(scip, genvbound->constant) )
-      printf(" + %g", genvbound->constant);
+   {
+      SCIPdebugPrintf(" + %g", genvbound->constant);
+   }
+
+   SCIPdebugPrintf("\n");
 }
 #endif
 
@@ -843,7 +852,6 @@ SCIP_RETCODE applyGenVBound(
          "global" : "local", SCIPvarGetName(genvbound->var));
       SCIPdebugMessage("  genvbound: ");
       printGenVBound(scip, genvbound);
-      printf("\n");
       SCIPdebugMessage("    [%.15g,%.15g] -> [%.15g,%.15g]\n", lb, ub, new_lb, new_ub);
    }
 #endif
@@ -907,6 +915,7 @@ SCIP_RETCODE applyGenVBound(
 }
 
 #ifdef SCIP_DEBUG
+/** prints event data as debug message */
 static
 void printEventData(
    SCIP_EVENTDATA*       eventdata,
@@ -922,9 +931,10 @@ void printEventData(
 
    for( i = 0; i < eventdata->nstarts; i++ )
    {
-      printf("(component %d, index %d) ", eventdata->startcomponents[i], eventdata->startindices[i]);
+      SCIPdebugPrintf("(component %d, index %d) ", eventdata->startcomponents[i], eventdata->startindices[i]);
    }
-   printf("\n");
+
+   SCIPdebugPrintf("\n");
 }
 #endif
 
@@ -1370,8 +1380,8 @@ SCIP_RETCODE sortGenVBounds(
       {
          SCIPdebugMessage("  [%d] ", j);
          printGenVBound(scip, propdata->genvboundstore[j]);
-         printf("\n");
       }
+
       SCIPdebugMessage("}\n");
    }
 #endif
@@ -1688,7 +1698,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* debug message */
    SCIPdebugMessage("added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
-   SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
 }
