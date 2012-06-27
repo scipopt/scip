@@ -4575,8 +4575,6 @@ SCIP_RETCODE tightenVarBounds(
    assert(!SCIPisZero(scip, val));
    assert(!SCIPisInfinity(scip, lhs));
    assert(!SCIPisInfinity(scip, -rhs));
-   assert(!SCIPisInfinity(scip, minresactivity));
-   assert(!SCIPisInfinity(scip, -maxresactivity));
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
