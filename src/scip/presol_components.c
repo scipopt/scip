@@ -743,13 +743,17 @@ SCIP_RETCODE splitProblem(
          /* there is no constraint to connect variables, so there should be only one variable in the component */
          assert(ncompvars == 1);
 
-         fixval = 0.0;
-
          /* fix variable to its best bound (or 0.0, if objective is 0) */
          if( SCIPisPositive(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetLbGlobal(compvars[0]);
          else if( SCIPisNegative(scip, SCIPvarGetObj(compvars[0])) )
             fixval = SCIPvarGetUbGlobal(compvars[0]);
+         else
+         {
+            fixval = 0.0;
+            fixval = MIN(fixval, SCIPvarGetUbGlobal(compvars[0]));
+            fixval = MAX(fixval, SCIPvarGetLbGlobal(compvars[0]));
+         }
 
 #ifdef SCIP_MORE_DEBUG
 	 SCIPinfoMessage(scip, NULL, "presol components: fix variables <%s> (locks [%d, %d]) to %g because it occurs in no constraint\n",
