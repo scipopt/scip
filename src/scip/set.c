@@ -106,6 +106,7 @@
 #define SCIP_DEFAULT_CONF_RESTARTNUM          0 /**< number of successful conflict analysis calls that trigger a restart
                                                  *   (0: disable conflict restarts) */
 #define SCIP_DEFAULT_CONF_RESTARTFAC        1.5 /**< factor to increase restartnum with after each restart */
+#define SCIP_DEFAULT_CONF_IGNORERELAXEDBD FALSE /**< should relaxed bounds be ignored? */
 
 
 /* Constraints */
@@ -912,6 +913,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/restartfac",
          "factor to increase restartnum with after each restart",
          &(*set)->conf_restartfac, FALSE, SCIP_DEFAULT_CONF_RESTARTFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/ignorerelaxedbd",
+         "should relaxed bounds be ignored?",
+         &(*set)->conf_ignorerelaxedbd, TRUE, SCIP_DEFAULT_CONF_IGNORERELAXEDBD,
          NULL, NULL) );
 
    /* constraint parameters */

@@ -179,6 +179,7 @@ struct SCIP_Set
    int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
                                               *   (0: disable conflict restarts) */
    SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
+   SCIP_Bool             conf_ignorerelaxedbd;/**< should relaxed bounds be ignored? */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

@@ -2401,6 +2401,12 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    nbdchgs = bdchginfo->pos;
    assert(nbdchgs >= 0);
 
+   /* if the relaxed bound should be ignored, set the relaxed bound to the bound given by the bdchgidx; that ensures
+    * that the loop(s) below will be skipped
+    */
+   if( set->conf_ignorerelaxedbd )
+      relaxedbd = SCIPbdchginfoGetNewbound(bdchginfo);
+
    /* search for the bound change information which includes the relaxed bound */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
