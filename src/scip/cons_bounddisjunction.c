@@ -2092,6 +2092,7 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
+   SCIP_Bool mustcheck;
    SCIP_Bool consreduceddom;
    int c;
 
