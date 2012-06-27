@@ -8,7 +8,7 @@ READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	 -framework IOKit -framework Carbon
+LPSLDFLAGS	+=	  -Wl,-no_compact_unwind -framework IOKit -framework Carbon
 endif
 
 ifeq ($(SHARED),true)
