@@ -3138,7 +3138,8 @@ SCIP_RETCODE writeOpbConstraints(
 	    {
 	       if( SCIPisGT(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons)) )
 	       {
-		  SCIPerrorMessage(scip, "Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n", SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
+		  SCIPerrorMessage("Cannot print empty violated constraint %s, %g <= %g is not fulfilled\n",
+                     SCIPconsGetName(cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
 	       }
 	       continue;
 	    }
