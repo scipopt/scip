@@ -310,6 +310,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          {
             SCIPdebugMessage("Turn off close cut separation, because of %d unsuccessful calls.\n", sepadata->nunsuccessful);
             sepadata->discardnode = currentnodenumber;
+            sepadata->nunsuccessful = 0;
          }
       }
    }
