@@ -3021,7 +3021,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIPfreeBufferArray(scip, &coveringvars);
    SCIP_CALL( SCIPfree(&coveringscip) );
@@ -3516,7 +3516,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIP_CALL( SCIPfree(&coveringscip) );
    SCIPfreeBufferArray(scip, &coverinds);

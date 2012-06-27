@@ -194,7 +194,7 @@ void domMerge(
    SCIP_Real* lastrightptr;
 
    assert(dom != NULL);
-   assert(SCIPsetIsLE(set, dom->lb, dom->ub));
+   assert(SCIPsetIsFeasLE(set, dom->lb, dom->ub));
 
 #ifndef NDEBUG
    {
@@ -319,7 +319,7 @@ void domMerge(
       while( *holelistptr != NULL )
       {
          /* check the the last right interval is smaller or equal to the current left interval (none overlapping) */
-         assert( SCIPsetIsLE(set, lastright, (*holelistptr)->hole.left) );
+         assert( SCIPsetIsFeasLE(set, lastright, (*holelistptr)->hole.left) );
 
          /* check the hole property (check that the hole is not empty) */
          assert( SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right) );
@@ -330,7 +330,7 @@ void domMerge(
       }   
 
       /* check the the last right interval is smaller or equal to the upper bound (none overlapping) */     
-      assert( SCIPsetIsLE(set, lastright, dom->ub) );
+      assert( SCIPsetIsFeasLE(set, lastright, dom->ub) );
    }
 #endif
 }
@@ -2640,6 +2640,7 @@ SCIP_RETCODE SCIPvarRelease(
    assert(*var != NULL);
    assert((*var)->nuses >= 1);
    assert(blkmem != NULL);
+   assert((*var)->scip == set->scip);
 
    SCIPdebugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
@@ -2761,6 +2762,7 @@ SCIP_RETCODE SCIPvarPrint(
    int i;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
 
    /* type of variable */
    switch( SCIPvarGetType(var) )
@@ -2898,6 +2900,7 @@ SCIP_RETCODE varEventVarUnlocked(
 
    assert(var != NULL);
    assert(var->nlocksdown <= 1 && var->nlocksup <= 1);
+   assert(var->scip == set->scip);
 
    /* issue VARUNLOCKED event on variable */
    SCIP_CALL( SCIPeventCreateVarUnlocked(&event, blkmem, var) );
@@ -2921,6 +2924,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    assert(var != NULL);
    assert(var->nlocksup >= 0);
    assert(var->nlocksdown >= 0);
+   assert(var->scip == set->scip);
 
    if( addnlocksdown == 0 && addnlocksup == 0 )
       return SCIP_OKAY;
@@ -3161,6 +3165,7 @@ SCIP_RETCODE SCIPvarTransform(
    char name[SCIP_MAXSTRLEN];
 
    assert(origvar != NULL);
+   assert(origvar->scip == set->scip);
    assert(SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_ORIGINAL);
    assert(SCIPsetIsEQ(set, origvar->glbdom.lb, origvar->locdom.lb));
    assert(SCIPsetIsEQ(set, origvar->glbdom.ub, origvar->locdom.ub));
@@ -3234,6 +3239,7 @@ SCIP_RETCODE SCIPvarGetTransformed(
 {
    assert(origvar != NULL);
    assert(SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_NEGATED);
+   assert(origvar->scip == set->scip);
 
    if( SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_NEGATED )
    {
@@ -3265,6 +3271,7 @@ SCIP_RETCODE SCIPvarColumn(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(var->scip == set->scip);
 
    SCIPdebugMessage("creating column for variable <%s>\n", var->name);
 
@@ -3298,6 +3305,7 @@ SCIP_RETCODE SCIPvarLoose(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(var->scip == set->scip);
    assert(var->data.col != NULL);
    assert(var->data.col->lppos == -1);
    assert(var->data.col->lpipos == -1);
@@ -3342,6 +3350,7 @@ SCIP_RETCODE varEventVarFixed(
    int i;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(0 <= fixeventtype && fixeventtype <= 2);
 
    /* issue VARFIXED event on variable */
@@ -3416,6 +3425,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_Real childfixedval;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPsetIsEQ(set, var->glbdom.lb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, var->glbdom.ub, var->locdom.ub));
    assert(infeasible != NULL);
@@ -3585,7 +3595,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Real activeconstant;
    SCIP_Bool activeconstantinf;
    int activevarssize;
-
 
    SCIP_VAR* var;
    SCIP_Real scalar;
@@ -3972,6 +3981,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
 
    assert( var != NULL );
    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
+   assert(var->scip == set->scip);
 
    multconstant = var->data.multaggr.constant;
    nmultvars = var->data.multaggr.nvars;
@@ -4036,6 +4046,7 @@ SCIP_RETCODE varUpdateAggregationBounds(
    SCIP_Bool aggvarbdschanged;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(aggvar != NULL);
    assert(!SCIPsetIsZero(set, scalar));
    assert(infeasible != NULL);
@@ -4231,6 +4242,7 @@ SCIP_RETCODE SCIPvarAggregate(
    int j;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
@@ -4932,6 +4944,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    int tmprequiredsize;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
    assert(naggvars == 0 || aggvars != NULL);
@@ -5331,6 +5344,7 @@ SCIP_RETCODE SCIPvarNegate(
    )
 {
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(negvar != NULL);
 
    /* check, if we already created the negated variable */
@@ -5470,6 +5484,7 @@ SCIP_RETCODE SCIPvarRemove(
    )
 {
    assert(SCIPvarGetProbindex(var) >= 0);
+   assert(var->scip == set->scip);
 
    /* if the variable is active in the transformed problem, remove it from the implication graph */
    if( SCIPvarIsTransformed(var)
@@ -5580,6 +5595,7 @@ SCIP_RETCODE varEventObjChanged(
    SCIP_EVENT* event;
 
    assert(var != NULL);
+   assert(var->scip == set->scip);
    assert(var->eventfilter != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarIsTransformed(var));
@@ -5607,6 +5623,7 @@ SCIP_RETCODE SCIPvarChgObj(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    SCIPdebugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
@@ -5673,6 +5690,7 @@ SCIP_RETCODE SCIPvarAddObj(
 {
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(set->stage < SCIP_STAGE_INITSOLVE);
 
    SCIPdebugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
@@ -5765,6 +5783,8 @@ SCIP_RETCODE SCIPvarChgObjDive(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(lp != NULL);
 
    SCIPdebugMessage("changing objective of <%s> to %g in current dive\n", var->name, newobj);
@@ -5825,6 +5845,8 @@ void SCIPvarAdjustLb(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(lb != NULL);
 
    SCIPdebugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
@@ -5840,6 +5862,8 @@ void SCIPvarAdjustUb(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(ub != NULL);
 
    SCIPdebugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
@@ -5876,12 +5900,13 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
+   assert(SCIPsetIsFeasLE(set, newbound, SCIPvarGetUbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -5929,12 +5954,13 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
+   assert(SCIPsetIsFeasGE(set, newbound, SCIPvarGetLbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -5986,6 +6012,8 @@ SCIP_RETCODE varEventGlbChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because global/root pseudo objective value has to be updated
@@ -6022,6 +6050,8 @@ SCIP_RETCODE varEventGubChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because global/root pseudo objective value has to be updated
@@ -6055,6 +6085,8 @@ SCIP_RETCODE varEventGholeAdded(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPsetIsLT(set, left, right));
 
    /* check, if the variable is being tracked for bound changes */
@@ -6079,7 +6111,9 @@ void varIncRootboundchgs(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(stat != NULL);
 
    if( SCIPvarIsActive(var) && SCIPvarIsTransformed(var) && set->stage == SCIP_STAGE_SOLVING )
@@ -6132,6 +6166,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(stat != NULL);
 
    /* adjust bound to integral value if variable is of integral type */
@@ -6300,6 +6335,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    assert(SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub));
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(stat != NULL);
 
    /* adjust bound to integral value if variable is of integral type */
@@ -6459,11 +6495,12 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6579,11 +6616,12 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -6693,6 +6731,8 @@ SCIP_RETCODE SCIPvarChgLbLazy(
    assert(var->probindex != -1);
    assert(SCIPsetIsFeasGE(set, var->glbdom.ub, lazylb));
    assert(SCIPsetIsFeasGE(set, var->lazyub, lazylb));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* variable should not be in the LP */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -6714,6 +6754,8 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    assert(var->probindex != -1);
    assert(SCIPsetIsFeasGE(set, lazyub, var->glbdom.lb));
    assert(SCIPsetIsFeasGE(set, lazyub, var->lazylb));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* variable should not be in the LP */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -6770,6 +6812,8 @@ SCIP_RETCODE varEventLbChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -6806,6 +6850,8 @@ SCIP_RETCODE varEventUbChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -6863,7 +6909,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -6997,14 +7043,16 @@ SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR* parentvar;
    SCIP_Real oldbound;
    int i;
-   
+
    assert(var != NULL);
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -7137,11 +7185,12 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
+   assert(SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -7251,11 +7300,12 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
+   assert(SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -7384,6 +7434,8 @@ SCIP_RETCODE SCIPvarChgLbDive(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(lp != NULL);
    assert(SCIPlpDiving(lp));
 
@@ -7472,6 +7524,8 @@ SCIP_RETCODE SCIPvarChgUbDive(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(lp != NULL);
    assert(SCIPlpDiving(lp));
 
@@ -7571,6 +7625,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    posinf = FALSE;
@@ -7636,6 +7691,7 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    posinf = FALSE;
@@ -7701,6 +7757,7 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    posinf = FALSE;
@@ -7766,6 +7823,7 @@ SCIP_Real SCIPvarGetMultaggrUbGlobal(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
    posinf = FALSE;
@@ -7827,13 +7885,14 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
-   
+
    SCIPdebugMessage("adding original hole (%g,%g) to <%s>\n", left, right, var->name);
-   
+
    if( SCIPsetIsEQ(set, left, right) )
       return SCIP_OKAY;
-   
+
    /* the interval should not be empty */
    assert(SCIPsetIsLT(set, left, right));
 
@@ -8255,6 +8314,8 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIPdebugMessage("adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(blkmem != NULL);
    assert(added != NULL);
@@ -8353,6 +8414,8 @@ SCIP_RETCODE SCIPvarResetBounds(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarIsOriginal(var));
    /* resetting of bounds on original variables which have a transformed counterpart easily fails if, e.g.,
     * the transformed variable has been fixed */ 
@@ -8436,13 +8499,13 @@ SCIP_RETCODE varAddVbound(
       {
          if( vbcoef > 0.0 )
          {
-            assert(SCIPsetIsGE(set, lb,  lb * vbcoef + vbconstant) );
-            assert(SCIPsetIsGE(set, ub,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasGE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasGE(set, ub,  ub * vbcoef + vbconstant) );
          }
          else
          {
-            assert(SCIPsetIsGE(set, lb,  ub * vbcoef + vbconstant) );
-            assert(SCIPsetIsGE(set, ub,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasGE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasGE(set, ub,  lb * vbcoef + vbconstant) );
          }
       }
       else
@@ -8450,13 +8513,13 @@ SCIP_RETCODE varAddVbound(
          assert(vbtype == SCIP_BOUNDTYPE_UPPER);
          if( vbcoef > 0.0 )
          {
-            assert(SCIPsetIsLE(set, lb,  lb * vbcoef + vbconstant) );
-            assert(SCIPsetIsLE(set, ub,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasLE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasLE(set, ub,  ub * vbcoef + vbconstant) );
          }
          else
          {
-            assert(SCIPsetIsLE(set, lb,  ub * vbcoef + vbconstant) );
-            assert(SCIPsetIsLE(set, ub,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasLE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsFeasLE(set, ub,  lb * vbcoef + vbconstant) );
          }
       }
 #endif
@@ -9072,6 +9135,8 @@ SCIP_RETCODE SCIPvarAddVlb(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarGetType(vlbvar) != SCIP_VARTYPE_CONTINUOUS);
    assert(infeasible != NULL);
 
@@ -9343,6 +9408,8 @@ SCIP_RETCODE SCIPvarAddVub(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarGetType(vubvar) != SCIP_VARTYPE_CONTINUOUS);
    assert(infeasible != NULL);
 
@@ -9612,6 +9679,8 @@ SCIP_RETCODE SCIPvarAddImplic(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
    assert(infeasible != NULL);
 
@@ -9770,6 +9839,8 @@ SCIP_RETCODE varFixBinary(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
@@ -9820,6 +9891,8 @@ SCIP_RETCODE SCIPvarAddClique(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(SCIPvarIsBinary(var)); 
    assert(infeasible != NULL);
 
@@ -9977,6 +10050,7 @@ SCIP_RETCODE varProcessChgBranchFactor(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* only use positive values */
    eps = SCIPsetEpsilon(set);
@@ -10038,6 +10112,7 @@ SCIP_RETCODE SCIPvarChgBranchFactor(
 
    assert(var != NULL);
    assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(branchfactor >= 0.0);
 
    SCIPdebugMessage("changing branch factor of <%s> from %g to %g\n", var->name, var->branchfactor, branchfactor);
@@ -11341,6 +11416,8 @@ SCIP_Real SCIPvarGetLbLP(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* get bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -11409,6 +11486,8 @@ SCIP_Real SCIPvarGetUbLP(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* get bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -11686,6 +11765,8 @@ void SCIPvarUpdateBestRootSol(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* if reduced cost are zero nothing to update */
    if( SCIPsetIsFeasZero(set, rootredcost) )
@@ -12056,6 +12137,8 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
 {
    assert(var != NULL);
    assert(relaxation != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -12114,8 +12197,9 @@ SCIP_Real SCIPvarGetRelaxSol(
    SCIP_Real solval;
    int i;
 
-
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -12194,6 +12278,8 @@ SCIP_RETCODE SCIPvarSetNLPSol(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -12314,6 +12400,8 @@ void SCIPvarGetClosestVlb(
 
    assert(var != NULL);
    assert(stat != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(closestvlb != NULL);
    assert(closestvlbidx != NULL);
 
@@ -12385,6 +12473,9 @@ void SCIPvarGetClosestVub(
 {
    int nvubs;
 
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(closestvub != NULL);
    assert(closestvubidx != NULL);
 
@@ -12458,6 +12549,8 @@ SCIP_RETCODE SCIPvarAddToRow(
    int i;
 
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, REALABS(val)));
 
@@ -12543,6 +12636,8 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(stat != NULL);
 
    /* check if history statistics should be collected for a variable */
@@ -14430,25 +14525,27 @@ int SCIPvarGetConflictingBdchgDepth(
    int i;
 
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsLE(set, bound, var->locdom.ub) )
+      if( SCIPsetIsFeasLE(set, bound, var->locdom.ub) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nubchginfos > 0);
-      assert(SCIPsetIsGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
+      assert(SCIPsetIsFeasGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound); --i )
+      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsFeasGT(set, bound, var->ubchginfos[i-1].newbound); --i )
       {
          assert(var->ubchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
       }
-      assert(SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert(SCIPsetIsFeasGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsFeasLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->ubchginfos[i].bdchgidx.depth;
@@ -14458,21 +14555,21 @@ int SCIPvarGetConflictingBdchgDepth(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsGE(set, bound, var->locdom.lb) )
+      if( SCIPsetIsFeasGE(set, bound, var->locdom.lb) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nlbchginfos > 0);
-      assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
+      assert(SCIPsetIsFeasLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound); --i )
+      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsFeasLT(set, bound, var->lbchginfos[i-1].newbound); --i )
       {
          assert(var->lbchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
       }
-      assert(SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert(SCIPsetIsFeasLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsFeasGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->lbchginfos[i].bdchgidx.depth;
@@ -15852,6 +15949,8 @@ SCIP_RETCODE SCIPvarCatchEvent(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(var->eventfilter != NULL);
    assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
@@ -15877,6 +15976,8 @@ SCIP_RETCODE SCIPvarDropEvent(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
 

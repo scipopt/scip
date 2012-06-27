@@ -121,12 +121,35 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* in debug mode, we check that we can rely on the partition into LP columns and non-LP columns */
          int i2;
 
-         for( i = 0; i < row1->nlpcols; ++i )
-            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
-               assert(row1->cols[i] != row2->cols[i2]);
-         for( i = row1->nlpcols; i < row1->len; ++i )
-            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
-               assert(row1->cols[i] != row2->cols[i2]);
+         i = 0;
+         i2 = row2->nlpcols;
+         while( i < row1->nlpcols && i2 < row2->len )
+         {
+            assert(row1->cols[i] != row2->cols[i2]);
+            if( row1->cols[i]->index < row2->cols[i2]->index )
+               ++i;
+            else
+            {
+               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i == row1->nlpcols || i2 == row2->len);
+
+         i = row1->nlpcols;
+         i2 = 0;
+         while( i < row1->len && i2 < row2->nlpcols )
+         {
+            assert(row1->cols[i] != row2->cols[i2]);
+            if( row1->cols[i]->index < row2->cols[i2]->index )
+               ++i;
+            else
+            {
+               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i == row1->len || i2 == row2->nlpcols);
 #endif
 
          /* both rows are linked and the number of lpcolumns is not equal so they cannot be equal */
@@ -176,6 +199,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       /* compare the columns and coefficients of the rows */
       for( i1 = 0; i1 < row1->len; ++i1 )
       {
+         /* current column of row1 is the current LP column of row2, check the coefficient */
          if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
          {
             if( REALABS(row1->vals[i1] - row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
@@ -183,6 +207,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
             else
                ++ilp;
          }
+         /* current column of row1 is the current non-LP column of row2, check the coefficient */
          else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
          {
             if( REALABS(row1->vals[i1] - row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
@@ -190,6 +215,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
             else
                ++inlp;
          }
+         /* current column of row1 is neither the current LP column of row2, nor the current non-LP column of row 2 */
          else
             return FALSE;
       }

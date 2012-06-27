@@ -1289,16 +1289,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
 
-
-   SCIP_CALL( SCIPallocBuffer(scip, &readerdata) );
-
-   readerdata->scip = scip;
-   readerdata->sol = NULL;
-   readerdata->valid = FALSE;
-   readerdata->branchpriowarning = FALSE;
-   readerdata->readerror = FALSE;
-   readerdata->retcode = SCIP_OKAY;
-
    path = NULL;
    oldpath[0] = '\0';
    if( changedir )
@@ -1348,6 +1338,16 @@ SCIP_DECL_READERREAD(readerReadZpl)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
    }
 
+   /* allocate storage */
+   SCIP_CALL( SCIPallocBuffer(scip, &readerdata) );
+
+   readerdata->scip = scip;
+   readerdata->sol = NULL;
+   readerdata->valid = FALSE;
+   readerdata->branchpriowarning = FALSE;
+   readerdata->readerror = FALSE;
+   readerdata->retcode = SCIP_OKAY;
+
    /* get the parameter string */
    SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
    if( strcmp(paramstr, "-") == 0 )
@@ -1358,7 +1358,11 @@ SCIP_DECL_READERREAD(readerReadZpl)
       else
       {
          /* evaluate retcode */
-         SCIP_CALL( readerdata->retcode );
+         if ( readerdata->retcode != SCIP_OKAY )
+         {
+            SCIPfreeBuffer(scip, &readerdata);
+            return readerdata->retcode;
+         }
       }
    }
    else
@@ -1444,12 +1448,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* call ZIMPL parser with arguments */
       if( !zpl_read_with_args(argv, argc, TRUE, (void*)readerdata) )
          readerdata->readerror = TRUE;
-      else
-      {
-         /* evaluate retcode */
-         SCIP_CALL( readerdata->retcode );
-      }
-
 
       /* free argument memory */
       for( i = argc - 1; i >= 1; --i )
@@ -1457,6 +1455,12 @@ SCIP_DECL_READERREAD(readerReadZpl)
          SCIPfreeBufferArray(scip, &argv[i]);
       }
       SCIPfreeBufferArray(scip, &argv);
+
+      if ( readerdata->retcode != SCIP_OKAY )
+      {
+         SCIPfreeBuffer(scip, &readerdata);
+         return readerdata->retcode;
+      }
    }
 
    if( changedir )
@@ -1470,7 +1474,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
          }
       }
    }
-
 
    if( readerdata->valid )
    {
@@ -1496,7 +1499,6 @@ SCIP_DECL_READERREAD(readerReadZpl)
       retcode = SCIP_READERROR;
    else
       retcode = SCIP_OKAY;
-
 
    /* free primal solution candidate */
    if( readerdata->sol != NULL )

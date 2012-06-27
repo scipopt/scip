@@ -931,7 +931,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             var,                /**< variable to be reported */
    SCIP_BOUNDTYPE        boundtype,          /**< bound to be reported */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place */
+   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
    )
 {
    assert(propdata != NULL);
@@ -965,20 +965,44 @@ SCIP_RETCODE relaxVbdvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype used for the variable bound variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, NULL, relaxedbd) );
+      SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedbd) );
    }
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, NULL, relaxedbd) );
+      SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedbd) );
    }
 
    return SCIP_OKAY;
+}
+
+/** compute the relaxed bound which is sufficient to propagate the inference lower bound of given variable */
+static
+SCIP_Real computeRelaxedLowerbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which was propagated */
+   SCIP_Real             inferlb,            /**< inference lower bound */
+   SCIP_Real             coef,               /**< inference variable bound coefficient used */
+   SCIP_Real             constant            /**< inference variable bound constant used */
+   )
+{
+   SCIP_Real relaxedbd;
+
+   if( SCIPvarIsIntegral(var) )
+      relaxedbd = (inferlb - 1.0 + 2*SCIPfeastol(scip) - constant) / coef;
+   else
+      relaxedbd = (inferlb - constant) / coef;
+
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferlb, SCIPadjustedVarLb(scip, var, relaxedbd * coef + constant)));
+
+   return relaxedbd;
 }
 
 
@@ -1027,19 +1051,25 @@ SCIP_RETCODE analyzeConflictLowerbound(
       if( SCIPvarIsIntegral(infervar) )
          relaxedub = inferlb - 1.0;
       else
-         relaxedub = inferlb - SCIPcutoffbounddelta(scip);
+         relaxedub = inferlb - 2*SCIPfeastol(scip);
 
       /* try to relax inference variable upper bound such that the infeasibility is still given */
       SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
 
-      /* collect the relaxed upper bound which is reported to the conflict analysis */
-      relaxedub = SCIPgetConflictVarRelaxedUb(scip, infervar);
+      /* collect the upper bound which is reported to the conflict analysis */
+      relaxedub = SCIPgetConflictVarUb(scip, infervar);
 
-      /* compute how far the variable bound variable can be relaxed */
-      relaxedbd = (relaxedub - constant) / coef;
+      /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedub = relaxedub + 1.0;
+      else
+         relaxedub = relaxedub + 2*SCIPfeastol(scip);
+
+      /* compute the relaxed bound which is sufficient to propagate the inference lower bound of given variable */
+      relaxedbd = computeRelaxedLowerbound(scip, infervar, relaxedub, coef, constant);
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, relaxedbd) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, NULL, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1060,6 +1090,29 @@ SCIP_RETCODE analyzeConflictLowerbound(
    }
 
    return SCIP_OKAY;
+}
+
+/** compute the relaxed bound which is sufficient to propagate the inference upper bound of given variable */
+static
+SCIP_Real computeRelaxedUpperbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which was propagated */
+   SCIP_Real             inferub,            /**< inference upper bound */
+   SCIP_Real             coef,               /**< inference variable bound coefficient used */
+   SCIP_Real             constant            /**< inference variable bound constant used */
+   )
+{
+   SCIP_Real relaxedbd;
+
+   if( SCIPvarIsIntegral(var) )
+      relaxedbd = (inferub + 1.0 - 2*SCIPfeastol(scip) - constant) / coef;
+   else
+      relaxedbd = (inferub - constant) / coef;
+
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferub, SCIPadjustedVarUb(scip, var, relaxedbd * coef + constant)));
+
+   return relaxedbd;
 }
 
 /** analyzes an infeasibility which was reached by updating the upper bound of the inference variable below its lower
@@ -1107,19 +1160,25 @@ SCIP_RETCODE analyzeConflictUpperbound(
       if( SCIPvarIsIntegral(infervar) )
          relaxedlb = inferub + 1.0;
       else
-         relaxedlb = inferub + SCIPcutoffbounddelta(scip);
+         relaxedlb = inferub + 2*SCIPfeastol(scip);
 
       /* try to relax inference variable lower bound such that the infeasibility is still given */
       SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
 
       /* collect the lower bound which is reported to the conflict analysis */
-      relaxedlb = SCIPgetConflictVarRelaxedLb(scip, infervar);
+      relaxedlb = SCIPgetConflictVarLb(scip, infervar);
 
-      /* compute how far the variable bound variable can be relaxed */
-      relaxedbd = (relaxedlb - constant) / coef;
+      /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
+      if( SCIPvarIsIntegral(infervar) )
+         relaxedlb = relaxedlb - 1.0;
+      else
+         relaxedlb = relaxedlb - 2*SCIPfeastol(scip);
+
+      /* compute the relaxed bound which is sufficient to propagate the inference upper bound of given variable */
+      relaxedbd = computeRelaxedUpperbound(scip, infervar, relaxedlb, coef, constant);
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, relaxedbd) );
+      SCIP_CALL( relaxVbdvar(scip, vbdvar, boundtype, NULL, relaxedbd) );
 
       /* analyze the conflict */
       SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
@@ -1675,6 +1734,7 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
    assert(vars != NULL);
    startvar = vars[getVarIndex(pos)];
    assert(startvar != NULL);
+   assert(startvar != infervar);
 
    SCIPdebugMessage("explain %s bound change of variable <%s>\n",
       getBoundtypeString(boundtype), SCIPvarGetName(infervar));
@@ -1704,13 +1764,14 @@ SCIP_DECL_PROPRESPROP(propRespropVbounds)
       constant = propdata->vboundconstants[pos][b];
       assert(!SCIPisZero(scip, coef));
 
-      /* compute how far the variable bound variable can be relaxed such that the given relaxed bound is still
-       * reached
-       */
-      relaxedbd = (relaxedbd - constant) / coef;
+      /* compute the relaxed bound which is sufficient to propagate the inference bound of given variable */
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+         relaxedbd = computeRelaxedLowerbound(scip, infervar, relaxedbd, coef, constant);
+      else
+         relaxedbd = computeRelaxedUpperbound(scip, infervar, relaxedbd, coef, constant);
 
       /* try to relax variable bound variable */
-      SCIP_CALL( relaxVbdvar(scip, startvar, boundtype, relaxedbd) );
+      SCIP_CALL( relaxVbdvar(scip, startvar, starttype, bdchgidx, relaxedbd) );
    }
    else
    {

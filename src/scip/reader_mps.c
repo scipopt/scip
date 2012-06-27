@@ -3443,7 +3443,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    saggvars = nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
    SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
-   SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 3*nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   if( nvars > 0 )
+   {
+      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 3*nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   }
+   else
+      indicatorSlackHash = NULL;
 
    /* initialize sparse matrix */
    SCIP_CALL( initializeMatrix(scip, &matrix, (nvars * 2)) );
@@ -3639,6 +3644,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          /* store slack variable in hash */
          slackvar = SCIPgetSlackVarIndicator(cons);
          assert( slackvar != NULL );
+         assert( indicatorSlackHash != NULL );
          assert( !SCIPhashtableExists(indicatorSlackHash, (void*) slackvar) );
          SCIP_CALL( SCIPhashtableInsert(indicatorSlackHash, (void*) slackvar) );
 
@@ -3806,7 +3812,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* free hash table */
    SCIPhashtableFree(&varAggregatedHash);
 
-   if( nConsIndicator == 0 )
+   if( indicatorSlackHash != NULL && nConsIndicator == 0 )
    {
       SCIPhashtableFree(&indicatorSlackHash);
       assert( indicatorSlackHash == NULL );

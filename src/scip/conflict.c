@@ -2404,6 +2404,14 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    /* search for the bound change information which includes the relaxed bound */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
+      /* adjust relaxed lower bound w.r.t. variable type */
+      SCIPvarAdjustLb(var, set, &relaxedbd);
+
+      /* due to numericis we compare the relaxed lower bound to the one present at the particular time point and take
+       * the better one
+       */
+      relaxedbd = MIN(relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo));
+
       /* check if relaxed lower bound is smaller or equal to global lower bound; if so we can ignore the conflicting
        * bound
        */
@@ -2438,6 +2446,14 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+      /* adjust relaxed upper bound w.r.t. variable type */
+      SCIPvarAdjustUb(var, set, &relaxedbd);
+
+      /* due to numericis we compare the relaxed upper bound to the one present at the particular time point and take
+       * the better one
+       */
+      relaxedbd = MAX(relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo));
 
       /* check if relaxed upper bound is greater or equal to global upper bound; if so we can ignore the conflicting
        * bound
@@ -2623,7 +2639,10 @@ SCIP_Real SCIPconflictGetVarLb(
    )
 {
    if( var->conflictlbcount == conflict->count )
+   {
+      assert(var->conflictlb >= var->conflictrelaxedlb);
       return var->conflictlb;
+   }
 
    return SCIPvarGetLbGlobal(var);
 }
@@ -2637,35 +2656,10 @@ SCIP_Real SCIPconflictGetVarUb(
    )
 {
    if( var->conflictubcount == conflict->count )
-      return var->conflictub;
-
-   return SCIPvarGetUbGlobal(var);
-}
-
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-SCIP_Real SCIPconflictGetVarRelaxedLb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   if( var->conflictlbcount == conflict->count )
-      return var->conflictrelaxedlb;
-
-   return SCIPvarGetLbGlobal(var);
-}
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise
- *  the global upper bound
- */
-SCIP_Real SCIPconflictGetVarRelaxedUb(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   if( var->conflictubcount == conflict->count )
+   {
+      assert(var->conflictub <= var->conflictrelaxedub);
       return var->conflictrelaxedub;
+   }
 
    return SCIPvarGetUbGlobal(var);
 }

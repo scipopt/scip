@@ -16269,32 +16269,6 @@ SCIP_Real SCIPgetConflictVarUb(
    return SCIPconflictGetVarUb(scip->conflict, var);
 }
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-SCIP_Real SCIPgetConflictVarRelaxedLb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedLb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   return SCIPconflictGetVarRelaxedLb(scip->conflict, var);
-}
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
- *  global upper bound
- */
-SCIP_Real SCIPgetConflictVarRelaxedUb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConflictVarRelaxedUb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   return SCIPconflictGetVarRelaxedUb(scip->conflict, var);
-}
-
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
  *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
  *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
@@ -18317,7 +18291,17 @@ SCIP_RETCODE SCIPflushRowExtensions(
    return SCIP_OKAY;
 }
 
-/** resolves variable to columns and adds them with the coefficient to the row */
+/** resolves variable to columns and adds them with the coefficient to the row
+ *
+ *  @note In case calling this method in the enforcement process of an lp solution, it might be that some variables,
+ *        that were not yet in the LP (e.g. dynamic columns) will change there lp solution value returned by SCIP.
+ *
+ *        e.g. A variable, which has a negative objective value, that has no column in the lp yet, is in the lp solution
+ *        on its upper bound (variables with status SCIP_VARSTATUS_LOOSE are in an lp solution on it's best bound), but
+ *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
+ *        initialization sets the lp solution value) to 0.0 . ( This leads to the conclusion that, if a constraint was
+ *        violated, the linear relaxation might not be violated anymore.)
+ */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */

@@ -5315,9 +5315,9 @@ void SCIProwSort(
       if( !row->delaysort )
       {
          for( c = 1; c < row->nlpcols; ++c )
-            assert(SCIPcolGetIndex(row->cols[c]) > SCIPcolGetIndex(row->cols[c-1]));
+            assert(row->cols[c]->index > row->cols[c-1]->index);
          for( c = row->nlpcols + 1; c < row->len; ++c )
-            assert(SCIPcolGetIndex(row->cols[c]) > SCIPcolGetIndex(row->cols[c-1]));
+            assert(row->cols[c]->index > row->cols[c-1]->index);
       }
    }
 #endif
@@ -6241,15 +6241,38 @@ SCIP_Real SCIProwGetScalarProduct(
       int i2;
 
 #ifndef NDEBUG
+      /* check that we can rely on the partition into LP columns and non-LP columns */
       if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
       {
-         /* check that we can rely on the partition into LP columns and non-LP columns */
-         for( i1 = 0; i1 < row1->nlpcols; ++i1 )
-            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
-               assert(row1->cols[i1] != row2->cols[i2]);
-         for( i1 = row1->nlpcols; i1 < row1->len; ++i1 )
-            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
-               assert(row1->cols[i1] != row2->cols[i2]);
+         i1 = 0;
+         i2 = row2->nlpcols;
+         while( i1 < row1->nlpcols && i2 < row2->len )
+         {
+            assert(row1->cols[i1] != row2->cols[i2]);
+            if( row1->cols[i1]->index < row2->cols[i2]->index )
+               ++i1;
+            else
+            {
+               assert(row1->cols[i1]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i1 == row1->nlpcols || i2 == row2->len);
+
+         i1 = row1->nlpcols;
+         i2 = 0;
+         while( i1 < row1->len && i2 < row2->nlpcols )
+         {
+            assert(row1->cols[i1] != row2->cols[i2]);
+            if( row1->cols[i1]->index < row2->cols[i2]->index )
+               ++i1;
+            else
+            {
+               assert(row1->cols[i1]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i1 == row1->len || i2 == row2->nlpcols);
       }
 #endif
 
@@ -6398,18 +6421,43 @@ int SCIProwGetDiscreteScalarProduct(
    {
       int i1;
       int i2;
+
 #ifndef NDEBUG
+      /* check that we can rely on the partition into LP columns and non-LP columns */
       if( (row1->nlpcols == 0) == (row2->nlpcols == 0) )
       {
-         /* check that we can rely on the partition into LP columns and non-LP columns */
-         for( i1 = 0; i1 < row1->nlpcols; ++i1 )
-            for( i2 = row2->nlpcols; i2 < row2->len; ++i2 )
-               assert(row1->cols[i1] != row2->cols[i2]);
-         for( i1 = row1->nlpcols; i1 < row1->len; ++i1 )
-            for( i2 = 0; i2 < row2->nlpcols; ++i2 )
-               assert(row1->cols[i1] != row2->cols[i2]);
+         i1 = 0;
+         i2 = row2->nlpcols;
+         while( i1 < row1->nlpcols && i2 < row2->len )
+         {
+            assert(row1->cols[i1] != row2->cols[i2]);
+            if( row1->cols[i1]->index < row2->cols[i2]->index )
+               ++i1;
+            else
+            {
+               assert(row1->cols[i1]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i1 == row1->nlpcols || i2 == row2->len);
+
+         i1 = row1->nlpcols;
+         i2 = 0;
+         while( i1 < row1->len && i2 < row2->nlpcols )
+         {
+            assert(row1->cols[i1] != row2->cols[i2]);
+            if( row1->cols[i1]->index < row2->cols[i2]->index )
+               ++i1;
+            else
+            {
+               assert(row1->cols[i1]->index > row2->cols[i2]->index);
+               ++i2;
+            }
+         }
+         assert(i1 == row1->len || i2 == row2->nlpcols);
       }
 #endif
+
       /* calculate the scalar product */
       prod = 0;
       i1 = 0;

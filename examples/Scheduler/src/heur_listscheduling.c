@@ -17,7 +17,26 @@
  * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Jens Schulz
  *
- * Bidirectional serial generation scheme.
+ * The heuristic performs a serial SGS (schedule generation scheme), see Kolisch and Hartmann 2006. Therefore, the jobs
+ * are considered in a topological order (e.g., sorted by their earliest start) and are scheduled according to that
+ * order as early as possible respecting the precedence and resource constraints.
+ *
+ * The serial generation scheme is extended to bidirectional SGS; see Li and Willis 1992. The first obtained schedule is
+ * the so-called forward schedule.  Then, all jobs are sorted in non-increasing order of their completion times in the
+ * forward schedule.  According to that ordering, a backward schedule is created by scheduling all jobs as late as
+ * possible again with respect to precedence and resource constraints.  It gets clear from the way the algorithm works,
+ * that if a feasible forward schedule has been found, a feasible backward schedule can be obtained, since no job needs
+ * to be scheduled earlier as in the forward schedule.  Recreating a forward schedule by sorting the jobs according to
+ * their start times in the backward schedule leads to a makespan not larger than the one in the first forward schedule.
+ *
+ * References:
+ * Kolisch & Hartmann:
+ * Experimental investigation of heuristics for resource-constrained project scheduling: An update
+ * EJOR, 2006
+ *
+ * Li & Willis
+ * An iterative scheduling technique for resource-constrained project scheduling
+ * EJOR 1985
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,6 +47,10 @@
 #include "heur_listscheduling.h"
 #include "scip/pub_misc.h"
 
+/**@name Properties of the heuristic
+ *
+ */
+
 #define HEUR_NAME             "listscheduling"
 #define HEUR_DESC             "scheduling specific primal heuristic which is based on bidirectional serial generation scheme"
 #define HEUR_DISPCHAR         'x'
@@ -37,6 +60,8 @@
 #define HEUR_MAXDEPTH         100000
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_BEFOREPRESOL
 #define HEUR_USESSUBSCIP      FALSE      /**< does the heuristic use a secondary SCIP instance? */
+
+/**@} */
 
 /*
  * Data structures
@@ -56,8 +81,8 @@ struct SCIP_HeurData
    SCIP_Bool             initialized;        /**< stores if initialization has already occurred */
 };
 
-/*
- * Local methods
+/**@name Local methods
+ *
  */
 
 /** initializes heuristic data structures */
@@ -91,8 +116,6 @@ SCIP_RETCODE heurdataInit(
    }
    else
    {
-      int* component;
-
       /* copy precedence graph */
       SCIP_CALL( SCIPdigraphCopy(&heurdata->precedencegraph, precedencegraph) );
 
@@ -103,9 +126,6 @@ SCIP_RETCODE heurdataInit(
       /* use the topological sorted for the variables */
       SCIP_CALL( SCIPdigraphTopoSortComponents(heurdata->precedencegraph) );
       SCIPdebug( SCIPdigraphPrintComponents(heurdata->precedencegraph, SCIPgetMessagehdlr(scip), NULL) );
-      SCIPdigraphPrintComponents(heurdata->precedencegraph, SCIPgetMessagehdlr(scip), NULL);
-
-      SCIPdigraphGetComponent(heurdata->precedencegraph, 0, &component, NULL);
 
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->capacities, capacities, nresources) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->vars, vars, njobs) );
@@ -116,9 +136,9 @@ SCIP_RETCODE heurdataInit(
       {
          SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );
       }
-   }
 
-   heurdata->initialized = TRUE;
+      heurdata->initialized = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -154,6 +174,7 @@ SCIP_RETCODE heurdataFree(
    }
 
    heurdata->initialized = FALSE;
+   heurdata->njobs = 0;
 
    return SCIP_OKAY;
 }
@@ -716,8 +737,10 @@ SCIP_RETCODE executeHeuristic(
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of primal heuristic
+/**@} */
+
+/**@name Callback methods
+ *
  */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
@@ -737,6 +760,8 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   SCIP_CALL( heurdataFree(scip, heurdata) );
+
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -748,17 +773,7 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
 #define heurInitListScheduling NULL
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitListScheduling)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   SCIP_CALL( heurdataFree(scip, heurdata) );
-   return SCIP_OKAY;
-}
+#define heurExitListScheduling NULL
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #define heurInitsolListScheduling NULL
@@ -796,10 +811,11 @@ SCIP_DECL_HEUREXEC(heurExecListScheduling)
    return SCIP_OKAY;
 }
 
+/**@} */
 
-/*
- * primal heuristic specific interface methods
-*/
+/**@name Interface methods
+ *
+ */
 
 /** creates the list scheduling primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurListScheduling(
@@ -824,7 +840,6 @@ SCIP_RETCODE SCIPincludeHeurListScheduling(
    assert(heur != NULL);
 
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeListScheduling) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitListScheduling) );
 
    return SCIP_OKAY;
 }
@@ -861,3 +876,5 @@ SCIP_RETCODE SCIPinitializeHeurListScheduling(
 
    return SCIP_OKAY;
 }
+
+/**@} */

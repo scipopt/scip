@@ -512,20 +512,15 @@ SCIP_RETCODE resolvePropagation(
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
+         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
+
          if( vbdcoef > 0.0 )
          {
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
-
-            relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
-
-            relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -576,14 +571,6 @@ SCIP_RETCODE resolvePropagation(
           */
          relaxedub -= SCIPfeastol(scip);
 
-         /* adjust the relaxed upper bound w.r.t. variable type */
-         relaxedub = SCIPadjustedVarUb(scip, var, relaxedub);
-
-         /* due to numericis we compare the compute relaxed upper bound to the one present at the particular time point and
-          * take the better one
-          */
-         relaxedub = MAX(relaxedub, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE));
-
          SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedub) );
       }
       else
@@ -608,20 +595,15 @@ SCIP_RETCODE resolvePropagation(
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
+         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+
          if( vbdcoef > 0.0 )
          {
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
-
-            relaxedbd = SCIPadjustedVarLb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
-
-            relaxedbd = SCIPadjustedVarUb(scip, vbdvar, relaxedbd);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -671,14 +653,6 @@ SCIP_RETCODE resolvePropagation(
           * to the integral condition of the variable bound variable
           */
          relaxedlb += SCIPfeastol(scip);
-
-         /* due to numericis we compare the compute relaxed lower bound to the one present at the particular time point and
-          * take the better one
-          */
-         relaxedlb = MIN(relaxedlb, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE));
-
-         /* adjust the relaxed lower bound w.r.t. variable type */
-         relaxedlb = SCIPadjustedVarLb(scip, var, relaxedlb);
 
          SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedlb) );
       }
@@ -736,7 +710,7 @@ SCIP_RETCODE analyzeConflict(
          SCIP_CALL( SCIPaddConflictRelaxedUb(scip, infervar, NULL, relaxedub) );
 
          /* collect the upper bound which is reported to the conflict analysis */
-         inferbd = SCIPgetConflictVarRelaxedUb(scip, infervar);
+         inferbd = SCIPgetConflictVarUb(scip, infervar);
 
          /* adjust inference bound with respect to the upper bound reported to the conflict analysis */
          if( SCIPvarIsIntegral(infervar) )
@@ -770,7 +744,7 @@ SCIP_RETCODE analyzeConflict(
          SCIP_CALL( SCIPaddConflictRelaxedLb(scip, infervar, NULL, relaxedlb) );
 
          /* collect the lower bound which is reported to the conflict analysis */
-         inferbd = SCIPgetConflictVarRelaxedLb(scip, infervar);
+         inferbd = SCIPgetConflictVarLb(scip, infervar);
 
          /* adjust inference bound with respect to the lower bound reported to the conflict analysis */
          if( SCIPvarIsIntegral(infervar) )
