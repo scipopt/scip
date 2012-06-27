@@ -215,7 +215,7 @@ do
 
       # additional environment variables needed by runcluster.sh
       export SOLVERPATH=$SCIPPATH
-      export EXECNAME=$BINNAME
+      export EXECNAME=$SCIPPATH/$BINNAME
       export BASENAME=$FILENAME
       export FILENAME=$i
       export CLIENTTMPDIR=$CLIENTTMPDIR
