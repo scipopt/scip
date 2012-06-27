@@ -11253,6 +11253,7 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 
       default:
          SCIPerrorMessage("unknown variable status\n");
+	 SCIPABORT(); /*lint !e527*/
          return SCIP_INVALIDDATA;
       }
    }
