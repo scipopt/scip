@@ -4503,7 +4503,7 @@ void SCIPdigraphFree(
    assert(*digraph != NULL);
 
    /* free arrays storing the successor nodes and arc datas */
-   for( i = 0; i < (*digraph)->nnodes; ++i )
+   for( i = (*digraph)->nnodes - 1; i >= 0; --i )
    {
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
       BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
