@@ -150,9 +150,14 @@ SCIP_RETCODE solveLP(
       return SCIP_OKAY;
    }
 
-   if( lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
+      assert(!*error);
+      *optimal = TRUE;
+   }
 #ifdef SCIP_DEBUG
+   else
+   {
       switch( lpsolstat )
       {
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -173,13 +178,8 @@ SCIP_RETCODE solveLP(
       default:
          SCIPdebugMessage("   received an unexpected solstat during solving lp: %d\n", lpsolstat);
       }
+   }
 #endif
-   }
-   else
-   {
-      assert(!*error);
-      *optimal = TRUE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1088,9 +1088,9 @@ SCIP_DECL_SORTPTRCOMP(compBounds)
 }
 
 #ifdef SCIP_DEBUG
+/** prints groups of variables */
 static
 void printGroups(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< data of the obbt propagator */
    )
 {
@@ -1099,22 +1099,28 @@ void printGroups(
    assert(propdata != NULL);
    assert(propdata->nbounds > 0);
 
-   SCIPinfoMessage(scip, NULL, "groups={\n");
+   SCIPdebugPrintf("groups={\n");
 
    for( i = 0; i < propdata->nboundgroups; i++ )
    {
       int j;
-      SCIPinfoMessage(scip, NULL, "  {\n");
+
+      SCIPdebugPrintf("  {\n");
+
       for( j = 0; j < propdata->boundgroups[i].nbounds; j++ )
       {
-         BOUND* bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
-         SCIPinfoMessage(scip, NULL, "      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
+         BOUND* bound;
+
+         bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
+
+         SCIPdebugPrintf("      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
             SCIPvarGetName(bound->var), bound->score);
       }
-      SCIPinfoMessage(scip, NULL, "  }\n");
+
+      SCIPdebugPrintf("  }\n");
    }
 
-   SCIPinfoMessage(scip, NULL, "}\n");
+   SCIPdebugPrintf("}\n");
 }
 #endif
 
