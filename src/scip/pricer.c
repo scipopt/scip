@@ -478,7 +478,7 @@ void SCIPpricerSetData(
 /** sets copy callback of pricer */
 void SCIPpricerSetCopy(
    SCIP_PRICER*          pricer,             /**< variable pricer */
-   SCIP_DECL_PRICERCOPY  ((*pricercopy))      /**< copy callback of pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy))     /**< copy callback of pricer */
    )
 {
    assert(pricer != NULL);

@@ -74,10 +74,28 @@
 #undef SCIP_DEBUG
 #endif
 
+/* include SoPlex solver */
 #include "spxsolver.h"
+
+/* define subversion for versions <= 1.5.0.1 */
+#ifndef SOPLEX_SUBVERSION
+#define SOPLEX_SUBVERSION 0
+#endif
+
+/* check version */
+#if (SOPLEX_VERSION < 133)
+#error "This interface is not compatible with SoPlex versions prior to 1.4"
+#endif
+
+/* get githash of SoPlex */
+#if (SOPLEX_VERSION >= 160)
+#include "spxgithash.h"
+#endif
+
+/* include SoPlex components */
 #include "slufactor.h"
 #include "spxsteeppr.h"
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
 #include "spxsteepexpr.h"
 #endif
 #include "spxparmultpr.h"
@@ -88,21 +106,6 @@
 
 #ifdef WITH_BOUNDFLIPPING
 #include "spxboundflippingrt.h"
-#endif
-
-/* check version */
-#if (SOPLEX_VERSION < 133)
-#error "This interface is not compatible with SoPlex versions prior to 1.4"
-#endif
-
-/* define subversion for versions <= 1.5.0.1 */
-#ifndef SOPLEX_SUBVERSION
-#define SOPLEX_SUBVERSION 0
-#endif
-
-/* get githash of SoPlex */
-#if (SOPLEX_VERSION > 150)
-#include "spxgithash.h"
 #endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
@@ -174,7 +177,7 @@ class SPxSCIP : public SPxSolver
    SPxLP::SPxSense       m_sense;            /**< optimization sense */
    SLUFactor             m_slu;              /**< sparse LU factorization */
    SPxSteepPR            m_price_steep;      /**< steepest edge pricer */
-#if (SOPLEX_VERSION > 150 && SOPLEX_SUBVERSION > 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 6) || SOPLEX_VERSION > 160)
    SPxSteepExPR          m_price_steep_ex;   /**< steepest edge with exact weight initialization */
 #else
    SPxSteepPR            m_price_steep_ex;   /**< fallback to quick start pricer */
@@ -190,6 +193,8 @@ class SPxSCIP : public SPxSolver
    bool                  m_fromscratch;      /**< use old basis indicator */
    bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
+   Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
+   Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
    Real                  m_objLoLimit;       /**< lower objective limit */
    Real                  m_objUpLimit;       /**< upper objective limit */
    Status                m_stat;             /**< solving status */
@@ -266,23 +271,41 @@ public:
 #endif
    }
 
-   /* the following methods are provided for comptability with earlier SoPlex versions */
-#if (SOPLEX_VERSION < 160 || SOPLEX_SUBVERSION < 5)
+   /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol()
    {
-      return delta();
+      return m_lpifeastol;
    }
 
-   Real opttol()
-   {
-      return delta();
-   }
-
+   /**< set feastol and store value in case SoPlex only accepts a larger tolerance */
    void setFeastol(
       const Real d
       )
    {
-      return setDelta(d);
+      m_lpifeastol = d;
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+      SPxSolver::setFeastol(d);
+#else
+      SPxSolver::setDelta(d);
+#endif
+   }
+
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
+   /**< return opttol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
+   Real opttol()
+   {
+      return m_lpiopttol;
+   }
+
+   /**< set opttol and store value in case SoPlex only accepts a larger tolerance */
+   void setOpttol(
+      const Real d
+      )
+   {
+      m_lpiopttol = d;
+
+      SPxSolver::setOpttol(d);
    }
 #endif
 
@@ -789,7 +812,7 @@ public:
          verbosity = Param::verbose();
          Param::setVerbose(getLpInfo() ? 3 : 0);
          SCIPdebugMessage("simplifying LP\n");
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
 #else
          result = simplifier->simplify(*this, epsilon(), delta());
@@ -1427,7 +1450,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#if (SOPLEX_VERSION > 150)
+#if (SOPLEX_VERSION >= 160)
    sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
 #endif
 #ifdef WITH_LPSCHECK
@@ -2890,7 +2913,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPerrorMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
       return SCIP_LPERROR;
    }
 
@@ -2912,8 +2935,17 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2934,6 +2966,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -2949,7 +2983,14 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
    return SCIP_OKAY;
 }
@@ -2969,9 +3010,18 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    /* pass call on to lpiStrongbranch() */
-   SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
-   
+   retcode = lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter);
+
+   /* pass SCIP_LPERROR to SCIP without a back trace */
+   if( retcode == SCIP_LPERROR )
+      return SCIP_LPERROR;
+
+   /* evaluate retcode */
+   SCIP_CALL( retcode );
+
    return SCIP_OKAY;
 }
 
@@ -2991,6 +3041,8 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
@@ -3006,8 +3058,16 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    for (int j = 0; j < ncols; ++j)
    {
       /* pass call on to lpiStrongbranch() */
-      SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
+      retcode = lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter);
+
+      /* pass SCIP_LPERROR to SCIP without a back trace */
+      if( retcode == SCIP_LPERROR )
+         return SCIP_LPERROR;
+
+      /* evaluate retcode */
+      SCIP_CALL( retcode );
    }
+
    return SCIP_OKAY;
 }
 /**@} */
@@ -3082,7 +3142,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
 #else
    return FALSE;
@@ -3380,7 +3440,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-#if (SOPLEX_VERSION > 150 || (SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2))
+#if ((SOPLEX_VERSION == 150 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 150)
    try
    {
       Vector tmp(lpi->spx->nCols(), ray);
@@ -3556,7 +3616,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
          case SPxSolver::ON_LOWER:
             rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
@@ -3570,6 +3630,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3583,7 +3644,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SPxSolver::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
-            break;	  
+            break;
          case SPxSolver::FIXED:
 	    /* Get reduced cost estimation. If the estimation is not correct this should not hurt:
 	     * If the basis is loaded into SoPlex again, the status is converted to FIXED again; in
@@ -3608,6 +3669,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -3658,6 +3720,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3680,6 +3743,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
@@ -4361,7 +4425,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->spx->feastol();
       break;
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
@@ -4402,7 +4466,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       lpi->spx->setFeastol(dval);
       break;
-#if (SOPLEX_VERSION >= 160 && SOPLEX_SUBVERSION >= 5)
+#if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;

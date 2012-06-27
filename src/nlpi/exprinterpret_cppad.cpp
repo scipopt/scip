@@ -50,9 +50,15 @@ using std::vector;
 SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
 using CppAD::SCIPInterval;
 
-/** CppAD needs to know a fixed upper bound on the number of threads at compile time. */
+/** CppAD needs to know a fixed upper bound on the number of threads at compile time.
+ * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
+ */
 #ifndef CPPAD_MAX_NUM_THREADS
-#define CPPAD_MAX_NUM_THREADS 48
+#ifndef NPARASCIP
+#define CPPAD_MAX_NUM_THREADS 64
+#else
+#define CPPAD_MAX_NUM_THREADS 1
+#endif
 #endif
 
 #ifdef __GNUC__
@@ -73,6 +79,25 @@ using CppAD::SCIPInterval;
  */
 #ifndef NPARASCIP
 #include <pthread.h>
+
+/* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
+namespace CppAD
+{
+template <> SCIPInterval erf_template(
+   const SCIPInterval    &x
+)
+{
+   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+   return SCIPInterval();
+}
+template <> AD<SCIPInterval> erf_template(
+   const AD<SCIPInterval> &x
+)
+{
+   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+   return AD<SCIPInterval>();
+}
+}
 
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;

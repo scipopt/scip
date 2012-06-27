@@ -41,7 +41,18 @@
                              return SCIP_LPERROR;                                                             \
                           }                                                                                   \
                        }                                                                                      \
-                       while( FALSE ) 
+                       while( FALSE )
+
+/* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
+#define ABORT_FALSE(x) { int _restat_;                                  \
+      if( (_restat_ = (x)) != 0 )                                       \
+      {                                                                 \
+         SCIPerrorMessage("LP Error: MOSEK returned %d\n", (int)_restat_); \
+         SCIPABORT();                                                   \
+         return FALSE;                                                  \
+      }                                                                 \
+   }
+
 
 #define IS_POSINF(x) ((x) >= SCIP_DEFAULT_INFINITY)
 #define IS_NEGINF(x) ((x) <= -SCIP_DEFAULT_INFINITY)
@@ -2593,17 +2604,17 @@ SCIP_Bool SCIPlpiWasSolved(
    MSKprostae prosta;
    MSKsolstae solsta;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, &solsta) );
-   
+   ABORT_FALSE( getSolutionStatus (lpi, &prosta, &solsta) );
+
    return (solsta == MSK_SOL_STA_OPTIMAL);
 }
- 
+
 /** gets information about primal and dual feasibility of the current LP solution */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2615,8 +2626,8 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool pfeas;
    SCIP_Bool dfeas;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetSolFeasibility (%d)\n",lpi->lpid);
@@ -2680,7 +2691,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    SCIPdebugMessage("Calling SCIPlpiExistsPrimalRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, &solsta));
+   ABORT_FALSE( getSolutionStatus (lpi, &prosta, &solsta));
 
    return (   solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
@@ -2702,7 +2713,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
  
    SCIPdebugMessage("Calling SCIPlpiHasPrimalRay (%d)\n",lpi->lpid);
    
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, NULL, &solsta) );
+   ABORT_FALSE( getSolutionStatus (lpi, NULL, &solsta) );
 
    return (solsta == MSK_SOL_STA_DUAL_INFEAS_CER);
 }
@@ -2736,7 +2747,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("Calling SCIPlpiIsPrimalFeasible (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, &prosta, NULL) );
+   ABORT_FALSE( getSolutionStatus (lpi, &prosta, NULL) );
 
    return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
 }
@@ -2751,13 +2762,13 @@ SCIP_Bool SCIPlpiExistsDualRay(
    MSKprostae prosta;
    MSKsolstae solsta;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
- 
+
    SCIPdebugMessage("Calling SCIPlpiExistsDualRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, &prosta, &solsta) );
+   ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
    return (   solsta == MSK_SOL_STA_PRIM_INFEAS_CER
       || prosta == MSK_PRO_STA_PRIM_INFEAS
@@ -2773,13 +2784,13 @@ SCIP_Bool SCIPlpiHasDualRay(
 {
    MSKsolstae solsta;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiHasDualRay (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus (lpi, NULL, &solsta) );
+   ABORT_FALSE( getSolutionStatus (lpi, NULL, &solsta) );
 
    return (solsta == MSK_SOL_STA_PRIM_INFEAS_CER);
 }
@@ -2807,13 +2818,13 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 {
    MSKprostae prosta;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiIsDualFeasible (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, &prosta, NULL) );
+   ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
    return (prosta == MSK_PRO_STA_DUAL_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
 }
@@ -2826,14 +2837,14 @@ SCIP_Bool SCIPlpiIsOptimal(
 {
    MSKsolstae solsta;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiIsOptimal (%d)\n",lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, NULL, &solsta) );
-      
+   ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
+
    return (solsta == MSK_SOL_STA_OPTIMAL);
 }
 
@@ -2894,14 +2905,17 @@ int SCIPlpiGetInternalStatus(
    )
 {
    MSKsolstae solsta;
+   SCIP_RETCODE retcode;
 
-   assert(MosekEnv != NULL); 
-   assert(lpi != NULL); 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetInternalStatus (%d)\n", lpi->lpid);
 
-   SCIP_CALL_ABORT( getSolutionStatus(lpi, NULL, &solsta) );
+   retcode = getSolutionStatus(lpi, NULL, &solsta);
+   if ( retcode != SCIP_OKAY )
+      return 0;
 
    return solsta; /*lint !e641*/
 }
@@ -3099,12 +3113,12 @@ SCIP_RETCODE convertstat_mosek2scip(
    )
 {
    int i;
-   
+
    for( i = 0; i < n; i++ )
    {
       double sl;
       double su;
-      
+
       switch (sk[i])
       {
       case MSK_SK_BAS:
@@ -3137,6 +3151,7 @@ SCIP_RETCODE convertstat_mosek2scip(
          break;
       default:
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }  /*lint !e788*/
    }
 
@@ -3189,6 +3204,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       default:
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }  /*lint !e788*/
    }
 
@@ -3196,7 +3212,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 }
 
 /** convert SCIP to Mosek status */
-static 
+static
 void convertstat_scip2mosek(
    int*                  stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */

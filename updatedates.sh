@@ -17,7 +17,7 @@ LASTYEAR=`expr $NEWYEAR - 1`
 
 DIRECTORIES=(check doc src src/* examples examples/* examples/*/src examples/*/doc)
 EXTENSIONS=(sh awk h c hpp cpp html)
-EXTRAFILES=(Makefile INSTALL)
+EXTRAFILES=(Makefile INSTALL make/make.project make/make.detecthost)
 
 echo ""
 echo "This script reports *all* files which have not a correct COPYRIGHT."
@@ -28,9 +28,14 @@ echo ""
 FILES=""
 for DIRECTORY in ${DIRECTORIES[@]}
 do
+    # exclude cppad subdirectory
+    if [[ "$DIRECTORY" =~ "src/cppad" ]]
+    then
+	continue
+    fi
     for EXTENSION in ${EXTENSIONS[@]}
     do
-	for FILE in $DIRECTORY/*.$EXTENSION 
+	for FILE in $DIRECTORY/*.$EXTENSION
 	do
 	    if test -f $FILE
 	    then
@@ -39,7 +44,7 @@ do
 	done
     done
     for EXTRAFILE in ${EXTRAFILES[@]}
-    do 
+    do
 	if test -f $DIRECTORY/$EXTRAFILE
 	then
 	    FILES="$FILES $DIRECTORY/$EXTRAFILE"

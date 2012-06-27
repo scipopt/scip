@@ -359,7 +359,7 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 
    newfeastol = SCIPparamGetReal(param);
 
-   /* change the feastol through the SCIP call in order to mark the LP unsolved */
+   /* change the feastol through the SCIP call in order to adjust lpfeastol if necessary */
    SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
@@ -373,8 +373,10 @@ SCIP_DECL_PARAMCHGD(paramChgdLpfeastol)
 
    newlpfeastol = SCIPparamGetReal(param);
 
-   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved */
-   SCIP_CALL( SCIPchgLpfeastol(scip, newlpfeastol) );
+   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved and control that it does not exceed
+    * SCIP's feastol
+    */
+   SCIP_CALL( SCIPchgLpfeastol(scip, newlpfeastol, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -2014,7 +2016,7 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    return SCIP_OKAY;
 }
 
-/**< sets the default value of an existing SCIP_Bool parameter */
+/** sets the default value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetSetDefaultBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
@@ -4005,20 +4007,54 @@ SCIP_RETCODE SCIPsetSetFeastol(
 
    set->num_feastol = feastol;
 
+   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if necessary,
+    * decrease it; use the SCIP change method in order to mark the LP unsolved
+    */
+   if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
+   {
+      SCIPdebugMessage("decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
+      SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set), TRUE) );
+   }
+
    return SCIP_OKAY;
 }
 
 /** sets primal feasibility tolerance of LP solver */
 SCIP_RETCODE SCIPsetSetLpfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(set != NULL);
 
-   set->num_lpfeastol = lpfeastol;
+   retcode = SCIP_OKAY;
 
-   return SCIP_OKAY;
+   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if this is
+    * tried, we correct it to feastol; note that when we are called, e.g., by paramChgdLpfeastol, lpfeastol has already
+    * been modified and so we cannot leave the lpfeastol value unchanged; if we would not return SCIP_PARAMETERWRONGVAL
+    * in this case, the interactive shell would print the incorrect value to be set
+    */
+   if( lpfeastol > SCIPsetFeastol(set) )
+   {
+      SCIPerrorMessage("LP feasibility tolerance must be at least as tight as SCIP's feasibility tolerance\n");
+
+      retcode = SCIP_PARAMETERWRONGVAL;
+      printnewvalue = TRUE;
+
+      set->num_lpfeastol = SCIPsetFeastol(set);
+   }
+   else
+      set->num_lpfeastol = lpfeastol;
+
+   if( printnewvalue )
+   {
+      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "numerics/lpfeastol = %.15g\n", SCIPsetLpfeastol(set));
+   }
+
+   return retcode;
 }
 
 /** sets feasibility tolerance for reduced costs in LP solution */

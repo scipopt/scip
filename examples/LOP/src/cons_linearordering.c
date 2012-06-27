@@ -64,6 +64,7 @@ struct SCIP_ConsData
 static
 SCIP_RETCODE LinearOrderingSeparate(
    SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   n,                  /**< number of elements */
    SCIP_VAR***           vars,               /**< n x n matrix of variables */
    SCIP_SOL*             sol,                /**< solution to be separated */
@@ -96,7 +97,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
+	    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -126,7 +127,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
-	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
+	       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );
@@ -310,7 +311,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
+	    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -358,7 +359,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -396,7 +397,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, consdata->n, consdata->vars, sol, &nGen) );
+      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -459,7 +460,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
-	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
+	       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -489,7 +490,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
 		  (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
-		  SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
+		  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 		  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );

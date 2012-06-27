@@ -847,6 +847,17 @@ void SCIPpropSetPresol(
    prop->maxprerounds = presolmaxrounds;
 }
 
+/** sets propagation conflict resolving callback of propagator */
+void SCIPpropSetResprop(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
+   )
+{
+   assert(prop != NULL);
+
+   prop->propresprop = propresprop;
+}
+
 /** gets name of propagator */
 const char* SCIPpropGetName(
    SCIP_PROP*            prop                /**< propagator */

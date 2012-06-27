@@ -167,21 +167,19 @@ SCIP_RETCODE unlockRounding(
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   SCIP_CONSHDLRDATA**   conshdlrdata,       /**< pointer to store the constraint handler data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
+   assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for catching bound change events on variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for and constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   
+   /* set event handler for catching bound change events on variables */
+   (*conshdlrdata)->eventhdlr = eventhdlr;
+
    return SCIP_OKAY;
 }
 
@@ -668,95 +666,85 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** index comparison method of and constraints: compares two indices of the variable set in the and constraint */
-static
-SCIP_DECL_SORTINDCOMP(consdataCompVar)
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
-
-   assert(consdata != NULL);
-   assert(0 <= ind1 && ind1 < consdata->nvars);
-   assert(0 <= ind2 && ind2 < consdata->nvars);
-
-   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
-}
-
 /** sorts and constraint's variables by non-decreasing variable index */
 static
-SCIP_RETCODE consdataSort(
-   SCIP*                 scip,               /**< SCIP data structure */
+void consdataSort(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
-      consdata->sorted = TRUE;
-   else if( !consdata->sorted )
+   if( !consdata->sorted )
    {
-      SCIP_VAR* varv;
-      int* perm;
-      int v;
-      int i;
-      int nexti;
-
-      /* get temporary memory to store the sorted permutation */
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
-
-      /* call bubble sort */
-      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
-
-      /* permute the variables in the constraint according to the resulting permutation */
-      for( v = 0; v < consdata->nvars; ++v )
+      if( consdata->nvars <= 1 )
+	 consdata->sorted = TRUE;
+      else
       {
-         if( perm[v] != v )
-         {
-            SCIP_Bool iswatchedvar1;
-            SCIP_Bool iswatchedvar2;
+	 SCIP_VAR* var1 = NULL;
+	 SCIP_VAR* var2 = NULL;
 
-            varv = consdata->vars[v];
-            iswatchedvar1 = (consdata->watchedvar1 == v);
-            iswatchedvar2 = (consdata->watchedvar2 == v);
-            i = v;
-            do
-            {
-               assert(0 <= perm[i] && perm[i] < consdata->nvars);
-               assert(perm[i] != i);
-               consdata->vars[i] = consdata->vars[perm[i]];
-               if( consdata->watchedvar1 == perm[i] )
-                  consdata->watchedvar1 = i;
-               if( consdata->watchedvar2 == perm[i] )
-                  consdata->watchedvar2 = i;
-               nexti = perm[i];
-               perm[i] = i;
-               i = nexti;
-            }
-            while( perm[i] != v );
-            consdata->vars[i] = varv;
-            if( iswatchedvar1 )
-               consdata->watchedvar1 = i;
-            if( iswatchedvar2 )
-               consdata->watchedvar2 = i;
-            perm[i] = i;
-         }
+	 /* remember watch variables */
+	 if( consdata->watchedvar1 != -1 )
+	 {
+	    var1 = consdata->vars[consdata->watchedvar1];
+	    assert(var1 != NULL);
+	    consdata->watchedvar1 = -1;
+	    if( consdata->watchedvar2 != -1 )
+	    {
+	       var2 = consdata->vars[consdata->watchedvar2];
+	       assert(var2 != NULL);
+	       consdata->watchedvar2 = -1;
+	    }
+	 }
+	 assert(consdata->watchedvar1 == -1);
+	 assert(consdata->watchedvar2 == -1);
+	 assert(var1 != NULL || var2 == NULL);
+
+	 /* sort variables after index */
+	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+	 consdata->sorted = TRUE;
+
+	 /* correct watched variables */
+	 if( var1 != NULL )
+	 {
+	    int pos;
+#ifndef NDEBUG
+	    SCIP_Bool found;
+
+	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+	    assert(found);
+#else
+	    SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+#endif
+	    assert(pos >= 0 && pos < consdata->nvars);
+	    consdata->watchedvar1 = pos;
+
+	    if( var2 != NULL )
+	    {
+#ifndef NDEBUG
+	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+	       assert(found);
+#else
+	       SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+#endif
+	       assert(pos >= 0 && pos < consdata->nvars);
+	       consdata->watchedvar2 = pos;
+	    }
+	 }
       }
-      consdata->sorted = TRUE;
+   }
 
 #ifdef SCIP_DEBUG
-      /* check sorting */
+   /* check sorting */
+   {
+      int v;
+
       for( v = 0; v < consdata->nvars; ++v )
       {
          assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
-         assert(perm[v] == v);
       }
-#endif
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &perm);
    }
-   assert(consdata->sorted);
-
-   return SCIP_OKAY;
+#endif
 }
 
 /** deletes all one-fixed variables and removes multiple entries */
@@ -853,7 +841,8 @@ SCIP_RETCODE applyFixings(
    }
 
    /* sort the variables in the constraint */
-   SCIP_CALL( consdataSort(scip, consdata) );
+   consdataSort(consdata);
+   assert(consdata->sorted);
 
    /* search for multiple variables; scan from back to front because deletion doesn't affect the order of the front
     * variables
@@ -918,7 +907,7 @@ SCIP_RETCODE applyFixings(
 }
 
 /** creates a linearization of the and constraint */
-static 
+static
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -965,7 +954,7 @@ SCIP_RETCODE createRelaxation(
 }
 
 /** adds linear relaxation of and constraint to the LP */
-static 
+static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to check */
@@ -975,7 +964,7 @@ SCIP_RETCODE addRelaxation(
    SCIP_CONSDATA* consdata;
 
    char rowname[SCIP_MAXSTRLEN];
-   
+
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
     *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
@@ -1146,7 +1135,7 @@ SCIP_RETCODE separateCons(
             SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
             *separated = TRUE;
          }
-      }            
+      }
    }
 
    return SCIP_OKAY;
@@ -1726,6 +1715,7 @@ SCIP_RETCODE dualPresolve(
 	       }
 	    }
 	 }
+	 assert(nimpoperands >= 0 && nimpoperands <= nvars);
 
 	 /* no dual fixable variables found */
 	 if( nimpoperands == 0 )
@@ -1835,7 +1825,7 @@ SCIP_RETCODE dualPresolve(
 	    {
 	       SCIP_Real fixval = (SCIPisLE(scip, REALABS(maxobj), resobj) ? 0.0 : 1.0);
 
-	       SCIPdebugMessage("dual-fixing variable <%s> in constraint <%s> to %g, because the contribution is not enough to nullify/exceed the contribution of the resultant \n", SCIPvarGetName(impoperands[maxpos]), SCIPconsGetName(cons), fixval);
+	       SCIPdebugMessage("dual-fixing variable <%s> in constraint <%s> to %g, because the contribution is%s enough to nullify/exceed the contribution of the resultant \n", SCIPvarGetName(impoperands[maxpos]), SCIPconsGetName(cons), fixval, (fixval < 0.5) ? " not" : "");
 
 	       SCIP_CALL( SCIPfixVar(scip, impoperands[maxpos], fixval, &infeasible, &fixed) );
 	       zerofix = (fixval < 0.5);
@@ -1845,7 +1835,7 @@ SCIP_RETCODE dualPresolve(
 		  ++(*nfixedvars);
 	    }
 
-	    SCIPdebugMessage("dual-fixing all variables except the variable with the highest contribution to the objective in constraint <%s> with positive contribution to 0 and with negative contribution to 1\n", SCIPconsGetName(cons));
+	    SCIPdebugMessage("dual-fixing all variables, except the variable with the highest contribution to the objective, in constraint <%s> with positive contribution to 0 and with negative contribution to 1\n", SCIPconsGetName(cons));
 
 	    for( v = nimpoperands - 1; v >= 0 && !(*cutoff); --v )
 	    {
@@ -1870,8 +1860,8 @@ SCIP_RETCODE dualPresolve(
 		  ++(*nfixedvars);
 	    }
 	    assert(*nfixedvars - oldnfixedvars <= nimpoperands);
-	    /* iff we have fixed all variables all variables needed to be stored in the impoperands array */
-	    assert((*nfixedvars - oldnfixedvars == nimpoperands) == (nimpoperands == nvars));
+	    /* iff we have fixed all variables, all variables needed to be stored in the impoperands array */
+	    assert((*nfixedvars - oldnfixedvars == nvars) == (nimpoperands == nvars));
 
 	    if( *nfixedvars - oldnfixedvars == nvars )
 	    {
@@ -2805,24 +2795,29 @@ SCIP_DECL_HASHGETKEY(hashGetKeyAndcons)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqAndcons)
 {
-   SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
    SCIP_Bool coefsequal;
    int i;
+#ifndef NDEBUG
+   SCIP* scip;
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+#endif
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
-   scip = (SCIP*)userptr; 
-   assert(scip != NULL);
-   
+
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
 
    /* sorts the constraints */
-   SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
-   SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
+   consdataSort(consdata1);
+   consdataSort(consdata2);
+   assert(consdata1->sorted);
+   assert(consdata2->sorted);
 
    coefsequal = TRUE;
 
@@ -2831,14 +2826,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqAndcons)
       /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
-         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
          coefsequal = FALSE;
          break;
       }
-      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
-   } 
-   
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
+   }
+
    return coefsequal;
 }
 
@@ -2956,11 +2951,12 @@ SCIP_RETCODE detectRedundantConstraints(
 
       consdata0 = SCIPconsGetData(cons0);
       /* sort the constraint */
-      SCIP_CALL( consdataSort(scip, consdata0) );
+      consdataSort(consdata0);
+      assert(consdata0->sorted);
 
       /* get constraint from current hash table with same variables as cons0 */
       cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
- 
+
       if( cons1 != NULL )
       {
          SCIP_CONSDATA* consdata1;
@@ -2969,25 +2965,25 @@ SCIP_RETCODE detectRedundantConstraints(
 
          assert(SCIPconsIsActive(cons1));
          assert(!SCIPconsIsModifiable(cons1));
-      
+
          consdata1 = SCIPconsGetData(cons1);
-         
+
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-         
+
          assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+         SCIP_CALL( updateFlags(scip, cons1, cons0) );
          redundant = FALSE;
 
          if( consdata0->resvar != consdata1->resvar )
          {
             SCIP_Bool aggregated;
-            
-            assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0); 
-         
+
+            assert(SCIPvarCompare(consdata0->resvar, consdata1->resvar) != 0);
+
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   cutoff, &redundant, &aggregated) );
@@ -2998,7 +2994,7 @@ SCIP_RETCODE detectRedundantConstraints(
             if( *cutoff )
                goto TERMINATE;
          }
-         else 
+         else
             redundant = TRUE;
 
          /* delete consdel */
@@ -3016,7 +3012,7 @@ SCIP_RETCODE detectRedundantConstraints(
       }
       else
       {
-         /* no such constraint in current hash table: insert cons0 into hash table */  
+         /* no such constraint in current hash table: insert cons0 into hash table */
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
@@ -3065,11 +3061,12 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
-   SCIP_CALL( consdataSort(scip, consdata0) );
+   consdataSort(consdata0);
+   assert(consdata0->sorted);
 
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
-   
+
    if( SCIPconsIsActive(cons0) )
    {
       for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && !SCIPisStopped(scip); ++c )
@@ -3102,7 +3099,8 @@ SCIP_RETCODE preprocessConstraintPairs(
          assert(consdata1->nvars >= 1);
 
          /* sort the constraint */
-         SCIP_CALL( consdataSort(scip, consdata1) );
+         consdataSort(consdata1);
+	 assert(consdata1->sorted);
 
          /* check consdata0 against consdata1:
           * - if they consist of the same operands, the resultants can be aggregated
@@ -3147,6 +3145,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             default:
                SCIPerrorMessage("invalid comparison result\n");
                SCIPABORT();
+               return SCIP_INVALIDDATA;
             }
          }
 
@@ -3161,7 +3160,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMessage("equivalent and constraints <%s> and <%s>: aggregate resultants <%s> == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
                SCIPvarGetName(consdata1->resvar));
-         
+
             /* aggregate resultants */
             SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
                   &infeasible, &redundant, &aggregated) );
@@ -3172,7 +3171,7 @@ SCIP_RETCODE preprocessConstraintPairs(
                assert(redundant);
                (*naggrvars)++;
             }
-            
+
             if( redundant )
             {
                /* delete constraint */
@@ -3658,8 +3657,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
    return SCIP_OKAY;
 }
-#else
-#define consExitpreAnd NULL
 #endif
 
 
@@ -3757,7 +3754,7 @@ SCIP_DECL_CONSSEPALP(consSepalpAnd)
       SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -3781,7 +3778,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
       SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
-   } 
+   }
 
    /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
@@ -3812,9 +3809,22 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
       {
          if( conshdlrdata->enforcecuts )
          {
-            
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
-            assert(separated); /* because the solution is integral, the separation always finds a cut */
+	    SCIP_Bool consseparated;
+
+            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated) );
+	    separated = separated || consseparated;
+
+	    /* following assert is wrong in the case some variables were not in LP (dynamic columns),
+	     *
+	     * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
+	     * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
+	     * thereby creating the column, changes the solution value (variable than has status column, and the
+	     * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
+	     * rows, which then are not seperated into the lp
+	     */
+#if 0
+	    assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+#endif
          }
          else
          {
@@ -3822,7 +3832,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
             return SCIP_OKAY;
          }
       }
-   } 
+   }
 
    if( separated )
       *result = SCIP_SEPARATED;
@@ -3849,7 +3859,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAnd)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -4382,13 +4392,16 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
 
    /* create event handler for events on variables */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecAnd, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlr) );
+
+   /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpAnd, consEnfopsAnd, consCheckAnd, consLockAnd,
@@ -4399,6 +4412,9 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
+#ifdef GMLGATEPRINTING
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAnd) );
+#endif
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );

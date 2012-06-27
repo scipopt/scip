@@ -108,6 +108,7 @@ struct SCIP_BdChgInfo
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
    SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
+   unsigned int          pos:27;             /**< position in the variable domain change array */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */

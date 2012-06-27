@@ -208,14 +208,38 @@ SCIP_RETCODE SCIPincludeBranchruleXyz(
    branchruledata = NULL;
    /* TODO: (optional) create branching rule specific data here */
 
+   branchrule = NULL;
+
    /* include branching rule */
+#if 0
+   /* use SCIPincludeBranchrule() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
+         BRANCHRULE_MAXBOUNDDIST,
+         branchCopyXyz, branchFreeXyz, branchInitXyz, branchExitXyz, branchInitsolXyz, branchExitsolXyz,
+         branchExeclpXyz, branchExecextXyz, branchExecpsXyz,
+         branchruledata) );
+#else
+   /* use SCIPincludeBranchruleBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
    assert(branchrule != NULL);
 
-   /* set non-fundamental callbacks via specific setter functions*/
-   /* TODO: (optional) set branching rule specific callbacks with SCIPsetBranchruleCALLBACK() here */
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyXyz) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeXyz) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitXyz) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitXyz) );
+   SCIP_CALL( SCIPsetBranchruleInitsol(scip, branchrule, branchInitsolXyz) );
+   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolXyz) );
+   SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpXyz) );
+   SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextXyz) );
+   SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsXyz) );
+#endif
 
    /* add xyz branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */

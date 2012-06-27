@@ -195,12 +195,33 @@ SCIP_RETCODE SCIPincludePricerXyz(
    pricerdata = NULL;
    /* TODO: (optional) create variable pricer specific data here */
 
+   pricer = NULL;
+   
    /* include variable pricer */
+#if 0
+   /* use SCIPincludePricer() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerCopyXyz, pricerFreeXyz, pricerInitXyz, pricerExitXyz, 
+         pricerInitsolXyz, pricerExitsolXyz, pricerRedcostXyz, pricerFarkasXyz,
+         pricerdata) );
+#else
+   /* use SCIPincludePricerBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerRedcostXyz, pricerdata) );
+         pricerRedcostXyz, pricerFarkasXyz, pricerdata) );
+   assert(pricer != NULL);
 
-   /* TODO: add non-fundamental callbacks via setter functions, if necessary */
-
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyXyz) );
+   SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeXyz) );
+   SCIP_CALL( SCIPsetPricerInit(scip, pricer, pricerInitXyz) );
+   SCIP_CALL( SCIPsetPricerExit(scip, pricer, pricerExitXyz) );
+   SCIP_CALL( SCIPsetPricerInitsol(scip, pricer, pricerInitsolXyz) );
+   SCIP_CALL( SCIPsetPricerExitsol(scip, pricer, pricerExitsolXyz) );
+#endif
 
    /* add xyz variable pricer parameters */
    /* TODO: (optional) add variable pricer specific parameters with SCIPaddTypeParam() here */

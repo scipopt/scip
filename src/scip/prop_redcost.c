@@ -534,6 +534,10 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   /* chack if all integral variables are fixed and the continuous variables should not be propagated */
+   if( !propdata->continuous && SCIPgetNPseudoBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
 
@@ -623,8 +627,7 @@ SCIP_RETCODE SCIPincludePropRedcost(
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecRedcost, NULL,
-         propdata) );
+         propExecRedcost, propdata) );
 
    assert(prop != NULL);
 

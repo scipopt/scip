@@ -31,6 +31,9 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef ALLDIFFERENT
+#include "scip/cons_alldifferent.h"
+#endif
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"

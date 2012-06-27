@@ -93,13 +93,6 @@ void xprs_error(
 #define CHECK_ZEROPLPIE(x) CHECK_ZEROE((*lpi)->xprslp, x)
 #define CHECK_ZERO CHECK_ZEROLPIE
 
-#define ABORT_ZERO(x) { int _restat_;                                   \
-      if( (_restat_ = (x)) != 0 )                                       \
-      {                                                                 \
-         SCIPerrorMessage("LP Error: Xpress returned %d\n", _restat_);  \
-         SCIPABORT();                                                   \
-      }                                                                 \
-   }
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE

@@ -404,6 +404,7 @@ SPxLP::SPxSense spxObjsen(
    default:
       SCIPerrorMessage("invalid objective sense\n");
       SCIPABORT();
+      return SPxLP::MINIMIZE;
    }
 }
 
@@ -2184,7 +2185,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SoPlex::BASIC:
             rstat[i] = SCIP_BASESTAT_BASIC;
-            break;	  
+            break;
          case SoPlex::FIXED:
          case SoPlex::ON_LOWER:
             rstat[i] = SCIP_BASESTAT_LOWER;
@@ -2198,6 +2199,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2210,7 +2212,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
          case SoPlex::BASIC:
             cstat[i] = SCIP_BASESTAT_BASIC;
-            break;	  
+            break;
          case SoPlex::FIXED:
             assert(lpi->spx->rep() == SoPlex::COLUMN);
             if( lpi->spx->pVec()[i] - lpi->spx->maxObj()[i] < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
@@ -2230,6 +2232,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          default:
             SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
          }
       }
    }
@@ -2277,6 +2280,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -2299,13 +2303,14 @@ SCIP_RETCODE SCIPlpiSetBase(
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    lpi->spx->setBasis(spxrstat, spxcstat);
 
    delete[] spxcstat;
    delete[] spxrstat;
-   
+
    return SCIP_OKAY;
 }
 

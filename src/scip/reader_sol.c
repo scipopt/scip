@@ -152,7 +152,26 @@ SCIP_RETCODE readSol(
       }
       else
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+         SCIP_RETCODE retcode;
+         retcode =  SCIPsetSolVal(scip, sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 

@@ -442,7 +442,7 @@ void SCIPreaderSetData(
    reader->readerdata = readerdata;
 }
 
-/**< sets copy method of reader */
+/** sets copy method of reader */
 void SCIPreaderSetCopy(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -453,7 +453,7 @@ void SCIPreaderSetCopy(
    reader->readercopy = readercopy;
 }
 
-/**< sets destructor of reader */
+/** sets destructor of reader */
 void SCIPreaderSetFree(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
@@ -464,7 +464,7 @@ void SCIPreaderSetFree(
    reader->readerfree = readerfree;
 }
 
-/**< sets read method of reader */
+/** sets read method of reader */
 void SCIPreaderSetRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERREAD  ((*readerread))     /**< read method */
@@ -475,7 +475,7 @@ void SCIPreaderSetRead(
    reader->readerread = readerread;
 }
 
-/**< sets write method of reader */
+/** sets write method of reader */
 void SCIPreaderSetWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method */

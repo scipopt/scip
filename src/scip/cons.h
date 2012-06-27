@@ -674,6 +674,14 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
+/** change name of given constraint */
+extern
+SCIP_RETCODE SCIPconsChgName(
+   SCIP_CONS*            cons,               /**< problem constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   const char*           name                /**< new name of constraint */
+   );
+
 /** frees a constraint and removes it from the conss array of its constraint handler */
 extern
 SCIP_RETCODE SCIPconsFree(

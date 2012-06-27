@@ -17,6 +17,14 @@
  * @ingroup FILEREADERS
  * @brief  file reader for variable bounds
  * @author Ambros Gleixner
+ *
+ * This reader allows to read a file containing new bounds for variables of the current problem.  Each line of the file
+ * should have format
+ *
+ *    <variable name> <lower bound> <upper bound>
+ *
+ * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
+ * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

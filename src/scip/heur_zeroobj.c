@@ -29,7 +29,7 @@
 #define HEUR_NAME             "zeroobj"
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
 #define HEUR_DISPCHAR         'Z'
-#define HEUR_PRIORITY         -1000000
+#define HEUR_PRIORITY         100
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
@@ -48,7 +48,7 @@
 #define DEFAULT_NODESOFS      100LL     /* number of nodes added to the contingent of the total nodes                */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem             */
 #define DEFAULT_ADDALLSOLS    FALSE     /* should all subproblem solutions be added to the original SCIP?            */
-#define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< Should heuristic only be executed if no primal solution was found, yet? */
+#define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< should heuristic only be executed if no primal solution was found, yet? */
 
 /*
  * Data structures
@@ -65,7 +65,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which zeroobj should at least improve the incumbent       */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
-   SCIP_Bool             onlywithoutsol;     /**< Should heuristic only be executed if no primal solution was found, yet? */
+   SCIP_Bool             onlywithoutsol;     /**< should heuristic only be executed if no primal solution was found, yet? */
 };
 
 
@@ -279,6 +279,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
    SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
+   SCIP_Real large;
 
    int nvars;                                /* number of original problem's variables          */
    int i;
@@ -345,7 +346,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
@@ -357,11 +358,33 @@ SCIP_RETCODE SCIPapplyZeroobj(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* determine large value to set variables to */
+   large = SCIPinfinity(scip);
+   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
+      large = 0.1 / SCIPfeastol(scip);
+
    /* get variable image and change to 0.0 in sub-SCIP */
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_Real adjustedbound;
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+
+      /* adjust infinite bounds in order to avoid that variables with non-zero objective 
+       * get fixed to infinite value in zeroobj subproblem
+       */
+      if( SCIPisInfinity(subscip, SCIPvarGetUbGlobal(subvars[i]) ) )
+      {
+         adjustedbound = MAX(large, SCIPvarGetLbGlobal(subvars[i])+large);
+         adjustedbound = MIN(adjustedbound, SCIPinfinity(subscip));
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
+      }
+      if( SCIPisInfinity(subscip, -SCIPvarGetLbGlobal(subvars[i]) ) )
+      {
+         adjustedbound = MIN(-large, SCIPvarGetUbGlobal(subvars[i])-large);
+         adjustedbound = MAX(adjustedbound, -SCIPinfinity(subscip));
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
+      }
    }
 
    /* free hash map */
@@ -561,7 +584,8 @@ SCIP_RETCODE SCIPincludeHeurZeroobj(
          &heurdata->addallsols, TRUE, DEFAULT_ADDALLSOLS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlywithoutsol",
-         "Should heuristic only be executed if no primal solution was found, yet?",
+         "should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
+
    return SCIP_OKAY;
 }

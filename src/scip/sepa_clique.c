@@ -1116,6 +1116,53 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
    return nadjnodes;
 }
 
+/** basic code for new cliques (needed because of error handling) */
+static
+SCIP_RETCODE newsolCliqueAddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< the cut separator itself */
+   SCIP_SEPADATA*        sepadata,           /**< data of separator */
+   int                   ncliquenodes,       /**< number of nodes in clique */
+   int*                  cliquenodes         /**< nodes in clique */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_ROW* cut;
+   char cutname[SCIP_MAXSTRLEN];
+   int i;
+
+   vars = sepadata->tcliquegraph->vars;
+   assert(sepadata->tcliquegraph->nnodes > 0);
+   assert(vars != NULL);
+
+   /* create the cut (handle retcode since we do not have a backtrace) */
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+   assert(ncliquenodes <= sepadata->tcliquegraph->nnodes);
+   /*SCIPdebugMessage(" -> clique in graph:");*/
+   for( i = 0; i < ncliquenodes; ++i )
+   {
+      assert(cliquenodes[i] < sepadata->tcliquegraph->nnodes);
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
+      /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
+   }
+   /*SCIPdebugPrintf("\n");*/
+   SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+
+   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
+   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+
+   /* release the row */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
+
 /** generates cuts using a clique found by algorithm for maximum weight clique
  *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
  */
@@ -1165,55 +1212,25 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
-         SCIP_VAR** vars;
-#ifndef NDEBUG
-         int nvars;
-#endif
-         SCIP_ROW* cut;
-         char cutname[SCIP_MAXSTRLEN];
+         SCIP_RETCODE retcode;
 
-#ifndef NDEBUG
-         nvars = sepadata->tcliquegraph->nnodes;
-#endif
-         vars = sepadata->tcliquegraph->vars;
-         assert(nvars > 0);
-         assert(vars != NULL);
-
-         /* create the cut */
-         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
-         SCIP_CALL_ABORT( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
-
-         SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
-         assert(ncliquenodes <= nvars);
-         /*SCIPdebugMessage(" -> clique in graph:");*/
-         for( i = 0; i < ncliquenodes; ++i )
+         /* explicitly handle return code */
+         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes);
+         if ( retcode == SCIP_OKAY )
          {
-            assert(cliquenodes[i] < nvars);
-            SCIP_CALL_ABORT( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
-            /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
-         }
-         /*SCIPdebugPrintf("\n");*/
-         SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
+            SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
+            sepadata->ncuts++;
 
-         SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
-         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-
-         SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
-         SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
-         sepadata->ncuts++;
-
-         /* release the row */
-         SCIP_CALL_ABORT( SCIPreleaseRow(scip, &cut) );
-
-         /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
-          * such that only more violated cuts are generated afterwards
-          */
-         if( sepadata->maxsepacuts >= 0 )
-         {
-            if( sepadata->ncuts > sepadata->maxsepacuts/2 )
-               *acceptsol = TRUE;
-            if( sepadata->ncuts >= sepadata->maxsepacuts )
-               *stopsolving = TRUE;
+            /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+             * such that only more violated cuts are generated afterwards
+             */
+            if( sepadata->maxsepacuts >= 0 )
+            {
+               if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+                  *acceptsol = TRUE;
+               if( sepadata->ncuts >= sepadata->maxsepacuts )
+                  *stopsolving = TRUE;
+            }
          }
       }
    }

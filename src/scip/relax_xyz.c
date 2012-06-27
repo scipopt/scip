@@ -181,14 +181,33 @@ SCIP_RETCODE SCIPincludeRelaxXyz(
    relaxdata = NULL;
    /* TODO: (optional) create relaxator specific data here */
 
+   relax = NULL;
+
    /* include relaxator */
+#if 0
+   /* use SCIPincludeRelax() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, 
+         relaxCopyXyz, relaxFreeXyz, relaxInitXyz, relaxExitXyz, relaxInitsolXyz, relaxExitsolXyz, relaxExecXyz,
+         relaxdata) );
+#else
+   /* use SCIPincludeRelaxBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxExecXyz, relaxdata) );
 
    assert(relax != NULL);
 
-   /* set non-fundamental callbacks via setter functions */
-   /* todo (optional) set relaxator callbacks with SCIPsetRelaxCALLBACKTYPE() here */
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetRelaxCopy(scip, relax, relaxCopyXyz) );
+   SCIP_CALL( SCIPsetRelaxFree(scip, relax, relaxFreeXyz) );
+   SCIP_CALL( SCIPsetRelaxInit(scip, relax, relaxInitXyz) );
+   SCIP_CALL( SCIPsetRelaxExit(scip, relax, relaxExitXyz) );
+   SCIP_CALL( SCIPsetRelaxInitsol(scip, relax, relaxInitsolXyz) );
+   SCIP_CALL( SCIPsetRelaxExitsol(scip, relax, relaxExitsolXyz) );
+#endif
 
    /* add xyz relaxator parameters */
    /* TODO: (optional) add relaxator specific parameters with SCIPaddTypeParam() here */

@@ -199,6 +199,7 @@ struct SCIP_Tree
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
+   SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
 };
 
 #ifdef __cplusplus

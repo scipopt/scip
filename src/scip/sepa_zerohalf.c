@@ -206,8 +206,7 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
 
 #define ZEROHALFstatistics(x)                x                    /**< execute if ZEROHALF__PRINT_STATISTICS is defined */
 #define ZEROHALFstatisticsMessage            printf("####   ") ; printf                   /**< print statistics message */
-#define ZEROHALFcreateNewTimer(timervar)     SCIP_CLOCK* timervar; SCIP_CALL(SCIPcreateClock(scip, &timervar)) /* create
-                                                                                                                  new timer */
+#define ZEROHALFcreateNewTimer(timervar)     SCIP_CALL(SCIPcreateClock(scip, &timervar)) /**< create new timer */
 #define ZEROHALFcreateTimer(timervar)        SCIP_CALL(SCIPcreateClock(scip, &timervar)) /**< recreate existing timer */
 #define ZEROHALFfreeTimer(timervar)          SCIP_CALL(SCIPfreeClock(scip, &timervar))                /**< free timer */
 #define ZEROHALFresetTimer(timervar)         SCIP_CALL(SCIPresetClock(scip, timervar))               /**< reset timer */
@@ -1758,8 +1757,8 @@ void findClosestLb(
             assert(dvlb != NULL);
             assert(SCIPvarGetType(zvlb[j]) != SCIP_VARTYPE_CONTINUOUS);
          
-            /* use only vlb with nonnegative variable z that are column variables */
-            if( SCIPvarGetStatus(zvlb[j]) == SCIP_VARSTATUS_COLUMN && 
+            /* use only vlb with nonnegative variable z that are column variables and present in the current LP */
+            if( SCIPvarGetStatus(zvlb[j]) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(SCIPvarGetCol(zvlb[j])) &&
                !SCIPisNegative(scip, SCIPcolGetLb(SCIPvarGetCol(zvlb[j]))) )
             {
                SCIP_Real vlbsol;
@@ -1863,8 +1862,8 @@ void findClosestUb(
             assert(dvub != NULL);
             assert(SCIPvarGetType(zvub[j]) != SCIP_VARTYPE_CONTINUOUS);
          
-            /* use only vub with nonnegative variable z that are column variables */
-            if( SCIPvarGetStatus(zvub[j]) == SCIP_VARSTATUS_COLUMN && 
+            /* use only vub with nonnegative variable z that are column variables and present in the current LP */
+            if( SCIPvarGetStatus(zvub[j]) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(SCIPvarGetCol(zvub[j])) &&
                !SCIPisNegative(scip, SCIPcolGetUb(SCIPvarGetCol(zvub[j]))) )
             {
                SCIP_Real vubsol;
@@ -2059,7 +2058,7 @@ SCIP_RETCODE getRelevantRows(
       
       /* get row data */
       colscurrentrow = SCIProwGetCols(row);
-      nnonzcurrentrow = SCIProwGetNNonz(row);
+      nnonzcurrentrow = SCIProwGetNLPNonz(row);
       valscurrentrow = SCIProwGetVals(row);
 
       /* clear dense coeffs arrays */
@@ -2098,7 +2097,10 @@ SCIP_RETCODE getRelevantRows(
           
             if( bestbndtype > -1 )
             {
-               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));            
+               int zlppos;
+
+               zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));
+               assert(0 <= zlppos && zlppos < lpdata->ncols);
 
                if( valscurrentrow[c] > 0 )
                   densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
@@ -2112,7 +2114,10 @@ SCIP_RETCODE getRelevantRows(
 
             if( bestbndtype > -1 )
             {
-               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));    
+               int zlppos;
+
+               zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));
+               assert(0 <= zlppos && zlppos < lpdata->ncols);
 
                if( valscurrentrow[c] > 0 )
                   densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;
@@ -2187,7 +2192,7 @@ SCIP_RETCODE getRelevantRows(
          || (!rhsisinfinity && SCIPisLE(scip, rhsslack, maxslack)) )
       { 
          colscurrentrow = SCIProwGetCols(row);
-         nnonzcurrentrow = SCIProwGetNNonz(row);
+         nnonzcurrentrow = SCIProwGetNLPNonz(row);
          valscurrentrow = SCIProwGetVals(row);
 
          lhsiseven = ISEVEN(scip, lhs);
@@ -2611,7 +2616,7 @@ SCIP_RETCODE storeMod2Data(
       row = lpdata->rows[problem->rrows[i]]; 
       colscurrentrow = SCIProwGetCols(row);
       nonzvalscurrentrow = SCIProwGetVals(row);
-      nnonzcurrentrow = SCIProwGetNNonz(row);
+      nnonzcurrentrow = SCIProwGetNLPNonz(row);
       assert(nnonzcurrentrow > 0);
       tempcurrentrow = NULL;
       fliplhsrhs = FALSE;
@@ -3114,7 +3119,7 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
          else
             (*weights)[lppos] = lpdata->intscalarsrightrow[lppos] * 0.5;
       
-         nnonz += SCIProwGetNNonz(lpdata->rows[lppos]); 
+         nnonz += SCIProwGetNLPNonz(lpdata->rows[lppos]); 
          (*nrowsincut)++;
       }
    }
@@ -4035,7 +4040,7 @@ SCIP_RETCODE decomposeProblem(
 
          colsofrow = SCIProwGetCols(lpdata->rows[problem->rrows[i]]);
          colvals = SCIProwGetVals(lpdata->rows[problem->rrows[i]]);
-         ncolvals = SCIProwGetNNonz(lpdata->rows[problem->rrows[i]]);
+         ncolvals = SCIProwGetNLPNonz(lpdata->rows[problem->rrows[i]]);
 
          for( cidx = 0 ; cidx < ncolvals ; ++cidx)
          {
@@ -4599,6 +4604,8 @@ SCIP_RETCODE preprocess(
    int                   nsepacutsinitial;
    int                   nzerohalfcutsbeforeppm;
    int                   nzerohalfcutsinitial;
+   SCIP_CLOCK* timer;
+   SCIP_CLOCK* pptimer;
 #endif
    char                  ppname[SCIP_MAXSTRLEN];
   
@@ -4668,6 +4675,7 @@ SCIP_RETCODE preprocess(
       *nsepacuts, *nzerohalfcuts, ZEROHALFevalTimer(sepadata->pptimers[sepadata->nppmethods]));
    ZEROHALFcreateNewTimer(timer);
    ZEROHALFstartTimer(timer);
+
    ZEROHALFcreateNewTimer(pptimer);  
 #endif
 
@@ -5345,7 +5353,7 @@ SCIP_RETCODE getZerohalfWeightvectorForSingleRow(
    else
       (*weights)[rowsindex] = lpdata->intscalarsrightrow[rowsindex] * 0.5;
 
-   if( SCIProwGetNNonz(lpdata->rows[rowsindex]) >= sepadata->maxnnonz )
+   if( SCIProwGetNLPNonz(lpdata->rows[rowsindex]) >= sepadata->maxnnonz )
    {
       SCIPfreeMemoryArray(scip, weights);
       weights = NULL; 
@@ -6470,6 +6478,8 @@ SCIP_RETCODE process(
    int                   nsepacutsinitial;
    int                   nzerohalfcutsbefore;
    int                   nzerohalfcutsinitial;
+   SCIP_CLOCK* timer;
+   SCIP_CLOCK* sepatimer;
 #endif
 
    int                   ncutsfoundbefore;
@@ -6543,6 +6553,7 @@ SCIP_RETCODE process(
 
    if( mod2data->nrowsind == 0 || mod2data->ncolsind == 0 )
       return SCIP_OKAY;
+
 #ifdef ZEROHALF__PRINT_STATISTICS
    ZEROHALFcreateNewTimer(timer);
    ZEROHALFcreateNewTimer(sepatimer);  
@@ -6965,7 +6976,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    sepadata->maxnnonz = 0;
    for( i = 0 ; i < lpdata->nrows ; i++ )
    {
-      sepadata->maxnnonz += SCIProwGetNNonz(lpdata->rows[i]); 
+      sepadata->maxnnonz += SCIProwGetNLPNonz(lpdata->rows[i]); 
    }
    sepadata->maxnnonz = (int) floor( 10.0 * sepadata->maxnnonz / (double) lpdata->nrows);
    sepadata->maxnnonz = (int) floor(MIN(0.1 * lpdata->ncols, sepadata->maxnnonz)) + NNONZOFFSET; 

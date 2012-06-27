@@ -19,6 +19,8 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Michael Winkler
+ * @author Gerald Gamrath
+ * @author Stefan Heinz
  *
  * This constraint handler handles a special type of linear constraints, namely variable bound constraints.
  * A variable bound constraint has the form

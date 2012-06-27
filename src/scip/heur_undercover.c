@@ -1303,16 +1303,18 @@ SCIP_RETCODE createCoveringProblem(
    SCIP_CALL( SCIPexprintFree(&exprint) );
 
    SCIPstatistic(
-      int nnonzs;
-      nnonzs = 0;
-      for( i = 0; i < nvars; ++i)
-         nnonzs += termcounter[i];
-      SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
-      nnonzs = 0;
-      for( i = 0; i < nvars; ++i)
-         if( conscounter[i] > 0 )
-            nnonzs++;
-      SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
+      {
+	 int nnonzs;
+	 nnonzs = 0;
+	 for( i = 0; i < nvars; ++i)
+	    nnonzs += termcounter[i];
+	 SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
+	 nnonzs = 0;
+	 for( i = 0; i < nvars; ++i)
+	    if( conscounter[i] > 0 )
+	       nnonzs++;
+	 SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
+      }
       );
 
    /* free counter arrays for weighted objectives */
@@ -2145,7 +2147,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, validsolved) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -3019,7 +3021,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIPfreeBufferArray(scip, &coveringvars);
    SCIP_CALL( SCIPfree(&coveringscip) );
@@ -3514,7 +3516,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &coveringvars[i]) );
+      SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIP_CALL( SCIPfree(&coveringscip) );
    SCIPfreeBufferArray(scip, &coverinds);

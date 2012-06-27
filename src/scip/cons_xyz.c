@@ -563,7 +563,32 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
+   conshdlr = NULL;
+
    /* include constraint handler */
+#if 0
+   /* use SCIPincludeConshdlr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
+    * new callbacks are added in future SCIP versions
+    */
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING,
+         conshdlrCopyXyz,
+         consFreeXyz, consInitXyz, consExitXyz,
+         consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
+         consDeleteXyz, consTransXyz, consInitlpXyz,
+         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
+         consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
+         consActiveXyz, consDeactiveXyz,
+         consEnableXyz, consDisableXyz, consDelvarsXyz,
+         consPrintXyz, consCopyXyz, consParseXyz,
+         consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
+#else
+   /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
+    * compile independent of new callbacks being added in future SCIP versions
+    */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpXyz, consEnfopsXyz, consCheckXyz, consLockXyz,
@@ -596,6 +621,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXyz) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXyz, consSepasolXyz, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXyz) );
+#endif
 
 #ifdef LINCONSUPGD_PRIORITY
    if( SCIPfindConshdlr(scip,"linear") != NULL )

@@ -368,6 +368,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  *  Note that in this case dual reductions might be invalid.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -581,6 +582,7 @@ int SCIPgetSubscipDepth(
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
@@ -591,12 +593,13 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */          
+   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
@@ -981,8 +984,9 @@ int SCIPgetNParams(
 
 /** creates a reader and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeReaderBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all reader callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludeReaderBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeReader(
@@ -1001,7 +1005,7 @@ SCIP_RETCODE SCIPincludeReader(
  *  Optional callbacks can be set via specific setter functions, see
  *  SCIPsetReaderCopy(), SCIPsetReaderFree(), SCIPsetReaderRead(), SCIPsetReaderWrite().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeReader().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeReader() instead
  */
 extern
 SCIP_RETCODE SCIPincludeReaderBasic(
@@ -1068,8 +1072,9 @@ int SCIPgetNReaders(
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
  *
- *  @deprecated Please use method SCIPincludePricerBasic() instead and add non-fundamental callbacks via
- *              setter functions
+ *  @note method has all pricer callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludePricerBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludePricer(
@@ -1100,6 +1105,8 @@ SCIP_RETCODE SCIPincludePricer(
  *
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  *  This should be done during the problem creation stage.
+ *
+ * @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
  */
 extern
 SCIP_RETCODE SCIPincludePricerBasic(
@@ -1219,8 +1226,10 @@ SCIP_RETCODE SCIPdeactivatePricer(
 
 /** creates a constraint handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeConshdlrBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all constraint handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeConshdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeConshdlr(
@@ -1281,7 +1290,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
  *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
  *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConshdlr().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConshdlr() instead
  */
 extern
 SCIP_RETCODE SCIPincludeConshdlrBasic(
@@ -1524,8 +1533,10 @@ int SCIPgetNConshdlrs(
 
 /** creates a conflict handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeConflicthdlrBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all conflict handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeConflicthdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlr(
@@ -1549,7 +1560,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
  *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
  *  and SCIPsetConflicthdlrExitsol()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeConflicthdlr().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConflicthdlr() instead
  */
 extern
 SCIP_RETCODE SCIPincludeConflicthdlrBasic(
@@ -1639,8 +1650,10 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
 
 /** creates a presolver and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludePresolBasic() instead and add non-fundamental (optional) callbacks/methods
- *              via corresponding setter methods.
+ *  @note method has all presolver callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludePresolBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludePresol(
@@ -1665,7 +1678,7 @@ SCIP_RETCODE SCIPincludePresol(
  *  functions. These are SCIPsetPresolCopy(), SCIPsetPresolFree(), SCIPsetPresolInit(), SCIPsetPresolExit(),
  *  SCIPsetPresolInitpre(), and SCIPsetPresolExitPre().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludePresol()
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePresol() instead
  */
 extern
 SCIP_RETCODE SCIPincludePresolBasic(
@@ -1756,8 +1769,10 @@ SCIP_RETCODE SCIPsetPresolPriority(
 
 /** creates a relaxation handler and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeRelaxBasic() instead and add non-fundamental (optional)
- *              callbacks/methods via corresponding setter methods.
+ *  @note method has all relaxation handler callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeRelaxBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeRelax(
@@ -1781,7 +1796,7 @@ SCIP_RETCODE SCIPincludeRelax(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetRelaxInit(), SCIPsetRelaxExit(),
  *  SCIPsetRelaxCopy(), SCIPsetRelaxFree(), SCIPsetRelaxInitsol(), and SCIPsetRelaxExitsol()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeRelax().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeRelax() instead
  */
 extern
 SCIP_RETCODE SCIPincludeRelaxBasic(
@@ -1872,8 +1887,10 @@ SCIP_RETCODE SCIPsetRelaxPriority(
 
 /** creates a separator and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeSepaBasic() instead and add
- *  non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all separator callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludeSepaBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeSepa(
@@ -1902,7 +1919,7 @@ SCIP_RETCODE SCIPincludeSepa(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaCopy(), SCIPsetSepaFree(),
  *  SCIPsetSepaInit(), SCIPsetSepaExit(), SCIPsetSepaInitsol(), and SCIPsetSepaExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeSepa().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeSepa() instead
  */
 extern
 SCIP_RETCODE SCIPincludeSepaBasic(
@@ -1998,8 +2015,10 @@ SCIP_RETCODE SCIPsetSepaPriority(
 
 /** creates a propagator and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludePropBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all propagator callbacks as arguments and is thus changed every time a new
+ *        callback is added
+ *        in future releases; consider using SCIPincludePropBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeProp(
@@ -2030,9 +2049,9 @@ SCIP_RETCODE SCIPincludeProp(
 /** creates a propagator and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
  *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
- *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), and SCIPsetPropPresol().
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeProp().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
  */
 extern
 SCIP_RETCODE SCIPincludePropBasic(
@@ -2045,7 +2064,6 @@ SCIP_RETCODE SCIPincludePropBasic(
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
-   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    );
 
@@ -2124,6 +2142,14 @@ SCIP_RETCODE SCIPsetPropPresol(
    SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
    );
 
+/** sets propagation conflict resolving callback of propagator */
+extern
+SCIP_RETCODE SCIPsetPropResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop))    /**< propagation conflict resolving callback */
+   );
+
 /** returns the propagator of the given name, or NULL if not existing */
 extern
 SCIP_PROP* SCIPfindProp(
@@ -2162,8 +2188,9 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
 
 /** creates a primal heuristic and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeHeurBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all heuristic callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeHeurBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeHeur(
@@ -2194,7 +2221,7 @@ SCIP_RETCODE SCIPincludeHeur(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetHeurCopy(), SCIPsetHeurFree(),
  *  SCIPsetHeurInit(), SCIPsetHeurExit(), SCIPsetHeurInitsol(), and SCIPsetHeurExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeHeur().
+*  @note if you want to set all callbacks with a single method call, consider using SCIPincludeHeur() instead
  */
 extern
 SCIP_RETCODE SCIPincludeHeurBasic(
@@ -2291,7 +2318,9 @@ SCIP_RETCODE SCIPsetHeurPriority(
 
 /** creates an event handler and includes it in SCIP
  *
- *  @deprecated: Please use method SCIPincludeEventhdlrBasic() instead
+ *  @note method has all event handler callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeEventhdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeEventhdlr(
@@ -2314,8 +2343,9 @@ SCIP_RETCODE SCIPincludeEventhdlr(
  *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
  *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeEventhdlr()
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeEventhdlr() instead
  */
+extern
 SCIP_RETCODE SCIPincludeEventhdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
@@ -2402,8 +2432,9 @@ int SCIPgetNEventhdlrs(
 
 /** creates a node selector and includes it in SCIP.
  *
- *  @deprecated Please use method SCIPincludeNodeselBasic() instead and add
- *              non-fundamental (optional) callbacks/methods via corresponding setter methods.
+ *  @note method has all node selector callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeNodeselBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeNodesel(
@@ -2428,7 +2459,7 @@ SCIP_RETCODE SCIPincludeNodesel(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetNodeselCopy(), SCIPsetNodeselFree(),
  *  SCIPsetNodeselInit(), SCIPsetNodeselExit(), SCIPsetNodeselInitsol(), and SCIPsetNodeselExitsol()
  *
- *  Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeNodesel().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeNodesel() instead
  */
 extern
 SCIP_RETCODE SCIPincludeNodeselBasic(
@@ -2534,8 +2565,9 @@ SCIP_NODESEL* SCIPgetNodesel(
 
 /** creates a branching rule and includes it in SCIP
  *
- *  @deprecated Please use method SCIPincludeBranchruleBasic() instead and add non-fundamental (optional) callbacks/methods
- *              via corresponding setter methods.
+ *  @note method has all branching rule callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeBranchruleBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 extern
 SCIP_RETCODE SCIPincludeBranchrule(
@@ -2564,8 +2596,9 @@ SCIP_RETCODE SCIPincludeBranchrule(
  *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
  *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
  *
- *  @note Since SCIP version 3.0, this method replaces the deprecated method SCIPincludeBranchrule().
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBranchrule() instead
  */
+extern
 SCIP_RETCODE SCIPincludeBranchruleBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE**     branchruleptr,      /**< reference to branching rule pointer, or NULL */
@@ -3879,6 +3912,14 @@ SCIP_RETCODE SCIPreleaseVar(
    SCIP_VAR**            var                 /**< pointer to variable */
    );
 
+/** change variable name */
+extern
+SCIP_RETCODE SCIPchgVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   const char*           name                /**< new name of constraint */
+   );
+
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
@@ -4196,7 +4237,12 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
-/** gets strong branching information on column variable with integral value */
+/** gets strong branching information on column variable x with integral LP solution value (val); that is, the down
+ *  branch is (x <= val -1.0) and the up brach ins (x >= val +1.0)
+ *
+ *  @note If the integral LP solution value is the lower or upper bound of the variable, the corresponding branch will
+ *        be marked as infeasible. That is, the valid pointer and the infeasible pointer are set to TRUE.
+ */
 extern
 SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5518,24 +5564,6 @@ SCIP_Real SCIPgetConflictVarUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the relaxed conflict lower bound if the variable is present in the current conflict set; otherwise the
- *  global lower bound
- */
-extern
-SCIP_Real SCIPgetConflictVarRelaxedLb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the relaxed conflict upper bound if the variable is present in the current conflict set; otherwise the
- *  global upper bound
- */
-extern
-SCIP_Real SCIPgetConflictVarRelaxedUb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
  *  SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
  *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar(); on success, calls the conflict
@@ -5674,6 +5702,14 @@ extern
 SCIP_RETCODE SCIPreleaseCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons                /**< pointer to constraint */
+   );
+
+/** change constraint name */
+extern
+SCIP_RETCODE SCIPchgConsName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
    );
 
 /** sets the initial flag of the given constraint */
@@ -6516,13 +6552,30 @@ SCIP_RETCODE SCIPcreateRowSepa(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row from unspecified origin
+/** creates and captures an LP row from an unspecified source */
+extern
+SCIP_RETCODE SCIPcreateRowUnspec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row
  *
- *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *  to facilitate correct statistics.
+ *  @deprecated Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6564,13 +6617,27 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
+/** creates and captures an LP row without any coefficients from an unspecified source */
+extern
+SCIP_RETCODE SCIPcreateEmptyRowUnspec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
 /** creates and captures an LP row without any coefficients
  *
- *  Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *  to facilitate correct statistics.
+ *  @deprecated Please use SCIPcreateEmptyRowCons() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
+ *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
 extern
-SCIP_DEPRECATED SCIP_RETCODE SCIPcreateEmptyRow(
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -6632,7 +6699,17 @@ SCIP_RETCODE SCIPflushRowExtensions(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** resolves variable to columns and adds them with the coefficient to the row */
+/** resolves variable to columns and adds them with the coefficient to the row
+ *
+ *  @note In case calling this method in the enforcement process of an lp solution, it might be that some variables,
+ *        that were not yet in the LP (e.g. dynamic columns) will change there lp solution value returned by SCIP.
+ *
+ *        e.g. A variable, which has a negative objective value, that has no column in the lp yet, is in the lp solution
+ *        on its upper bound (variables with status SCIP_VARSTATUS_LOOSE are in an lp solution on it's best bound), but
+ *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
+ *        initialization sets the lp solution value) to 0.0 . ( This leads to the conclusion that, if a constraint was
+ *        violated, the linear relaxation might not be violated anymore.)
+ */
 extern
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9646,7 +9723,8 @@ SCIP_RETCODE SCIPchgFeastol(
 extern
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lpfeastol           /**< new primal feasibility tolerance of LP solver */
+   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
+   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets the feasibility tolerance for reduced costs */

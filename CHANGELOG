@@ -1,4 +1,4 @@
-SCIP version NEXT
+SCIP version 3.0.0
 ==================
 
 interface
@@ -90,14 +90,13 @@ interface
   is already efficient to be part of a valid explanation
 - new method SCIPisConflictVarUsed() returns TRUE if the given bound change is already part of the conflict set;
   that is the bound change is redundant;
-- new methods SCIPgetConflictVarLb(), SCIPgetConflictVarUb(), SCIPgetConflictVarRelaxedLb(), and
-  SCIPgetConflictVarRelaxedUb() returning the (relaxed) lower/upper bound of the given variable within the current
-  active conflict set
+- new methods SCIPgetConflictVarLb() and SCIPgetConflictVarUb() returning the lower/upper bound of the given
+  variable within the current active conflict set
 - the resolve propagation methods for the constraint handler and propagator getting a new parameter called relaxedbd;
   explaining/resolving this relaxed bound is sufficient
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
-- data structure for binary search trees (SCIP_BST and SCIP_BSTNODE in pub_misc.h)
+- data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
 - renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
@@ -123,9 +122,10 @@ interface
 - added basic creation methods for all constraint handlers
 - added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions for
   non-fundamental callbacks of variables and problems.
-- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), SCIPcreateRowSepa() that allow
-  to set the originating constraint handler or separator of a row respectively; this is, for instance, needed for
-  statistics on the number of applied cuts.
+- new functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), and SCIPcreateRowSepa() that allow to
+  set the originating constraint handler or separator of a row respectively; this is, for instance, needed for statistics on
+  the number of applied cuts. If rows are created outside a constraint handler or separator use SCIPcreateRowUnspec() and
+  SCIPcreateEmptyRowUnspec(). The use of SCIPcreateEmptyRow() and SCIPcreateRow() is deprecated;
 - new functions SCIProwGetOrigintype and SCIProwGetOriginCons SCIProwGetOriginSepa to obtain the originator that created a row
 - new functions SCIPconshdlrGetNCutsApplied() in pub_cons.h to get the number of cuts applied to the lp
 - new function SCIPconshdlrIncNAppliedCuts() in cons.h to increase the number of applied cuts (used by sepastore.c)
@@ -139,6 +139,11 @@ interface
 - forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE
 - new parameter numerics/lpfeastol for primal feasibility tolerance used in LP solver
 - new macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set
+- new method SCIPchgVarName() and SCIPchgConsName() which can be used to change name of variables and
+  constraints in problem creation stage
+- new parameter in SCIPcopy() to indicate whether the message handler from the source SCIP should be passed to the
+  target SCIP (only the pointer is copied and the usage counter of the message handler is increased), in multi theaded
+  enviroment this parameter needs to be set to FALSE
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with
@@ -219,6 +224,7 @@ fixed bugs:
 - fixed bug that disabled multi-aggregation of two integer or implicit integer variables
 - fixed bug in sol.c with requesting values of transformed variables in original solution; previously this had only
   been handled in SCIPgetSolVal(), now the handling has been moved to SCIPsolGetVal()
+- fixed bug in cons_xor.c parsing a constraint
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
@@ -304,6 +310,7 @@ features:
 - added statistics on the number of cuts/rows that have actually been applied to the lp for each constraint handler and separator;
   use SCIPcreate(Empty)RowCons() and SCIPcreate(Empty)RowSepa() to support the statistics.
 - implemented first clique lifting procedure in cons_setppc.c (by default is off)
+- oneopt can now be called before presolving
 
 Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;

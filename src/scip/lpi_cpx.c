@@ -45,11 +45,13 @@
       }                                                                 \
    }
 
+/* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
 #define ABORT_ZERO(x) { int _restat_;                                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPerrorMessage("LP Error: CPLEX returned %d\n", _restat_);   \
          SCIPABORT();                                                   \
+         return FALSE;                                                  \
       }                                                                 \
    }
 
@@ -477,7 +479,8 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]);
+      assert(lpi->curparam.intparval[i] == par.intparval[i]
+         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
@@ -553,8 +556,10 @@ int getIntParam(
    assert(lpi != NULL);
 
    for( i = 0; i < NUMINTPARAM; ++i )
+   {
       if( intparam[i] == param )
          return lpi->cpxparam.intparval[i];
+   }
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
@@ -791,7 +796,7 @@ void reconvertBothSides(
             rhs[i] = lpi->rhsarray[i];
          }
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -840,7 +845,7 @@ void reconvertLhs(
          else
             lhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -888,7 +893,7 @@ void reconvertRhs(
          else
             rhs[i] = lpi->rhsarray[i];
          break;
-         
+
       default:
          SCIPerrorMessage("invalid row sense\n");
          SCIPABORT();
@@ -3446,10 +3451,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
        */
       CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
 
-      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 10);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
+      /* In a numerical perfect world, the 50 below should be zero. However, due to numerical inaccuracies after refactorization,
+       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */
+      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 50);
+      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 50);
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );

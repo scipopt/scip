@@ -46,6 +46,7 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
+#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -67,6 +68,7 @@ int findvarpos(
 
    return -1;
 }
+#endif
 
 /** copies an array of variables and objective values */
 static
@@ -155,17 +157,28 @@ SCIP_RETCODE SCIPsolveSlack(
    int nvars;
    int norigvars;
    int maxprio;
-   int minprio;
    int currprio;
    int currconsgroup;
    int currvarboundgroup;
    int c;
    int count;
-
+#ifndef NDEBUG
+   int minprio;
+#endif
    assert(scip != NULL);
    assert(status != NULL);
    assert(nconsgroups >= 0);
    assert(nvargroups >= 0);
+
+   copiedvargroups = NULL;
+   varboundconss = NULL;
+   supindvarboundgroups = NULL;
+   copiedconsgroups = NULL;
+   supindconsgroups = NULL;
+   copiedvargroupprios = NULL;
+   vargroupindices = NULL;
+   consgroupindices = NULL;
+   copiedconsgroupprios = NULL;
 
    /* testing whether we have correct set to work on */
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
@@ -300,10 +313,12 @@ SCIP_RETCODE SCIPsolveSlack(
    else
       maxprio = copiedvargroupprios[0];
 
+#ifndef NDEBUG
    if( vargroupisempty || ( !consgroupisempty && copiedconsgroupprios[nconsgroups-1] < copiedvargroupprios[nvargroups-1] ))
       minprio = copiedconsgroupprios[nconsgroups-1];
    else
       minprio = copiedvargroupprios[nvargroups-1];
+#endif
 
    /* remember all the binvars that will be created to return value at the end of the function */
    SCIP_CALL( SCIPallocMemoryArray(scip, &allbinvars, nconsgroups + nvargroups) );
@@ -311,7 +326,7 @@ SCIP_RETCODE SCIPsolveSlack(
    /* create the superindicator constraints for the member of the consgroups array */
    if( !consgroupisempty )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&copiedconsgroups, consgroups, nconsgroups) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &copiedconsgroups, consgroups, nconsgroups) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(supindconsgroups), nconsgroups) );
 
       for( c = 0; c < nconsgroups; ++c)
@@ -391,7 +406,7 @@ SCIP_RETCODE SCIPsolveSlack(
       /* prepare array for later compilation of return value */
       if(consviols != NULL)
       {
-      countvar = 0;
+         countvar = 0;
 
          for(c = 0; c < nvargroups; ++c)
          {
@@ -401,7 +416,7 @@ SCIP_RETCODE SCIPsolveSlack(
       }
 
       /* duplicate the var groups to avoid any change in the original var groups */
-      SCIP_ALLOC( BMSduplicateMemoryArray(&copiedvargroups, vargroups, nvargroups) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &copiedvargroups, vargroups, nvargroups) );
 
       /* allocating the memory for the superindvargroups pointer */
       SCIP_CALL( SCIPallocMemoryArray(scip, &(supindvarboundgroups), nvargroups) );
@@ -926,7 +941,7 @@ SCIP_RETCODE SCIPsolveSlack(
       }
 
       SCIPfreeMemoryArray(scip, &supindconsgroups);
-      BMSfreeMemoryArray(&copiedconsgroups);
+      SCIPfreeMemoryArray(scip, &copiedconsgroups);
       SCIPfreeMemoryArray(scip, &copiedconsgroupprios);
       SCIPfreeMemoryArray(scip, &consgroupindices);
    }
@@ -944,7 +959,7 @@ SCIP_RETCODE SCIPsolveSlack(
       }
 
       SCIPfreeMemoryArray(scip, &supindvarboundgroups);
-      BMSfreeMemoryArray(&copiedvargroups);
+      SCIPfreeMemoryArray(scip, &copiedvargroups);
       SCIPfreeMemoryArray(scip, &copiedvargroupprios);
       SCIPfreeMemoryArray(scip, &vargroupindices);
    }
@@ -962,6 +977,7 @@ SCIP_RETCODE SCIPsolveSlack(
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
 {  /*lint --e{715}*/
+   SCIP_STATUS status;
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "solveslack called\n");
 
@@ -972,7 +988,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
       break;
 
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPsolveSlack(scip, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, FALSE, NULL) );
+      SCIP_CALL( SCIPsolveSlack(scip, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, &status) );
       break;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -1197,6 +1213,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTestslack)
 
    case SCIP_STAGE_PROBLEM:
       SCIPdialogMessage(scip, NULL, "unit test for SCIPsolveSlack() started\n");
+      /* NOTE: changing the two integer number below will change the solution (original values: 13, 17) */
       SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
       break;
 
