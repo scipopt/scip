@@ -6617,7 +6617,7 @@ SCIP_RETCODE SCIPcreateProb(
    SCIP_PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateProb", TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateProb", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
    /* free old problem */
    SCIP_CALL( SCIPfreeProb(scip) );
