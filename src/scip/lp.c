@@ -10189,11 +10189,13 @@ void sumStrongCGRow(
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
-   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
+   SCIP_Bool*            rowtoolong,         /**< pointer to store whether the aggregated row is too long and thus invalid */
+   int*                  cutrank             /**< pointer to store the rank of the returned aggregation; or NULL */
    )
 {
    SCIP_Real maxweight;
    int rowlensum;
+   int maxrank = 0;
    int i;
 
    assert(prob != NULL);
@@ -10300,6 +10302,8 @@ void sumStrongCGRow(
             *emptyrow = FALSE;
             *localrowsused = *localrowsused || row->local;
 
+            maxrank = MAX(maxrank, row->rank);
+
             SCIPdebugMessage("strong CG: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
                r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
                scale, weights[r], slacksign[r], *strongcgrhs);
@@ -10325,6 +10329,10 @@ void sumStrongCGRow(
    /* check if the total number of non-zeros is too large */
    if( *nrowinds > maxmksetcoefs )
       *rowtoolong = TRUE;
+
+   /* set rank of the cut */
+   if( cutrank != NULL )
+      *cutrank = maxrank + 1;
 }
 
 /** Transform equation  \f$ a*x == b \f$, \f$ lb <= x <= ub \f$ into standard form \f$ a^\prime*x^\prime == b\f$, \f$ 0 <= x^\prime <= ub^\prime \f$.
@@ -11032,7 +11040,8 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
-   SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
+   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
    )
 {
    int* slacksign;
@@ -11082,7 +11091,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    /* calculate the row summation */
    sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
       maxmksetcoefs, maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused, &rowtoolong);
+      &emptyrow, &localrowsused, &rowtoolong, cutrank);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
    if( emptyrow || rowtoolong )

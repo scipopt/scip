@@ -81,6 +81,8 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var2, val2) );
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+      /* set cut rank: for implied bounds we always set to 1 */
+      SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage(" -> found cut (activity = %g): ", activity);

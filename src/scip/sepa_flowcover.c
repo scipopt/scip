@@ -1923,6 +1923,7 @@ SCIP_RETCODE addCut(
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
+   int                   cutrank,            /**< rank of the cut */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
@@ -1961,6 +1962,9 @@ SCIP_RETCODE addCut(
             cutislocal, FALSE, sepadata->dynamiccuts) );
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 
+      /* set cut rank */
+      SCIProwChgRank(cut, cutrank);
+
       SCIPdebugMessage(" -> found potential flowcover cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -1982,8 +1986,8 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, adds the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
-         SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
+         SCIPdebugMessage(" -> found flowcover cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -2068,6 +2072,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIP_Real nvubcoefsmax;
    SCIP_Bool cutislocal;
    SCIP_Bool success;
+   int cutrank;
    int ncandsetdelta;
    int ntesteddeltas;
    int startidx;
@@ -2287,7 +2292,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
-            &cutrhs, &cutact, &success, &cutislocal, NULL) );
+            &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
       
@@ -2297,7 +2302,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       cutact = lambda * cutact;
 
       assert(SCIPisFeasEQ(scip, bestefficacy, calcEfficacy(nvars, cutcoefs, cutrhs, cutact)));
-      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
+      SCIP_CALL( addCut(scip, sepa, sepadata, vars, nvars, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutrank, normtype, ncuts) );
    }
 
    /* free data structures */

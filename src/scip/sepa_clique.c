@@ -1160,6 +1160,9 @@ SCIP_RETCODE newsolCliqueAddRow(
    /*SCIPdebugPrintf("\n");*/
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
+   /* set cut rank: for clique cuts we always set to 1 */
+   SCIProwChgRank(cut, 1);
+
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
    SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );

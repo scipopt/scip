@@ -178,6 +178,7 @@ SCIP_RETCODE addCut(
    SCIP_Real             cutrhs,             /**< right hand side of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
+   int                   cutrank,            /**< rank of the cut */
    const char*           cutclassname,       /**< name of cut class to use for row names */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
@@ -222,7 +223,10 @@ SCIP_RETCODE addCut(
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, 
                cutislocal, FALSE, cutremovable) );
          SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-   
+
+         /* set cut rank */
+         SCIProwChgRank(cut, cutrank);
+
          SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -243,8 +247,8 @@ SCIP_RETCODE addCut(
          /* if scaling was successful, add the cut */
          if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
          {
-            SCIPdebugMessage(" -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
-               cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
+            SCIPdebugMessage(" -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+               cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
@@ -565,6 +569,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       SCIP_Real cutact;
       SCIP_Bool success;
       SCIP_Bool cutislocal;
+      int cutrank;
       int i;
 
       assert(!SCIPisFeasZero(scip, bestdelta));
@@ -583,12 +588,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
          /* generate cut with bestdelta and best boundswitch value */
          SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, 
                maxmksetcoefs, maxweightrange, minfrac, maxfrac, rowweights, bestdelta, NULL, NULL, cutcoefs, 
-               &cutrhs, &cutact, &success, &cutislocal, NULL) );
+               &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(allowlocal || !cutislocal);
          assert(success); 
          
          /* add the cut to the separation storage */
-         SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutclassname, ncuts) );
+         SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutrank, cutclassname, ncuts) );
       }
       else
       {

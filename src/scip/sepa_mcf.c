@@ -5761,6 +5761,7 @@ SCIP_RETCODE addCut(
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
+   int                   cutrank,            /**< rank of the cut */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
@@ -5821,11 +5822,14 @@ SCIP_RETCODE addCut(
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
+   /* set cut rank */
+   SCIProwChgRank(cut, cutrank);
+
    /* check efficacy */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
-      SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
-                       cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
+      SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
+                       cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
 
@@ -6364,6 +6368,7 @@ SCIP_RETCODE generateClusterCuts(
             /* variables for flowcutset separation */
             SCIP_Real abscutrhs = 0.0;
             SCIP_Real relviolation = 0.0;
+            int cutrank;
 
             /* we should not have too small deltas */
             assert( !SCIPisFeasZero(scip, deltas[d]) );
@@ -6374,7 +6379,7 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                                    (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d],
                                    NULL, NULL, cutcoefs, &cutrhs, &cutact,
-                                   &success, &cutislocal, NULL) );
+                                   &success, &cutislocal, &cutrank) );
             assert(ALLOWLOCAL || !cutislocal);
 
             /* // no success means row was too long or empty, there is a free
@@ -6397,7 +6402,7 @@ SCIP_RETCODE generateClusterCuts(
             if( SCIPisFeasGT(scip, cutact, cutrhs) )
             {
                SCIPdebugMessage("success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
-               SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts, cutoff) );
+               SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
                if( *cutoff )
                   break;
 
@@ -6548,6 +6553,7 @@ SCIP_RETCODE generateClusterCuts(
                   SCIP_Real cutact;
                   SCIP_Bool success;
                   SCIP_Bool cutislocal;
+                  int cutrank;
 
                   /* we should not have too small deltas */
                   assert( !SCIPisFeasZero(scip, bestdelta) );
@@ -6557,13 +6563,13 @@ SCIP_RETCODE generateClusterCuts(
                   SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
                   SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                                          (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
-                                         cutcoefs, &cutrhs, &cutact, &success, &cutislocal, NULL) );
+                                         cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
                   assert(ALLOWLOCAL || !cutislocal);
 
                   if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                   {
                      SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-                     SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts, cutoff) );
+                     SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
                   }
                }
             }

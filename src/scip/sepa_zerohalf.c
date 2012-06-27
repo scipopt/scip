@@ -574,6 +574,7 @@ struct Zerohalf_CutData
    SCIP_Real             norm;               /**< norm of the nonzero elements of the zerohalf cut */
    SCIP_Real             efficacy;           /**< efficacy of the zerohalf cut */
    SCIP_Real             violation;          /**< violation of the zerohalf cut */
+   int                   cutrank;            /**< rank of cut */
    int                   nnonz;              /**< number of nonzero coefficients of the zerohalf cut */
   
    /* statistics */  
@@ -983,6 +984,7 @@ SCIP_RETCODE ZerohalfCutDataCreate(
    (*cutdata)->norm = 0.0;
    (*cutdata)->efficacy = 0.0;
    (*cutdata)->violation = 0.0;
+   (*cutdata)->cutrank = 0;
    (*cutdata)->nnonz = 0;
      
    (*cutdata)->nrrowsincut = nrrowsincut;
@@ -3176,14 +3178,14 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
             BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
             weights, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-            &(cutdata->success), &(cutdata->islocal), NULL) );
+            &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
      
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
                weights, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-               &(cutdata->success), &(cutdata->islocal), NULL) );
+               &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }
    else
@@ -3226,7 +3228,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
                weights, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
-               &(cutdata->success), &(cutdata->islocal), NULL) );
+               &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }
    assert(ALLOWLOCAL || !cutdata->islocal);
@@ -3272,6 +3274,8 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
                SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &(cutdata->cut), sepa, cutname, -SCIPinfinity(scip), cutdata->rhs, 
                      cutdata->islocal, FALSE, sepadata->dynamiccuts));
                SCIP_CALL(SCIPaddVarsToRow(scip, cutdata->cut, cutdata->nnonz, cutvars, cutvals));
+               /* set cut rank */
+               SCIProwChgRank(cutdata->cut, cutdata->cutrank);
             }
             else
                cutdata->success = FALSE;

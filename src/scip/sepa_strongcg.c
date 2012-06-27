@@ -248,6 +248,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    int ncuts;
    int c;
    int i;
+   int cutrank;
    SCIP_Bool success;
    SCIP_Bool cutislocal;
    char normtype;
@@ -422,7 +423,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 #endif
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
                
@@ -456,9 +457,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
                   cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-            SCIPdebugMessage(" -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+            SCIPdebugMessage(" -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
                c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-               cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
+               cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm, cutrank);
 
             if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
             {
@@ -473,6 +474,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
                /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+               SCIProwChgRank(cut, cutrank);
 
                assert(success);
 #ifdef MAKECUTINTEGRAL

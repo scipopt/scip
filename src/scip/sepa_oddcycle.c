@@ -1031,6 +1031,9 @@ SCIP_RETCODE generateOddCycleCut(
    SCIP_CALL( SCIPchgRowRhs(scip, cut, SCIProwGetRhs(cut)-negatedcount) );
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
+   /* set cut rank: for oddcycle cuts we always set to 1 */
+   SCIProwChgRank(cut, 1);
+
    /* not every odd cycle has to be violated due to incompleteness of the implication graph */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {

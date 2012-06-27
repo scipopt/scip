@@ -2868,6 +2868,7 @@ SCIP_RETCODE createCGCutStrongCG(
    int nrows;
    int nvars;
    int k;
+   int cutrank;
 
    assert( scip != NULL );
    assert( sepadata != NULL );
@@ -2935,7 +2936,7 @@ SCIP_RETCODE createCGCutStrongCG(
    cutact = -1.0;
    cutrhs = -1.0;
    SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+         weights, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
    SCIPdebugMessage("Strong-CG: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success, 
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
@@ -2966,6 +2967,8 @@ SCIP_RETCODE createCGCutStrongCG(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+            SCIProwChgRank(cut, cutrank);
+
             assert( success );
 
 #ifdef SCIP_DEBUG
@@ -2988,9 +2991,9 @@ SCIP_RETCODE createCGCutStrongCG(
 
                if ( !SCIPisCutEfficacious(scip, NULL, cut) )
                {
-                  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f rank=%d\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                     SCIPgetCutEfficacy(scip, NULL, cut));
+                     SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut));
 
                   /* release the row */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
