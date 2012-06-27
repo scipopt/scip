@@ -194,7 +194,7 @@ void domMerge(
    SCIP_Real* lastrightptr;
 
    assert(dom != NULL);
-   assert(SCIPsetIsFeasLE(set, dom->lb, dom->ub));
+   assert(SCIPsetIsLE(set, dom->lb, dom->ub));
 
 #ifndef NDEBUG
    {
@@ -319,7 +319,7 @@ void domMerge(
       while( *holelistptr != NULL )
       {
          /* check the the last right interval is smaller or equal to the current left interval (none overlapping) */
-         assert( SCIPsetIsFeasLE(set, lastright, (*holelistptr)->hole.left) );
+         assert( SCIPsetIsLE(set, lastright, (*holelistptr)->hole.left) );
 
          /* check the hole property (check that the hole is not empty) */
          assert( SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right) );
@@ -330,7 +330,7 @@ void domMerge(
       }   
 
       /* check the the last right interval is smaller or equal to the upper bound (none overlapping) */     
-      assert( SCIPsetIsFeasLE(set, lastright, dom->ub) );
+      assert( SCIPsetIsLE(set, lastright, dom->ub) );
    }
 #endif
 }
@@ -5906,7 +5906,7 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasLE(set, newbound, SCIPvarGetUbOriginal(var)));
+   assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -5960,7 +5960,7 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasGE(set, newbound, SCIPvarGetLbOriginal(var)));
+   assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbOriginal(var)));
 
    if( SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
@@ -6500,7 +6500,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6621,7 +6621,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -6909,7 +6909,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
+   assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
 
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -7052,7 +7052,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
+   assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
 
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -7190,7 +7190,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
+   assert(SCIPsetIsLE(set, newbound, var->locdom.ub));
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -7305,7 +7305,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    /* adjust bound to integral value if variable is of integral type */
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
-   assert(SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
+   assert(SCIPsetIsGE(set, newbound, var->locdom.lb));
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -8499,13 +8499,13 @@ SCIP_RETCODE varAddVbound(
       {
          if( vbcoef > 0.0 )
          {
-            assert(SCIPsetIsFeasGE(set, lb,  lb * vbcoef + vbconstant) );
-            assert(SCIPsetIsFeasGE(set, ub,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, ub,  ub * vbcoef + vbconstant) );
          }
          else
          {
-            assert(SCIPsetIsFeasGE(set, lb,  ub * vbcoef + vbconstant) );
-            assert(SCIPsetIsFeasGE(set, ub,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsGE(set, ub,  lb * vbcoef + vbconstant) );
          }
       }
       else
@@ -8513,13 +8513,13 @@ SCIP_RETCODE varAddVbound(
          assert(vbtype == SCIP_BOUNDTYPE_UPPER);
          if( vbcoef > 0.0 )
          {
-            assert(SCIPsetIsFeasLE(set, lb,  lb * vbcoef + vbconstant) );
-            assert(SCIPsetIsFeasLE(set, ub,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, lb,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, ub,  ub * vbcoef + vbconstant) );
          }
          else
          {
-            assert(SCIPsetIsFeasLE(set, lb,  ub * vbcoef + vbconstant) );
-            assert(SCIPsetIsFeasLE(set, ub,  lb * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, lb,  ub * vbcoef + vbconstant) );
+            assert(SCIPsetIsLE(set, ub,  lb * vbcoef + vbconstant) );
          }
       }
 #endif
@@ -14532,21 +14532,21 @@ int SCIPvarGetConflictingBdchgDepth(
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsFeasLE(set, bound, var->locdom.ub) )
+      if( SCIPsetIsLE(set, bound, var->locdom.ub) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nubchginfos > 0);
-      assert(SCIPsetIsFeasGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
+      assert(SCIPsetIsGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsFeasGT(set, bound, var->ubchginfos[i-1].newbound); --i )
+      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound); --i )
       {
          assert(var->ubchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
       }
-      assert(SCIPsetIsFeasGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsFeasLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert(SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->ubchginfos[i].bdchgidx.depth;
@@ -14556,21 +14556,21 @@ int SCIPvarGetConflictingBdchgDepth(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsFeasGE(set, bound, var->locdom.lb) )
+      if( SCIPsetIsGE(set, bound, var->locdom.lb) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nlbchginfos > 0);
-      assert(SCIPsetIsFeasLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
+      assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsFeasLT(set, bound, var->lbchginfos[i-1].newbound); --i )
+      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound); --i )
       {
          assert(var->lbchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
       }
-      assert(SCIPsetIsFeasLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsFeasGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert(SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->lbchginfos[i].bdchgidx.depth;
