@@ -2092,7 +2092,7 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
-   SCIP_Bool mustcheck;
+   SCIP_Bool consreduceddom;
    int c;
 
    assert(conshdlr != NULL);
@@ -2111,7 +2111,8 @@ SCIP_DECL_CONSPROP(consPropBounddisjunction)
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr,
-            &cutoff, &infeasible, &reduceddom, &mustcheck) );
+            &cutoff, &infeasible, &consreduceddom, &mustcheck) );
+      reduceddom = reduceddom || consreduceddom;
    }
 
    /* return the correct result */
