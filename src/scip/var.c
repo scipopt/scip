@@ -574,6 +574,7 @@ SCIP_RETCODE SCIPboundchgApply(
    var = boundchg->var;
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsIntegral(set, boundchg->newbound));
 
    /* apply bound change */
    switch( boundchg->boundtype )
@@ -847,6 +848,17 @@ SCIP_RETCODE boundchgApplyGlobal(
    var = SCIPboundchgGetVar(boundchg);
    newbound = SCIPboundchgGetNewbound(boundchg);
    boundtype = SCIPboundchgGetBoundtype(boundchg);
+
+   /* check if the bound change is redundant which can happen due to a (better) global bound change which was perforemed
+    * after that bound change was applied
+    *
+    * @note a global bound change is not captured by the redundant member of the bound change data structure
+    */
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLE(set, newbound, SCIPvarGetLbGlobal(var)))
+      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGE(set, newbound, SCIPvarGetUbGlobal(var))) )
+   {
+      return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
       SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
@@ -6513,6 +6525,8 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    newbound = adjustedLb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsLE(set, newbound, var->glbdom.ub));
+   /* the new global bound has to be tighter except we are in the original problem */
+   assert(lp == NULL || SCIPsetIsLE(set, var->glbdom.lb, newbound));
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -6634,6 +6648,8 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    newbound = adjustedUb(set, SCIPvarGetType(var), newbound);
    /* check that the bound is feasible */
    assert(SCIPsetIsGE(set, newbound, var->glbdom.lb));
+   /* the new global bound has to be tighter except we are in the original problem */
+   assert(lp == NULL || SCIPsetIsGE(set, var->glbdom.ub, newbound));
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
