@@ -257,9 +257,6 @@ ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
-ifeq ($(GMP),true)
-LPSLDFLAGS	+=	$(GMP_LDFLAGS)
-endif
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
@@ -414,12 +411,9 @@ GMPDEP		:=	$(SRCDIR)/depend.gmp
 GMPSRC		:=	$(shell cat $(GMPDEP))
 ifeq ($(GMP),auto)
 GMP		=	$(ZIMPL)
-ifeq ($(LPS),spx)
-GMP		=	true
 endif
 ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
-endif
 endif
 
 READLINEDEP	:=	$(SRCDIR)/depend.readline

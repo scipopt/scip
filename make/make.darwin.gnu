@@ -3,7 +3,7 @@ LDFLAGS		+=
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
-GMP_LDFLAGS 	=	-lgmpxx -lgmp
+GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 
