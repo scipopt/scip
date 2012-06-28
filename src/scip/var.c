@@ -779,6 +779,10 @@ SCIP_RETCODE SCIPboundchgUndo(
       /* reinstall the previous local bound */
       SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
             var->lbchginfos[var->nlbchginfos].oldbound) );
+
+      /* in case all bound changes are removed the local bound should match the global bound */
+      assert(var->nlbchginfos > 0 || SCIPsetIsEQ(set, var->locdom.lb, var->glbdom.lb));
+
       break;
 
    case SCIP_BOUNDTYPE_UPPER:
@@ -796,6 +800,10 @@ SCIP_RETCODE SCIPboundchgUndo(
       /* reinstall the previous local bound */
       SCIP_CALL( SCIPvarChgUbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
             var->ubchginfos[var->nubchginfos].oldbound) );
+
+      /* in case all bound changes are removed the local bound should match the global bound */
+      assert(var->nubchginfos > 0 || SCIPsetIsEQ(set, var->locdom.ub, var->glbdom.ub));
+
       break;
 
    default:
