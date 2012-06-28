@@ -6192,6 +6192,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.lb;
+   /* adjust the bound, that the lower bound is always <= to the upper bound */
+   newbound = MIN(newbound, var->glbdom.ub);
    var->glbdom.lb = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -6361,6 +6363,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.ub;
+   /* adjust the bound, that the upper bound is always >= to the lower bound */
+   newbound = MAX(newbound, var->glbdom.lb);
    var->glbdom.ub = newbound;
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -6920,6 +6924,8 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* change the bound */
    oldbound = var->locdom.lb;
+   /* adjust the bound, that the lower bound is always <= to the upper bound */
+   newbound = MIN(newbound, var->locdom.ub);
    var->locdom.lb = newbound;
 
    /* merges overlapping holes into single holes, moves bounds respectively */
@@ -7063,6 +7069,8 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* change the bound */
    oldbound = var->locdom.ub;
+   /* adjust the bound, that the upper bound is always >= to the lower bound */
+   newbound = MAX(newbound, var->locdom.lb);
    var->locdom.ub = newbound;
 
    /* merges overlapping holes into single holes, moves bounds respectively */
