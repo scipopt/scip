@@ -1298,7 +1298,7 @@ SCIP_RETCODE initBounds(
 
       /* create groups */
       SCIP_CALL( createGroups(propdata) );
-      SCIPdebug( printGroups(scip, propdata) );
+      SCIPdebug( printGroups(propdata) );
    }
 
    return SCIP_OKAY;

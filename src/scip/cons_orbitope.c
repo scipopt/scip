@@ -218,22 +218,23 @@ void printMatrix(
    assert( consdata->vars != NULL );
 
    for (j = 0; j < consdata->nblocks; ++j)
-      SCIPinfoMessage(scip, NULL, "-");
-   SCIPinfoMessage(scip, NULL, "\n");
+      SCIPdebugPrintf("-");
+
+   SCIPdebugPrintf("\n");
    for (i = 0; i < consdata->nspcons; ++i)
    {
       for (j = 0; j < consdata->nblocks; ++j)
       {
          if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            SCIPinfoMessage(scip, NULL, "%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
+            SCIPdebugPrintf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
          else
-            SCIPinfoMessage(scip, NULL, " ");
+            SCIPdebugPrintf(" ");
       }
-      SCIPinfoMessage(scip, NULL, "|\n");
+      SCIPdebugPrintf("|\n");
    }
    for (j = 0; j < consdata->nblocks; ++j)
-      SCIPinfoMessage(scip, NULL, "-");
-   SCIPinfoMessage(scip, NULL, "\n");
+      SCIPdebugPrintf("-");
+   SCIPdebugPrintf("\n");
 }
 #endif
 

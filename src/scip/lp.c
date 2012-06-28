@@ -11812,6 +11812,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   type = 'b';
                   break;
                default:
+                  type = '?';
                   SCIPerrorMessage("unknown base stat %d\n", cstat[j]);
                   SCIPABORT();
                }
@@ -11819,7 +11820,7 @@ SCIP_RETCODE lpLexDualSimplex(
             }
          }
          SCIPdebugMessage("\n\n");
-         
+
          if( !chooseBasic )
          {
             SCIPsetFreeBufferArray(set, &primsol);
@@ -12035,6 +12036,7 @@ SCIP_RETCODE lpLexDualSimplex(
                         type = 'b'; 
                         break;
                      default: 
+                        type = '?';
                         SCIPerrorMessage("unknown base state %d\n", cstat[j]);
                         SCIPABORT();
                      }
@@ -12042,7 +12044,7 @@ SCIP_RETCODE lpLexDualSimplex(
                   }
                }
                SCIPdebugMessage("\n\n");
-               
+
                if( !chooseBasic )
                {
                   SCIPsetFreeBufferArray(set, &primsol);
