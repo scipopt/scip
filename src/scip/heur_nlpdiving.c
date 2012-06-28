@@ -1834,7 +1834,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       /* find best candidate variable */
       switch( heurdata->varselrule )
       {
-         SCIP_VAR** pseudocands;
       case 'c':
          SCIP_CALL( chooseCoefVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
                &bestcand, &bestcandmayround, &bestcandroundup) );
@@ -1867,6 +1866,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
          /* double diving only works if we have both relaxations at hand, otherwise we fall back to fractional diving */
          if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
+            SCIP_VAR** pseudocands;
+            
             SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands, NULL) );
             assert(backtrackdepth > 0 || nnlpcands <= npseudocands);
             assert(SCIPgetNLPBranchCands(scip) <= npseudocands);
@@ -1878,6 +1879,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             var = pseudocands[bestcand];
             break;
          }
+         else
+            updatepscost = FALSE;
          /*lint -fallthrough*/
       case 'f':
          SCIP_CALL( chooseFracVar(scip, heurdata, nlpcands, nlpcandssol, nlpcandsfrac, nnlpcands, varincover, covercomputed,
@@ -2031,9 +2034,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             /* for pseudo-cost computation */
-            if( updatepscost )
+            if( updatepscost && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
-               assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
                if( heurdata->varselrule == 'd' )
                {
                   assert(pseudocandsnlpsol != NULL);
