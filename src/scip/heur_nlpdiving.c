@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -1274,6 +1275,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       {
          assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
          ++(heurdata->nfixedcovervars);
+         printf("XXX fix var %s from [%g,%g] to %g\n",SCIPvarGetName(var),oldbound,otherbound,newbound);
       }
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
@@ -1283,7 +1285,9 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       {
          assert(!SCIPisFeasEQ(scip, newbound, otherbound));
          --(heurdata->nfixedcovervars);
+         printf("XXX unffix var %s to [%g,%g]\n",SCIPvarGetName(var),newbound,otherbound);
       }
+         printf("XXX relax var %s to [%g,%g]\n",SCIPvarGetName(var),newbound,otherbound);
       break;
    default:
       SCIPerrorMessage("invalid event type.\n");
@@ -1495,6 +1499,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* only call heuristic, if an NLP relaxation has been constructed */
    if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the current node will not be cutoff, e.g., due to a (integer and NLP-)feasible LP solution */
+   if( SCIPisFeasGE(scip, SCIPgetLocalLowerbound(scip), SCIPgetUpperbound(scip)) )
       return SCIP_OKAY;
 
    /* get heuristic's data */
@@ -2360,7 +2368,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    if( covercomputed )
    {
       assert(heurdata->eventhdlr != NULL);
-      assert(heurdata->nfixedcovervars == 0);
+      assert(heurdata->nfixedcovervars >= 0); /* variables might have been globally fixed in propagation */
       assert(varincover != NULL);
       assert(covervars != NULL);
 
