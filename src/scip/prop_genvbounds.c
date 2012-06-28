@@ -34,7 +34,7 @@
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
-#define PROP_TIMING SCIP_PROPTIMING_BEFORELP
+#define PROP_TIMING   SCIP_PROPTIMING_ALWAYS
 #define PROP_PRIORITY                    -10 /**< propagator priority */
 #define PROP_FREQ                          1 /**< propagator frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators
@@ -1527,7 +1527,8 @@ static
 SCIP_RETCODE execGenVBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata,           /**< data of the genvbounds propagator */
-   SCIP_RESULT*          result              /**< result pointer */
+   SCIP_RESULT*          result,             /**< result pointer */
+   SCIP_Bool             local               /**< should local propagation be applied? */
    )
 {
    assert(scip != NULL);
@@ -1563,7 +1564,7 @@ SCIP_RETCODE execGenVBounds(
       SCIP_CALL( setUpEvents(scip, propdata) );
    }
 
-   /* apply global propagation if primal bound has improved */
+   /* always apply global propagation if primal bound has improved */
    if( SCIPisFeasLT(scip, SCIPgetCutoffbound(scip), propdata->lastcutoff) )
    {
       if( propdata->ngindices > 0 )
@@ -1575,7 +1576,7 @@ SCIP_RETCODE execGenVBounds(
    }
 
    /* apply local propagation if bound change events were caught */
-   if( *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
+   if( local && *result != SCIP_CUTOFF && SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 )
    {
       SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result) );
       assert(*result != SCIP_DIDNOTRUN);
@@ -1778,7 +1779,7 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
    }
 
    /* propagate */
-   SCIP_CALL( execGenVBounds(scip, propdata, result) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -1818,8 +1819,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
       return SCIP_OKAY;
    }
 
-   /* propagate */
-   SCIP_CALL( execGenVBounds(scip, propdata, result) );
+   /* propagate locally only in SCIP_PROPTIMING_BEFORELP, but globally always if the cutoff bound has improved */
+   SCIP_CALL( execGenVBounds(scip, propdata, result, (proptiming == SCIP_PROPTIMING_BEFORELP)) );
 
    return SCIP_OKAY;
 }
