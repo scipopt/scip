@@ -1272,7 +1272,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       /* if cover variable is now fixed */
       if( SCIPisFeasEQ(scip, newbound, otherbound) )
       {
-         assert(!SCIPisFeasEQ(scip, oldbound, otherbound));
+         assert(!SCIPisEQ(scip, oldbound, otherbound));
          ++(heurdata->nfixedcovervars);
       }
       break;
@@ -1281,7 +1281,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
       /* if cover variable is now unfixed */
       if( SCIPisFeasEQ(scip, oldbound,otherbound) )
       {
-         assert(!SCIPisFeasEQ(scip, newbound, otherbound));
+         assert(!SCIPisEQ(scip, newbound, otherbound));
          --(heurdata->nfixedcovervars);
       }
       break;
@@ -1820,6 +1820,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
+      SCIP_Bool updatepscost;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
@@ -1828,6 +1829,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       bestcandmayround = TRUE;
       bestcandroundup = FALSE;
       bestboundval = SCIP_INVALID;
+      updatepscost = TRUE;
 
       /* find best candidate variable */
       switch( heurdata->varselrule )
@@ -1920,6 +1922,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
       do
       {
          SCIP_Real frac;
+         frac = SCIP_INVALID;
 
          if( backtracked && backtrackdepth > 0 )
          {
@@ -2028,14 +2031,18 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
             }
 
             /* for pseudo-cost computation */
-            if( heurdata->varselrule == 'd' && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            if( updatepscost )
             {
-               assert(pseudocandsnlpsol != NULL);
-               assert(0 <= bestcand && bestcand < npseudocands);
-               frac = SCIPfrac(scip, pseudocandsnlpsol[bestcand]);
+               assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+               if( heurdata->varselrule == 'd' )
+               {
+                  assert(pseudocandsnlpsol != NULL);
+                  assert(0 <= bestcand && bestcand < npseudocands);
+                  frac = SCIPfrac(scip, pseudocandsnlpsol[bestcand]);
+               }
+               else
+                  frac = nlpcandsfrac[bestcand];
             }
-            else
-               frac = nlpcandsfrac[bestcand];
          }
 
          /* apply domain propagation */
@@ -2134,8 +2141,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                objval = SCIPgetLPObjval(scip);
 
                /* update pseudo cost values */
-               if( SCIPisGT(scip, objval, oldobjval) )
+               if( updatepscost && SCIPisGT(scip, objval, oldobjval) )
                {
+                  assert(frac != SCIP_INVALID);
                   if( bestcandroundup )
                   {
                      SCIP_CALL( SCIPupdateVarPseudocost(scip, var, 1.0-frac, objval - oldobjval, 1.0) );
@@ -2269,6 +2277,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
                SCIP_CALL( SCIPnewProbingNode(scip) );
                divedepth = backtrackdepth;
+
+               /* do not update pseudocosts if backtracking by more than one level */
+               updatepscost = FALSE;
+
                /* in case, we are feasible after backtracking, fix less variables at once in continuing diving
                 * @todo should we remember the fixquot in heurdata for the next run?
                 */
