@@ -3028,7 +3028,7 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
-      return SCIP_BOUNDTYPE_LOWER; /* arbitrarily return some boundtype */
+      return NULL;
    }
 
    consdata = SCIPconsGetData(cons);
