@@ -3625,7 +3625,7 @@ SCIP_RETCODE solveNode(
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT || SCIPsolveIsStopped(set, stat, FALSE) )
                {
                   SCIP_NODE* node;
-               
+
                   /* as we hit the time or iteration limit or another interrupt (e.g., gap limit), we do not want to solve the LP again.
                    * in order to terminate correctly, we create a "branching" with only one child node 
                    * that is a copy of the focusnode 
@@ -3767,6 +3767,8 @@ SCIP_RETCODE addCurrentSolution(
    /* found a feasible solution */
    if( SCIPtreeHasFocusNodeLP(tree) )
    {
+      assert(lp->primalfeasible);
+
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);
 

@@ -2761,12 +2761,31 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       int nusefulconss;
       int firstcons;
       SCIP_Bool lpchanged;
+      SCIP_Bool lastinfeasible;
 
       /* check, if this LP solution was already enforced at this node */
       if( conshdlr->lastenfolplpcount == stat->lpcount
          && conshdlr->lastenfolpdomchgcount == stat->domchgcount
          && conshdlr->lastenfolpnode == stat->nnodes )
       {
+         assert(conshdlr->lastenfopsresult != SCIP_CUTOFF);
+         assert(conshdlr->lastenfopsresult != SCIP_BRANCHED);
+         assert(conshdlr->lastenfopsresult != SCIP_REDUCEDDOM);
+         /* might this assert fail due to numerics? if yes, it should probably treated like SCIP_INFEASIBLE */
+         assert(conshdlr->lastenfopsresult != SCIP_SEPARATED);
+
+         /* if we already enforced the same pseudo solution at this node, we will only enforce new constraints in the
+          * following; however, the result of the last call for the old constraint is still valid and we have to ensure
+          * that an infeasibility in the last call is not lost because we only enforce new constraints
+          */
+         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE || conshdlr->lastenfopsresult == SCIP_CONSADDED )
+         {
+            *result = SCIP_INFEASIBLE;
+            lastinfeasible = TRUE;
+         }
+         else
+            lastinfeasible = FALSE;
+
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
           */
@@ -2782,6 +2801,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
          lpchanged = TRUE;
+         lastinfeasible = FALSE;
       }
       assert(firstcons >= 0);
       assert(firstcons + nconss <= conshdlr->nenfoconss);
@@ -2837,6 +2857,9 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          /* perform the cached constraint updates */
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
+         /* remember the result of the enforcement call */
+         conshdlr->lastenfolpresult = *result;
+
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfolpcalls++;
@@ -2869,6 +2892,13 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* if the same LP solution was already enforced at this node, we only enforced new constraints this time;
+          * if the enfolp call returns feasible now, the solution is only feasible w.r.t. the new constraints, if the
+          * last call detected infeasibility for the old constraints, we have to change the result to infeasible
+          */
+         if( lastinfeasible && *result == SCIP_FEASIBLE )
+            *result = SCIP_INFEASIBLE;
       }
    }
 
@@ -2919,10 +2949,29 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       int nusefulconss;
       int firstcons;
       SCIP_Bool pschanged;
+      SCIP_Bool lastinfeasible;
 
       /* check, if this LP solution was already enforced at this node */
       if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
       {
+         assert(conshdlr->lastenfopsresult != SCIP_CUTOFF);
+         assert(conshdlr->lastenfopsresult != SCIP_BRANCHED);
+         assert(conshdlr->lastenfopsresult != SCIP_REDUCEDDOM);
+         assert(conshdlr->lastenfopsresult != SCIP_DIDNOTRUN || objinfeasible);
+
+         /* if we already enforced the same pseudo solution at this node, we will only enforce new constraints in the
+          * following; however, the result of the last call for the old constraint is still valid and we have to ensure
+          * that an infeasibility in the last call is not lost because we only enforce new constraints
+          */
+         if( conshdlr->lastenfopsresult == SCIP_INFEASIBLE || conshdlr->lastenfopsresult == SCIP_CONSADDED
+            || conshdlr->lastenfopsresult == SCIP_SOLVELP )
+         {
+            *result = SCIP_INFEASIBLE;
+            lastinfeasible = TRUE;
+         }
+         else
+            lastinfeasible = FALSE;
+
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
           */
@@ -2938,6 +2987,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
          pschanged = TRUE;
+         lastinfeasible = FALSE;
       }
       assert(firstcons >= 0);
       assert(firstcons + nconss <= conshdlr->nenfoconss);
@@ -2988,6 +3038,9 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          /* perform the cached constraint updates */
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
+         /* remember the result of the enforcement call */
+         conshdlr->lastenfopsresult = *result;
+
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfopscalls++;
@@ -3025,6 +3078,13 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
+
+         /* if the same pseudo solution was already enforced at this node, we only enforced new constraints this time;
+          * if the enfops call returns feasible now, the solution is only feasible w.r.t. the new constraints, if the
+          * last call detected infeasibility for the old constraints, we have to change the result to infeasible
+          */
+         if( lastinfeasible && *result == SCIP_FEASIBLE )
+            *result = SCIP_INFEASIBLE;
       }
    }
 
