@@ -318,7 +318,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (void*) (size_t) v, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) );
    }
 
    return SCIP_OKAY;
@@ -367,7 +367,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (void*) (size_t) v, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) );
    }
 
    return SCIP_OKAY;
