@@ -872,6 +872,17 @@ SCIP_RETCODE constructSNFRelaxation(
                vubconsts[bestubtype], *transrhs);
          }
       }
+
+      /* relaxing the mixed integer set to a 0-1 single node flow set was not successful because coefficient of y_j and
+       * the bounds selected for the transformation together result in an infinite variable upper bound in the 0-1 single
+       * node flow set; this can be caused by huge but finite values for the bounds or the coefficient
+       */
+      if( SCIPisInfinity(scip, transvarvubcoefs[*ntransvars]) )
+      {
+         assert(!(*success));
+         goto TERMINATE;
+      }
+
       assert(boundsfortrans[probidx] > -3);
       assert(assoctransvars[probidx] >= 0 && assoctransvars[probidx] == (*ntransvars));
       assert(transvarcoefs[*ntransvars] == 1 || transvarcoefs[*ntransvars] == - 1 );
