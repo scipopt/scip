@@ -206,7 +206,8 @@ SCIP_RETCODE consdataCreate(
 /** debug method, prints variable matrix */
 static
 void printMatrix(
-   SCIP_CONSDATA*        consdata            /**< the constraint data     */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< the constraint data */
    )
 {
    int i;
@@ -218,23 +219,23 @@ void printMatrix(
    assert( consdata->vars != NULL );
 
    for (j = 0; j < consdata->nblocks; ++j)
-      SCIPdebugPrintf("-");
+      SCIPinfoMessage(scip, NULL, "-");
 
-   SCIPdebugPrintf("\n");
+   SCIPinfoMessage(scip, NULL, "\n");
    for (i = 0; i < consdata->nspcons; ++i)
    {
       for (j = 0; j < consdata->nblocks; ++j)
       {
          if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
-            SCIPdebugPrintf("%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
+            SCIPinfoMessage(scip, NULL, "%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
          else
-            SCIPdebugPrintf(" ");
+            SCIPinfoMessage(scip, NULL, " ");
       }
-      SCIPdebugPrintf("|\n");
+      SCIPinfoMessage(scip, NULL, "|\n");
    }
    for (j = 0; j < consdata->nblocks; ++j)
-      SCIPdebugPrintf("-");
-   SCIPdebugPrintf("\n");
+      SCIPinfoMessage(scip, NULL, "-");
+   SCIPinfoMessage(scip, NULL, "\n");
 }
 #endif
 
@@ -703,7 +704,7 @@ SCIP_RETCODE propagateCons(
 
 #ifdef PRINT_MATRIX
    SCIPdebugMessage("Matrix:\n");
-   printMatrix(consdata);
+   printMatrix(scip, consdata);
 #endif
 
    /* propagate */
@@ -1095,7 +1096,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef PRINT_MATRIX
    SCIPdebugMessage("Matrix:\n");
-   printMatrix(consdata);
+   printMatrix(scip, consdata);
 #endif
 
    /* computation of table: this now minimizes the value of the shifted column */
