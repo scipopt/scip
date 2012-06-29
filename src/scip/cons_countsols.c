@@ -1831,7 +1831,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          {
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
-
          }
 
          assert( buffersize >= requiredsize );
@@ -2167,6 +2166,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
          if( requiredsize > buffersize )
          {
+	    buffersize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
          }
