@@ -881,7 +881,6 @@ SCIP_RETCODE SCIPsetExitPlugins(
 extern
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
@@ -890,7 +889,6 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 extern
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );

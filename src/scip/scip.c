@@ -9106,7 +9106,7 @@ SCIP_RETCODE initPresolve(
          scip->primal, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
 
    /* inform plugins that the presolving is abound to begin */
-   SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat) );
+   SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
@@ -9187,7 +9187,7 @@ SCIP_RETCODE exitPresolve(
 #endif
 
    /* inform plugins that the presolving is finished, and perform final modifications */
-   SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat) );
+   SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
