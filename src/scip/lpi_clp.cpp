@@ -1448,7 +1448,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -1464,7 +1464,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 
@@ -3442,7 +3442,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_PRICING:
       /* should not happen - see above */
       SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
+      return SCIP_LPERROR; /*lint !e527*/
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       /** Amount of print out:

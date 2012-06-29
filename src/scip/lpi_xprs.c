@@ -1735,7 +1735,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets row names */
@@ -1750,7 +1750,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets the objective sense of the LP */
@@ -1760,7 +1760,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    )
 {
    SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -2938,7 +2938,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    if ((lpi->solstat != XPRS_LP_UNBOUNDED) || (lpi->unbvec < 0))
    {
       /* Not unbounded or the optimizer didn't return a ray index. */
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
    }
 
    CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
@@ -2947,7 +2947,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    cfirst += nrows;
    SCIP_CALL( getBase(lpi) );
    if (lpi->solmethod == 'd')
-      return SCIP_ERROR; /* Unboundedness found by dual - nothing we can do about it. */
+      return SCIP_LPERROR; /* Unboundedness found by dual - nothing we can do about it. */
 
    /* At this point we should be fairly confident that unboundedness */
    /* is caused by primal trying to pivot a non-basic variable into */
@@ -3009,7 +3009,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
       int hasRay;
       CHECK_ZERO( XPRSgetprimalray(lpi->xprslp, ray, &hasRay) );
       if (!hasRay)
-         return SCIP_ERROR;
+         return SCIP_LPERROR;
    }
 #endif
 
@@ -3032,10 +3032,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    if (lpi->solstat != XPRS_LP_INFEAS)
    {
       /* Not infeasible. */
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
    }
    if (lpi->solmethod != 'p')
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
 
    /* The required Farkas multipliers should be the duals set up by */
    /* phase I primal. */
@@ -3045,7 +3045,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
       int hasRay;
       CHECK_ZERO( XPRSgetdualray(lpi->xprslp, dualfarkas, &hasRay) );
       if (!hasRay)
-         return SCIP_ERROR;
+         return SCIP_LPERROR;
    }
 #endif
 

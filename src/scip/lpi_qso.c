@@ -1540,7 +1540,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    )
 {
    SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -2416,7 +2416,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by QSopt.\n");
 
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets dual Farkas proof for infeasibility */
@@ -2697,7 +2697,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by QSopt.\n");
 
    /* QSopt does not provide an interface for this yet */
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
@@ -2742,7 +2742,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by QSopt.\n");
 
    /* QSopt does not provide an interface for this yet */
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /**@} */

@@ -4218,7 +4218,7 @@ SCIP_RETCODE SCIPlpiClearState(
       std::string s = x.what();
       SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
       assert( lpi->spx->getStatus() != SPxSolver::OPTIMAL );
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
@@ -4264,7 +4264,7 @@ SCIP_RETCODE SCIPlpiReadState(
    bool success;
    SOPLEX_TRY( lpi->messagehdlr, success = lpi->spx->readBasisFile(fname, 0, 0) );
 
-   return success ? SCIP_OKAY : SCIP_ERROR;
+   return success ? SCIP_OKAY : SCIP_LPERROR;
 }
 
 /** writes LP state (like basis information) to a file */
@@ -4281,7 +4281,8 @@ SCIP_RETCODE SCIPlpiWriteState(
    SOPLEX_TRY( lpi->messagehdlr, res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
-      return SCIP_ERROR;
+      return SCIP_LPERROR;
+
    return SCIP_OKAY;
 }
 
