@@ -14133,7 +14133,7 @@ SCIP_RETCODE SCIPbdchginfoCreate(
    (*bdchginfo)->inferencedata.info = 0;
    (*bdchginfo)->bdchgidx.depth = INT_MAX;
    (*bdchginfo)->bdchgidx.pos = -1;
-   (*bdchginfo)->pos = -1;
+   (*bdchginfo)->pos = 0;
    (*bdchginfo)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING; /*lint !e641*/
    (*bdchginfo)->boundtype = boundtype; /*lint !e641*/
    (*bdchginfo)->inferboundtype = boundtype; /*lint !e641*/
@@ -14790,6 +14790,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
+#undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
 #undef SCIPbdchginfoGetOldbound
@@ -16023,6 +16024,16 @@ SCIP_RETCODE SCIPvarDropEvent(
    SCIP_CALL( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
    return SCIP_OKAY;
+}
+
+/** returns the position of the bound change index */
+int SCIPbdchgidxGetPos(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   )
+{
+   assert(bdchgidx != NULL);
+
+   return bdchgidx->pos;
 }
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one */

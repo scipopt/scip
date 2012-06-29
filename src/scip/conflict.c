@@ -2390,6 +2390,8 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
 
    /* get bound change information */
    bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);
+   /* check that the bound change info is not a temporary one */
+   assert(SCIPbdchgidxGetPos(&bdchginfo->bdchgidx) >= 0);
 
    /* if bound of variable was not changed (this means it is still the global bound), we can ignore the conflicting
     * bound

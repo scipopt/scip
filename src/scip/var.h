@@ -1412,6 +1412,12 @@ SCIP_Real SCIPvarGetVSIDS(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** returns the position of the bound change index */
+extern
+int SCIPbdchgidxGetPos(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1424,6 +1430,7 @@ SCIP_Real SCIPvarGetVSIDS(
    SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
+#define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
 
 #endif
 
