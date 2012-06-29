@@ -63,6 +63,7 @@ static int CATLIMITS[] = {0,20,50,100,500};
 struct SCIP_PresolData
 {
    SCIP_Bool             didsearch;          /** did the presolver already search for components? */
+   SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
    SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    SCIP_Longint          nodelimit;          /** maximum number of nodes to be solved in subproblems */
@@ -297,8 +298,13 @@ SCIP_RETCODE copyAndSolveComponent(
 
       /* abort if the plugins were not successfully copied */
       if( !success )
-         return SCIP_OKAY;
+      {
+         SCIP_CALL( SCIPfree(&presoldata->subscip) );
+         presoldata->subscip = NULL;
+         presoldata->pluginscopied = FALSE;
 
+         return SCIP_OKAY;
+      }
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
@@ -864,7 +870,8 @@ SCIP_RETCODE splitProblem(
          /* update statistics */
          SCIPstatistic( updateStatisticsSingleVar(presoldata) );
       }
-      else
+      /* we do not want to solve the component, if it is the last unsolved one */
+      else if( ncompvars < SCIPgetNVars(scip) )
       {
          SCIP_RESULT subscipresult;
 
@@ -882,17 +889,16 @@ SCIP_RETCODE splitProblem(
          }
 #endif
 
-         /* we do not want to solve the component, if it is the last unsolved one */
-         if( ncompvars < SCIPgetNVars(scip) )
-         {
-            /* build subscip for one component and try to solve it */
-            SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars,
-                  compfixvals, ncompvars, nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss,
-                  &subscipresult) );
+         /* build subscip for one component and try to solve it */
+         SCIP_CALL( copyAndSolveComponent(scip, presoldata, consmap, comp, compconss, ncompconss, compvars,
+               compfixvals, ncompvars, nbinvars, nintvars, nsolvedprobs, ndeletedvars, ndeletedconss,
+               &subscipresult) );
 
-            if( subscipresult == SCIP_CUTOFF )
-               break;
-         }
+         if( subscipresult == SCIP_CUTOFF )
+            break;
+
+         if( !presoldata->pluginscopied )
+            break;
       }
    }
 
@@ -944,21 +950,31 @@ SCIP_RETCODE presolComponents(
    if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   /* we do not want to run, if there are no variables left */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   /* the presolver should be executed only if it didn't run so far or the number of variables was significantly reduced
+    * since tha last run
+    */
+   if( (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
+      return SCIP_OKAY;
+
+   /* if we were not able to copy all plugins, we cannot run the components presolver */
+   if( !presoldata->pluginscopied )
+      return SCIP_OKAY;
+
    /* only call the component presolver, if presolving would be stopped otherwise */
    if( !SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
    /* check for a reached timelimit */
    if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   presoldata = SCIPpresolGetData(presol);
-   assert(presoldata != NULL);
-
-   nvars = SCIPgetNVars(scip);
-
-   /* the presolver should be executed only once */
-   if( nvars == 0 || (presoldata->didsearch && nvars > (1 - presoldata->reldecrease) * presoldata->lastnvars) )
       return SCIP_OKAY;
 
    SCIPstatistic( resetStatistics(scip, presoldata) );
@@ -1155,6 +1171,7 @@ SCIP_DECL_PRESOLINIT(presolInitComponents)
 
    presoldata->subscip = NULL;
    presoldata->didsearch = FALSE;
+   presoldata->pluginscopied = TRUE;
 
    return SCIP_OKAY;
 }
