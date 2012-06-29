@@ -77,7 +77,7 @@ typedef SCIP_Longint         Int;
 #define DISP_SOLS_NAME             "sols"
 #define DISP_SOLS_DESC             "number of detected feasible solutions"
 #define DISP_SOLS_HEADER           " sols "
-#define DISP_SOLS_WIDTH            6
+#define DISP_SOLS_WIDTH            7
 #define DISP_SOLS_PRIORITY         110000
 #define DISP_SOLS_POSITION         100000
 #define DISP_SOLS_STRIPLINE        TRUE
@@ -163,6 +163,22 @@ void setInt(
 }
 
 
+/** sets a power of 2 to the given value */
+static
+void setPowerOfTwo(
+   Int*                  value,              /**< pointer to the value to increase */
+   SCIP_Longint          exponent            /**< exponent for the base 2 */
+   )
+{
+#ifdef WITH_GMP
+   mpz_ui_pow_ui(*value, 2, exponent);
+#else
+   assert(exponent < 64);
+   (*value) = 1 << exponent;
+#endif
+}
+
+
 /** free memory */
 static
 void freeInt(
@@ -212,14 +228,14 @@ void multInt(
    )
 {
 #ifdef WITH_GMP
-   mpz_mul_ui (*value, *value, factor);
+   mpz_mul_ui(*value, *value, factor);
 #else
    (*value) *= factor;
 #endif
 }
 
 
-/* method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
+/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
 static
 void toString(
    Int                   value,              /**< number */
@@ -235,7 +251,7 @@ void toString(
 }
 
 
-/* method for creating a SCIP_Longing out of an Int */
+/** method for creating a SCIP_Longing out of an Int */
 static
 SCIP_Longint getNCountedSols(
    Int                   value,              /**< number to convert */
@@ -491,7 +507,6 @@ CUTOFF_CONSTRAINT(addIntegerCons)
       var = vars[v];
 
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
-      assert( varIsUnfixedLocal(var) );
 
       if( SCIPvarIsBinary(var) )
       {
@@ -707,19 +722,12 @@ SCIP_RETCODE countSparsesol(
 
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
-         SCIP_Longint nsols;
          int npseudocands;
 
-         nsols = 1;
          npseudocands = SCIPgetNPseudoBranchCands(scip);
-         assert(npseudocands < 64);
 
-         /* bit shift the factor by npseudocands; this means factor = 2^npseudocands */
-         nsols <<= npseudocands;
-
-         /* set newsols to the computed number */
-         setInt(&newsols, nsols);
-         SCIPdebugMessage("-> add 2^%d to number of solutions\n", npseudocands);
+         /* sets a power of 2 to the number of solutions */
+         setPowerOfTwo(&newsols, npseudocands);
       }
       else
       {
