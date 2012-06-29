@@ -138,11 +138,13 @@ do
             echo > $TMPFILE
             if test $SETTINGS != "default"
             then
-                echo set load $SETTINGS                >>  $TMPFILE
+                echo set load $SETTINGS            >> $TMPFILE
+	    else
+		echo set emphasis count            >> $TMPFILE
             fi
             if test $FEASTOL != "default"
             then
-                echo set numerics feastol $FEASTOL    >> $TMPFILE
+                echo set numerics feastol $FEASTOL >> $TMPFILE
             fi
             echo set limits time $TIMELIMIT        >> $TMPFILE
             echo set limits nodes $NODELIMIT       >> $TMPFILE
