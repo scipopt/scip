@@ -3428,6 +3428,9 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* turn on aggressive constraint aging */ 
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );       
+
+      /* turn off components presolver since we are currently not able to handle that in case of counting */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
       break;
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
