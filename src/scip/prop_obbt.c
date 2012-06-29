@@ -47,12 +47,6 @@
 #define PROP_FREQ                           0      /**< propagator frequency */
 #define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
                                                     *   found reductions? */
-#define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after
-                                                    *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY               FALSE      /**< should presolving be delay, if other presolvers found reductions?  */
-#define PROP_PRESOL_MAXROUNDS               0      /**< maximal number of presolving rounds the presolver participates
-                                                    *   in (-1: no limit) */
-
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
 #define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
                                                     *   domains sizes? */

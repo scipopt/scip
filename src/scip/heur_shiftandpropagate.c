@@ -1309,7 +1309,6 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 /** initialization method of primal heuristic(called after problem was transformed). We only need this method for
  *  statistic mode of heuristic.
  */
-#ifdef SCIP_STATISTIC
 static
 SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 {  /*lint --e{715}*/
@@ -1320,19 +1319,19 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    assert(heurdata != NULL);
 
-   heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   heurdata->nremainingviols = 0;
-   heurdata->nprobings = 0;
-   heurdata->ntotaldomredsfound = 0;
-   heurdata->ncutoffs = 0;
-   heurdata->nlpiters = 0;
-   heurdata->nredundantrows = 0;
+   heurdata->randseed = DEFAULT_RANDSEED;
 
+   SCIPstatistic(
+      heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      heurdata->nremainingviols = 0;
+      heurdata->nprobings = 0;
+      heurdata->ntotaldomredsfound = 0;
+      heurdata->ncutoffs = 0;
+      heurdata->nlpiters = 0;
+      heurdata->nredundantrows = 0;
+   )
    return SCIP_OKAY;
 }
-#else
-#define heurInitShiftandpropagate NULL
-#endif
 
 /** destructor of primal heuristic to free user data(called when SCIP is exiting) */
 static

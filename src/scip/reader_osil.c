@@ -298,11 +298,11 @@ SCIP_RETCODE readObjective(
    }
    else if( strcmp(attrval, "min") == 0 )
    {
-      SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE);
+      SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
    }
    else if( strcmp(attrval, "max") == 0 )
    {
-      SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE);
+      SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
    }
    else
    {
