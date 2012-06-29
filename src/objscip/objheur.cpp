@@ -199,7 +199,6 @@ SCIP_RETCODE SCIPincludeObjHeur(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
 
    assert(scip != NULL);
    assert(objheur != NULL);
@@ -208,21 +207,15 @@ SCIP_RETCODE SCIPincludeObjHeur(
    heurdata = new SCIP_HEURDATA;
    heurdata->objheur = objheur;
    heurdata->deleteobject = deleteobject;
-   heur = NULL;
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
+   SCIP_CALL( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
          objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
-         objheur->scip_timingmask_, objheur->scip_usessubscip_, 
-         heurExecObj, heurdata) ); /*lint !e429*/
-   assert(heur != NULL);
-
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyObj) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeObj) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitObj) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitObj) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolObj) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolObj) );
+         objheur->scip_timingmask_, objheur->scip_usessubscip_,
+         heurCopyObj,
+         heurFreeObj, heurInitObj, heurExitObj,
+         heurInitsolObj, heurExitsolObj, heurExecObj,
+         heurdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

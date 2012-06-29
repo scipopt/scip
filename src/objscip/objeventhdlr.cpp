@@ -216,7 +216,6 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
 
    assert(scip != NULL);
    assert(objeventhdlr != NULL);
@@ -226,19 +225,12 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    eventhdlrdata->objeventhdlr = objeventhdlr;
    eventhdlrdata->deleteobject = deleteobject;
 
-   eventhdlr = NULL;
    /* include event handler */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
-         eventhdlrExecObj, eventhdlrdata) ); /*lint !e429*/
-   assert(eventhdlr != NULL);
-
-   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventhdlrCopyObj) );
-   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventhdlrFreeObj) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventhdlrInitObj) );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventhdlrExitObj) );
-   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventhdlrInitsolObj) );
-   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventhdlrExitsolObj) );
-   SCIP_CALL( SCIPsetEventhdlrDelete(scip, eventhdlr, eventhdlrDeleteObj) );
+   SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
+         eventhdlrCopyObj,
+         eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj,
+         eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
+         eventhdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }
