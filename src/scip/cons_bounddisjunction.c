@@ -670,8 +670,8 @@ SCIP_RETCODE removeFixedVariables(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
          /* if literal is satisfied, then constraint is redundant and we can stop */
-         if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasLE(scip, var, bound, SCIPvarGetLbGlobal(var))) ||
-             (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasGE(scip, var, bound, SCIPvarGetUbGlobal(var))) )
+         if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasLE(scip, var, bound, SCIPvarGetLbGlobal(var))) || /*lint !e666*/
+            (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasGE(scip, var, bound, SCIPvarGetUbGlobal(var))) ) /*lint !e666*/
          {
             *redundant = TRUE;
             break;
@@ -1272,8 +1272,8 @@ SCIP_RETCODE createNAryBranch(
       assert(var != NULL);
 
       /* constraint should be violated, so all bounds in the constraint have to be violated */
-      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) &&
-         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) );
+      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) && /*lint !e666*/
+         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPgetSolVal(scip, NULL, var), bounds[v])) ); /*lint !e666*/
 
       varlb = SCIPcomputeVarLbLocal(scip, var);
       varub = SCIPcomputeVarUbLocal(scip, var);
@@ -2983,7 +2983,7 @@ int SCIPgetNVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3004,7 +3004,7 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3025,7 +3025,7 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -3046,7 +3046,7 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    {
       SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

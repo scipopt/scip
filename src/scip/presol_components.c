@@ -422,10 +422,17 @@ SCIP_RETCODE copyAndSolveComponent(
 
          if( feasible )
          {
+            SCIP_Real glb;
+            SCIP_Real gub;
+
             /* get values of variables in the optimal solution */
             for( i = 0; i < nvars; ++i )
             {
                subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
+
+               /* get global bounds */
+               glb = SCIPvarGetLbGlobal(vars[i]);
+               gub = SCIPvarGetUbGlobal(vars[i]);
 
                if( subvar != NULL )
                {
@@ -440,14 +447,14 @@ SCIP_RETCODE copyAndSolveComponent(
                    * the absolute epsilon; therefore, we change the fixing values, if needed, and mark that the solution
                    * has to be checked again
                    */
-                  if( SCIPisGT(scip, fixvals[i], SCIPvarGetUbGlobal(vars[i])) )
+                  if( SCIPisGT(scip, fixvals[i], gub) )
                   {
-                     fixvals[i] = SCIPvarGetUbGlobal(vars[i]);
+                     fixvals[i] = gub;
                      feasible = FALSE;
                   }
-                  else if( SCIPisLT(scip, fixvals[i], SCIPvarGetLbGlobal(vars[i])) )
+                  else if( SCIPisLT(scip, fixvals[i], glb) )
                   {
-                     fixvals[i] = SCIPvarGetLbGlobal(vars[i]);
+                     fixvals[i] = glb;
                      feasible = FALSE;
                   }
                   assert(SCIPisLE(scip, fixvals[i], SCIPvarGetUbLocal(vars[i])));
@@ -459,14 +466,14 @@ SCIP_RETCODE copyAndSolveComponent(
                    * thus, the variable is not constrained and we fix it to its best bound
                    */
                   if( SCIPisPositive(scip, SCIPvarGetObj(vars[i])) )
-                     fixvals[i] = SCIPvarGetLbGlobal(vars[i]);
+                     fixvals[i] = glb;
                   else if( SCIPisNegative(scip, SCIPvarGetObj(vars[i])) )
-                     fixvals[i] = SCIPvarGetUbGlobal(vars[i]);
+                     fixvals[i] = gub;
                   else
                   {
                      fixvals[i] = 0.0;
-                     fixvals[i] = MIN(fixvals[i], SCIPvarGetUbGlobal(vars[i]));
-                     fixvals[i] = MAX(fixvals[i], SCIPvarGetLbGlobal(vars[i]));
+                     fixvals[i] = MIN(fixvals[i], gub);
+                     fixvals[i] = MAX(fixvals[i], glb);
                   }
                }
             }
@@ -834,8 +841,8 @@ SCIP_RETCODE splitProblem(
          else
          {
             compfixvals[0] = 0.0;
-            compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0]));
-            compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0]));
+            compfixvals[0] = MIN(compfixvals[0], SCIPvarGetUbGlobal(compvars[0])); /*lint !e666*/
+            compfixvals[0] = MAX(compfixvals[0], SCIPvarGetLbGlobal(compvars[0])); /*lint !e666*/
          }
 
 #ifdef SCIP_MORE_DEBUG

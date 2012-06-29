@@ -5836,7 +5836,7 @@ SCIP_Bool SCIPnlpHasContinuousNonlinearity(
          assert(exprtreevars != NULL || nexprtreevars == 0);
 
          for( i = 0; i < nexprtreevars; ++i )
-            if( SCIPvarGetType(exprtreevars[i]) == SCIP_VARTYPE_CONTINUOUS )
+            if( SCIPvarGetType(exprtreevars[i]) == SCIP_VARTYPE_CONTINUOUS ) /*lint !e613*/
                return TRUE;
       }
    }
