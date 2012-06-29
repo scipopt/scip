@@ -6212,6 +6212,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.lb;
+   assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
    /* adjust the bound, that the lower bound is always <= to the upper bound */
    newbound = MIN(newbound, var->glbdom.ub);
    var->glbdom.lb = newbound;
@@ -6383,6 +6384,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* change the bound */
    oldbound = var->glbdom.ub;
+   assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
    /* adjust the bound, that the upper bound is always >= to the lower bound */
    newbound = MAX(newbound, var->glbdom.lb);
    var->glbdom.ub = newbound;
@@ -6948,6 +6950,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* change the bound */
    oldbound = var->locdom.lb;
+   assert(SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    /* adjust the bound, that the lower bound is always <= to the upper bound */
    newbound = MIN(newbound, var->locdom.ub);
    var->locdom.lb = newbound;
@@ -7093,6 +7096,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* change the bound */
    oldbound = var->locdom.ub;
+   assert(SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    /* adjust the bound, that the upper bound is always >= to the lower bound */
    newbound = MAX(newbound, var->locdom.lb);
    var->locdom.ub = newbound;
