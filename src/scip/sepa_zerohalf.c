@@ -1757,8 +1757,8 @@ void findClosestLb(
             assert(dvlb != NULL);
             assert(SCIPvarGetType(zvlb[j]) != SCIP_VARTYPE_CONTINUOUS);
          
-            /* use only vlb with nonnegative variable z that are column variables */
-            if( SCIPvarGetStatus(zvlb[j]) == SCIP_VARSTATUS_COLUMN && 
+            /* use only vlb with nonnegative variable z that are column variables and present in the current LP */
+            if( SCIPvarGetStatus(zvlb[j]) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(SCIPvarGetCol(zvlb[j])) &&
                !SCIPisNegative(scip, SCIPcolGetLb(SCIPvarGetCol(zvlb[j]))) )
             {
                SCIP_Real vlbsol;
@@ -1862,8 +1862,8 @@ void findClosestUb(
             assert(dvub != NULL);
             assert(SCIPvarGetType(zvub[j]) != SCIP_VARTYPE_CONTINUOUS);
          
-            /* use only vub with nonnegative variable z that are column variables */
-            if( SCIPvarGetStatus(zvub[j]) == SCIP_VARSTATUS_COLUMN && 
+            /* use only vub with nonnegative variable z that are column variables and present in the current LP */
+            if( SCIPvarGetStatus(zvub[j]) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(SCIPvarGetCol(zvub[j])) &&
                !SCIPisNegative(scip, SCIPcolGetUb(SCIPvarGetCol(zvub[j]))) )
             {
                SCIP_Real vubsol;
@@ -2097,7 +2097,10 @@ SCIP_RETCODE getRelevantRows(
           
             if( bestbndtype > -1 )
             {
-               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));            
+               int zlppos;
+
+               zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));
+               assert(0 <= zlppos && zlppos < lpdata->ncols);
 
                if( valscurrentrow[c] > 0 )
                   densecoeffscurrentrightrow[zlppos] += valscurrentrow[c] * bestbvbnd;
@@ -2111,7 +2114,10 @@ SCIP_RETCODE getRelevantRows(
 
             if( bestbndtype > -1 )
             {
-               int zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));    
+               int zlppos;
+
+               zlppos = SCIPcolGetLPPos(SCIPvarGetCol(bestzvbnd));
+               assert(0 <= zlppos && zlppos < lpdata->ncols);
 
                if( valscurrentrow[c] > 0 )
                   densecoeffscurrentleftrow[zlppos] -= valscurrentrow[c] * bestbvbnd;

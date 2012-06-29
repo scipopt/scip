@@ -207,11 +207,14 @@ SCIP_RETCODE consdataPrint(
    {
       SCIPinfoMessage(scip, file, " no binary variables yet");
    }
-
-   for( b = 0; b < nbinvars; ++b )
+   else
    {
-      SCIPinfoMessage(scip, file, " %+d ", offset + b);
-      SCIP_CALL( SCIPwriteVarName(scip, file, binvars[b], FALSE) );
+      assert(binvars != NULL);
+      for( b = 0; b < nbinvars; ++b )
+      {
+         SCIPinfoMessage(scip, file, " %+d ", offset + b);
+         SCIP_CALL( SCIPwriteVarName(scip, file, binvars[b], FALSE) );
+      }
    }
 
    return SCIP_OKAY;
@@ -2752,7 +2755,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseLinking)
-{
+{  /*lint --e{715}*/
    SCIP_VAR** binvars;
    SCIP_VAR* intvar;
    SCIP_VAR* var;

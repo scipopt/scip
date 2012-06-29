@@ -60,10 +60,30 @@ do
 	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" clean
 	echo
 
-	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\""
+	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\"" -j
 	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS"
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" -j
 	echo
+
+	if test "$?" != 0
+	then
+	    exit
+	fi
+
+	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
+	echo
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false clean
+	echo
+
+	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false -j
+	echo
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false -j
+	echo
+
+	if test "$?" != 0
+	then
+	    exit
+	fi
 
 #	if test "$?" = 0
 #	then

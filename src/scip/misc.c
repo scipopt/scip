@@ -4503,7 +4503,7 @@ void SCIPdigraphFree(
    assert(*digraph != NULL);
 
    /* free arrays storing the successor nodes and arc datas */
-   for( i = 0; i < (*digraph)->nnodes; ++i )
+   for( i = (*digraph)->nnodes - 1; i >= 0; --i )
    {
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
       BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
@@ -6180,6 +6180,19 @@ SCIP_Longint SCIPcalcBinomCoef(
 /*
  * Permutations / Shuffling
  */
+
+/** swaps two ints */
+void SCIPswapInts(
+   int*                  value1,             /**< pointer to first integer */
+   int*                  value2              /**< pointer ti second integer */
+   )
+{
+   int tmp;
+
+   tmp = *value1;
+   *value1 = *value2;
+   *value2 = tmp;
+}
 
 /** swaps the addresses of two pointers */
 void SCIPswapPointers(

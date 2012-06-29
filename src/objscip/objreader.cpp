@@ -150,7 +150,6 @@ SCIP_RETCODE SCIPincludeObjReader(
    )
 {
    SCIP_READERDATA* readerdata;
-   SCIP_READER* reader;
 
    assert(scip != NULL);
    assert(objreader != NULL);
@@ -159,18 +158,11 @@ SCIP_RETCODE SCIPincludeObjReader(
    readerdata = new SCIP_READERDATA;
    readerdata->objreader = objreader;
    readerdata->deleteobject = deleteobject;
-   reader = NULL;
 
    /* include file reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
-         readerdata) ); /*lint !e429*/
-   assert(reader != NULL);
-
-   /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyObj) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeObj) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadObj) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteObj) );
+   SCIP_CALL( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
+         readerCopyObj,
+         readerFreeObj, readerReadObj, readerWriteObj, readerdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

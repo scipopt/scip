@@ -1,0 +1,564 @@
+STATISTICS
+  Problem name     : partorb_1-FullIns_3.cip
+  Variables        : 124 (0 binary, 124 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 431 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x#0#0>: obj=0, original bounds=[0,1]
+  [integer] <x#0#1>: obj=0, original bounds=[0,1]
+  [integer] <x#0#2>: obj=0, original bounds=[0,1]
+  [integer] <x#0#3>: obj=0, original bounds=[0,1]
+  [integer] <x#1#0>: obj=0, original bounds=[0,1]
+  [integer] <x#1#1>: obj=0, original bounds=[0,1]
+  [integer] <x#1#2>: obj=0, original bounds=[0,1]
+  [integer] <x#1#3>: obj=0, original bounds=[0,1]
+  [integer] <x#2#0>: obj=0, original bounds=[0,1]
+  [integer] <x#2#1>: obj=0, original bounds=[0,1]
+  [integer] <x#2#2>: obj=0, original bounds=[0,1]
+  [integer] <x#2#3>: obj=0, original bounds=[0,1]
+  [integer] <x#3#0>: obj=0, original bounds=[0,1]
+  [integer] <x#3#1>: obj=0, original bounds=[0,1]
+  [integer] <x#3#2>: obj=0, original bounds=[0,1]
+  [integer] <x#3#3>: obj=0, original bounds=[0,1]
+  [integer] <x#4#0>: obj=0, original bounds=[0,1]
+  [integer] <x#4#1>: obj=0, original bounds=[0,1]
+  [integer] <x#4#2>: obj=0, original bounds=[0,1]
+  [integer] <x#4#3>: obj=0, original bounds=[0,1]
+  [integer] <x#5#0>: obj=0, original bounds=[0,1]
+  [integer] <x#5#1>: obj=0, original bounds=[0,1]
+  [integer] <x#5#2>: obj=0, original bounds=[0,1]
+  [integer] <x#5#3>: obj=0, original bounds=[0,1]
+  [integer] <x#6#0>: obj=0, original bounds=[0,1]
+  [integer] <x#6#1>: obj=0, original bounds=[0,1]
+  [integer] <x#6#2>: obj=0, original bounds=[0,1]
+  [integer] <x#6#3>: obj=0, original bounds=[0,1]
+  [integer] <x#7#0>: obj=0, original bounds=[0,1]
+  [integer] <x#7#1>: obj=0, original bounds=[0,1]
+  [integer] <x#7#2>: obj=0, original bounds=[0,1]
+  [integer] <x#7#3>: obj=0, original bounds=[0,1]
+  [integer] <x#8#0>: obj=0, original bounds=[0,1]
+  [integer] <x#8#1>: obj=0, original bounds=[0,1]
+  [integer] <x#8#2>: obj=0, original bounds=[0,1]
+  [integer] <x#8#3>: obj=0, original bounds=[0,1]
+  [integer] <x#9#0>: obj=0, original bounds=[0,1]
+  [integer] <x#9#1>: obj=0, original bounds=[0,1]
+  [integer] <x#9#2>: obj=0, original bounds=[0,1]
+  [integer] <x#9#3>: obj=0, original bounds=[0,1]
+  [integer] <x#10#0>: obj=0, original bounds=[0,1]
+  [integer] <x#10#1>: obj=0, original bounds=[0,1]
+  [integer] <x#10#2>: obj=0, original bounds=[0,1]
+  [integer] <x#10#3>: obj=0, original bounds=[0,1]
+  [integer] <x#11#0>: obj=0, original bounds=[0,1]
+  [integer] <x#11#1>: obj=0, original bounds=[0,1]
+  [integer] <x#11#2>: obj=0, original bounds=[0,1]
+  [integer] <x#11#3>: obj=0, original bounds=[0,1]
+  [integer] <x#12#0>: obj=0, original bounds=[0,1]
+  [integer] <x#12#1>: obj=0, original bounds=[0,1]
+  [integer] <x#12#2>: obj=0, original bounds=[0,1]
+  [integer] <x#12#3>: obj=0, original bounds=[0,1]
+  [integer] <x#13#0>: obj=0, original bounds=[0,1]
+  [integer] <x#13#1>: obj=0, original bounds=[0,1]
+  [integer] <x#13#2>: obj=0, original bounds=[0,1]
+  [integer] <x#13#3>: obj=0, original bounds=[0,1]
+  [integer] <x#14#0>: obj=0, original bounds=[0,1]
+  [integer] <x#14#1>: obj=0, original bounds=[0,1]
+  [integer] <x#14#2>: obj=0, original bounds=[0,1]
+  [integer] <x#14#3>: obj=0, original bounds=[0,1]
+  [integer] <x#15#0>: obj=0, original bounds=[0,1]
+  [integer] <x#15#1>: obj=0, original bounds=[0,1]
+  [integer] <x#15#2>: obj=0, original bounds=[0,1]
+  [integer] <x#15#3>: obj=0, original bounds=[0,1]
+  [integer] <x#16#0>: obj=0, original bounds=[0,1]
+  [integer] <x#16#1>: obj=0, original bounds=[0,1]
+  [integer] <x#16#2>: obj=0, original bounds=[0,1]
+  [integer] <x#16#3>: obj=0, original bounds=[0,1]
+  [integer] <x#17#0>: obj=0, original bounds=[0,1]
+  [integer] <x#17#1>: obj=0, original bounds=[0,1]
+  [integer] <x#17#2>: obj=0, original bounds=[0,1]
+  [integer] <x#17#3>: obj=0, original bounds=[0,1]
+  [integer] <x#18#0>: obj=0, original bounds=[0,1]
+  [integer] <x#18#1>: obj=0, original bounds=[0,1]
+  [integer] <x#18#2>: obj=0, original bounds=[0,1]
+  [integer] <x#18#3>: obj=0, original bounds=[0,1]
+  [integer] <x#19#0>: obj=0, original bounds=[0,1]
+  [integer] <x#19#1>: obj=0, original bounds=[0,1]
+  [integer] <x#19#2>: obj=0, original bounds=[0,1]
+  [integer] <x#19#3>: obj=0, original bounds=[0,1]
+  [integer] <x#20#0>: obj=0, original bounds=[0,1]
+  [integer] <x#20#1>: obj=0, original bounds=[0,1]
+  [integer] <x#20#2>: obj=0, original bounds=[0,1]
+  [integer] <x#20#3>: obj=0, original bounds=[0,1]
+  [integer] <x#21#0>: obj=0, original bounds=[0,1]
+  [integer] <x#21#1>: obj=0, original bounds=[0,1]
+  [integer] <x#21#2>: obj=0, original bounds=[0,1]
+  [integer] <x#21#3>: obj=0, original bounds=[0,1]
+  [integer] <x#22#0>: obj=0, original bounds=[0,1]
+  [integer] <x#22#1>: obj=0, original bounds=[0,1]
+  [integer] <x#22#2>: obj=0, original bounds=[0,1]
+  [integer] <x#22#3>: obj=0, original bounds=[0,1]
+  [integer] <x#23#0>: obj=0, original bounds=[0,1]
+  [integer] <x#23#1>: obj=0, original bounds=[0,1]
+  [integer] <x#23#2>: obj=0, original bounds=[0,1]
+  [integer] <x#23#3>: obj=0, original bounds=[0,1]
+  [integer] <x#24#0>: obj=0, original bounds=[0,1]
+  [integer] <x#24#1>: obj=0, original bounds=[0,1]
+  [integer] <x#24#2>: obj=0, original bounds=[0,1]
+  [integer] <x#24#3>: obj=0, original bounds=[0,1]
+  [integer] <x#25#0>: obj=0, original bounds=[0,1]
+  [integer] <x#25#1>: obj=0, original bounds=[0,1]
+  [integer] <x#25#2>: obj=0, original bounds=[0,1]
+  [integer] <x#25#3>: obj=0, original bounds=[0,1]
+  [integer] <x#26#0>: obj=0, original bounds=[0,1]
+  [integer] <x#26#1>: obj=0, original bounds=[0,1]
+  [integer] <x#26#2>: obj=0, original bounds=[0,1]
+  [integer] <x#26#3>: obj=0, original bounds=[0,1]
+  [integer] <x#27#0>: obj=0, original bounds=[0,1]
+  [integer] <x#27#1>: obj=0, original bounds=[0,1]
+  [integer] <x#27#2>: obj=0, original bounds=[0,1]
+  [integer] <x#27#3>: obj=0, original bounds=[0,1]
+  [integer] <x#28#0>: obj=0, original bounds=[0,1]
+  [integer] <x#28#1>: obj=0, original bounds=[0,1]
+  [integer] <x#28#2>: obj=0, original bounds=[0,1]
+  [integer] <x#28#3>: obj=0, original bounds=[0,1]
+  [integer] <x#29#0>: obj=0, original bounds=[0,1]
+  [integer] <x#29#1>: obj=0, original bounds=[0,1]
+  [integer] <x#29#2>: obj=0, original bounds=[0,1]
+  [integer] <x#29#3>: obj=0, original bounds=[0,1]
+  [integer] <y#0>: obj=1, original bounds=[0,1]
+  [integer] <y#1>: obj=1, original bounds=[0,1]
+  [integer] <y#2>: obj=1, original bounds=[0,1]
+  [integer] <y#3>: obj=1, original bounds=[0,1]
+CONSTRAINTS
+  [linear] <pack_1>: <x#0#3>[I] +<x#0#2>[I] +<x#0#1>[I] +<x#0#0>[I] == 1;
+  [linear] <pack_2>: <x#1#3>[I] +<x#1#2>[I] +<x#1#1>[I] +<x#1#0>[I] == 1;
+  [linear] <pack_3>: <x#2#3>[I] +<x#2#2>[I] +<x#2#1>[I] +<x#2#0>[I] == 1;
+  [linear] <pack_4>: <x#3#3>[I] +<x#3#2>[I] +<x#3#1>[I] +<x#3#0>[I] == 1;
+  [linear] <pack_5>: <x#4#3>[I] +<x#4#2>[I] +<x#4#1>[I] +<x#4#0>[I] == 1;
+  [linear] <pack_6>: <x#5#3>[I] +<x#5#2>[I] +<x#5#1>[I] +<x#5#0>[I] == 1;
+  [linear] <pack_7>: <x#6#3>[I] +<x#6#2>[I] +<x#6#1>[I] +<x#6#0>[I] == 1;
+  [linear] <pack_8>: <x#7#3>[I] +<x#7#2>[I] +<x#7#1>[I] +<x#7#0>[I] == 1;
+  [linear] <pack_9>: <x#8#3>[I] +<x#8#2>[I] +<x#8#1>[I] +<x#8#0>[I] == 1;
+  [linear] <pack_10>: <x#9#3>[I] +<x#9#2>[I] +<x#9#1>[I] +<x#9#0>[I] == 1;
+  [linear] <pack_11>: <x#10#3>[I] +<x#10#2>[I] +<x#10#1>[I] +<x#10#0>[I] == 1;
+  [linear] <pack_12>: <x#11#3>[I] +<x#11#2>[I] +<x#11#1>[I] +<x#11#0>[I] == 1;
+  [linear] <pack_13>: <x#12#3>[I] +<x#12#2>[I] +<x#12#1>[I] +<x#12#0>[I] == 1;
+  [linear] <pack_14>: <x#13#3>[I] +<x#13#2>[I] +<x#13#1>[I] +<x#13#0>[I] == 1;
+  [linear] <pack_15>: <x#14#3>[I] +<x#14#2>[I] +<x#14#1>[I] +<x#14#0>[I] == 1;
+  [linear] <pack_16>: <x#15#3>[I] +<x#15#2>[I] +<x#15#1>[I] +<x#15#0>[I] == 1;
+  [linear] <pack_17>: <x#16#3>[I] +<x#16#2>[I] +<x#16#1>[I] +<x#16#0>[I] == 1;
+  [linear] <pack_18>: <x#17#3>[I] +<x#17#2>[I] +<x#17#1>[I] +<x#17#0>[I] == 1;
+  [linear] <pack_19>: <x#18#3>[I] +<x#18#2>[I] +<x#18#1>[I] +<x#18#0>[I] == 1;
+  [linear] <pack_20>: <x#19#3>[I] +<x#19#2>[I] +<x#19#1>[I] +<x#19#0>[I] == 1;
+  [linear] <pack_21>: <x#20#3>[I] +<x#20#2>[I] +<x#20#1>[I] +<x#20#0>[I] == 1;
+  [linear] <pack_22>: <x#21#3>[I] +<x#21#2>[I] +<x#21#1>[I] +<x#21#0>[I] == 1;
+  [linear] <pack_23>: <x#22#3>[I] +<x#22#2>[I] +<x#22#1>[I] +<x#22#0>[I] == 1;
+  [linear] <pack_24>: <x#23#3>[I] +<x#23#2>[I] +<x#23#1>[I] +<x#23#0>[I] == 1;
+  [linear] <pack_25>: <x#24#3>[I] +<x#24#2>[I] +<x#24#1>[I] +<x#24#0>[I] == 1;
+  [linear] <pack_26>: <x#25#3>[I] +<x#25#2>[I] +<x#25#1>[I] +<x#25#0>[I] == 1;
+  [linear] <pack_27>: <x#26#3>[I] +<x#26#2>[I] +<x#26#1>[I] +<x#26#0>[I] == 1;
+  [linear] <pack_28>: <x#27#3>[I] +<x#27#2>[I] +<x#27#1>[I] +<x#27#0>[I] == 1;
+  [linear] <pack_29>: <x#28#3>[I] +<x#28#2>[I] +<x#28#1>[I] +<x#28#0>[I] == 1;
+  [linear] <pack_30>: <x#29#3>[I] +<x#29#2>[I] +<x#29#1>[I] +<x#29#0>[I] == 1;
+  [linear] <edge_1>:  -<y#0>[I] +<x#1#0>[I] +<x#0#0>[I] <= 0;
+  [linear] <edge_2>:  -<y#1>[I] +<x#1#1>[I] +<x#0#1>[I] <= 0;
+  [linear] <edge_3>:  -<y#2>[I] +<x#1#2>[I] +<x#0#2>[I] <= 0;
+  [linear] <edge_4>:  -<y#3>[I] +<x#1#3>[I] +<x#0#3>[I] <= 0;
+  [linear] <edge_5>:  -<y#0>[I] +<x#3#0>[I] +<x#0#0>[I] <= 0;
+  [linear] <edge_6>:  -<y#1>[I] +<x#3#1>[I] +<x#0#1>[I] <= 0;
+  [linear] <edge_7>:  -<y#2>[I] +<x#3#2>[I] +<x#0#2>[I] <= 0;
+  [linear] <edge_8>:  -<y#3>[I] +<x#3#3>[I] +<x#0#3>[I] <= 0;
+  [linear] <edge_9>:  -<y#0>[I] +<x#10#0>[I] +<x#0#0>[I] <= 0;
+  [linear] <edge_10>:  -<y#1>[I] +<x#10#1>[I] +<x#0#1>[I] <= 0;
+  [linear] <edge_11>:  -<y#2>[I] +<x#10#2>[I] +<x#0#2>[I] <= 0;
+  [linear] <edge_12>:  -<y#3>[I] +<x#10#3>[I] +<x#0#3>[I] <= 0;
+  [linear] <edge_13>:  -<y#0>[I] +<x#12#0>[I] +<x#0#0>[I] <= 0;
+  [linear] <edge_14>:  -<y#1>[I] +<x#12#1>[I] +<x#0#1>[I] <= 0;
+  [linear] <edge_15>:  -<y#2>[I] +<x#12#2>[I] +<x#0#2>[I] <= 0;
+  [linear] <edge_16>:  -<y#3>[I] +<x#12#3>[I] +<x#0#3>[I] <= 0;
+  [linear] <edge_17>:  -<y#0>[I] +<x#2#0>[I] +<x#1#0>[I] <= 0;
+  [linear] <edge_18>:  -<y#1>[I] +<x#2#1>[I] +<x#1#1>[I] <= 0;
+  [linear] <edge_19>:  -<y#2>[I] +<x#2#2>[I] +<x#1#2>[I] <= 0;
+  [linear] <edge_20>:  -<y#3>[I] +<x#2#3>[I] +<x#1#3>[I] <= 0;
+  [linear] <edge_21>:  -<y#0>[I] +<x#9#0>[I] +<x#1#0>[I] <= 0;
+  [linear] <edge_22>:  -<y#1>[I] +<x#9#1>[I] +<x#1#1>[I] <= 0;
+  [linear] <edge_23>:  -<y#2>[I] +<x#9#2>[I] +<x#1#2>[I] <= 0;
+  [linear] <edge_24>:  -<y#3>[I] +<x#9#3>[I] +<x#1#3>[I] <= 0;
+  [linear] <edge_25>:  -<y#0>[I] +<x#11#0>[I] +<x#1#0>[I] <= 0;
+  [linear] <edge_26>:  -<y#1>[I] +<x#11#1>[I] +<x#1#1>[I] <= 0;
+  [linear] <edge_27>:  -<y#2>[I] +<x#11#2>[I] +<x#1#2>[I] <= 0;
+  [linear] <edge_28>:  -<y#3>[I] +<x#11#3>[I] +<x#1#3>[I] <= 0;
+  [linear] <edge_29>:  -<y#0>[I] +<x#10#0>[I] +<x#2#0>[I] <= 0;
+  [linear] <edge_30>:  -<y#1>[I] +<x#10#1>[I] +<x#2#1>[I] <= 0;
+  [linear] <edge_31>:  -<y#2>[I] +<x#10#2>[I] +<x#2#2>[I] <= 0;
+  [linear] <edge_32>:  -<y#3>[I] +<x#10#3>[I] +<x#2#3>[I] <= 0;
+  [linear] <edge_33>:  -<y#0>[I] +<x#5#0>[I] +<x#2#0>[I] <= 0;
+  [linear] <edge_34>:  -<y#1>[I] +<x#5#1>[I] +<x#2#1>[I] <= 0;
+  [linear] <edge_35>:  -<y#2>[I] +<x#5#2>[I] +<x#2#2>[I] <= 0;
+  [linear] <edge_36>:  -<y#3>[I] +<x#5#3>[I] +<x#2#3>[I] <= 0;
+  [linear] <edge_37>:  -<y#0>[I] +<x#7#0>[I] +<x#2#0>[I] <= 0;
+  [linear] <edge_38>:  -<y#1>[I] +<x#7#1>[I] +<x#2#1>[I] <= 0;
+  [linear] <edge_39>:  -<y#2>[I] +<x#7#2>[I] +<x#2#2>[I] <= 0;
+  [linear] <edge_40>:  -<y#3>[I] +<x#7#3>[I] +<x#2#3>[I] <= 0;
+  [linear] <edge_41>:  -<y#0>[I] +<x#14#0>[I] +<x#2#0>[I] <= 0;
+  [linear] <edge_42>:  -<y#1>[I] +<x#14#1>[I] +<x#2#1>[I] <= 0;
+  [linear] <edge_43>:  -<y#2>[I] +<x#14#2>[I] +<x#2#2>[I] <= 0;
+  [linear] <edge_44>:  -<y#3>[I] +<x#14#3>[I] +<x#2#3>[I] <= 0;
+  [linear] <edge_45>:  -<y#0>[I] +<x#16#0>[I] +<x#2#0>[I] <= 0;
+  [linear] <edge_46>:  -<y#1>[I] +<x#16#1>[I] +<x#2#1>[I] <= 0;
+  [linear] <edge_47>:  -<y#2>[I] +<x#16#2>[I] +<x#2#2>[I] <= 0;
+  [linear] <edge_48>:  -<y#3>[I] +<x#16#3>[I] +<x#2#3>[I] <= 0;
+  [linear] <edge_49>:  -<y#0>[I] +<x#9#0>[I] +<x#3#0>[I] <= 0;
+  [linear] <edge_50>:  -<y#1>[I] +<x#9#1>[I] +<x#3#1>[I] <= 0;
+  [linear] <edge_51>:  -<y#2>[I] +<x#9#2>[I] +<x#3#2>[I] <= 0;
+  [linear] <edge_52>:  -<y#3>[I] +<x#9#3>[I] +<x#3#3>[I] <= 0;
+  [linear] <edge_53>:  -<y#0>[I] +<x#7#0>[I] +<x#3#0>[I] <= 0;
+  [linear] <edge_54>:  -<y#1>[I] +<x#7#1>[I] +<x#3#1>[I] <= 0;
+  [linear] <edge_55>:  -<y#2>[I] +<x#7#2>[I] +<x#3#2>[I] <= 0;
+  [linear] <edge_56>:  -<y#3>[I] +<x#7#3>[I] +<x#3#3>[I] <= 0;
+  [linear] <edge_57>:  -<y#0>[I] +<x#16#0>[I] +<x#3#0>[I] <= 0;
+  [linear] <edge_58>:  -<y#1>[I] +<x#16#1>[I] +<x#3#1>[I] <= 0;
+  [linear] <edge_59>:  -<y#2>[I] +<x#16#2>[I] +<x#3#2>[I] <= 0;
+  [linear] <edge_60>:  -<y#3>[I] +<x#16#3>[I] +<x#3#3>[I] <= 0;
+  [linear] <edge_61>:  -<y#0>[I] +<x#4#0>[I] +<x#3#0>[I] <= 0;
+  [linear] <edge_62>:  -<y#1>[I] +<x#4#1>[I] +<x#3#1>[I] <= 0;
+  [linear] <edge_63>:  -<y#2>[I] +<x#4#2>[I] +<x#3#2>[I] <= 0;
+  [linear] <edge_64>:  -<y#3>[I] +<x#4#3>[I] +<x#3#3>[I] <= 0;
+  [linear] <edge_65>:  -<y#0>[I] +<x#13#0>[I] +<x#3#0>[I] <= 0;
+  [linear] <edge_66>:  -<y#1>[I] +<x#13#1>[I] +<x#3#1>[I] <= 0;
+  [linear] <edge_67>:  -<y#2>[I] +<x#13#2>[I] +<x#3#2>[I] <= 0;
+  [linear] <edge_68>:  -<y#3>[I] +<x#13#3>[I] +<x#3#3>[I] <= 0;
+  [linear] <edge_69>:  -<y#0>[I] +<x#12#0>[I] +<x#4#0>[I] <= 0;
+  [linear] <edge_70>:  -<y#1>[I] +<x#12#1>[I] +<x#4#1>[I] <= 0;
+  [linear] <edge_71>:  -<y#2>[I] +<x#12#2>[I] +<x#4#2>[I] <= 0;
+  [linear] <edge_72>:  -<y#3>[I] +<x#12#3>[I] +<x#4#3>[I] <= 0;
+  [linear] <edge_73>:  -<y#0>[I] +<x#6#0>[I] +<x#4#0>[I] <= 0;
+  [linear] <edge_74>:  -<y#1>[I] +<x#6#1>[I] +<x#4#1>[I] <= 0;
+  [linear] <edge_75>:  -<y#2>[I] +<x#6#2>[I] +<x#4#2>[I] <= 0;
+  [linear] <edge_76>:  -<y#3>[I] +<x#6#3>[I] +<x#4#3>[I] <= 0;
+  [linear] <edge_77>:  -<y#0>[I] +<x#8#0>[I] +<x#4#0>[I] <= 0;
+  [linear] <edge_78>:  -<y#1>[I] +<x#8#1>[I] +<x#4#1>[I] <= 0;
+  [linear] <edge_79>:  -<y#2>[I] +<x#8#2>[I] +<x#4#2>[I] <= 0;
+  [linear] <edge_80>:  -<y#3>[I] +<x#8#3>[I] +<x#4#3>[I] <= 0;
+  [linear] <edge_81>:  -<y#0>[I] +<x#15#0>[I] +<x#4#0>[I] <= 0;
+  [linear] <edge_82>:  -<y#1>[I] +<x#15#1>[I] +<x#4#1>[I] <= 0;
+  [linear] <edge_83>:  -<y#2>[I] +<x#15#2>[I] +<x#4#2>[I] <= 0;
+  [linear] <edge_84>:  -<y#3>[I] +<x#15#3>[I] +<x#4#3>[I] <= 0;
+  [linear] <edge_85>:  -<y#0>[I] +<x#17#0>[I] +<x#4#0>[I] <= 0;
+  [linear] <edge_86>:  -<y#1>[I] +<x#17#1>[I] +<x#4#1>[I] <= 0;
+  [linear] <edge_87>:  -<y#2>[I] +<x#17#2>[I] +<x#4#2>[I] <= 0;
+  [linear] <edge_88>:  -<y#3>[I] +<x#17#3>[I] +<x#4#3>[I] <= 0;
+  [linear] <edge_89>:  -<y#0>[I] +<x#11#0>[I] +<x#5#0>[I] <= 0;
+  [linear] <edge_90>:  -<y#1>[I] +<x#11#1>[I] +<x#5#1>[I] <= 0;
+  [linear] <edge_91>:  -<y#2>[I] +<x#11#2>[I] +<x#5#2>[I] <= 0;
+  [linear] <edge_92>:  -<y#3>[I] +<x#11#3>[I] +<x#5#3>[I] <= 0;
+  [linear] <edge_93>:  -<y#0>[I] +<x#6#0>[I] +<x#5#0>[I] <= 0;
+  [linear] <edge_94>:  -<y#1>[I] +<x#6#1>[I] +<x#5#1>[I] <= 0;
+  [linear] <edge_95>:  -<y#2>[I] +<x#6#2>[I] +<x#5#2>[I] <= 0;
+  [linear] <edge_96>:  -<y#3>[I] +<x#6#3>[I] +<x#5#3>[I] <= 0;
+  [linear] <edge_97>:  -<y#0>[I] +<x#8#0>[I] +<x#5#0>[I] <= 0;
+  [linear] <edge_98>:  -<y#1>[I] +<x#8#1>[I] +<x#5#1>[I] <= 0;
+  [linear] <edge_99>:  -<y#2>[I] +<x#8#2>[I] +<x#5#2>[I] <= 0;
+  [linear] <edge_100>:  -<y#3>[I] +<x#8#3>[I] +<x#5#3>[I] <= 0;
+  [linear] <edge_101>:  -<y#0>[I] +<x#15#0>[I] +<x#5#0>[I] <= 0;
+  [linear] <edge_102>:  -<y#1>[I] +<x#15#1>[I] +<x#5#1>[I] <= 0;
+  [linear] <edge_103>:  -<y#2>[I] +<x#15#2>[I] +<x#5#2>[I] <= 0;
+  [linear] <edge_104>:  -<y#3>[I] +<x#15#3>[I] +<x#5#3>[I] <= 0;
+  [linear] <edge_105>:  -<y#0>[I] +<x#17#0>[I] +<x#5#0>[I] <= 0;
+  [linear] <edge_106>:  -<y#1>[I] +<x#17#1>[I] +<x#5#1>[I] <= 0;
+  [linear] <edge_107>:  -<y#2>[I] +<x#17#2>[I] +<x#5#2>[I] <= 0;
+  [linear] <edge_108>:  -<y#3>[I] +<x#17#3>[I] +<x#5#3>[I] <= 0;
+  [linear] <edge_109>:  -<y#0>[I] +<x#7#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_110>:  -<y#1>[I] +<x#7#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_111>:  -<y#2>[I] +<x#7#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_112>:  -<y#3>[I] +<x#7#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_113>:  -<y#0>[I] +<x#14#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_114>:  -<y#1>[I] +<x#14#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_115>:  -<y#2>[I] +<x#14#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_116>:  -<y#3>[I] +<x#14#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_117>:  -<y#0>[I] +<x#16#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_118>:  -<y#1>[I] +<x#16#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_119>:  -<y#2>[I] +<x#16#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_120>:  -<y#3>[I] +<x#16#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_121>:  -<y#0>[I] +<x#13#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_122>:  -<y#1>[I] +<x#13#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_123>:  -<y#2>[I] +<x#13#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_124>:  -<y#3>[I] +<x#13#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_125>:  -<y#0>[I] +<x#8#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_126>:  -<y#1>[I] +<x#8#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_127>:  -<y#2>[I] +<x#8#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_128>:  -<y#3>[I] +<x#8#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_129>:  -<y#0>[I] +<x#17#0>[I] +<x#6#0>[I] <= 0;
+  [linear] <edge_130>:  -<y#1>[I] +<x#17#1>[I] +<x#6#1>[I] <= 0;
+  [linear] <edge_131>:  -<y#2>[I] +<x#17#2>[I] +<x#6#2>[I] <= 0;
+  [linear] <edge_132>:  -<y#3>[I] +<x#17#3>[I] +<x#6#3>[I] <= 0;
+  [linear] <edge_133>:  -<y#0>[I] +<x#12#0>[I] +<x#7#0>[I] <= 0;
+  [linear] <edge_134>:  -<y#1>[I] +<x#12#1>[I] +<x#7#1>[I] <= 0;
+  [linear] <edge_135>:  -<y#2>[I] +<x#12#2>[I] +<x#7#2>[I] <= 0;
+  [linear] <edge_136>:  -<y#3>[I] +<x#12#3>[I] +<x#7#3>[I] <= 0;
+  [linear] <edge_137>:  -<y#0>[I] +<x#11#0>[I] +<x#7#0>[I] <= 0;
+  [linear] <edge_138>:  -<y#1>[I] +<x#11#1>[I] +<x#7#1>[I] <= 0;
+  [linear] <edge_139>:  -<y#2>[I] +<x#11#2>[I] +<x#7#2>[I] <= 0;
+  [linear] <edge_140>:  -<y#3>[I] +<x#11#3>[I] +<x#7#3>[I] <= 0;
+  [linear] <edge_141>:  -<y#0>[I] +<x#8#0>[I] +<x#7#0>[I] <= 0;
+  [linear] <edge_142>:  -<y#1>[I] +<x#8#1>[I] +<x#7#1>[I] <= 0;
+  [linear] <edge_143>:  -<y#2>[I] +<x#8#2>[I] +<x#7#2>[I] <= 0;
+  [linear] <edge_144>:  -<y#3>[I] +<x#8#3>[I] +<x#7#3>[I] <= 0;
+  [linear] <edge_145>:  -<y#0>[I] +<x#15#0>[I] +<x#7#0>[I] <= 0;
+  [linear] <edge_146>:  -<y#1>[I] +<x#15#1>[I] +<x#7#1>[I] <= 0;
+  [linear] <edge_147>:  -<y#2>[I] +<x#15#2>[I] +<x#7#2>[I] <= 0;
+  [linear] <edge_148>:  -<y#3>[I] +<x#15#3>[I] +<x#7#3>[I] <= 0;
+  [linear] <edge_149>:  -<y#0>[I] +<x#17#0>[I] +<x#7#0>[I] <= 0;
+  [linear] <edge_150>:  -<y#1>[I] +<x#17#1>[I] +<x#7#1>[I] <= 0;
+  [linear] <edge_151>:  -<y#2>[I] +<x#17#2>[I] +<x#7#2>[I] <= 0;
+  [linear] <edge_152>:  -<y#3>[I] +<x#17#3>[I] +<x#7#3>[I] <= 0;
+  [linear] <edge_153>:  -<y#0>[I] +<x#14#0>[I] +<x#8#0>[I] <= 0;
+  [linear] <edge_154>:  -<y#1>[I] +<x#14#1>[I] +<x#8#1>[I] <= 0;
+  [linear] <edge_155>:  -<y#2>[I] +<x#14#2>[I] +<x#8#2>[I] <= 0;
+  [linear] <edge_156>:  -<y#3>[I] +<x#14#3>[I] +<x#8#3>[I] <= 0;
+  [linear] <edge_157>:  -<y#0>[I] +<x#16#0>[I] +<x#8#0>[I] <= 0;
+  [linear] <edge_158>:  -<y#1>[I] +<x#16#1>[I] +<x#8#1>[I] <= 0;
+  [linear] <edge_159>:  -<y#2>[I] +<x#16#2>[I] +<x#8#2>[I] <= 0;
+  [linear] <edge_160>:  -<y#3>[I] +<x#16#3>[I] +<x#8#3>[I] <= 0;
+  [linear] <edge_161>:  -<y#0>[I] +<x#13#0>[I] +<x#8#0>[I] <= 0;
+  [linear] <edge_162>:  -<y#1>[I] +<x#13#1>[I] +<x#8#1>[I] <= 0;
+  [linear] <edge_163>:  -<y#2>[I] +<x#13#2>[I] +<x#8#2>[I] <= 0;
+  [linear] <edge_164>:  -<y#3>[I] +<x#13#3>[I] +<x#8#3>[I] <= 0;
+  [linear] <edge_165>:  -<y#0>[I] +<x#15#0>[I] +<x#8#0>[I] <= 0;
+  [linear] <edge_166>:  -<y#1>[I] +<x#15#1>[I] +<x#8#1>[I] <= 0;
+  [linear] <edge_167>:  -<y#2>[I] +<x#15#2>[I] +<x#8#2>[I] <= 0;
+  [linear] <edge_168>:  -<y#3>[I] +<x#15#3>[I] +<x#8#3>[I] <= 0;
+  [linear] <edge_169>:  -<y#0>[I] +<x#19#0>[I] +<x#9#0>[I] <= 0;
+  [linear] <edge_170>:  -<y#1>[I] +<x#19#1>[I] +<x#9#1>[I] <= 0;
+  [linear] <edge_171>:  -<y#2>[I] +<x#19#2>[I] +<x#9#2>[I] <= 0;
+  [linear] <edge_172>:  -<y#3>[I] +<x#19#3>[I] +<x#9#3>[I] <= 0;
+  [linear] <edge_173>:  -<y#0>[I] +<x#21#0>[I] +<x#9#0>[I] <= 0;
+  [linear] <edge_174>:  -<y#1>[I] +<x#21#1>[I] +<x#9#1>[I] <= 0;
+  [linear] <edge_175>:  -<y#2>[I] +<x#21#2>[I] +<x#9#2>[I] <= 0;
+  [linear] <edge_176>:  -<y#3>[I] +<x#21#3>[I] +<x#9#3>[I] <= 0;
+  [linear] <edge_177>:  -<y#0>[I] +<x#28#0>[I] +<x#9#0>[I] <= 0;
+  [linear] <edge_178>:  -<y#1>[I] +<x#28#1>[I] +<x#9#1>[I] <= 0;
+  [linear] <edge_179>:  -<y#2>[I] +<x#28#2>[I] +<x#9#2>[I] <= 0;
+  [linear] <edge_180>:  -<y#3>[I] +<x#28#3>[I] +<x#9#3>[I] <= 0;
+  [linear] <edge_181>:  -<y#0>[I] +<x#28#0>[I] +<x#10#0>[I] <= 0;
+  [linear] <edge_182>:  -<y#1>[I] +<x#28#1>[I] +<x#10#1>[I] <= 0;
+  [linear] <edge_183>:  -<y#2>[I] +<x#28#2>[I] +<x#10#2>[I] <= 0;
+  [linear] <edge_184>:  -<y#3>[I] +<x#28#3>[I] +<x#10#3>[I] <= 0;
+  [linear] <edge_185>:  -<y#0>[I] +<x#18#0>[I] +<x#10#0>[I] <= 0;
+  [linear] <edge_186>:  -<y#1>[I] +<x#18#1>[I] +<x#10#1>[I] <= 0;
+  [linear] <edge_187>:  -<y#2>[I] +<x#18#2>[I] +<x#10#2>[I] <= 0;
+  [linear] <edge_188>:  -<y#3>[I] +<x#18#3>[I] +<x#10#3>[I] <= 0;
+  [linear] <edge_189>:  -<y#0>[I] +<x#20#0>[I] +<x#10#0>[I] <= 0;
+  [linear] <edge_190>:  -<y#1>[I] +<x#20#1>[I] +<x#10#1>[I] <= 0;
+  [linear] <edge_191>:  -<y#2>[I] +<x#20#2>[I] +<x#10#2>[I] <= 0;
+  [linear] <edge_192>:  -<y#3>[I] +<x#20#3>[I] +<x#10#3>[I] <= 0;
+  [linear] <edge_193>:  -<y#0>[I] +<x#19#0>[I] +<x#11#0>[I] <= 0;
+  [linear] <edge_194>:  -<y#1>[I] +<x#19#1>[I] +<x#11#1>[I] <= 0;
+  [linear] <edge_195>:  -<y#2>[I] +<x#19#2>[I] +<x#11#2>[I] <= 0;
+  [linear] <edge_196>:  -<y#3>[I] +<x#19#3>[I] +<x#11#3>[I] <= 0;
+  [linear] <edge_197>:  -<y#0>[I] +<x#28#0>[I] +<x#11#0>[I] <= 0;
+  [linear] <edge_198>:  -<y#1>[I] +<x#28#1>[I] +<x#11#1>[I] <= 0;
+  [linear] <edge_199>:  -<y#2>[I] +<x#28#2>[I] +<x#11#2>[I] <= 0;
+  [linear] <edge_200>:  -<y#3>[I] +<x#28#3>[I] +<x#11#3>[I] <= 0;
+  [linear] <edge_201>:  -<y#0>[I] +<x#23#0>[I] +<x#11#0>[I] <= 0;
+  [linear] <edge_202>:  -<y#1>[I] +<x#23#1>[I] +<x#11#1>[I] <= 0;
+  [linear] <edge_203>:  -<y#2>[I] +<x#23#2>[I] +<x#11#2>[I] <= 0;
+  [linear] <edge_204>:  -<y#3>[I] +<x#23#3>[I] +<x#11#3>[I] <= 0;
+  [linear] <edge_205>:  -<y#0>[I] +<x#25#0>[I] +<x#11#0>[I] <= 0;
+  [linear] <edge_206>:  -<y#1>[I] +<x#25#1>[I] +<x#11#1>[I] <= 0;
+  [linear] <edge_207>:  -<y#2>[I] +<x#25#2>[I] +<x#11#2>[I] <= 0;
+  [linear] <edge_208>:  -<y#3>[I] +<x#25#3>[I] +<x#11#3>[I] <= 0;
+  [linear] <edge_209>:  -<y#0>[I] +<x#28#0>[I] +<x#12#0>[I] <= 0;
+  [linear] <edge_210>:  -<y#1>[I] +<x#28#1>[I] +<x#12#1>[I] <= 0;
+  [linear] <edge_211>:  -<y#2>[I] +<x#28#2>[I] +<x#12#2>[I] <= 0;
+  [linear] <edge_212>:  -<y#3>[I] +<x#28#3>[I] +<x#12#3>[I] <= 0;
+  [linear] <edge_213>:  -<y#0>[I] +<x#18#0>[I] +<x#12#0>[I] <= 0;
+  [linear] <edge_214>:  -<y#1>[I] +<x#18#1>[I] +<x#12#1>[I] <= 0;
+  [linear] <edge_215>:  -<y#2>[I] +<x#18#2>[I] +<x#12#2>[I] <= 0;
+  [linear] <edge_216>:  -<y#3>[I] +<x#18#3>[I] +<x#12#3>[I] <= 0;
+  [linear] <edge_217>:  -<y#0>[I] +<x#25#0>[I] +<x#12#0>[I] <= 0;
+  [linear] <edge_218>:  -<y#1>[I] +<x#25#1>[I] +<x#12#1>[I] <= 0;
+  [linear] <edge_219>:  -<y#2>[I] +<x#25#2>[I] +<x#12#2>[I] <= 0;
+  [linear] <edge_220>:  -<y#3>[I] +<x#25#3>[I] +<x#12#3>[I] <= 0;
+  [linear] <edge_221>:  -<y#0>[I] +<x#22#0>[I] +<x#12#0>[I] <= 0;
+  [linear] <edge_222>:  -<y#1>[I] +<x#22#1>[I] +<x#12#1>[I] <= 0;
+  [linear] <edge_223>:  -<y#2>[I] +<x#22#2>[I] +<x#12#2>[I] <= 0;
+  [linear] <edge_224>:  -<y#3>[I] +<x#22#3>[I] +<x#12#3>[I] <= 0;
+  [linear] <edge_225>:  -<y#0>[I] +<x#21#0>[I] +<x#13#0>[I] <= 0;
+  [linear] <edge_226>:  -<y#1>[I] +<x#21#1>[I] +<x#13#1>[I] <= 0;
+  [linear] <edge_227>:  -<y#2>[I] +<x#21#2>[I] +<x#13#2>[I] <= 0;
+  [linear] <edge_228>:  -<y#3>[I] +<x#21#3>[I] +<x#13#3>[I] <= 0;
+  [linear] <edge_229>:  -<y#0>[I] +<x#28#0>[I] +<x#13#0>[I] <= 0;
+  [linear] <edge_230>:  -<y#1>[I] +<x#28#1>[I] +<x#13#1>[I] <= 0;
+  [linear] <edge_231>:  -<y#2>[I] +<x#28#2>[I] +<x#13#2>[I] <= 0;
+  [linear] <edge_232>:  -<y#3>[I] +<x#28#3>[I] +<x#13#3>[I] <= 0;
+  [linear] <edge_233>:  -<y#0>[I] +<x#24#0>[I] +<x#13#0>[I] <= 0;
+  [linear] <edge_234>:  -<y#1>[I] +<x#24#1>[I] +<x#13#1>[I] <= 0;
+  [linear] <edge_235>:  -<y#2>[I] +<x#24#2>[I] +<x#13#2>[I] <= 0;
+  [linear] <edge_236>:  -<y#3>[I] +<x#24#3>[I] +<x#13#3>[I] <= 0;
+  [linear] <edge_237>:  -<y#0>[I] +<x#26#0>[I] +<x#13#0>[I] <= 0;
+  [linear] <edge_238>:  -<y#1>[I] +<x#26#1>[I] +<x#13#1>[I] <= 0;
+  [linear] <edge_239>:  -<y#2>[I] +<x#26#2>[I] +<x#13#2>[I] <= 0;
+  [linear] <edge_240>:  -<y#3>[I] +<x#26#3>[I] +<x#13#3>[I] <= 0;
+  [linear] <edge_241>:  -<y#0>[I] +<x#28#0>[I] +<x#14#0>[I] <= 0;
+  [linear] <edge_242>:  -<y#1>[I] +<x#28#1>[I] +<x#14#1>[I] <= 0;
+  [linear] <edge_243>:  -<y#2>[I] +<x#28#2>[I] +<x#14#2>[I] <= 0;
+  [linear] <edge_244>:  -<y#3>[I] +<x#28#3>[I] +<x#14#3>[I] <= 0;
+  [linear] <edge_245>:  -<y#0>[I] +<x#20#0>[I] +<x#14#0>[I] <= 0;
+  [linear] <edge_246>:  -<y#1>[I] +<x#20#1>[I] +<x#14#1>[I] <= 0;
+  [linear] <edge_247>:  -<y#2>[I] +<x#20#2>[I] +<x#14#2>[I] <= 0;
+  [linear] <edge_248>:  -<y#3>[I] +<x#20#3>[I] +<x#14#3>[I] <= 0;
+  [linear] <edge_249>:  -<y#0>[I] +<x#24#0>[I] +<x#14#0>[I] <= 0;
+  [linear] <edge_250>:  -<y#1>[I] +<x#24#1>[I] +<x#14#1>[I] <= 0;
+  [linear] <edge_251>:  -<y#2>[I] +<x#24#2>[I] +<x#14#2>[I] <= 0;
+  [linear] <edge_252>:  -<y#3>[I] +<x#24#3>[I] +<x#14#3>[I] <= 0;
+  [linear] <edge_253>:  -<y#0>[I] +<x#26#0>[I] +<x#14#0>[I] <= 0;
+  [linear] <edge_254>:  -<y#1>[I] +<x#26#1>[I] +<x#14#1>[I] <= 0;
+  [linear] <edge_255>:  -<y#2>[I] +<x#26#2>[I] +<x#14#2>[I] <= 0;
+  [linear] <edge_256>:  -<y#3>[I] +<x#26#3>[I] +<x#14#3>[I] <= 0;
+  [linear] <edge_257>:  -<y#0>[I] +<x#28#0>[I] +<x#15#0>[I] <= 0;
+  [linear] <edge_258>:  -<y#1>[I] +<x#28#1>[I] +<x#15#1>[I] <= 0;
+  [linear] <edge_259>:  -<y#2>[I] +<x#28#2>[I] +<x#15#2>[I] <= 0;
+  [linear] <edge_260>:  -<y#3>[I] +<x#28#3>[I] +<x#15#3>[I] <= 0;
+  [linear] <edge_261>:  -<y#0>[I] +<x#23#0>[I] +<x#15#0>[I] <= 0;
+  [linear] <edge_262>:  -<y#1>[I] +<x#23#1>[I] +<x#15#1>[I] <= 0;
+  [linear] <edge_263>:  -<y#2>[I] +<x#23#2>[I] +<x#15#2>[I] <= 0;
+  [linear] <edge_264>:  -<y#3>[I] +<x#23#3>[I] +<x#15#3>[I] <= 0;
+  [linear] <edge_265>:  -<y#0>[I] +<x#25#0>[I] +<x#15#0>[I] <= 0;
+  [linear] <edge_266>:  -<y#1>[I] +<x#25#1>[I] +<x#15#1>[I] <= 0;
+  [linear] <edge_267>:  -<y#2>[I] +<x#25#2>[I] +<x#15#2>[I] <= 0;
+  [linear] <edge_268>:  -<y#3>[I] +<x#25#3>[I] +<x#15#3>[I] <= 0;
+  [linear] <edge_269>:  -<y#0>[I] +<x#22#0>[I] +<x#15#0>[I] <= 0;
+  [linear] <edge_270>:  -<y#1>[I] +<x#22#1>[I] +<x#15#1>[I] <= 0;
+  [linear] <edge_271>:  -<y#2>[I] +<x#22#2>[I] +<x#15#2>[I] <= 0;
+  [linear] <edge_272>:  -<y#3>[I] +<x#22#3>[I] +<x#15#3>[I] <= 0;
+  [linear] <edge_273>:  -<y#0>[I] +<x#26#0>[I] +<x#15#0>[I] <= 0;
+  [linear] <edge_274>:  -<y#1>[I] +<x#26#1>[I] +<x#15#1>[I] <= 0;
+  [linear] <edge_275>:  -<y#2>[I] +<x#26#2>[I] +<x#15#2>[I] <= 0;
+  [linear] <edge_276>:  -<y#3>[I] +<x#26#3>[I] +<x#15#3>[I] <= 0;
+  [linear] <edge_277>:  -<y#0>[I] +<x#21#0>[I] +<x#16#0>[I] <= 0;
+  [linear] <edge_278>:  -<y#1>[I] +<x#21#1>[I] +<x#16#1>[I] <= 0;
+  [linear] <edge_279>:  -<y#2>[I] +<x#21#2>[I] +<x#16#2>[I] <= 0;
+  [linear] <edge_280>:  -<y#3>[I] +<x#21#3>[I] +<x#16#3>[I] <= 0;
+  [linear] <edge_281>:  -<y#0>[I] +<x#28#0>[I] +<x#16#0>[I] <= 0;
+  [linear] <edge_282>:  -<y#1>[I] +<x#28#1>[I] +<x#16#1>[I] <= 0;
+  [linear] <edge_283>:  -<y#2>[I] +<x#28#2>[I] +<x#16#2>[I] <= 0;
+  [linear] <edge_284>:  -<y#3>[I] +<x#28#3>[I] +<x#16#3>[I] <= 0;
+  [linear] <edge_285>:  -<y#0>[I] +<x#20#0>[I] +<x#16#0>[I] <= 0;
+  [linear] <edge_286>:  -<y#1>[I] +<x#20#1>[I] +<x#16#1>[I] <= 0;
+  [linear] <edge_287>:  -<y#2>[I] +<x#20#2>[I] +<x#16#2>[I] <= 0;
+  [linear] <edge_288>:  -<y#3>[I] +<x#20#3>[I] +<x#16#3>[I] <= 0;
+  [linear] <edge_289>:  -<y#0>[I] +<x#24#0>[I] +<x#16#0>[I] <= 0;
+  [linear] <edge_290>:  -<y#1>[I] +<x#24#1>[I] +<x#16#1>[I] <= 0;
+  [linear] <edge_291>:  -<y#2>[I] +<x#24#2>[I] +<x#16#2>[I] <= 0;
+  [linear] <edge_292>:  -<y#3>[I] +<x#24#3>[I] +<x#16#3>[I] <= 0;
+  [linear] <edge_293>:  -<y#0>[I] +<x#26#0>[I] +<x#16#0>[I] <= 0;
+  [linear] <edge_294>:  -<y#1>[I] +<x#26#1>[I] +<x#16#1>[I] <= 0;
+  [linear] <edge_295>:  -<y#2>[I] +<x#26#2>[I] +<x#16#2>[I] <= 0;
+  [linear] <edge_296>:  -<y#3>[I] +<x#26#3>[I] +<x#16#3>[I] <= 0;
+  [linear] <edge_297>:  -<y#0>[I] +<x#28#0>[I] +<x#17#0>[I] <= 0;
+  [linear] <edge_298>:  -<y#1>[I] +<x#28#1>[I] +<x#17#1>[I] <= 0;
+  [linear] <edge_299>:  -<y#2>[I] +<x#28#2>[I] +<x#17#2>[I] <= 0;
+  [linear] <edge_300>:  -<y#3>[I] +<x#28#3>[I] +<x#17#3>[I] <= 0;
+  [linear] <edge_301>:  -<y#0>[I] +<x#23#0>[I] +<x#17#0>[I] <= 0;
+  [linear] <edge_302>:  -<y#1>[I] +<x#23#1>[I] +<x#17#1>[I] <= 0;
+  [linear] <edge_303>:  -<y#2>[I] +<x#23#2>[I] +<x#17#2>[I] <= 0;
+  [linear] <edge_304>:  -<y#3>[I] +<x#23#3>[I] +<x#17#3>[I] <= 0;
+  [linear] <edge_305>:  -<y#0>[I] +<x#25#0>[I] +<x#17#0>[I] <= 0;
+  [linear] <edge_306>:  -<y#1>[I] +<x#25#1>[I] +<x#17#1>[I] <= 0;
+  [linear] <edge_307>:  -<y#2>[I] +<x#25#2>[I] +<x#17#2>[I] <= 0;
+  [linear] <edge_308>:  -<y#3>[I] +<x#25#3>[I] +<x#17#3>[I] <= 0;
+  [linear] <edge_309>:  -<y#0>[I] +<x#22#0>[I] +<x#17#0>[I] <= 0;
+  [linear] <edge_310>:  -<y#1>[I] +<x#22#1>[I] +<x#17#1>[I] <= 0;
+  [linear] <edge_311>:  -<y#2>[I] +<x#22#2>[I] +<x#17#2>[I] <= 0;
+  [linear] <edge_312>:  -<y#3>[I] +<x#22#3>[I] +<x#17#3>[I] <= 0;
+  [linear] <edge_313>:  -<y#0>[I] +<x#24#0>[I] +<x#17#0>[I] <= 0;
+  [linear] <edge_314>:  -<y#1>[I] +<x#24#1>[I] +<x#17#1>[I] <= 0;
+  [linear] <edge_315>:  -<y#2>[I] +<x#24#2>[I] +<x#17#2>[I] <= 0;
+  [linear] <edge_316>:  -<y#3>[I] +<x#24#3>[I] +<x#17#3>[I] <= 0;
+  [linear] <edge_317>:  -<y#0>[I] +<x#27#0>[I] +<x#18#0>[I] <= 0;
+  [linear] <edge_318>:  -<y#1>[I] +<x#27#1>[I] +<x#18#1>[I] <= 0;
+  [linear] <edge_319>:  -<y#2>[I] +<x#27#2>[I] +<x#18#2>[I] <= 0;
+  [linear] <edge_320>:  -<y#3>[I] +<x#27#3>[I] +<x#18#3>[I] <= 0;
+  [linear] <edge_321>:  -<y#0>[I] +<x#29#0>[I] +<x#18#0>[I] <= 0;
+  [linear] <edge_322>:  -<y#1>[I] +<x#29#1>[I] +<x#18#1>[I] <= 0;
+  [linear] <edge_323>:  -<y#2>[I] +<x#29#2>[I] +<x#18#2>[I] <= 0;
+  [linear] <edge_324>:  -<y#3>[I] +<x#29#3>[I] +<x#18#3>[I] <= 0;
+  [linear] <edge_325>:  -<y#0>[I] +<x#27#0>[I] +<x#19#0>[I] <= 0;
+  [linear] <edge_326>:  -<y#1>[I] +<x#27#1>[I] +<x#19#1>[I] <= 0;
+  [linear] <edge_327>:  -<y#2>[I] +<x#27#2>[I] +<x#19#2>[I] <= 0;
+  [linear] <edge_328>:  -<y#3>[I] +<x#27#3>[I] +<x#19#3>[I] <= 0;
+  [linear] <edge_329>:  -<y#0>[I] +<x#29#0>[I] +<x#19#0>[I] <= 0;
+  [linear] <edge_330>:  -<y#1>[I] +<x#29#1>[I] +<x#19#1>[I] <= 0;
+  [linear] <edge_331>:  -<y#2>[I] +<x#29#2>[I] +<x#19#2>[I] <= 0;
+  [linear] <edge_332>:  -<y#3>[I] +<x#29#3>[I] +<x#19#3>[I] <= 0;
+  [linear] <edge_333>:  -<y#0>[I] +<x#27#0>[I] +<x#20#0>[I] <= 0;
+  [linear] <edge_334>:  -<y#1>[I] +<x#27#1>[I] +<x#20#1>[I] <= 0;
+  [linear] <edge_335>:  -<y#2>[I] +<x#27#2>[I] +<x#20#2>[I] <= 0;
+  [linear] <edge_336>:  -<y#3>[I] +<x#27#3>[I] +<x#20#3>[I] <= 0;
+  [linear] <edge_337>:  -<y#0>[I] +<x#29#0>[I] +<x#20#0>[I] <= 0;
+  [linear] <edge_338>:  -<y#1>[I] +<x#29#1>[I] +<x#20#1>[I] <= 0;
+  [linear] <edge_339>:  -<y#2>[I] +<x#29#2>[I] +<x#20#2>[I] <= 0;
+  [linear] <edge_340>:  -<y#3>[I] +<x#29#3>[I] +<x#20#3>[I] <= 0;
+  [linear] <edge_341>:  -<y#0>[I] +<x#27#0>[I] +<x#21#0>[I] <= 0;
+  [linear] <edge_342>:  -<y#1>[I] +<x#27#1>[I] +<x#21#1>[I] <= 0;
+  [linear] <edge_343>:  -<y#2>[I] +<x#27#2>[I] +<x#21#2>[I] <= 0;
+  [linear] <edge_344>:  -<y#3>[I] +<x#27#3>[I] +<x#21#3>[I] <= 0;
+  [linear] <edge_345>:  -<y#0>[I] +<x#29#0>[I] +<x#21#0>[I] <= 0;
+  [linear] <edge_346>:  -<y#1>[I] +<x#29#1>[I] +<x#21#1>[I] <= 0;
+  [linear] <edge_347>:  -<y#2>[I] +<x#29#2>[I] +<x#21#2>[I] <= 0;
+  [linear] <edge_348>:  -<y#3>[I] +<x#29#3>[I] +<x#21#3>[I] <= 0;
+  [linear] <edge_349>:  -<y#0>[I] +<x#27#0>[I] +<x#22#0>[I] <= 0;
+  [linear] <edge_350>:  -<y#1>[I] +<x#27#1>[I] +<x#22#1>[I] <= 0;
+  [linear] <edge_351>:  -<y#2>[I] +<x#27#2>[I] +<x#22#2>[I] <= 0;
+  [linear] <edge_352>:  -<y#3>[I] +<x#27#3>[I] +<x#22#3>[I] <= 0;
+  [linear] <edge_353>:  -<y#0>[I] +<x#29#0>[I] +<x#22#0>[I] <= 0;
+  [linear] <edge_354>:  -<y#1>[I] +<x#29#1>[I] +<x#22#1>[I] <= 0;
+  [linear] <edge_355>:  -<y#2>[I] +<x#29#2>[I] +<x#22#2>[I] <= 0;
+  [linear] <edge_356>:  -<y#3>[I] +<x#29#3>[I] +<x#22#3>[I] <= 0;
+  [linear] <edge_357>:  -<y#0>[I] +<x#27#0>[I] +<x#23#0>[I] <= 0;
+  [linear] <edge_358>:  -<y#1>[I] +<x#27#1>[I] +<x#23#1>[I] <= 0;
+  [linear] <edge_359>:  -<y#2>[I] +<x#27#2>[I] +<x#23#2>[I] <= 0;
+  [linear] <edge_360>:  -<y#3>[I] +<x#27#3>[I] +<x#23#3>[I] <= 0;
+  [linear] <edge_361>:  -<y#0>[I] +<x#29#0>[I] +<x#23#0>[I] <= 0;
+  [linear] <edge_362>:  -<y#1>[I] +<x#29#1>[I] +<x#23#1>[I] <= 0;
+  [linear] <edge_363>:  -<y#2>[I] +<x#29#2>[I] +<x#23#2>[I] <= 0;
+  [linear] <edge_364>:  -<y#3>[I] +<x#29#3>[I] +<x#23#3>[I] <= 0;
+  [linear] <edge_365>:  -<y#0>[I] +<x#27#0>[I] +<x#24#0>[I] <= 0;
+  [linear] <edge_366>:  -<y#1>[I] +<x#27#1>[I] +<x#24#1>[I] <= 0;
+  [linear] <edge_367>:  -<y#2>[I] +<x#27#2>[I] +<x#24#2>[I] <= 0;
+  [linear] <edge_368>:  -<y#3>[I] +<x#27#3>[I] +<x#24#3>[I] <= 0;
+  [linear] <edge_369>:  -<y#0>[I] +<x#29#0>[I] +<x#24#0>[I] <= 0;
+  [linear] <edge_370>:  -<y#1>[I] +<x#29#1>[I] +<x#24#1>[I] <= 0;
+  [linear] <edge_371>:  -<y#2>[I] +<x#29#2>[I] +<x#24#2>[I] <= 0;
+  [linear] <edge_372>:  -<y#3>[I] +<x#29#3>[I] +<x#24#3>[I] <= 0;
+  [linear] <edge_373>:  -<y#0>[I] +<x#27#0>[I] +<x#25#0>[I] <= 0;
+  [linear] <edge_374>:  -<y#1>[I] +<x#27#1>[I] +<x#25#1>[I] <= 0;
+  [linear] <edge_375>:  -<y#2>[I] +<x#27#2>[I] +<x#25#2>[I] <= 0;
+  [linear] <edge_376>:  -<y#3>[I] +<x#27#3>[I] +<x#25#3>[I] <= 0;
+  [linear] <edge_377>:  -<y#0>[I] +<x#29#0>[I] +<x#25#0>[I] <= 0;
+  [linear] <edge_378>:  -<y#1>[I] +<x#29#1>[I] +<x#25#1>[I] <= 0;
+  [linear] <edge_379>:  -<y#2>[I] +<x#29#2>[I] +<x#25#2>[I] <= 0;
+  [linear] <edge_380>:  -<y#3>[I] +<x#29#3>[I] +<x#25#3>[I] <= 0;
+  [linear] <edge_381>:  -<y#0>[I] +<x#27#0>[I] +<x#26#0>[I] <= 0;
+  [linear] <edge_382>:  -<y#1>[I] +<x#27#1>[I] +<x#26#1>[I] <= 0;
+  [linear] <edge_383>:  -<y#2>[I] +<x#27#2>[I] +<x#26#2>[I] <= 0;
+  [linear] <edge_384>:  -<y#3>[I] +<x#27#3>[I] +<x#26#3>[I] <= 0;
+  [linear] <edge_385>:  -<y#0>[I] +<x#29#0>[I] +<x#26#0>[I] <= 0;
+  [linear] <edge_386>:  -<y#1>[I] +<x#29#1>[I] +<x#26#1>[I] <= 0;
+  [linear] <edge_387>:  -<y#2>[I] +<x#29#2>[I] +<x#26#2>[I] <= 0;
+  [linear] <edge_388>:  -<y#3>[I] +<x#29#3>[I] +<x#26#3>[I] <= 0;
+  [linear] <edge_389>:  -<y#0>[I] +<x#28#0>[I] +<x#27#0>[I] <= 0;
+  [linear] <edge_390>:  -<y#1>[I] +<x#28#1>[I] +<x#27#1>[I] <= 0;
+  [linear] <edge_391>:  -<y#2>[I] +<x#28#2>[I] +<x#27#2>[I] <= 0;
+  [linear] <edge_392>:  -<y#3>[I] +<x#28#3>[I] +<x#27#3>[I] <= 0;
+  [linear] <edge_393>:  -<y#0>[I] +<x#29#0>[I] +<x#27#0>[I] <= 0;
+  [linear] <edge_394>:  -<y#1>[I] +<x#29#1>[I] +<x#27#1>[I] <= 0;
+  [linear] <edge_395>:  -<y#2>[I] +<x#29#2>[I] +<x#27#2>[I] <= 0;
+  [linear] <edge_396>:  -<y#3>[I] +<x#29#3>[I] +<x#27#3>[I] <= 0;
+  [linear] <edge_397>:  -<y#0>[I] +<x#29#0>[I] +<x#28#0>[I] <= 0;
+  [linear] <edge_398>:  -<y#1>[I] +<x#29#1>[I] +<x#28#1>[I] <= 0;
+  [linear] <edge_399>:  -<y#2>[I] +<x#29#2>[I] +<x#28#2>[I] <= 0;
+  [linear] <edge_400>:  -<y#3>[I] +<x#29#3>[I] +<x#28#3>[I] <= 0;
+  [orbitope] <OF>: partOrbitope(x#0#0,x#0#1,x#0#2.x#1#0,x#1#1,x#1#2.x#2#0,x#2#1,x#2#2.x#3#0,x#3#1,x#3#2.x#4#0,x#4#1,x#4#2.x#5#0,x#5#1,x#5#2.x#6#0,x#6#1,x#6#2.x#7#0,x#7#1,x#7#2.x#8#0,x#8#1,x#8#2.x#9#0,x#9#1,x#9#2.x#10#0,x#10#1,x#10#2.x#11#0,x#11#1,x#11#2.x#12#0,x#12#1,x#12#2.x#13#0,x#13#1,x#13#2.x#14#0,x#14#1,x#14#2.x#15#0,x#15#1,x#15#2.x#16#0,x#16#1,x#16#2.x#17#0,x#17#1,x#17#2.x#18#0,x#18#1,x#18#2.x#19#0,x#19#1,x#19#2.x#20#0,x#20#1,x#20#2.x#21#0,x#21#1,x#21#2.x#22#0,x#22#1,x#22#2.x#23#0,x#23#1,x#23#2.x#24#0,x#24#1,x#24#2.x#25#0,x#25#1,x#25#2.x#26#0,x#26#1,x#26#2.x#27#0,x#27#1,x#27#2.x#28#0,x#28#1,x#28#2.x#29#0,x#29#1,x#29#2);
+END

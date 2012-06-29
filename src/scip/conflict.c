@@ -2017,7 +2017,7 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          }
          else if( var->conflictlb == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since it this lower bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
             SCIPdebugMessage("adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
             var->conflictrelaxedlb = MAX(var->conflictrelaxedlb, relaxedbd);
             return TRUE;
@@ -2048,7 +2048,7 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          }
          else if( var->conflictub == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since it this upper bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
             SCIPdebugMessage("adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
             var->conflictrelaxedub = MIN(var->conflictrelaxedub, relaxedbd);
             return TRUE;
@@ -2397,9 +2397,18 @@ SCIP_RETCODE SCIPconflictAddRelaxedBound(
    if( bdchginfo == NULL )
       return SCIP_OKAY;
 
+   /* check that the bound change info is not a temporary one */
+   assert(SCIPbdchgidxGetPos(&bdchginfo->bdchgidx) >= 0);
+
    /* get the position of the bound change information within the bound change array of the variable */
    nbdchgs = bdchginfo->pos;
    assert(nbdchgs >= 0);
+
+   /* if the relaxed bound should be ignored, set the relaxed bound to the bound given by the bdchgidx; that ensures
+    * that the loop(s) below will be skipped
+    */
+   if( set->conf_ignorerelaxedbd )
+      relaxedbd = SCIPbdchginfoGetNewbound(bdchginfo);
 
    /* search for the bound change information which includes the relaxed bound */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )

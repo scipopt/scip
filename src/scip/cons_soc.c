@@ -3074,7 +3074,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSOC)
    /* tell SCIP that we have something nonlinear */
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsAdded(conss[c]) )
+      if( SCIPconsIsAdded(conss[c]) ) /*lint !e613*/
       {
          SCIPenableNLP(scip);
          break;

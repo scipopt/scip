@@ -3234,7 +3234,7 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
-{
+{  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);

@@ -5609,14 +5609,15 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
 
    for( c = 0; c < nconss; ++c )
    {
-      assert(conss[c] != NULL);  /*lint !e613*/
+      assert(conss != NULL);  /* for flexelint */
+      assert(conss[c] != NULL);
 
       /* make sure variable fixations have been resolved */
-      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );  /*lint !e613*/
+      SCIP_CALL( removeFixedVariables(scip, conshdlr, conss[c], &changed, &upgraded) );
       assert(!upgraded);
 
 #ifndef NDEBUG
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       assert(consdata->f != NULL);

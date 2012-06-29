@@ -880,7 +880,7 @@ SCIP_RETCODE separateCons(
    assert(consdata->row != NULL);
 
    /* check non-LP rows for feasibility and add them as cut, if violated */
-   if( sol != NULL || !SCIProwIsInLP(consdata->row) )
+   if( !SCIProwIsInLP(consdata->row) )
    {
       feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
       if( SCIPisFeasNegative(scip, feasibility) )

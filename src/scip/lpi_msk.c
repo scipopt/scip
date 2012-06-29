@@ -1553,7 +1553,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets row names */
@@ -1568,7 +1568,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    )
 {
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets the objective sense of the LP */
@@ -1578,7 +1578,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    )
 {
    SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_ERROR;
+   return SCIP_LPERROR;
 }
 
 /** gets objective coefficients from LP problem object */

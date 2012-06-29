@@ -6808,8 +6808,6 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
 
    return SCIP_OKAY;
 }
-#else
-#define consActiveSetppc NULL
 #endif
 
 
@@ -6829,8 +6827,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 
    return SCIP_OKAY;
 }
-#else
-#define consDeactiveSetppc NULL
 #endif
 
 /** variable deletion method of constraint handler */

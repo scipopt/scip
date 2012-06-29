@@ -1679,7 +1679,7 @@ void SCIPprobUpdateBestRootSol(
 
    /* compute current root LP objective value */
    rootlpobjval = SCIPlpGetObjval(lp, set, prob);
-   assert(rootlpobjval != SCIP_INVALID);
+   assert(rootlpobjval != SCIP_INVALID); /*lint !e777*/
 
    for( v = 0; v < prob->nvars; ++v )
    {
@@ -1744,7 +1744,7 @@ void SCIPprobUpdateBestRootSol(
          default:
             SCIPerrorMessage("invalid basis state\n");
             SCIPABORT();
-            return;
+            return; /*lint !e527*/
          }
       }
 

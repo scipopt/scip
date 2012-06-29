@@ -164,7 +164,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -560,8 +560,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	       continue;
 
 	    /* the priorities should ensure that the solution is integral */
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[i][j])) );
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][i])) );
+	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[i][j])) );
+	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][i])) );
 	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[i][j]), 0.5);
 
 	    if ( oneIJ == SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][i]), 0.5) )
@@ -577,8 +577,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 	       if (k == i || k == j)
 		  continue;
 
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][k])) );
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, vars[k][i])) );
+	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[j][k])) );
+	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, vars[k][i])) );
 	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[j][k]), 0.5);
 	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, vars[k][i]), 0.5);
 
@@ -641,8 +641,8 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       continue;
 
 	    /* the priorities should ensure that the solution is integral */
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[i][j])) );
-	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][i])) );
+	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i][j])) );
+	    assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][i])) );
 	    oneIJ = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[i][j]), 0.5);
 
 	    /* check symmetry equations */
@@ -666,8 +666,8 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       if (k == i || k == j)
 		  continue;
 
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][k])) );
-	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, vars[k][i])) );
+	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j][k])) );
+	       assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[k][i])) );
 	       oneJK = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[j][k]), 0.5);
 	       oneKI = SCIPisGT(scip, SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
 
@@ -679,7 +679,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
                   if( printreason )
                   {
                      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-                     SCIPinfoMessage(scip, NULL, 
+                     SCIPinfoMessage(scip, NULL,
                         "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
                         SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
                         SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]), 0.5,

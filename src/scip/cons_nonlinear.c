@@ -7956,7 +7956,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
             break;
          }
 
-         vars[cnt] = SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i];
+         vars[cnt] = (SCIP_VAR*)(SCIPexprgraphGetVars(conshdlrdata->exprgraph)[i]);
          ++cnt;
       }
 

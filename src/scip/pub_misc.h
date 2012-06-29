@@ -4296,6 +4296,13 @@ SCIP_Longint SCIPcalcBinomCoef(
  *@{
  */
 
+/** swaps two ints */
+extern
+void SCIPswapInts(
+   int*                  value1,             /**< pointer to first integer */
+   int*                  value2              /**< pointer ti second integer */
+   );
+
 /** swaps the addresses of two pointers */
 extern
 void SCIPswapPointers(

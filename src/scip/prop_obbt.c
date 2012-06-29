@@ -47,12 +47,6 @@
 #define PROP_FREQ                           0      /**< propagator frequency */
 #define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
                                                     *   found reductions? */
-#define PROP_PRESOL_PRIORITY         -2000000      /**< priority of the presolving method (>= 0: before, < 0: after
-                                                    *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY               FALSE      /**< should presolving be delay, if other presolvers found reductions?  */
-#define PROP_PRESOL_MAXROUNDS               0      /**< maximal number of presolving rounds the presolver participates
-                                                    *   in (-1: no limit) */
-
 #define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
 #define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
                                                     *   domains sizes? */
@@ -150,9 +144,14 @@ SCIP_RETCODE solveLP(
       return SCIP_OKAY;
    }
 
-   if( lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
+      assert(!*error);
+      *optimal = TRUE;
+   }
 #ifdef SCIP_DEBUG
+   else
+   {
       switch( lpsolstat )
       {
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -173,13 +172,8 @@ SCIP_RETCODE solveLP(
       default:
          SCIPdebugMessage("   received an unexpected solstat during solving lp: %d\n", lpsolstat);
       }
+   }
 #endif
-   }
-   else
-   {
-      assert(!*error);
-      *optimal = TRUE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1088,9 +1082,9 @@ SCIP_DECL_SORTPTRCOMP(compBounds)
 }
 
 #ifdef SCIP_DEBUG
+/** prints groups of variables */
 static
 void printGroups(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< data of the obbt propagator */
    )
 {
@@ -1099,22 +1093,28 @@ void printGroups(
    assert(propdata != NULL);
    assert(propdata->nbounds > 0);
 
-   SCIPinfoMessage(scip, NULL, "groups={\n");
+   SCIPdebugPrintf("groups={\n");
 
    for( i = 0; i < propdata->nboundgroups; i++ )
    {
       int j;
-      SCIPinfoMessage(scip, NULL, "  {\n");
+
+      SCIPdebugPrintf("  {\n");
+
       for( j = 0; j < propdata->boundgroups[i].nbounds; j++ )
       {
-         BOUND* bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
-         SCIPinfoMessage(scip, NULL, "      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
+         BOUND* bound;
+
+         bound = propdata->bounds[propdata->boundgroups[i].firstbdindex + j];
+
+         SCIPdebugPrintf("      %s bound of <%s>, scoreval=%u\n", bound->boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
             SCIPvarGetName(bound->var), bound->score);
       }
-      SCIPinfoMessage(scip, NULL, "  }\n");
+
+      SCIPdebugPrintf("  }\n");
    }
 
-   SCIPinfoMessage(scip, NULL, "}\n");
+   SCIPdebugPrintf("}\n");
 }
 #endif
 
@@ -1292,7 +1292,7 @@ SCIP_RETCODE initBounds(
 
       /* create groups */
       SCIP_CALL( createGroups(propdata) );
-      SCIPdebug( printGroups(scip, propdata) );
+      SCIPdebug( printGroups(propdata) );
    }
 
    return SCIP_OKAY;

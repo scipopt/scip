@@ -354,7 +354,11 @@ SCIP_RETCODE createNewSols(
    
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert(nvars == SCIPgetNOrigVars(subscip));
+
+   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
+    */
+   assert(nvars <= SCIPgetNOrigVars(subscip));
 
    /* for copying a solution we need an explicit mapping */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );

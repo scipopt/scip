@@ -3145,7 +3145,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             default:
                SCIPerrorMessage("invalid comparison result\n");
                SCIPABORT();
-               return SCIP_INVALIDDATA;
+               return SCIP_INVALIDDATA; /*lint !e527*/
             }
          }
 

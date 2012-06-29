@@ -144,6 +144,7 @@ BEGIN {
    pb = +infty;
    firstpb = +infty;
    db = -infty;
+   dbset = 0;
    rootdb = -infty;
    simpiters = 0;
    bbnodes = 0;
@@ -221,6 +222,12 @@ BEGIN {
 /^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+
+# check for primalbound before statitic printing
+/^Primal Bound       :/{
+   pb = $4
+}
+
 #
 # get objective sense
 #
@@ -229,6 +236,7 @@ BEGIN {
       objsense = 1;
    if ( $4 == "maximize" )
       objsense = -1;
+
    # objsense is 0 otherwise
 }
 #
@@ -386,6 +394,7 @@ BEGIN {
    if( $4 == "infeasible" ) {
       pb = +infty;
       db = +infty;
+      dbset = 1;
       feasible = 0;
    }
    else if( $4 == "-" ) {
@@ -399,8 +408,10 @@ BEGIN {
    }
 }
 /^Dual Bound         :/ { 
-   if( $4 != "-" ) 
+   if( $4 != "-" ) {
       db = $4;
+      dbset = 1;
+   }
 }
 /^  Root Dual Bound  :/ {
    if( $5 != "-" )
@@ -542,13 +553,13 @@ BEGIN {
 	 else
 	    objsense = -1;  # maximize
       }
-      
+
       # modify primal bound for maximization problems without primal solution
-      if ( objsense == -1 && pb >= +infty )
+      if ( (objsense == -1 && pb >= +infty) )
 	 pb = -1.0 * pb;
 
       # modify dual bound for infeasible maximization problems
-      if ( objsense == -1 && db >= +infty )
+      if ( objsense == -1 && (db >= +infty || dbset == 0) )
 	 db = -1.0 * db;
 
       nprobs++;

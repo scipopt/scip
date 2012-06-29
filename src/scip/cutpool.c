@@ -192,7 +192,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       }
       assert(row1->nlpcols == 0 && row2->nlpcols > 0);
 
-      i1 = 0;
       ilp = 0;
       inlp = row2->nlpcols;
 

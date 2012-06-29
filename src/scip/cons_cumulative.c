@@ -3681,7 +3681,7 @@ SCIP_RETCODE checkOverload(
       assert(nnodedatas <= 2*nvars);
 
       root = SCIPbtGetRoot(tree);
-      data = SCIPbtnodeGetData(root);
+      data = (SCIP_ENVELOP*)SCIPbtnodeGetData(root);
 
       /* check for overload */
       if( data->envelop > capacity * lcts[j] )
