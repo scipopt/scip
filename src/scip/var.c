@@ -431,7 +431,7 @@ SCIP_RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].var = var;
    var->lbchginfos[var->nlbchginfos].bdchgidx.depth = depth;
    var->lbchginfos[var->nlbchginfos].bdchgidx.pos = pos;
-   var->lbchginfos[var->nlbchginfos].pos = var->nlbchginfos;
+   var->lbchginfos[var->nlbchginfos].pos = var->nlbchginfos; /*lint !e732*/
    var->lbchginfos[var->nlbchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].redundant = FALSE;
@@ -507,7 +507,7 @@ SCIP_RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].var = var;
    var->ubchginfos[var->nubchginfos].bdchgidx.depth = depth;
    var->ubchginfos[var->nubchginfos].bdchgidx.pos = pos;
-   var->ubchginfos[var->nubchginfos].pos = var->nubchginfos;
+   var->ubchginfos[var->nubchginfos].pos = var->nubchginfos; /*lint !e732*/
    var->ubchginfos[var->nubchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].redundant = FALSE;
@@ -3687,8 +3687,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &activeconstant) );
       assert(var != NULL);
 
-      assert(SCIPsetIsInfinity(set, activeconstant) == (activeconstant == SCIPsetInfinity(set)));
-      assert(SCIPsetIsInfinity(set, -activeconstant) == (activeconstant == -SCIPsetInfinity(set)));
+      assert(SCIPsetIsInfinity(set, activeconstant) == (activeconstant == SCIPsetInfinity(set))); /*lint !e777*/
+      assert(SCIPsetIsInfinity(set, -activeconstant) == (activeconstant == -SCIPsetInfinity(set))); /*lint !e777*/
 
       activeconstantinf = SCIPsetIsInfinity(set, activeconstant) || SCIPsetIsInfinity(set, -activeconstant);
 
@@ -3973,8 +3973,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       }
    }
 
-   assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set)));
-   assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set)));
+   assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
+   assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set))); /*lint !e777*/
 
    SCIPsetFreeBufferArray(set, &tmpvars2);
    SCIPsetFreeBufferArray(set, &tmpscalars2);
@@ -11289,8 +11289,8 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 
       default:
          SCIPerrorMessage("unknown variable status\n");
-	 SCIPABORT(); /*lint !e527*/
-         return SCIP_INVALIDDATA;
+	 SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
    *scalar = 0.0;
@@ -15004,7 +15004,7 @@ SCIP_RETCODE SCIPvarSetInitial(
 {
    assert(var != NULL);
 
-   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL && var->varstatus != SCIP_VARSTATUS_LOOSE )
+   if( (SCIP_VARSTATUS)var->varstatus != SCIP_VARSTATUS_ORIGINAL && (SCIP_VARSTATUS)var->varstatus != SCIP_VARSTATUS_LOOSE )
       return SCIP_INVALIDCALL;
 
    var->initial = initial;
@@ -15020,7 +15020,7 @@ SCIP_RETCODE SCIPvarSetRemovable(
 {
    assert(var != NULL);
 
-   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL && var->varstatus != SCIP_VARSTATUS_LOOSE )
+   if( (SCIP_VARSTATUS)var->varstatus != SCIP_VARSTATUS_ORIGINAL && (SCIP_VARSTATUS)var->varstatus != SCIP_VARSTATUS_LOOSE )
       return SCIP_INVALIDCALL;
 
    var->removable = removable;
