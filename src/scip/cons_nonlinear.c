@@ -4979,6 +4979,12 @@ SCIP_RETCODE separatePoint(
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
+      /* skip constraints that are not enabled */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -5973,6 +5979,7 @@ SCIP_RETCODE propagateBounds(
          assert(conss != NULL);
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
+         assert(SCIPconsIsActive(conss[c]));
 
 #ifndef NDEBUG
          consdata = SCIPconsGetData(conss[c]);
@@ -6981,10 +6988,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 
    consdata = SCIPconsGetData(maxviolcons);
    assert(consdata != NULL);
+
    maxviol = consdata->lhsviol + consdata->rhsviol;
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    SCIPdebugMessage("enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
+
+   /* we propagate and separate constraints only if they are active and enforcing by branching only does not seem much effective */
+   assert(SCIPconsIsActive(maxviolcons));
 
    /* if we are above the 100'th enforcement round for this node, something is strange
     * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
@@ -7132,6 +7143,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
 
    SCIPdebugMessage("enfops with max violation in cons <%s>\n", SCIPconsGetName(maxviolcons));
 
+   /* we propagate constraints only if they are active and enforcing by branching only does not seem much effective */
+   assert(SCIPconsIsActive(maxviolcons));
+
    /* run domain propagation */
    dummy = 0;
    SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
@@ -7200,7 +7214,6 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(sol != NULL);
    assert(result != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -7395,6 +7408,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -7409,6 +7423,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          assert(consdata->isremovedfixingslin);
          havechange = TRUE;
       }
+
+      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the case for active constraints */
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
 
       if( !consdata->ispresolved || havegraphchange )
       {
@@ -7525,6 +7543,11 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
 
    assert(scip != NULL);
    assert(cons != NULL);
+
+   /* variable locking for nonlinear part is done w.r.t. variables in the expression graph
+    * since only active constraints have their nonlinear part in the expression graph, we can lock only active constraints
+    */
+   assert(SCIPconsIsActive(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7923,28 +7946,29 @@ static
 SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   int cnt;
 
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *success = TRUE;
+
    if( varssize < consdata->nlinvars )
    {
-      (*success) = FALSE;
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
-   (*success) = TRUE;
-
    BMScopyMemoryArray(vars, consdata->linvars, consdata->nlinvars);
+   cnt = consdata->nlinvars;
 
    if( consdata->exprgraphnode != NULL )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int* varsusage;
       int i;
-      int cnt;
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
@@ -7953,7 +7977,6 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 
       SCIPexprgraphGetSubtreeVarsUsage(conshdlrdata->exprgraph, consdata->exprgraphnode, varsusage);
 
-      cnt = consdata->nlinvars;
       for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
       {
          if( varsusage[i] == 0 )
@@ -7961,7 +7984,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 
          if( cnt >= varssize )
          {
-            (*success) = FALSE;
+            *success = FALSE;
             break;
          }
 
@@ -7970,6 +7993,28 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
       }
 
       SCIPfreeBufferArray(scip, &varsusage);
+   }
+   else
+   {
+      SCIP_VAR** exprvars;
+      int nexprvars;
+      int e;
+
+      for( e = 0; e < consdata->nexprtrees; ++e )
+      {
+         exprvars  = SCIPexprtreeGetVars(consdata->exprtrees[e]);
+         nexprvars = SCIPexprtreeGetNVars(consdata->exprtrees[e]);
+         assert(exprvars != NULL || nexprvars == 0);
+
+         if( cnt + nexprvars >= varssize )
+         {
+            *success = FALSE;
+            break;
+         }
+
+         BMScopyMemoryArray(&vars[cnt], exprvars, nexprvars);
+         cnt += nexprvars;
+      }
    }
 
    return SCIP_OKAY;
@@ -7984,7 +8029,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   (*nvars) = consdata->nlinvars;
+   *nvars = consdata->nlinvars;
 
    if( consdata->exprgraphnode != NULL )
    {
@@ -8001,12 +8046,19 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 
       for( i = 0; i < SCIPexprgraphGetNVars(conshdlrdata->exprgraph); ++i )
          if( varsusage[i] > 0 )
-            ++(*nvars);
+            ++*nvars;
 
       SCIPfreeBufferArray(scip, &varsusage);
    }
+   else
+   {
+      int e;
 
-   (*success) = TRUE;
+      for( e = 0; e < consdata->nexprtrees; ++e )
+         *nvars += SCIPexprtreeGetNVars(consdata->exprtrees[e]);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
