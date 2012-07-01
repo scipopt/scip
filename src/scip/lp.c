@@ -13144,7 +13144,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             limitresolveiters,  /**< should LP iterations for resolving calls be limited?
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
