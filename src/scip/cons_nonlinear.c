@@ -417,6 +417,7 @@ void consdataUpdateLinearActivity(
 
       for( i = 0; i < consdata->nlinvars; ++i )
       {
+         assert(SCIPvarGetLbLocal(consdata->linvars[i]) <= SCIPvarGetUbLocal(consdata->linvars[i]));
          assert(consdata->lineventdata[i] != NULL);
          if( consdata->lincoefs[i] >= 0.0 )
          {
@@ -450,6 +451,7 @@ void consdataUpdateLinearActivity(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          assert(consdata->lineventdata[i] != NULL);
+         assert(SCIPvarGetLbLocal(consdata->linvars[i]) <= SCIPvarGetUbLocal(consdata->linvars[i]));
          if( consdata->lincoefs[i] >= 0.0 )
          {
             bnd = SCIPvarGetUbLocal(consdata->linvars[i]);
@@ -473,6 +475,7 @@ void consdataUpdateLinearActivity(
          consdata->maxlinactivity += consdata->lincoefs[i] * bnd;
       }
    }
+   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 
    SCIPintervalSetRoundingMode(prevroundmode);
 }
@@ -522,9 +525,7 @@ void consdataUpdateLinearActivityLbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->minlinactivity += minuscoef * oldbnd;
+         consdata->minlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, -newbnd) )
@@ -560,9 +561,7 @@ void consdataUpdateLinearActivityLbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->maxlinactivity += minuscoef * oldbnd;
+         consdata->maxlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, -newbnd) )
@@ -576,6 +575,8 @@ void consdataUpdateLinearActivityLbChange(
 
       SCIPintervalSetRoundingMode(prevroundmode);
    }
+
+   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 }
 
 /** update the linear activities after a change in the upper bound of a variable */
@@ -600,7 +601,6 @@ void consdataUpdateLinearActivityUbChange(
     * a > 0:  y <= rhs - a*lb(x),  y >= lhs - a*ub(x)
     * a < 0:  y <= rhs - a*ub(x),  y >= lhs - a*lb(x)
     */
-
    if( coef > 0.0 )
    {
       /* we should only be called if lhs is finite */
@@ -623,9 +623,7 @@ void consdataUpdateLinearActivityUbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->maxlinactivity += minuscoef * oldbnd;
+         consdata->maxlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, newbnd) )
@@ -661,9 +659,7 @@ void consdataUpdateLinearActivityUbChange(
       }
       else
       {
-         SCIP_Real minuscoef;
-         minuscoef = -coef;
-         consdata->minlinactivity += minuscoef * oldbnd;
+         consdata->minlinactivity += SCIPintervalNegateReal(coef) * oldbnd;
       }
 
       if( SCIPisInfinity(scip, newbnd) )
@@ -677,6 +673,8 @@ void consdataUpdateLinearActivityUbChange(
 
       SCIPintervalSetRoundingMode(prevroundmode);
    }
+
+   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 }
 
 /** processes variable fixing or bound change event */
@@ -3536,10 +3534,13 @@ SCIP_RETCODE computeViolation(
          var = SCIPexprtreeGetVars(consdata->exprtrees[i])[0];
          varval = SCIPgetSolVal(scip, sol, var);
 
-         /* project onto global box, in case someone gives us a point that is slightly outside the bounds (and then cannot be evaluated) */
-         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-         varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+         /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+         if( sol == NULL )
+         {
+            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
+            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
+            varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+         }
 
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], &varval, &val) );
       }
@@ -3555,10 +3556,13 @@ SCIP_RETCODE computeViolation(
             var = SCIPexprtreeGetVars(consdata->exprtrees[i])[j];
             varval = SCIPgetSolVal(scip, sol, var);
 
-            /* project onto global box, in case someone gives us a point that is slightly outside the bounds (and then cannot be evaluated) */
-            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-            varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+            /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+            if( sol == NULL )
+            {
+               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
+               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
+               varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+            }
 
             x[j] = varval;
          }
