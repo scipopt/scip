@@ -2611,7 +2611,6 @@ SCIP_RETCODE getLinearCoeffs(
 
    assert( scip != NULL );
    assert( nvars == 0 || vars != NULL );
-   assert( nvars > 0 || vars == NULL );
    assert( !SCIPisInfinity(scip, *rhs) );
    assert( matrix != NULL );
    
