@@ -6348,6 +6348,10 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
    for( c = 0; c < nconss; ++c )
    {
+      /* skip not yet active constraints */
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
@@ -6400,6 +6404,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
+
+      /* skip inactive constraints */
+      if( !SCIPconsIsActive(conss[c]) )
+         continue;
+      assert(SCIPconsIsAdded(conss[c]));
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -6452,8 +6462,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 #endif
 
          /* tell SCIP that we have something nonlinear */
-         if( SCIPconsIsAdded(conss[c]) )
-            SCIPenableNLP(scip);
+         SCIPenableNLP(scip);
       }
    }
 
