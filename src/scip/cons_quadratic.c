@@ -7292,7 +7292,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                   gap = -(xval*yval - xval*yub - yval*xlb + xlb*yub) / (1+sqrt(xval*xval + yval*yval));
             }
 
-            assert(!SCIPisFeasNegative(scip, gap));
+            assert(!SCIPisNegative(scip, gap / MAX3(REALABS(xval), REALABS(yval), 1.0)));
             if( gap < 0.0 )
                gap = 0.0;
          }
