@@ -50,10 +50,11 @@
  * - There is a time limit (parameter @a timelimit).
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
- *   the cuts are taken into account - which cannot easily be included into the separation subscip.) 
+ *   the cuts are taken into account - which cannot easily be included into the separation subscip.)
  *   Then the solution is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
+ * @todo Use pointers to originating separators to sort out cuts that should not be used.
  *
  * @warning This plugin is not yet fully tested.
  * @warning This separator should be used carefully - it may require a long separation time.
