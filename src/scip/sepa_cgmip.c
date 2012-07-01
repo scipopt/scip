@@ -2435,12 +2435,12 @@ SCIP_RETCODE createCGCutDirect(
             cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
       SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
-      
+
       /* if norm is 0, the cut is trivial */
       if ( SCIPisPositive(scip, cutnorm) )
       {
          SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
-         
+
          if ( violated || (sepadata->usecutpool && ! cutislocal ) )
          {
             SCIP_ROW* cut;
@@ -3093,12 +3093,13 @@ SCIP_RETCODE createCGCuts(
       SCIP_SOL* sol;
       sol = sols[s];
 
+      /* generate cuts by the C-MIR and/or Strong-CG functions */
       if ( sepadata->usecmir )
       {
          SCIP_CALL( createCGCutCMIR(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
                boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, ngen) );
       }
-      
+
       if ( sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutStrongCG(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
@@ -3111,7 +3112,9 @@ SCIP_RETCODE createCGCuts(
                &nprevrows, prevrows, ngen) );
       }
    }
-   assert( nprevrows <= nsols );
+   assert( nprevrows <= 2 * nsols );
+   assert( sepadata->usecmir || nprevrows <= nsols );
+   assert( sepadata->usestrongcg || nprevrows <= nsols );
 
    /* release rows */
    for (k = 0; k < nprevrows; ++k)
@@ -3374,7 +3377,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
 
    if ( success && !SCIPisStopped(scip) )
-   {      
+   {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
 
