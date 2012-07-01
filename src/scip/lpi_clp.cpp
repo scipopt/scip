@@ -66,19 +66,15 @@
 #define CLP_VERSION VERSION
 #endif
 
-#include <iostream>
 #include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include <vector>
 #include <string>
 
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
-
-
-/* in C++ we have to use "0" instead of "(void*)0" */
-#undef NULL
-#define NULL 0
 
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
@@ -2382,7 +2378,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
     * detects an objective limit exceedence. The primal simplex has no such detection (will never
     * stop with objective limit exceedence). Hence we are infeasible only if status == 1 and we have
     * not stopped due to the objective limit. */
-   return ( lpi->clp->status() == 1 && lpi->clp->secondaryStatus() == 0 );
+   return ( lpi->clp->status() == 1 && (lpi->clp->secondaryStatus() == 0 || lpi->clp->secondaryStatus() == 6) );
 }
 
 
