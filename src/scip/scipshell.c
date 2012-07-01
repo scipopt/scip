@@ -83,10 +83,9 @@ SCIP_RETCODE fromCommandLine(
    case SCIP_READERROR:
       SCIPinfoMessage(scip, NULL, "error reading file <%s>\n", filename);
       return SCIP_OKAY;
-      /*lint -fallthrough*/
    default:
       SCIP_CALL( retcode );
-   }
+   } /*lint !e788*/
 
    /*******************
     * Problem Solving *
