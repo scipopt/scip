@@ -314,13 +314,13 @@ SCIP_RETCODE printSCI(
          {
             switch (M[k][l])
             {
-            case 1: 
-               SCIPinfoMessage(scip, NULL, "+"); 
+            case 1:
+               SCIPinfoMessage(scip, NULL, "+");
                break;
-            case -1: 
+            case -1:
                SCIPinfoMessage(scip, NULL, "-");
                break;
-            case 0: 
+            case 0:
                SCIPinfoMessage(scip, NULL, "#");
                break;
             default:
@@ -381,7 +381,7 @@ void copyValues(
  *  The values of the minimal SCIs are stored in @a weights.
  *  The array @a cases[i][j] stores which of the cases were applied to get @a weights[i][j].
  *  Here, 3 means that we have reached the upper limit.
- * 
+ *
  *  We assume that the upper right triangle is fixed to 0. Hence we can perform the computation a
  *  bit more efficient.
  */
@@ -1487,7 +1487,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 {  /*lint --e{715}*/
-   SCIP_Bool infeasible;
+   SCIP_Bool infeasible = FALSE;
    int nfixedvars = 0;
    int ncuts = 0;
    int c;
@@ -1498,7 +1498,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTFIND;
-   infeasible = FALSE;
 
    /* loop through constraints */
    for (c = 0; c < nusefulconss && ! infeasible; c++)
@@ -1546,7 +1545,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 {  /*lint --e{715}*/
-   SCIP_Bool infeasible;
+   SCIP_Bool infeasible = FALSE;
    int nfixedvars = 0;
    int ncuts = 0;
    int c;
@@ -1623,17 +1622,19 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_Real** vals;
       SCIP_Real** weights;
+      SCIP_Real** vals;
+      SCIP_CONS* cons;
       int** cases;
-      int i;
-      int j;
       int nspcons;
       int nblocks;
+      int i;
+      int j;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
-      consdata = SCIPconsGetData(conss[c]);
+      cons = conss[c];
+      assert( cons != 0 );
+      consdata = SCIPconsGetData(cons);
 
       assert( consdata != NULL );
       assert( consdata->nspcons > 0 );
@@ -1641,6 +1642,26 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       assert( consdata->vals != NULL );
       assert( consdata->weights != NULL );
       assert( consdata->cases != NULL );
+
+      /* check for upper right triangle */
+      if ( ! consdata->istrianglefixed )
+      {
+         SCIP_Bool infeasible = FALSE;
+         int nfixedvars = 0;
+
+         SCIP_CALL( fixTriangle(scip, cons, &infeasible, &nfixedvars) );
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         if ( nfixedvars > 0 )
+         {
+            *result = SCIP_REDUCEDDOM;
+            return SCIP_OKAY;
+         }
+      }
+      assert( consdata->istrianglefixed );
 
       nspcons = consdata->nspcons;
       nblocks = consdata->nblocks;
