@@ -1332,7 +1332,7 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
 
          SCIP_CALL( SCIPpropCons(scip, consdata->slackcons, proptiming, &locresult) );
 
-         SCIPdebugPrintf(" --> locresult=%d", locresult);
+         SCIPdebugPrintf(" --> locresult=%d\n", locresult);
       }
       /**@todo else propagate the domain of the binvar as well: start probing mode, fix binvar to one, propagate
        *       constraint, and see whether we become infeasible; if this is implemented, the resprop callback must be
@@ -1531,7 +1531,7 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
 
    assert(scip != NULL);
 
-   SCIPdebugMessage("locking variables for constraint <%s>", SCIPconsGetName(cons));
+   SCIPdebugMessage("locking variables for constraint <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
