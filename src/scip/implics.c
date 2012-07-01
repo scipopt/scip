@@ -1220,15 +1220,15 @@ SCIP_RETCODE SCIPcliqueAddVar(
       const int amount = clique->nvars - pos;
 
       /* moving elements to correct position */
-      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount);
-      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount);
+      BMSmoveMemoryArray(&(clique->vars[pos+1]), &(clique->vars[pos]), amount); /*lint !e866*/
+      BMSmoveMemoryArray(&(clique->values[pos+1]), &(clique->values[pos]), amount); /*lint !e866*/
       clique->nvars++;
 
       /* insertion for a variable with cliquevalue FALSE */
       if( !value )
       {
 	 /* find last entry with the same variable and value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos );
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos ); /*lint !e722*/
 
 	 /* check if the same variable with other value also exists */
 	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
@@ -1243,7 +1243,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 	 else
 	 {
 	    /* find last entry with the same variable and different value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos );
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos ); /*lint !e722*/
 
 	    /* check if we found the same variable with the same value more than once */
 	    if( pos > 0 && clique->vars[pos - 1] == var )
@@ -1267,7 +1267,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
       else
       {
 	 /* find last entry with the same variable and different value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos );
+	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos ); /*lint !e722*/
 
 	 /* check if the same variable with other value also exists */
 	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
@@ -1291,7 +1291,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
 	 else
 	 {
 	    /* find last entry with the same variable and value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos );
+	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos ); /*lint !e722*/
 
 	    if( pos != i )
 	       *doubleentry = TRUE;
