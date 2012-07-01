@@ -422,7 +422,7 @@ SCIP_RETCODE getConstraints(
    modifiable = FALSE;
 
    /* get length of line and check for correct ending of constraint line */
-   len = strlen(buf);
+   len = (int)strlen(buf);
    if( len < 1 || buf[len - 1] != ';' )
    {
       cipinput->haserror = TRUE;
