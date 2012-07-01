@@ -2600,9 +2600,7 @@ SCIP_RETCODE printQuadraticCons(
    assert( scip != NULL );
    assert( rowname != NULL );
 
-   /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
-   assert( nlinvars > 0 || linvars == NULL );
    assert( nquadvarterms == 0 || quadvarterms != NULL );
    assert( nbilinterms == 0 || bilinterms != NULL );
 
@@ -2698,9 +2696,7 @@ SCIP_RETCODE printNonlinearCons(
    assert( scip != NULL );
    assert( rowname != NULL );
 
-   /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
-   assert( nlinvars > 0 || linvars == NULL );
    assert( nexprtrees == 0 || exprtrees != NULL );
    assert( nexprtrees == 0 || exprtreecoefs != NULL );
 
