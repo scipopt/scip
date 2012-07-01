@@ -49,7 +49,7 @@
 #define DEFAULT_NWAITINGNODES 200LL          /* number of nodes without incumbent change heuristic should wait        */
 #define DEFAULT_RANDOMIZATION TRUE           /* should the choice which sols to take be randomized?                   */
 #define DEFAULT_DONTWAITATROOT FALSE         /* should the nwaitingnodes parameter be ignored at the root node?       */
-#define DEFAULT_USELPROWS    FALSE           /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_USELPROWS     FALSE          /* should subproblem be created out of the rows in the LP rows,
                                               * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE           /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
                                               * cutpool of the original scip be copied to constraints of the subscip
@@ -90,8 +90,7 @@ struct SCIP_HeurData
    SOLTUPLE*             lasttuple;          /**< last tuple of solutions created by crossover                      */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
-                                              *   to constraints in subproblem?
-                                              */
+                                              *   to constraints in subproblem?                                     */
    SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
 };
 
@@ -494,9 +493,10 @@ SCIP_RETCODE setupSubproblem(
        * crossover, since it would probably just optimize over the same space as the other heuristic
        */
       for( i = 1; i < nusedsols; i++ )
+      {
          if( SCIPsolGetHeur(sols[i]) != solheur || SCIPsolGetNodenum(sols[i]) != solnodenum )
             allsame = FALSE;
-
+      }
       *success = !allsame && !SCIPhashtableExists(heurdata->hashtable, elem);
 
       /* check, whether solution tuple has already been tried */
@@ -912,7 +912,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
@@ -926,7 +926,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
-   assert(!SCIPisInfinity(scip,SCIPgetUpperbound(scip)));
+   assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
    if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
@@ -946,22 +946,21 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int) SCIPheurGetNCalls(heur), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, (unsigned int) SCIPheurGetNCalls(heur), TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
    retcode = SCIPsolve(subscip);
 
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
+   /* Errors in solving the subproblem should not kill the overall solving process.
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
    if( retcode != SCIP_OKAY )
    {
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
@@ -974,8 +973,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       int solindex;                             /* index of the solution created by crossover          */
 
       /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       success = FALSE;
