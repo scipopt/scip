@@ -226,7 +226,7 @@ SCIP_RETCODE readVariables(
       SCIP_CALL( SCIPaddVar(scip, (*vars)[*nvars]) );
 
       /* if variable is actually semicontinuous or semiintegral, create bounddisjunction constraint (var <= 0.0 || var >= semibound) */
-      if( semibound != SCIP_INVALID )
+      if( semibound != SCIP_INVALID )  /*lint !e777*/
       {
          SCIP_CONS* cons;
          SCIP_VAR* consvars[2];
@@ -243,7 +243,7 @@ SCIP_RETCODE readVariables(
          bounds[0] = 0.0;
          bounds[1] = semibound;
 
-         SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_semibound", SCIPvarGetName((*vars)[*nvars]));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_semibound", SCIPvarGetName((*vars)[*nvars]));
 
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, consvars, boundtypes, bounds, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -343,7 +343,7 @@ SCIP_RETCODE readObjective(
       /* get coefficient value */
       if( xmlFirstChild(coefnode) == NULL || xmlGetData(xmlFirstChild(coefnode)) == NULL )
       {
-         SCIPerrorMessage("No objective coefficient stored for %d'th variable (<%s>).\n", idx, SCIPvarGetName(vars[idx]));
+         SCIPerrorMessage("No objective coefficient stored for %d'th variable (<%s>).\n", idx, SCIPvarGetName(vars[idx]));  /*lint !e613*/
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -352,13 +352,13 @@ SCIP_RETCODE readObjective(
       val = strtod(attrval, (char**)&attrval);
       if( *attrval != '\0' )
       {
-         SCIPerrorMessage("Error parsing objective coefficient value '%s' for %d'th variable (<%s>).\n", xmlGetData(xmlFirstChild(coefnode)), idx, SCIPvarGetName(vars[idx]));
+         SCIPerrorMessage("Error parsing objective coefficient value '%s' for %d'th variable (<%s>).\n", xmlGetData(xmlFirstChild(coefnode)), idx, SCIPvarGetName(vars[idx]));  /*lint !e613*/
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
       /* change objective coefficient of SCIP variable */
-      SCIP_CALL( SCIPchgVarObj(scip, vars[idx], val) );
+      SCIP_CALL( SCIPchgVarObj(scip, vars[idx], val) );  /*lint !e613*/
    }
 
    /* objective constant: model as fixed variable, if nonzero */
@@ -471,7 +471,7 @@ SCIP_RETCODE readConstraints(
       consname = xmlGetAttrval(consnode, "name");
       if( consname == NULL )
       {
-         SCIPsnprintf(name, 20, "cons%d", *nconss);
+         (void) SCIPsnprintf(name, 20, "cons%d", *nconss);
          consname = name;
       }
 
@@ -870,7 +870,7 @@ SCIP_RETCODE readLinearCoefs(
 
       val[count] = strtod(xmlGetData(xmlFirstChild(elnode)), (char**)&attrval);
 
-      if( *attrval != '\0' || (val[count] != val[count]) )
+      if( *attrval != '\0' || (val[count] != val[count]) )  /*lint !e777*/
       {
          SCIPerrorMessage("Invalid value '%s' in <el> node under <value> node in <linearConstraintCoefficients>.\n", xmlGetData(elnode));
          *doingfine = FALSE;
@@ -921,9 +921,9 @@ SCIP_RETCODE readLinearCoefs(
             assert(idx[pos] >= 0);
             assert(idx[pos] < nvars);
 
-            assert(constypes[row] == LINEAR);
+            assert(constypes[row] == LINEAR);  /*lint !e613*/
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, conss[row], vars[idx[pos]], val[pos]) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, conss[row], vars[idx[pos]], val[pos]) );  /*lint !e613*/
          }
       }
    }
@@ -946,9 +946,9 @@ SCIP_RETCODE readLinearCoefs(
             assert(idx[pos] >= 0);
             assert(idx[pos] < nconss);
 
-            assert(constypes[idx[pos]] == LINEAR);
+            assert(constypes[idx[pos]] == LINEAR);  /*lint !e613*/
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, conss[idx[pos]], vars[col], val[pos]) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, conss[idx[pos]], vars[col], val[pos]) );  /*lint !e613*/
          }
       }
    }
@@ -1091,7 +1091,7 @@ SCIP_RETCODE readQuadraticCoefs(
       if( attrval != NULL )
       {
          coef = strtod(attrval, (char**)&attrval);
-         if( *attrval != '\0' || (coef != coef) )
+         if( *attrval != '\0' || (coef != coef) )  /*lint !e777*/
          {
             SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "coef"), count);
             *doingfine = FALSE;
@@ -1131,10 +1131,10 @@ SCIP_RETCODE readQuadraticCoefs(
          cons = *objcons;
          assert(*objconstype == QUADRATIC);
       }
-      else if( constypes[considx] == LINEAR )
+      else if( constypes[considx] == LINEAR )  /*lint !e613*/
       {
          /* replace linear constraint by quadratic constraint */
-         cons = conss[considx];
+         cons = conss[considx];  /*lint !e613*/
 
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
             SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
@@ -1144,18 +1144,18 @@ SCIP_RETCODE readQuadraticCoefs(
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[considx]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[considx]) );  /*lint !e613*/
 
-         conss[considx] = cons;
-         constypes[considx] = QUADRATIC;
+         conss[considx] = cons;  /*lint !e613*/
+         constypes[considx] = QUADRATIC;  /*lint !e613*/
       }
       else
       {
-         cons = conss[considx];
-         assert(constypes[considx] == QUADRATIC);
+         cons = conss[considx];  /*lint !e613*/
+         assert(constypes[considx] == QUADRATIC);  /*lint !e613*/
       }
 
-      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, vars[varidx1], vars[varidx2], coef) );
+      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, vars[varidx1], vars[varidx2], coef) );  /*lint !e613*/
    }
 
    if( count != nqterms )
@@ -1223,7 +1223,7 @@ SCIP_RETCODE readExpression(
       if( attrval != NULL )
       {
          coef = strtod(attrval, (char**)&attrval);
-         if( *attrval != '\0' || (coef != coef) )
+         if( *attrval != '\0' || (coef != coef) )  /*lint !e777*/
          {
             SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of <variable> node in nonlinear expression.\n", xmlGetAttrval(node, "coef"));
             *doingfine = FALSE;
@@ -1236,14 +1236,14 @@ SCIP_RETCODE readExpression(
       }
 
       /* assign index to variable, if we see it the first time */
-      if( exprvaridx[idx] == -1 )
+      if( exprvaridx[idx] == -1 )  /*lint !e613*/
       {
-         exprvaridx[idx] = *nexprvars;
+         exprvaridx[idx] = *nexprvars;  /*lint !e613*/
          ++*nexprvars;
       }
 
       /* create VARIDX expression, put into LINEAR expression if we have coefficient != 1 */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_VARIDX, exprvaridx[idx]) );
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_VARIDX, exprvaridx[idx]) );  /*lint !e613*/
       if( coef != 1.0 )
       {
          SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), expr, 1, expr, &coef, 0.0) );
@@ -1269,7 +1269,7 @@ SCIP_RETCODE readExpression(
       if( attrval != NULL )
       {
          val = strtod(attrval, (char**)&attrval);
-         if( *attrval != '\0' || (val != val) )
+         if( *attrval != '\0' || (val != val) )  /*lint !e777*/
          {
             SCIPerrorMessage("Invalid value '%s' in \"value\" attribute of <number> node in nonlinear expression.\n", xmlGetAttrval(node, "value"));
             *doingfine = FALSE;
@@ -1674,7 +1674,7 @@ SCIP_RETCODE readExpression(
          if( attrval != NULL )
          {
             quadelems[nquadelems].coef = strtod(attrval, (char**)&attrval);
-            if( *attrval != '\0' || (quadelems[nquadelems].coef != quadelems[nquadelems].coef) )
+            if( *attrval != '\0' || (quadelems[nquadelems].coef != quadelems[nquadelems].coef) )  /*lint !e777*/
             {
                SCIPerrorMessage("Invalid value '%s' for \"coef\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "coef"), nquadelems);
                *doingfine = FALSE;
@@ -1735,13 +1735,13 @@ SCIP_RETCODE readExpression(
                continue;
 
             /* assign new index to variable, if we see it the first time in this exprtree */
-            if( exprvaridx[i] == -1 )
+            if( exprvaridx[i] == -1 )  /*lint !e613*/
             {
-               exprvaridx[i] = *nexprvars;
+               exprvaridx[i] = *nexprvars;  /*lint !e613*/
                ++*nexprvars;
             }
 
-            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[quadvarsidxs[i]], SCIP_EXPR_VARIDX, exprvaridx[i]) );
+            SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &children[quadvarsidxs[i]], SCIP_EXPR_VARIDX, exprvaridx[i]) );  /*lint !e613*/
          }
 
          /* create quadratic expression */
@@ -1882,7 +1882,7 @@ SCIP_RETCODE readNonlinearExprs(
          assert(exprvaridx[i] < nexprvars );
 
          if( exprvaridx[i] >= 0 )
-            exprvars[exprvaridx[i]] = vars[i];
+            exprvars[exprvaridx[i]] = vars[i];  /*lint !e613*/
       }
 
       /* create expression tree */
@@ -1923,8 +1923,8 @@ SCIP_RETCODE readNonlinearExprs(
          }
          else
          {
-            cons = &conss[considx];
-            constype = &constypes[considx];
+            cons = &conss[considx];  /*lint !e613*/
+            constype = &constypes[considx];  /*lint !e613*/
          }
          oldcons = *cons;
 
@@ -2187,8 +2187,8 @@ SCIP_DECL_READERREAD(readerReadOsil)
    /* add constraints to problem */
    for( i = 0; i < nconss; ++i )
    {
-      assert(conss[i] != NULL);
-      SCIP_CALL( SCIPaddCons(scip, conss[i]) );
+      assert(conss[i] != NULL);  /*lint !e613*/
+      SCIP_CALL( SCIPaddCons(scip, conss[i]) );  /*lint !e613*/
    }
    if( objcons != NULL )
    {
@@ -2206,14 +2206,14 @@ CLEANUP:
    /* free variables */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );  /*lint !e613*/
    }
    SCIPfreeBufferArrayNull(scip, &vars);
 
    /* free constraints */
    for( i = 0; i < nconss; ++i )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
    }
    SCIPfreeBufferArrayNull(scip, &conss);
    SCIPfreeBufferArrayNull(scip, &constypes);

@@ -1770,7 +1770,7 @@ SCIP_RETCODE splitOffLinearPart(
    assert(conshdlrdata->exprgraph != NULL);
 
    /* number of children of expression graph node is a good upper estimate on number of linear variables */
-   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);
+   linvarssize = MAX(SCIPexprgraphGetNodeNChildren(consdata->exprgraphnode), 1);  /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars,  linvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linvarssize) );
 
@@ -6407,7 +6407,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
    for( c = 0; c < nconss; ++c )
    {
       /* skip not yet active constraints */
-      if( !SCIPconsIsActive(conss[c]) )
+      if( !SCIPconsIsActive(conss[c]) )  /*lint !e613*/
          continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -8064,7 +8064,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
             break;
          }
 
-         BMScopyMemoryArray(&vars[cnt], exprvars, nexprvars);
+         BMScopyMemoryArray(&vars[cnt], exprvars, nexprvars);  /*lint !e866*/
          cnt += nexprvars;
       }
    }
@@ -8605,7 +8605,6 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
 /** adds expression trees to a nonlinear constraint
  * constraint must not be active yet
  */
-extern
 SCIP_RETCODE SCIPaddExprtreesNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */

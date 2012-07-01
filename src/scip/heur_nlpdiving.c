@@ -1530,15 +1530,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnnlpiterations = heurdata->maxnlpiterabs;
-   maxnnlpiterations += (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel;
+   maxnnlpiterations += (int)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel);
 
    /* don't try to dive, if we took too many NLP iterations during diving */
    if( heurdata->nnlpiterations >= maxnnlpiterations )
       return SCIP_OKAY;
 
    /* allow at least a bit more than the so far average number of NLP iterations per dive */
-   avgnnlpiterations = heurdata->nnlpiterations / MAX(ncalls, 1.0);
-   maxnnlpiterations = MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
+   avgnnlpiterations = (int)(heurdata->nnlpiterations / MAX(ncalls, 1.0));
+   maxnnlpiterations = (int)MAX(maxnnlpiterations, heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
    /* don't try to dive, if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );
@@ -1557,7 +1557,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
 
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, heurdata->nlpfastfail) );
+   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, (int)heurdata->nlpfastfail) );
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -2145,7 +2145,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving) /*lint --e{715}*/
                /* update pseudo cost values */
                if( updatepscost && SCIPisGT(scip, objval, oldobjval) )
                {
-                  assert(frac != SCIP_INVALID);
+                  assert(frac != SCIP_INVALID);  /*lint !e777*/
                   if( bestcandroundup )
                   {
                      SCIP_CALL( SCIPupdateVarPseudocost(scip, var, 1.0-frac, objval - oldobjval, 1.0) );

@@ -61,7 +61,6 @@
 
 #define PROPVARTOL    SCIPepsilon(scip) /**< tolerance to add to variable bounds in domain propagation */
 #define PROPSIDETOL   SCIPepsilon(scip) /**< tolerance to add to constraint sides in domain propagation */
-#define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
 /** power function type to be used by a constraint instead of the general pow */
@@ -1245,11 +1244,11 @@ SCIP_RETCODE presolveDual(
                {
                   /* if a < 0.0, then a*x^2 is unbounded for x -> infinity, thus fix x to infinity */
                   xfix = SCIPinfinity(scip);
-                  xfixobjval = SCIPinfinity(scip);
+                  /* not needed: xfixobjval = SCIPinfinity(scip); */
                }
                else
                {
-                  if( xfix == SCIP_INVALID )
+                  if( xfix == SCIP_INVALID ) /*lint !e777*/
                   {
                      /* initialize with value for x=xub */
                      xfix = xub;
@@ -1279,11 +1278,11 @@ SCIP_RETCODE presolveDual(
                   if( cand > xlb && cand > -consdata->xoffset && cand < xub && xfixobjval > -b*b/(4.0*a) + c )
                   {
                      xfix = cand;
-                     xfixobjval = -b*b/(4.0*a) + c;
+                     /* not needed: xfixobjval = -b*b/(4.0*a) + c; */
                   }
                }
             }
-            assert(xfix != SCIP_INVALID);
+            assert(xfix != SCIP_INVALID); /*lint !e777*/
             assert(SCIPisInfinity(scip, -xlb) || SCIPisLE(scip, xlb, xfix));
             assert(SCIPisInfinity(scip,  xub) || SCIPisGE(scip, xub, xfix));
          }
@@ -1413,7 +1412,7 @@ SCIP_RETCODE tightenBounds(
             /* if variable not fixed yet, then do so now */
             SCIP_Real fixval;
 
-            if( bounds.inf != bounds.sup )
+            if( bounds.inf != bounds.sup ) /*lint !e777*/
                fixval = (bounds.inf + bounds.sup) / 2.0;
             else
                fixval = bounds.inf;
@@ -2958,7 +2957,7 @@ SCIP_RETCODE addVarbound(
       SCIP_CONS* vbdcons;
       char name[SCIP_MAXSTRLEN];
 
-      SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_vbnd", SCIPconsGetName(cons));
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_vbnd", SCIPconsGetName(cons));
 
       SCIP_CALL( SCIPcreateConsVarbound(scip, &vbdcons, name, var, vbdvar, vbdcoef, lhs, rhs,
          FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4994,7 +4993,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAbspower)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      if( SCIPconsIsAdded(conss[c]) )
+      if( SCIPconsIsAdded(conss[c]) )  /*lint !e613*/
       {
          SCIPenableNLP(scip);
          break;
@@ -5082,7 +5081,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
       }
 
       /* add nlrow respresentation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
       {
          if( consdata->nlrow == NULL )
          {
@@ -5943,7 +5942,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       default:
          SCIPerrorMessage("invalid result from checkFixedVariables\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }  /*lint !e788*/
 
       if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
@@ -5979,7 +5978,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
                   lhs = -SCIPinfinity(scip);
                else
                   lhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
-               if( -SCIPisInfinity(scip, consdata->lhs) )
+               if( SCIPisInfinity(scip, -consdata->lhs) )
                   rhs =  SCIPinfinity(scip);
                else
                   rhs = (consdata->lhs - SIGN(consdata->xoffset) * consdata->pow(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
@@ -6026,7 +6025,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
-         SCIPdebugMessage("upgraded constraint <%s> to linear constraint due to binary x-variable\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMessage("upgraded constraint <%s> to linear constraint due to binary x-variable\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          SCIPdebugPrintCons(scip, conss[c], NULL);
          SCIPdebugPrintCons(scip, lincons, NULL);
 
@@ -6051,7 +6050,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          *naddconss += localnaddconss;
          *result = SCIP_SUCCESS;
       }
-      if( SCIPconsIsDeleted(conss[c]) )
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
       {
          ++*ndelconss;
          *result = SCIP_SUCCESS;
@@ -6061,7 +6060,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       if( conshdlrdata->dualpresolve )
       {
          /* check if a variable can be fixed because it appears in no other constraint */
-         SCIP_CALL( presolveDual(scip, conss[c], &infeas, ndelconss, nfixedvars) );
+         SCIP_CALL( presolveDual(scip, conss[c], &infeas, ndelconss, nfixedvars) );  /*lint !e613*/
          if( infeas )
          {
             SCIPdebugMessage("dual presolve on constraint <%s> says problem is infeasible in presolve\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
@@ -6553,7 +6552,7 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
          break;
       default:
          SCIPABORT(); /* checked above that this cannot happen */
-         return SCIP_INVALIDDATA;
+         return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
 
