@@ -7547,7 +7547,7 @@ SCIP_DECL_CONSLOCK(consLockNonlinear)
    /* variable locking for nonlinear part is done w.r.t. variables in the expression graph
     * since only active constraints have their nonlinear part in the expression graph, we can lock only active constraints
     */
-   assert(SCIPconsIsActive(cons));
+   assert(SCIPconsIsActive(cons) || SCIPconsIsDeleted(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
