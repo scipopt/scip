@@ -3489,6 +3489,7 @@ SCIP_RETCODE computeViolation(
    )
 {  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    SCIP_Real varval;
    int i;
 
@@ -3531,17 +3532,39 @@ SCIP_RETCODE computeViolation(
 
       if( nvars == 1 )
       {
-         /* in the not so unusual case that an expression has only one variable, we do not extra alloc memory */
-         varval = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(consdata->exprtrees[i])[0]);
+         /* in the not so unusual case that an expression has only one variable, we do not need to extra allocate memory */
+         var = SCIPexprtreeGetVars(consdata->exprtrees[i])[0];
+         varval = SCIPgetSolVal(scip, sol, var);
+
+         /* project onto global box, in case someone gives us a point that is slightly outside the bounds (and then cannot be evaluated) */
+         assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
+         assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
+         varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], &varval, &val) );
       }
       else
       {
          SCIP_Real* x;
+         int j;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
-         SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, SCIPexprtreeGetVars(consdata->exprtrees[i]), x) );
+
+         for( j = 0; j < nvars; ++j )
+         {
+            var = SCIPexprtreeGetVars(consdata->exprtrees[i])[j];
+            varval = SCIPgetSolVal(scip, sol, var);
+
+            /* project onto global box, in case someone gives us a point that is slightly outside the bounds (and then cannot be evaluated) */
+            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
+            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
+            varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+
+            x[j] = varval;
+         }
+
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], x, &val) );
+
          SCIPfreeBufferArray(scip, &x);
       }
 
@@ -3875,13 +3898,13 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    xlb = SCIPvarGetLbLocal(var);
    xub = SCIPvarGetUbLocal(var);
 
-   /* if variable is fixed, then cannot really compute secant */
-   if( SCIPisEQ(scip, xlb, xub) )
-      return SCIP_OKAY;
    /* if variable is unbounded, then cannot really compute secant */
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+   {
+      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since variable is unbounded\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
-   assert(SCIPisLT(scip, xlb, xub));
+   }
+   assert(SCIPisLE(scip, xlb, xub));
 
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
    if( !finite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
@@ -3894,13 +3917,22 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
    if( !finite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
-      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
+      SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
       return SCIP_OKAY;
    }
    valub *= treecoef;
 
-   slope = (valub - vallb) / (xub - xlb);
-   constant = vallb - slope * xlb;
+   if( SCIPisEQ(scip, xlb, xub) )
+   {
+      assert(SCIPisEQ(scip, vallb, valub));
+      slope = 0.0;
+      constant = 0.5 * (vallb+valub);
+   }
+   else
+   {
+      slope = (valub - vallb) / (xub - xlb);
+      constant = vallb - slope * xlb;
+   }
 
    /* add secant to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
@@ -3911,7 +3943,10 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    {
       SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
    }
-   SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &var, &slope) );
+   if( slope != 0.0 )
+   {
+      SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &var, &slope) );
+   }
 
    *success = TRUE;
 
@@ -4028,12 +4063,6 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
       return SCIP_OKAY;
    }
 
-   if( SCIPisEQ(scip, xlb, xub) && SCIPisEQ(scip, ylb, yub) )
-   {
-      SCIPdebugMessage("skip bivariate secant since both <%s> and <%s> are fixed\n", SCIPvarGetName(x), SCIPvarGetName(y));
-      return SCIP_OKAY;
-   }
-
    /* reference point should not be outside of bounds */
    assert(SCIPisFeasLE(scip, xlb, ref[0]));
    assert(SCIPisFeasGE(scip, xub, ref[0]));
@@ -4058,7 +4087,23 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    p4[0] = xlb;
    p4[1] = yub;
 
-   if( SCIPisEQ(scip, xlb, xub) )
+   if( SCIPisEQ(scip, xlb, xub) && SCIPisEQ(scip, ylb, yub) )
+   {
+      SCIP_CALL( SCIPexprtreeEval(exprtree, p1, &p1val) );
+
+      if( !finite(p1val) || SCIPisInfinity(scip, REALABS(p1val)) )
+      {
+         SCIPdebugMessage("skip secant for tree %d of constraint <%s> since function cannot be evaluated\n", exprtreeidx, SCIPconsGetName(cons));
+         return SCIP_OKAY;
+      }
+
+      p1val *= treecoef;
+
+      coefx = 0.0;
+      coefy = 0.0;
+      constant = p1val;
+   }
+   else if( SCIPisEQ(scip, xlb, xub) )
    {
       /* secant between p1 and p4: p1val + [(p4val - p1val) / (yub - ylb)] * (y - ylb) */
       assert(!SCIPisEQ(scip, ylb, yub));
@@ -4668,7 +4713,9 @@ SCIP_RETCODE addIntervalGradientEstimator(
 
       SCIPintervalMulScalar(INTERVALINFTY, &intgrad[i], intgrad[i], treecoef);
 
-      if( (overestimate && val == ub) ||  /*lint !e777*/
+      if( SCIPisEQ(scip, lb, ub) )
+         coefs[i] = 0.0;
+      else if( (overestimate && val == ub) ||  /*lint !e777*/
          (!overestimate && val == lb) )   /*lint !e777*/
          coefs[i] = SCIPintervalGetInf(intgrad[i]);
       else
@@ -4799,7 +4846,7 @@ SCIP_RETCODE generateCut(
          }
          if( !success )
          {
-            SCIPdebugMessage("failed to generate polyhedral estimator for concave function, fall back to intervalgradient cut\n");
+            SCIPdebugMessage("failed to generate polyhedral estimator for %d-dim concave function in exprtree %d, fall back to intervalgradient cut\n", SCIPexprtreeGetNVars(consdata->exprtrees[i]), i);
             SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
          }
       }
@@ -7095,6 +7142,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
          {
             *result = SCIP_FEASIBLE;
             SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+            assert(!SCIPisInfinity(scip, maxviol));
          }
          return SCIP_OKAY;
       }
