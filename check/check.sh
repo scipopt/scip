@@ -40,6 +40,14 @@ then
     mkdir locks
 fi
 
+PWD=`pwd`
+FIELLLL=`ls results/check.$TSTNAME.*3.0.0.*dbg.cpx.*.err`
+
+echo -e "$PWD" "\n" "$FIELLLL"
+
+exit
+
+
 LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
 RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
 DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done

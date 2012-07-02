@@ -22,7 +22,7 @@ cd $SCIPDIR
 
 # email variables
 ADMINEMAIL=heinz@zib.de
-EMAILTO=lpip-developers@zib.de
+LPIPDEVELOPERSEMAIL=lpip-developers@zib.de
 EMAILFROM="Git <git@zib.de>"
 HOSTNAME=`hostname`
 
@@ -40,7 +40,7 @@ TIME=3600
 LOCK=false
 CONTINUE=false
 OPTS=(dbg opt)
-TESTS=(short miplib2010 bugs)
+TESTS=(short MMM bugs)
 
 # first delete cron jobs if one exists
 crontab -r
@@ -121,25 +121,42 @@ do
             NABORTS=`grep -c abort check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
             NREADERRORS=`grep -c readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
 
+	    # only send fail mail to the group if the occurs on MMM or short
+	    if [ "$TEST" == "bugs" ]
+	    then
+		RECEIVER=$ADMINEMAIL
+	    else
+		EMAILTO=$LPIPDEVELOPERSEMAIL
+	    fi
+
+	    # construct string which shows the destination of the out, err, and res files
+	    ERRORFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.err`
+	    OUTFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.out`
+	    RESFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+	    DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
+
             # check read fails
             if [ $NFAILS -gt 0 ];
             then
                 SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-                grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+		ERRORINSTANCES=`grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check read errors
             if [ $NREADERRORS -gt 0 ];
             then
                 SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-                grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+		ERRORINSTANCES=`grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check aborts
             if [ $NABORTS -gt 0 ];
             then
                 SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-                grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+		ERRORINSTANCES=`grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check performance in opt mode
@@ -164,7 +181,8 @@ do
 
             # in any case send a mail to admin
             SUBJECT="[$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-            tail -8 check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
+	    RESULTS=`tail -8 check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+            echo -e "$RESULTS \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
         done
     done
     
