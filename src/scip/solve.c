@@ -2503,6 +2503,7 @@ SCIP_RETCODE solveNodeLP(
       {
          SCIPdebugMessage("solution cuts off node\n");
       }
+   }
 #endif
 
    if( !(*cutoff) && !(*lperror) )
