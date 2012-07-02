@@ -21216,6 +21216,8 @@ SCIP_RETCODE solveProbingLP(
 
 /** solves the LP at the current probing node (cannot be applied at preprocessing stage);
  *  no separation or pricing is applied
+ *
+ *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
  */
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */

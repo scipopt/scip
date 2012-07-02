@@ -7930,8 +7930,9 @@ SCIP_RETCODE SCIPpropagateProbingImplications(
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
    );
 
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
- *  no separation or pricing is applied
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage);  no separation or pricing is applied
+ *
+ *  The LP has to be constructed before (you can use SCIPisLPConstructed() or SCIPconstructLP()).
  */
 extern
 SCIP_RETCODE SCIPsolveProbingLP(
