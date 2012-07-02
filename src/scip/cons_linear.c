@@ -4830,7 +4830,7 @@ SCIP_RETCODE tightenBounds(
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
-   force = (nvars == 1);
+   force = (nvars == 1) && !SCIPconsIsModifiable(cons);
 
    /* ensure that the variables are properly sorted */
    if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
@@ -4841,7 +4841,7 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   for( nrounds = 0; !consdata->boundstightened && nrounds < MAXTIGHTENROUNDS; ++nrounds )
+   for( nrounds = 0; (force || !consdata->boundstightened) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = TRUE;
