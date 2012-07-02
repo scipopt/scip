@@ -12558,7 +12558,7 @@ SCIP_RETCODE lpSolveStable(
       }
 
       success3 = FALSE;
-      if( !simplex && !tightdualfeastol && !tightdualfeastol )
+      if( !simplex && !tightprimfeastol && !tightdualfeastol )
       {
          SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success3) );
       }
@@ -12594,7 +12594,7 @@ SCIP_RETCODE lpSolveStable(
          {
             SCIP_CALL( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
          }
-         if( !simplex && !tightdualfeastol && !tightdualfeastol )
+         if( !simplex && !tightprimfeastol && !tightdualfeastol )
          {
             SCIP_CALL( lpSetBarrierconvtol(lp, SCIPsetBarrierconvtol(set), &success) );
          }
@@ -13155,6 +13155,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_RETCODE retcode;
    SCIP_Bool needprimalray;
    SCIP_Bool needdualray;
+   int harditlim;
    int resolveitlim;
 
    assert(lp != NULL);
@@ -13174,8 +13175,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       || (set->conf_enable && set->conf_useinflp));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
-   resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, itlim) : itlim );
-   assert(itlim == -1 || (resolveitlim <= itlim));
+   harditlim = (int) MAX(itlim, INT_MAX);
+   resolveitlim = ( limitresolveiters ? lpGetResolveItlim(set, stat, harditlim) : harditlim );
+   assert(harditlim == -1 || (resolveitlim <= harditlim));
 
    /* if there are lazy bounds, check whether the bounds should explicitly be put into the LP (diving was started)
     * or removed from the LP (diving was ended)
@@ -13216,7 +13218,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, itlim, needprimalray,
+      SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, messagehdlr, stat, prob, eventqueue, resolveitlim, harditlim, needprimalray,
             needdualray, fastmip, tightprimfeastol, tightdualfeastol, fromscratch, keepsol, lperror) );
       SCIPdebugMessage("lpFlushAndSolve() returned solstat %d (error=%u)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
