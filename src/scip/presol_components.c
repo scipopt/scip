@@ -341,7 +341,7 @@ SCIP_RETCODE copyAndSolveComponent(
       /* if we have only continuous variables, solving the root should be enough;
        * this avoids to spend much time in a nonlinear subscip with only continuous variables
        */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", presoldata->nodelimit) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
    }
 
    /* create problem in sub-SCIP */
