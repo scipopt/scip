@@ -452,7 +452,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
