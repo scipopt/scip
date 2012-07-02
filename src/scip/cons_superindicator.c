@@ -25,6 +25,9 @@
  */
 /**@todo unify enfolp and enfops, sepalp and sepaps callbacks */
 /**@todo enforce by branching on binary variable if slack constraint only returns SCIP_INFEASIBLE */
+/**@todo consider enforcing by adding slack constraint (or copy of it) locally if binary variable is fixed to 1
+ *       (some constraint handler cannot enforce constraints that are not active)
+ */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -1039,7 +1042,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
    SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 #endif
 
-   /* check all contraints */
+   /* check all constraints */
    for( i = nconss-1; i >= 0 && cont; i-- )
    {
       SCIP_CONSDATA* consdata;
@@ -1332,7 +1335,7 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
 
          SCIP_CALL( SCIPpropCons(scip, consdata->slackcons, proptiming, &locresult) );
 
-         SCIPdebugPrintf(" --> locresult=%d", locresult);
+         SCIPdebugPrintf(" --> locresult=%d\n", locresult);
       }
       /**@todo else propagate the domain of the binvar as well: start probing mode, fix binvar to one, propagate
        *       constraint, and see whether we become infeasible; if this is implemented, the resprop callback must be
@@ -1531,7 +1534,7 @@ SCIP_DECL_CONSLOCK(consLockSuperindicator)
 
    assert(scip != NULL);
 
-   SCIPdebugMessage("locking variables for constraint <%s>", SCIPconsGetName(cons));
+   SCIPdebugMessage("locking variables for constraint <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

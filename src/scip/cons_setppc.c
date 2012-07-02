@@ -174,20 +174,20 @@ int setppcCompare(
 
    consdata1 = SCIPconsGetData(cons1);
    assert(consdata1 != NULL);
-   assert(consdata1->setppctype != SCIP_SETPPCTYPE_COVERING);
+   assert(consdata1->setppctype != SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
    consdata2 = SCIPconsGetData(cons2);
    assert(consdata2 != NULL);
-   assert(consdata2->setppctype != SCIP_SETPPCTYPE_COVERING);
+   assert(consdata2->setppctype != SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
 
    if( consdata1->setppctype < consdata2->setppctype ||
-      (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars < consdata2->nvars) ||
-      (consdata2->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars > consdata2->nvars) )
+      (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars < consdata2->nvars) || /*lint !e641*/
+      (consdata2->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars > consdata2->nvars) ) /*lint !e641*/
       return -1;
-   else if( (consdata1->setppctype == consdata2->setppctype && consdata1->nvars == consdata2->nvars) )
+   else if( (consdata1->setppctype == consdata2->setppctype && consdata1->nvars == consdata2->nvars) ) /*lint !e641*/
       return 0;
    else
    {
-      assert(consdata1->setppctype > consdata2->setppctype || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars > consdata2->nvars) || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars < consdata2->nvars));
+      assert(consdata1->setppctype > consdata2->setppctype || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars > consdata2->nvars) || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars < consdata2->nvars)); /*lint !e641*/
       return +1;
    }
 }
@@ -2252,8 +2252,11 @@ SCIP_RETCODE addExtraCliques(
    assert(cutoff != NULL);
 
    /* no given binary variables */
-   if( nbinvars == 0 )
+   if( nbinvars == 0 || ncliques == 0 )
       return SCIP_OKAY;
+
+   assert(binvars != NULL);
+   assert(cliquepartition != NULL);
 
    /* no useful clique information */
    if( ncliques == nbinvars )
@@ -2341,7 +2344,7 @@ SCIP_RETCODE addExtraCliques(
 		  /* get the maximal number of occurances of this variable, if this variables  */
 		  tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
 		  maxnvarconsidx[varindex] = SCIPvarGetNLocksDown(tmpvar) + SCIPvarGetNLocksUp(tmpvar);
-		  SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+		  SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
 	       }
 	       else
 	       {
@@ -2354,7 +2357,7 @@ SCIP_RETCODE addExtraCliques(
 		  if( varnconss[varindex] == maxnvarconsidx[varindex] )
 		  {
 		     maxnvarconsidx[varindex] = SCIPcalcMemGrowSize(scip, maxnvarconsidx[varindex] + 1);
-		     SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+		     SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
 		  }
 
 		  assert(varnconss[varindex] < maxnvarconsidx[varindex]);
@@ -2417,6 +2420,8 @@ SCIP_RETCODE collectCliqueConss(
    if( nconss == 0 )
       return SCIP_OKAY;
 
+   assert(conss != NULL);
+
    for( c = nconss - 1; c >= 0; --c )
    {
       cons = conss[c];
@@ -2449,9 +2454,9 @@ SCIP_RETCODE collectCliqueConss(
 
       /* @todo: check for covering constraints with only two variables which are equal to a packing constraint with
        * negated variables */
-      if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
-         assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+         assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
          usefulconss[*nusefulconss] = cons;
          ++(*nusefulconss);
@@ -2497,6 +2502,8 @@ SCIP_RETCODE collectCliqueData(
    if( nusefulconss == 0 )
       return SCIP_OKAY;
 
+   assert(usefulconss != NULL);
+
    for( c = nusefulconss - 1; c >= 0; --c )
    {
       cons = usefulconss[c];
@@ -2507,7 +2514,7 @@ SCIP_RETCODE collectCliqueData(
       assert(consdata != NULL);
 
       /* here we should have no covering constraints anymore and the constraint data should be merged */
-      assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+      assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
       assert(consdata->merged);
 
       /* save maximal number of vars */
@@ -2540,7 +2547,7 @@ SCIP_RETCODE collectCliqueData(
             /* get the maximal number of occurances of this variable, if this variables  */
             tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
             maxnvarconsidx[varindex] = SCIPvarGetNLocksDown(tmpvar) + SCIPvarGetNLocksUp(tmpvar);
-            SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );  /*lint !e866*/
          }
          else
          {
@@ -2553,7 +2560,7 @@ SCIP_RETCODE collectCliqueData(
          if( varnconss[varindex] == maxnvarconsidx[varindex] )
          {
             maxnvarconsidx[varindex] = SCIPcalcMemGrowSize(scip, maxnvarconsidx[varindex] + 1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
          }
 
          assert(varnconss[varindex] < maxnvarconsidx[varindex]);
@@ -2652,7 +2659,7 @@ SCIP_RETCODE addCliqueDataEntry(
       assert(varconsidxs[varindex] == NULL);
 
       maxnvarconsidx[varindex] = 1;
-      SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
       varnconss[varindex] = 0;
    }
    else
@@ -2663,7 +2670,7 @@ SCIP_RETCODE addCliqueDataEntry(
       if( varnconss[varindex] == maxnvarconsidx[varindex] )
       {
 	 maxnvarconsidx[varindex] = SCIPcalcMemGrowSize(scip, maxnvarconsidx[varindex] + 1);
-	 SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) );
+	 SCIP_CALL( SCIPreallocBufferArray(scip, &(varconsidxs[varindex]), maxnvarconsidx[varindex]) ); /*lint !e866*/
       }
    }
    assert(varnconss[varindex] < maxnvarconsidx[varindex]);
@@ -2735,7 +2742,7 @@ SCIP_RETCODE presolvePropagateCons(
    /* no variables left */
    if( nvars == 0 && !SCIPconsIsModifiable(cons) )
    {
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 SCIPdebugMessage("empty set-partition/-covering constraint found -> cutoff\n");
 	 *cutoff = TRUE;
@@ -2744,7 +2751,7 @@ SCIP_RETCODE presolvePropagateCons(
       }
       else
       {
-	 assert(consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+	 assert(consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
 	 /* delete constraint */
 	 SCIPdebugMessage(" -> deleting constraint <%s>, no variables left\n", SCIPconsGetName(cons));
@@ -2762,7 +2769,7 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set covering constraint is feasible anyway and can be deleted
        * - a set partitioning or packing constraint is infeasible
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 /* delete constraint */
 	 SCIPdebugMessage(" -> deleting set-covering constraint <%s>, at least two variables are fixed to 1\n", SCIPconsGetName(cons));
@@ -2784,7 +2791,7 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set covering constraint is feasible anyway and can be disabled
        * - all other variables in a set partitioning or packing constraint must be zero
        */
-      if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING && consdata->nfixedzeros < nvars - 1 )
+      if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING && consdata->nfixedzeros < nvars - 1 ) /*lint !e641*/
       {
          assert(vars != NULL);
 
@@ -2810,7 +2817,7 @@ SCIP_RETCODE presolvePropagateCons(
 	 }
       }
 
-      if( !SCIPconsIsModifiable(cons) || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( !SCIPconsIsModifiable(cons) || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 /* delete constraint */
 	 SCIPdebugMessage(" -> deleting constraint <%s>, all variable are fixed\n", SCIPconsGetName(cons));
@@ -2837,7 +2844,7 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set packing constraint is feasible anyway and can be deleted
        * - a set partitioning or covering constraint is infeasible, and so is the whole problem
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 SCIPdebugMessage("set partitioning / covering constraint <%s> is infeasible\n", SCIPconsGetName(cons));
 	 *cutoff = TRUE;
@@ -2864,7 +2871,7 @@ SCIP_RETCODE presolvePropagateCons(
        * - a set partitioning or covering constraint is feasible and can be deleted after the
        *   remaining variable is fixed to one
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
 	 fixed = FALSE;
 	 for( v = nvars - 1; v >= 0; --v )
@@ -2904,7 +2911,7 @@ SCIP_RETCODE presolvePropagateCons(
    /* all but two variable were fixed to zero in a setpartitioning constraint then delete the constraint and
     * aggregate the remaining two variables
     */
-   if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedzeros + 2 == nvars )
+   if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedzeros + 2 == nvars ) /*lint !e641*/
    {
       SCIP_VAR* var;
 
@@ -2989,7 +2996,7 @@ SCIP_RETCODE presolvePropagateCons(
 		     SCIP_CALL( SCIPreallocBufferArray(scip, &undoneaggrvars, 2 * (*saggregations)) );
 
 		     /* clear the aggregation type array to set the default to the aggregation of the form x + y = 1 */
-		     BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations);
+		     BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations); /*lint !e866*/
 		  }
 
 		  /* memorize aagregation variables*/
@@ -3104,9 +3111,13 @@ SCIP_RETCODE checkForOverlapping(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   vars = consdata->vars;
    nvars = consdata->nvars;
-   assert(vars != NULL || nvars == 0);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   vars = consdata->vars;
+   assert(vars != NULL);
 
    oldnfixedzeros = consdata->nfixedzeros;
    overlapdestroyed = FALSE;
@@ -3147,6 +3158,10 @@ SCIP_RETCODE checkForOverlapping(
       assert(consdata1 != NULL);
 
       nvars1 = consdata1->nvars;
+
+      if( nvars1 == 0 )
+	 continue;
+
       /* no more variables from cons as nvars1 can overlap */
       assert(countofoverlapping[c] <= nvars1);
 
@@ -3158,7 +3173,7 @@ SCIP_RETCODE checkForOverlapping(
       /* cons1 includes cons */
       if( !overlapdestroyed && countofoverlapping[c] == nvars - consdata->nfixedzeros )
       {
-	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
 	 {
 	    if( nvars - consdata->nfixedzeros < nvars1 )
 	    {
@@ -3172,6 +3187,7 @@ SCIP_RETCODE checkForOverlapping(
 	       assert(consdata1->merged);
 
 	       vars1 = consdata1->vars;
+	       assert(vars1 != NULL);
 
 	       /* sorting array after indices of variables, negated and active counterparts would stand side by side */
 	       SCIPsortDownPtr((void**)vars1, SCIPvarCompActiveAndNegated, nvars1);
@@ -3285,7 +3301,7 @@ SCIP_RETCODE checkForOverlapping(
 
 	    /* if caused by all fixings now this set partitioning constraint doesn't have any variable which was
 	     * fixed to one, it's infeasible */
-	    if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nfixedzeros == nvars1 && consdata1->nfixedones != 1 )
+	    if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nfixedzeros == nvars1 && consdata1->nfixedones != 1 ) /*lint !e641*/
 	    {
 	       SCIPdebugMessage("all variable in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
 	       *cutoff = TRUE;
@@ -3322,7 +3338,7 @@ SCIP_RETCODE checkForOverlapping(
       else if( (!overlapdestroyed && countofoverlapping[c] + consdata1->nfixedzeros == nvars1) || countofoverlapping[c] == nvars1 )
       {
 	 /* even in deleted constraints we may fix unfixed variables */
-	 if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+	 if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
 	 {
 	    const int oldnfixedvars = *nfixedvars;
 #ifndef NDEBUG
@@ -3451,7 +3467,7 @@ SCIP_RETCODE checkForOverlapping(
 
 	    /* if caused by all fixings now this set partitioning constraint doesn't have any variable which was
 	     * fixed to one, it's infeasible */
-	    if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedzeros == nvars && consdata->nfixedones != 1 )
+	    if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata->nfixedzeros == nvars && consdata->nfixedones != 1 ) /*lint !e641*/
 	    {
 	       SCIPdebugMessage("all variable in the set-partitioning constraint <%s> are fixed to zero, this leads to a cutoff\n", SCIPconsGetName(cons1));
 	       *cutoff = TRUE;
@@ -3475,7 +3491,7 @@ SCIP_RETCODE checkForOverlapping(
 	 }
 	 else
 	 {
-	    assert(consdata1->setppctype == SCIP_SETPPCTYPE_PACKING);
+	    assert(consdata1->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
 	    /* delete cons1 due to redundancy to cons */
 	    SCIPdebugMessage(" -> deleting constraint <%s> number <%d> due to inclusion in constraint <%s> number <%d>\n", SCIPconsGetName(cons1), c, SCIPconsGetName(cons), considx);
@@ -3488,7 +3504,7 @@ SCIP_RETCODE checkForOverlapping(
        * cons and both constraints are setpartitioning constraints we might aggregate both not overlapping variables and
        * delete one constraint
        */
-      else if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1 && countofoverlapping[c] == nvars1 - 1 )
+      else if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1 && countofoverlapping[c] == nvars1 - 1 ) /*lint !e641*/
       {
 	 SCIP_VAR* aggvar1;
 	 SCIP_VAR* aggvar2;
@@ -3641,7 +3657,7 @@ SCIP_RETCODE checkForOverlapping(
 	    SCIP_CALL( SCIPreallocBufferArray(scip, &undoneaggrvars, 2 * (*saggregations)) );
 
 	    /* clear the aggregation type array to set the default to the aggregation of the form x + y = 1 */
-	    BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations);
+	    BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations); /*lint !e866*/
 	 }
 
 	 /* memorize aagregation variables*/
@@ -3663,7 +3679,7 @@ SCIP_RETCODE checkForOverlapping(
        * delete all overlapping variables in cons1 and add the negated variable of the not overlapped variable to cons
        * 1; the result should be a shorter constraint with the same impact
        */
-      else if( shrinking && !overlapdestroyed && countofoverlapping[c] > 1 && ((consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1) || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars1 - 1)) )
+      else if( shrinking && !overlapdestroyed && countofoverlapping[c] > 1 && ((consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1) || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars1 - 1)) ) /*lint !e641*/
       {
 	 SCIP_CONSDATA* consdatachange;
 	 SCIP_VAR** varstostay;
@@ -3673,7 +3689,6 @@ SCIP_RETCODE checkForOverlapping(
 	 SCIP_VAR* addvar;
 	 SCIP_Bool negated0;
 	 SCIP_Bool negated1;
-	 SCIP_Bool noaddvar = FALSE;
 	 int nvarstostay;
 	 int nvarstochange;
 	 int constochangeidx;
@@ -3683,7 +3698,7 @@ SCIP_RETCODE checkForOverlapping(
 
 	 addvar = NULL;
 
-	 assert((consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING) != (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING) || countofoverlapping[c] != nvars - 1 || countofoverlapping[c] != nvars1 - 1);
+	 assert((consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING) != (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING) || countofoverlapping[c] != nvars - 1 || countofoverlapping[c] != nvars1 - 1); /*lint !e641*/
 
 	 /* both constraints should stay merged */
 	 assert(consdata->merged);
@@ -3695,7 +3710,7 @@ SCIP_RETCODE checkForOverlapping(
 	 consdata1->sorted = FALSE;
 
 	 /* initialize variables */
-	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1)
+	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && countofoverlapping[c] == nvars - oldnfixedzeros - 1) /*lint !e641*/
 	 {
 	    varstostay = vars;
 	    varstochange = consdata1->vars;
@@ -3771,7 +3786,6 @@ SCIP_RETCODE checkForOverlapping(
 	    if( SCIPvarGetIndex(var) < SCIPvarGetIndex(var1)  )
 	    {
 	       assert(addvar == NULL);
-	       assert(!noaddvar);
 	       addvar = varstostay[v];
 	       --v;
 	    }
@@ -3788,7 +3802,6 @@ SCIP_RETCODE checkForOverlapping(
 	       if( negated0 != negated1 )
 	       {
 		  assert(addvar == NULL);
-		  noaddvar = TRUE;
 
 		  SCIPdebugMessage("-> trying to fix <%s> to 0 because it would exist twice in a constraint\n", SCIPvarGetName(varstochange[v1]));
 
@@ -3804,7 +3817,7 @@ SCIP_RETCODE checkForOverlapping(
 		  assert(fixed);
 		  ++(*nfixedvars);
 
-		  /* the above fixing is equal to th fixation of varstostay[v] to 1, so we can call presolvePropagateCons() for consstay */
+		  /* the above fixing is equal to the fixation of varstostay[v] to 1, so we can call presolvePropagateCons() for consstay */
 		  SCIP_CALL( presolvePropagateCons(scip, constostay, FALSE, NULL, NULL, NULL, NULL, nfixedvars, naggrvars, ndelconss, cutoff) );
 
 		  return SCIP_OKAY;
@@ -3824,45 +3837,42 @@ SCIP_RETCODE checkForOverlapping(
 	       --v1;
 	    }
 	 }
-	 assert(addvar != NULL || v >= 0 || noaddvar);
+	 assert(addvar != NULL || v >= 0);
 	 /* we should have removed exactly countofoverlapping[c] variables from the constochange */
 	 assert(*nchgcoefs - oldnchgcoefs == countofoverlapping[c]);
 
-	 if( !noaddvar )
+	 /* determine addvar if not yet found */
+	 if( addvar == NULL )
 	 {
-	    /* determine addvar if not yet found */
-	    if( addvar == NULL )
+	    for( ; v >= 0; --v)
 	    {
-	       for( ; v >= 0; --v)
-	       {
-		  if( SCIPvarGetLbLocal(varstostay[v]) > 0.5 || SCIPvarGetUbLocal(varstostay[v]) < 0.5 )
-		     continue;
+	       if( SCIPvarGetLbLocal(varstostay[v]) > 0.5 || SCIPvarGetUbLocal(varstostay[v]) < 0.5 )
+		  continue;
 
-		  /* all variables inside the first clique constraint should be either active or negated of an active one */
-		  assert(SCIPvarIsActive(varstostay[v]) || (SCIPvarGetStatus(varstostay[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(varstostay[v]))));
+	       /* all variables inside the first clique constraint should be either active or negated of an active one */
+	       assert(SCIPvarIsActive(varstostay[v]) || (SCIPvarGetStatus(varstostay[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(varstostay[v]))));
 
-		  addvar = varstostay[v];
-		  break;
-	       }
+	       addvar = varstostay[v];
+	       break;
 	    }
-	    assert(addvar != NULL);
-
-	    /* get representative variable for all deleted variables */
-	    SCIP_CALL( SCIPgetNegatedVar(scip, addvar, &addvar) );
-	    assert(addvar != NULL);
-
-	    SCIPdebugMessage(" -> adding variable <%s> to constraint <%s> number %d\n", SCIPvarGetName(addvar), SCIPconsGetName(constochange), constochangeidx);
-	    /* add representative for overlapping instead */
-	    SCIP_CALL( addCoef(scip, constochange, addvar) );
-	    ++(*nchgcoefs);
-
-	    /* constraint should be still merged because this added variable is new in this constraint */
-	    consdatachange->merged = TRUE;
-	    assert(constochangeidx == (cons == constochange ? considx : c));
-
-	    /* correct local data structure, add constraint entry to variable data  */
-	    SCIP_CALL( addCliqueDataEntry(scip, addvar, constochangeidx, TRUE, usefulvars, nusefulvars, vartoindex, varnconss, maxnvarconsidx, varconsidxs) );
 	 }
+	 assert(addvar != NULL);
+
+	 /* get representative variable for all deleted variables */
+	 SCIP_CALL( SCIPgetNegatedVar(scip, addvar, &addvar) );
+	 assert(addvar != NULL);
+
+	 SCIPdebugMessage(" -> adding variable <%s> to constraint <%s> number %d\n", SCIPvarGetName(addvar), SCIPconsGetName(constochange), constochangeidx);
+	 /* add representative for overlapping instead */
+	 SCIP_CALL( addCoef(scip, constochange, addvar) );
+	 ++(*nchgcoefs);
+
+	 /* constraint should be still merged because this added variable is new in this constraint */
+	 consdatachange->merged = TRUE;
+	 assert(constochangeidx == (cons == constochange ? considx : c));
+
+	 /* correct local data structure, add constraint entry to variable data  */
+	 SCIP_CALL( addCliqueDataEntry(scip, addvar, constochangeidx, TRUE, usefulvars, nusefulvars, vartoindex, varnconss, maxnvarconsidx, varconsidxs) );
 
 	 /* cons changed so much, that it cannot be used for more overlapping checks */
 	 if( *chgcons )
@@ -3939,10 +3949,15 @@ SCIP_RETCODE liftCliqueVariables(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   vars = consdata->vars;
    nvars = consdata->nvars;
-   assert(vars != NULL || nvars == 0);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    assert(nvars <= *maxnvars);
+
+   vars = consdata->vars;
+   assert(vars != NULL);
 
    v1 = endidx;
 
@@ -4131,7 +4146,7 @@ SCIP_RETCODE liftCliqueVariables(
 		  }
 	       }
 	    }
-	    if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+	    if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
 	    {
 	       assert(SCIPvarIsActive(vars[nottocheck]) || (SCIPvarGetStatus(vars[nottocheck]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[nottocheck]))));
 
@@ -4158,7 +4173,7 @@ SCIP_RETCODE liftCliqueVariables(
 	    break;
 	 }
 	 /* we found a variable which could be added to a partitioning constraint so we can fix it to zero */
-	 else if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+	 else if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
 	 {
 	    SCIPdebugMessage("trying to fix <%s> to 0 because this variable is in the same clique with a set partition\n", SCIPvarGetName(usefulvars[v1 + 1]));
 	    /* fix variable to zero */
@@ -4277,7 +4292,7 @@ SCIP_RETCODE liftCliqueVariables(
       if( k < 0 )
       {
 	 /* we found a variable which could be added to a partitioning constraint so we can fix it to zero */
-	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+	 if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
 	 {
 	    SCIPdebugMessage("trying to fix <%s> to 0 because this variable is in the same clique with a set partition\n", SCIPvarGetName(usefulvars[v1]));
 
@@ -4729,7 +4744,7 @@ SCIP_RETCODE preprocessCliques(
        */
 
       /* we try to add all variables to the partitioning constraints, to try to fix as much as possible */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
          v1 = nusefulvars - 1;
       else
       {
@@ -4808,7 +4823,6 @@ SCIP_RETCODE preprocessCliques(
                ++(countofoverlapping[varconsidxs[varindex][i]]);
          }
 
-	 oldnchgcoefs = *nchgcoefs;
 	 chgcons0 = FALSE;
 
 	 /* check for overlapping constraint after lifting, in the first round we will only check up front */
@@ -4894,6 +4908,11 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(firstchange != NULL);
    assert(ndelconss != NULL);
    assert(nchgsides != NULL);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   assert(conss != NULL);
 
    /* create a hash table for the constraint set */
    hashtablesize = SCIPcalcHashtableSize(10*nconss);

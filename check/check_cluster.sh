@@ -50,9 +50,9 @@ EXCLUSIVE=${17}
 
 
 # check all variables defined
-if [ -z ${EXCLUSIVE} ]
+if test -z $EXCLUSIVE
 then
-    echo Skipping test since not all variables are defined.
+    echo Skipping test since variable EXCLUSIVE is not defined.
     exit 1;
 fi
 

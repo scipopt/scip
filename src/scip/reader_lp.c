@@ -2647,7 +2647,6 @@ SCIP_RETCODE printQuadraticCons(
 
    /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
-   assert( nlinvars > 0 || linvars == NULL );
    assert( nquadvarterms == 0 || quadvarterms != NULL );
    assert( nbilinterms == 0 || bilinterms != NULL );
 

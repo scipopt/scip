@@ -50,10 +50,11 @@
  * - There is a time limit (parameter @a timelimit).
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
- *   the cuts are taken into account - which cannot easily be included into the separation subscip.) 
+ *   the cuts are taken into account - which cannot easily be included into the separation subscip.)
  *   Then the solution is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
+ * @todo Use pointers to originating separators to sort out cuts that should not be used.
  *
  * @warning This plugin is not yet fully tested.
  * @warning This separator should be used carefully - it may require a long separation time.
@@ -2435,12 +2436,12 @@ SCIP_RETCODE createCGCutDirect(
             cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
       SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
-      
+
       /* if norm is 0, the cut is trivial */
       if ( SCIPisPositive(scip, cutnorm) )
       {
          SCIP_Bool violated = SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm);
-         
+
          if ( violated || (sepadata->usecutpool && ! cutislocal ) )
          {
             SCIP_ROW* cut;
@@ -3093,12 +3094,13 @@ SCIP_RETCODE createCGCuts(
       SCIP_SOL* sol;
       sol = sols[s];
 
+      /* generate cuts by the C-MIR and/or Strong-CG functions */
       if ( sepadata->usecmir )
       {
          SCIP_CALL( createCGCutCMIR(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
                boundsfortrans, boundtypesfortrans, &nprevrows, prevrows, ngen) );
       }
-      
+
       if ( sepadata->usestrongcg )
       {
          SCIP_CALL( createCGCutStrongCG(scip, sepa, sepadata, mipdata, sol, normtype, cutcoefs, cutvars, cutvals, varsolvals, weights,
@@ -3111,7 +3113,9 @@ SCIP_RETCODE createCGCuts(
                &nprevrows, prevrows, ngen) );
       }
    }
-   assert( nprevrows <= nsols );
+   assert( nprevrows <= 2 * nsols );
+   assert( sepadata->usecmir || nprevrows <= nsols );
+   assert( sepadata->usestrongcg || nprevrows <= nsols );
 
    /* release rows */
    for (k = 0; k < nprevrows; ++k)
@@ -3374,7 +3378,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
 
    if ( success && !SCIPisStopped(scip) )
-   {      
+   {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
 

@@ -3360,15 +3360,9 @@ SCIP_RETCODE propIndicator(
             /* consider only finite lhs/rhs */
             if ( ! SCIPisInfinity(scip, -lhs) || ! SCIPisInfinity(scip, rhs) )
             {
-               /* ignore equations */
+               /* ignore equations (cannot add opposite constraint) */
                if ( ! SCIPisEQ(scip, lhs, rhs) )
                {
-                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(lhs)) )
-                     lhs += 1.0;
-
-                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(rhs)) )
-                     rhs -= 1.0;
-
                   assert( consdata->lincons != NULL );
                   nlinvars = SCIPgetNVarsLinear(scip, consdata->lincons);
                   linvars = SCIPgetVarsLinear(scip, consdata->lincons);
@@ -3392,6 +3386,13 @@ SCIP_RETCODE propIndicator(
                      }
                   }
                   assert( nlinvars == nvars + 1 );
+
+                  /* possibly adjust lhs/rhs */
+                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(lhs)) )
+                     lhs += 1.0;
+
+                  if ( allintegral && ! SCIPisInfinity(scip, REALABS(rhs)) )
+                     rhs -= 1.0;
 
                   /* create reverse constraint */
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "reverse_%s", SCIPconsGetName(consdata->lincons));

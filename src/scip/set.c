@@ -3723,7 +3723,6 @@ SCIP_RETCODE SCIPsetExitPlugins(
 /** calls initpre methods of all plugins */
 SCIP_RETCODE SCIPsetInitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
@@ -3756,7 +3755,6 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 /** calls exitpre methods of all plugins */
 SCIP_RETCODE SCIPsetExitprePlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
