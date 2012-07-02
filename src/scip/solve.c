@@ -2495,10 +2495,14 @@ SCIP_RETCODE solveNodeLP(
 #ifdef SCIP_DEBUG
    if( *cutoff )
    {
-      if ( SCIPtreeGetCurrentDepth(tree) == 0 )
+      if( SCIPtreeGetCurrentDepth(tree) == 0 )
+      {
          SCIPdebugMessage("solution cuts off root node, stop solution process\n");
+      }
       else
+      {
          SCIPdebugMessage("solution cuts off node\n");
+      }
 #endif
 
    if( !(*cutoff) && !(*lperror) )
