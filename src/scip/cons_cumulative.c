@@ -1173,7 +1173,7 @@ SCIP_RETCODE evaluateCumulativeness(
       consdata->estimatedstrength = (SCIP_Real)(capacity - minfreecapacity) / (SCIP_Real) capacity;
    }
 
-   SCIPstatisticMessage("cumulative constraint<%s>: DISJ1=%g, DISJ2=%g, CUM=%g, RS1 = %g, RS2 = %g, EST = %g\n",
+   SCIPstatisticPrintf("cumulative constraint<%s>: DISJ1=%g, DISJ2=%g, CUM=%g, RS1 = %g, RS2 = %g, EST = %g\n",
       SCIPconsGetName(cons), consdata->disjfactor1, disjfactor2, cumfactor1, resstrength1, resstrength2,
       consdata->estimatedstrength);
 
@@ -7029,12 +7029,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
       SCIP_CALL( SCIPconsdataVisualize(scip, conss[c]) );
    }
 
-   SCIPstatisticMessage("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
-   SCIPstatisticMessage("@44  dual %d\n", conshdlrdata->ndualfixs);
-   SCIPstatisticMessage("@55  locks %d\n", conshdlrdata->nremovedlocks);
-   SCIPstatisticMessage("@66  decomp %d\n", conshdlrdata->ndecomps);
-   SCIPstatisticMessage("@77  allconsdual %d\n", conshdlrdata->nallconsdualfixs);
-   SCIPstatisticMessage("@88  alwaysruns %d\n", conshdlrdata->nalwaysruns);
+   SCIPstatisticPrintf("@33  irrelevant %d\n", conshdlrdata->nirrelevantjobs);
+   SCIPstatisticPrintf("@44  dual %d\n", conshdlrdata->ndualfixs);
+   SCIPstatisticPrintf("@55  locks %d\n", conshdlrdata->nremovedlocks);
+   SCIPstatisticPrintf("@66  decomp %d\n", conshdlrdata->ndecomps);
+   SCIPstatisticPrintf("@77  allconsdual %d\n", conshdlrdata->nallconsdualfixs);
+   SCIPstatisticPrintf("@88  alwaysruns %d\n", conshdlrdata->nalwaysruns);
 
    return SCIP_OKAY;
 }
