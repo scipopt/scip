@@ -575,8 +575,6 @@ void consdataUpdateLinearActivityLbChange(
 
       SCIPintervalSetRoundingMode(prevroundmode);
    }
-
-   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 }
 
 /** update the linear activities after a change in the upper bound of a variable */
@@ -673,8 +671,6 @@ void consdataUpdateLinearActivityUbChange(
 
       SCIPintervalSetRoundingMode(prevroundmode);
    }
-
-   assert(consdata->minlinactivity <= consdata->maxlinactivity || consdata->minlinactivityinf > 0 || consdata->maxlinactivityinf > 0);
 }
 
 /** processes variable fixing or bound change event */
