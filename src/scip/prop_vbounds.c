@@ -1438,7 +1438,7 @@ SCIP_RETCODE propagateVbounds(
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
-      propdata->inqueue[startpos] = FALSE;
+      propdata->inqueue[topopos] = FALSE;
 
       startvar = vars[getVarIndex(startpos)];
       starttype = getBoundtype(startpos);
