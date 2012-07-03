@@ -146,16 +146,23 @@ SCIP_RETCODE createSubproblem(
          SCIP_Real ub;
 
          solval = SCIPgetSolVal(scip, sol, vars[i]);
-
-         /* due to dual reductions, it may happen that the solution value is not in
-            the variable's domain anymore */
          lb = SCIPvarGetLbGlobal(subvars[i]);
          ub = SCIPvarGetUbGlobal(subvars[i]);
-         solval = MIN3(lb, ub, solval);
-
+         assert(SCIPisLE(scip, lb, ub));
+         
+         /* due to dual reductions, it may happen that the solution value is not in
+            the variable's domain anymore */
+         if( SCIPisLT(scip, solval, lb) )
+            solval = lb;
+         else if( SCIPisGT(scip, solval, ub) )
+            solval = ub;
+         
          /* perform the bound change */
-         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
-         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
+         if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
+         {
+            SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
+            SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
+         }
       }
    }
 
