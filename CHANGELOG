@@ -231,6 +231,7 @@ fixed bugs:
 - fixed bug in mutation heuristic with variables being fixed to infinite values
 - fixed several bugs writing an mps file in the reader_mps.c, e.g. writing fixed variables which are not (yet) removed
   and writing integer variables even with an objective value of 0, if they only exist in non-linear constraints
+- fixed bug in sepa_clique.c, could not handle only empty cliques, that were not removed
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
