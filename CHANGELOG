@@ -227,6 +227,7 @@ fixed bugs:
 - fixed bug in cons_xor.c parsing a constraint
 - fixed wrong assert in feasibility pump stage 3
 - fixed bug in simple rounding heuristic with column generation for variables with strictly positive lower bound
+- made Octane heuristic numerically more stable to avoid asserts being caused by cancellation
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
