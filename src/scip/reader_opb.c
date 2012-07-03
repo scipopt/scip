@@ -3834,6 +3834,7 @@ SCIP_RETCODE SCIPwriteOpb(
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
    int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed variables */
    int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
@@ -3874,7 +3875,7 @@ SCIP_RETCODE SCIPwriteOpb(
                if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                   continue;
             }
-            
+
             assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
          }
 #endif
@@ -3898,7 +3899,7 @@ SCIP_RETCODE SCIPwriteOpb(
                   SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
                   SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
                   SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
-                  
+
                   if( transformed )
                   {
                      SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
@@ -3920,12 +3921,12 @@ SCIP_RETCODE SCIPwriteOpb(
             for( v = nfixedvars - 1; v >= 0; --v )
                if( !existands || !SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                {
-                  if( sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) == NULL )
+                  if( sscanf(SCIPvarGetName(fixedvars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(fixedvars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(fixedvars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
                      SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");
-                     SCIP_CALL( SCIPprintVar(scip, vars[v], NULL) );
+                     SCIP_CALL( SCIPprintVar(scip, fixedvars[v], NULL) );
                      SCIPwarningMessage(scip, "OPB format needs generic variable names!\n");
-                  
+
                      if( transformed )
                      {
                         SCIPwarningMessage(scip, "write transformed problem with generic variable names.\n");
@@ -3952,7 +3953,7 @@ SCIP_RETCODE SCIPwriteOpb(
                   if( SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                      continue;
                }
-               
+
                assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );
             }
 #endif
@@ -3967,7 +3968,7 @@ SCIP_RETCODE SCIPwriteOpb(
          assert(resvars != NULL);
          assert(andvars != NULL);
          assert(nandvars != NULL);
-            
+
          for( v = nresvars - 1; v >= 0; --v )
          {
             assert(andvars[v] != NULL);
@@ -3980,7 +3981,7 @@ SCIP_RETCODE SCIPwriteOpb(
 
       *result = SCIP_SUCCESS;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3998,7 +3999,7 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -4020,7 +4021,7 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
 
    SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, nfixedvars, conss, nconss, genericnames, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }

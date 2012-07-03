@@ -45,7 +45,7 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -66,7 +66,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteWbo)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, nfixedvars, conss, nconss, genericnames, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }
