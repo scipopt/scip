@@ -82,7 +82,7 @@ void tryToInsert(
    assert(lambda != NULL);
    assert(nfacets != NULL);
 
-   if( lam <= 0.0 || SCIPisFeasGE(scip, lam, lambda[f_max-1]) )
+   if( SCIPisFeasLE(scip, lam, 0.0) || SCIPisFeasGE(scip, lam, lambda[f_max-1]) )
       return;
 
    lastfacet = facets[f_max];
@@ -487,7 +487,7 @@ void generateNeighborFacets(
 
    /* reverse search for facets from which the actual facet can be got by a single, decreasing + to - flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = 0; j < nsubspacevars && !facets[i][j] && negquotient[j] > lambda[i]; ++j )
+   for( j = 0; j < nsubspacevars && !facets[i][j] && SCIPisFeasGT(scip, negquotient[j], lambda[i]); ++j )
    {
       if( SCIPisFeasPositive(scip, q + 2*raydirection[j]) )
       {
@@ -498,7 +498,7 @@ void generateNeighborFacets(
 
    /* reverse search for facets from which the actual facet can be got by a single, nonincreasing - to + flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && negquotient[j] <= lambda[i]; --j )
+           for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && SCIPisFeasLE(scip, negquotient[j], lambda[i]); --j )
    {
       if( SCIPisFeasPositive(scip, q - 2*raydirection[j]) )
       {
@@ -890,6 +890,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
          assert(SCIPisPositive(scip, p));
          assert(SCIPisPositive(scip, q));
       }
+
+      /* avoid dividing by values close to 0.0 */
+      if( !SCIPisFeasPositive(scip, q) )
+         continue;
 
       /* assert necessary for flexelint */
       assert(q > 0);
