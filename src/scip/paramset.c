@@ -1618,6 +1618,28 @@ const char* paramtypeGetName(
    return paramtypename[(int)paramtype];
 }
 
+/** returns whether an existing parameter is fixed */
+SCIP_Bool SCIPparamsetIsFixed(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+
+   return SCIPparamIsFixed(param);
+}
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetGetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */

@@ -1872,6 +1872,17 @@ SCIP_RETCODE SCIPsetAddStringParam(
    return SCIP_OKAY;
 }
 
+/** gets the fixing status value of an existing parameter */
+SCIP_Bool SCIPsetIsParamFixed(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   return SCIPparamsetIsFixed(set->paramset, name);
+}
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPsetGetBoolParam(
    SCIP_SET*             set,                /**< global SCIP settings */

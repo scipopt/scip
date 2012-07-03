@@ -700,6 +700,13 @@ SCIP_RETCODE SCIPaddStringParam(
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
+/** gets the fixing status of an existing parameter */
+extern
+SCIP_Bool SCIPisParamFixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   );
+
 /** gets the value of an existing SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPgetBoolParam(

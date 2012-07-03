@@ -1902,7 +1902,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecFixParam)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* get the parameter to set */
+   /* get the parameter to fix */
    param = (SCIP_PARAM*)SCIPdialogGetData(dialog);
 
    (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current fixing status: %s, new value (TRUE/FALSE): ",
