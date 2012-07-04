@@ -2191,7 +2191,7 @@ SCIP_RETCODE solveSubproblem(
    /* forbid recursive call of undercover heuristic */
    if( SCIPisParamFixed(subscip, "heuristics/"HEUR_NAME"/freq") )
    {
-      SCIPwarningMessage("unfixing parameter heuristics/"HEUR_NAME"/freq in subscip of undercover heuristic to avoid recursive calls\n");
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in subscip of undercover heuristic to avoid recursive calls\n");
       SCIP_CALL( SCIPunfixParam(subscip, "heuristics/"HEUR_NAME"/freq") );
    }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
