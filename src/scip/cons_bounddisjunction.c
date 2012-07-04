@@ -104,12 +104,18 @@
  * @{
  */
 
+#if 0 /* These only work if one also passes integral values in case of integral variables. This is not always the case and not even asserted. */
 /** use defines for numeric compare methods to be slightly faster for integral values */
 #define isFeasLT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) >  0.5 : SCIPisFeasLT(scip, val1, val2))
 #define isFeasLE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val2) - (val1) > -0.5 : SCIPisFeasLE(scip, val1, val2))
 #define isFeasGT(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) >  0.5 : SCIPisFeasGT(scip, val1, val2))
 #define isFeasGE(scip, var, val1, val2) (SCIPvarIsIntegral(var) ? (val1) - (val2) > -0.5 : SCIPisFeasGE(scip, val1, val2))
-
+#else
+#define isFeasLT(scip, var, val1, val2) SCIPisFeasLT(scip, val1, val2)
+#define isFeasLE(scip, var, val1, val2) SCIPisFeasLE(scip, val1, val2)
+#define isFeasGT(scip, var, val1, val2) SCIPisFeasGT(scip, val1, val2)
+#define isFeasGE(scip, var, val1, val2) SCIPisFeasGE(scip, val1, val2)
+#endif
 /**@} */
 
 
@@ -666,6 +672,10 @@ SCIP_RETCODE removeFixedVariables(
       bound = consdata->bounds[v];
       boundtype = consdata->boundtypes[v];
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
+
+      SCIPdebugMessage("in <%s>, replace <%s>[%g,%g] %c= %g by <%s>[%g,%g] %c= %g\n", SCIPconsGetName(cons),
+         SCIPvarGetName(consdata->vars[v]), SCIPvarGetLbGlobal(consdata->vars[v]), SCIPvarGetUbGlobal(consdata->vars[v]), (consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), consdata->bounds[v],
+         SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? '>' : '<'), bound);
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
