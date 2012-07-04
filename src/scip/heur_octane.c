@@ -495,10 +495,10 @@ void generateNeighborFacets(
          tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
-
+   
    /* reverse search for facets from which the actual facet can be got by a single, nonincreasing - to + flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-           for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && SCIPisFeasLE(scip, negquotient[j], lambda[i]); --j )
+   for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && SCIPisFeasLE(scip, negquotient[j], lambda[i]); --j )
    {
       if( SCIPisFeasPositive(scip, q - 2*raydirection[j]) )
       {
@@ -1039,7 +1039,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 /** creates the octane primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
