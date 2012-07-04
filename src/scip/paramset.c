@@ -3575,6 +3575,22 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
          /* get frequency parameter of heuristic */
          (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
 
+         /* we have to unfix the parameter if it fixed and not already set to -1 */
+         if( SCIPparamsetIsFixed(paramset, paramname) )
+         {
+            int oldfreq;
+
+            SCIP_CALL( SCIPparamsetGetInt(paramset, paramname, &oldfreq) );
+
+            /* if the frequency is already set to -1, we do not have to unfix it, but must not try to set it, either */
+            if( oldfreq == -1 )
+               continue;
+
+            /* unfix parameter */
+            SCIPmessageFPrintInfo(messagehdlr, NULL, "unfixing parameter %s in order to disable sub-SCIPs in the current (sub-)SCIP instance\n", paramname);
+            SCIP_CALL( SCIPparamsetFix(paramset, paramname, FALSE) );
+         }
+
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
@@ -3592,6 +3608,23 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       
          /* get frequency parameter of separator */
          (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", sepaname);
+
+         /* we have to unfix the parameter if it fixed and not already set to -1 */
+         if( SCIPparamsetIsFixed(paramset, paramname) )
+         {
+            int oldfreq;
+
+            SCIP_CALL( SCIPparamsetGetInt(paramset, paramname, &oldfreq) );
+
+            /* if the frequency is already set to -1, we do not have to unfix it, but must not try to set it, either */
+            if( oldfreq == -1 )
+               continue;
+
+            /* unfix parameter */
+            SCIPmessageFPrintInfo(messagehdlr, NULL, "unfixing parameter %s in order to disable sub-SCIPs in the current (sub-)SCIP instance\n", paramname);
+            SCIP_CALL( SCIPparamsetFix(paramset, paramname, FALSE) );
+         }
+
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
