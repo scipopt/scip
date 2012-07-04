@@ -312,9 +312,18 @@ SCIP_RETCODE copyAndSolveComponent(
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.0) );
 
       /* reduce the effort spent for hash tables */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      if( !SCIPisParamFixed(subscip, "misc/usevartable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
+      }
+      if( !SCIPisParamFixed(subscip, "misc/useconstable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
+      }
+      if( !SCIPisParamFixed(subscip, "misc/usesmalltables") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usesmalltables", TRUE) );
+      }
 
       /* do not catch control-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

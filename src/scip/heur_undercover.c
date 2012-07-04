@@ -1587,7 +1587,7 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetPresolving(coveringscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use inference branching */
-   if( SCIPfindBranchrule(coveringscip, "inference") != NULL )
+   if( SCIPfindBranchrule(coveringscip, "inference") != NULL && !SCIPisParamFixed(coveringscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(coveringscip, "branching/inference/priority", INT_MAX/4) );
    }
@@ -2183,9 +2183,17 @@ SCIP_RETCODE solveSubproblem(
 
    /* deactivate expensive pre-root heuristics, since it may happen that the lp relaxation of the subproblem is already
       infeasible; in this case, we do not want to waste time on heuristics before solving the root lp */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
+   if( !SCIPisParamFixed(subscip, "heuristics/shiftandpropagate/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shiftandpropagate/freq", -1) );
+   }
 
    /* forbid recursive call of undercover heuristic */
+   if( SCIPisParamFixed(subscip, "heuristics/"HEUR_NAME"/freq") )
+   {
+      SCIPwarningMessage("unfixing parameter heuristics/"HEUR_NAME"/freq in subscip of undercover heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/"HEUR_NAME"/freq") );
+   }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);

@@ -1692,10 +1692,22 @@ SCIP_RETCODE subscipSetParams(
    SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
 #else
    /* set other heuristics */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+   if( !SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+   }
 
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/pscostdiving/freq", 1) ); */
    /*     SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", 3) ); */

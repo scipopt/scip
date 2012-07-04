@@ -522,19 +522,22 @@ SCIP_RETCODE SCIPapplyRens(
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
       /* use best estimate node selection */
-      if( SCIPfindNodesel(scip, "estimate") != NULL )
+      if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
       }
 
       /* use inference branching */
-      if( SCIPfindBranchrule(scip, "inference") != NULL )
+      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
       /* disable conflict analysis */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      if( !SCIPisParamFixed(subscip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+      }
    }
 
 #ifdef SCIP_DEBUG

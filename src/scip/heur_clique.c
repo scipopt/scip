@@ -620,8 +620,11 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIPdebugMessage("found %d cliques\n", ncliques);
 
    /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
-   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   }
 
    if( ncliques == nbinvars )
    {
@@ -988,7 +991,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
  TERMINATE:
 
    /* reset the conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
+   }
 
    /* free conflict variables */
    if( onefixvars != NULL )

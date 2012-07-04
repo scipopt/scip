@@ -1147,18 +1147,39 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* disable expensive presolving */
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
-         /* use inference branching */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
-
          /* use best estimate node selection */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+         if( SCIPfindNodesel(probingscip, "estimate") != NULL && !SCIPisParamFixed(probingscip, "nodeselection/estimate/stdpriority") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+         }
+
+         /* use inference branching */
+         if( SCIPfindBranchrule(probingscip, "inference") != NULL && !SCIPisParamFixed(probingscip, "branching/inference/priority") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "branching/inference/priority", INT_MAX/4) );
+         }
 
          /* disable conflict analysis */
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+         if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useinflp", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useboundlp", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
+         }
+         if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
+         {
+            SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+         }
 
          /* the neighborhood size is double the distance plus another ten percent */
          mindistance = SCIPceil(scip, 2.2*mindistance);

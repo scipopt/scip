@@ -514,7 +514,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
          SCIP_CALL( SCIPrestartSolve(scip) );
 
          /* use inference branching, since the objective is not meaningful */
-         if ( SCIPfindBranchrule(scip, "inference") != NULL )
+         if ( SCIPfindBranchrule(scip, "inference") != NULL && !SCIPisParamFixed(scip, "branching/inference/priority") )
          {
             SCIP_CALL( SCIPsetIntParam(scip, "branching/inference/priority", INT_MAX/4) );
          }

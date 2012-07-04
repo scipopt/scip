@@ -293,9 +293,18 @@ SCIP_RETCODE createSubSCIP(
     * set nodelimit to 0
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   }
+   if( !SCIPisParamFixed(heurdata->subscip, "propagating/probing/maxprerounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
+   }
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrestarts") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
+   }
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable SCIP output */
@@ -943,7 +952,11 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", heurdata->resolvetolfactor*SCIPfeastol(scip)) );
       SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", heurdata->resolvetolfactor*SCIPepsilon(scip)) );
       SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-      SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
+
+      if( !SCIPisParamFixed(heurdata->subscip, "constraints/linear/aggregatevariables") )
+      {
+         SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "constraints/linear/aggregatevariables", FALSE) );
+      }
    }
 
    /* transform sub-SCIP */
@@ -954,7 +967,10 @@ SCIP_RETCODE solveSubNLP(
     *  reset maxpresolverounds, in case user changed
     */
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   }
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPpressedCtrlC(heurdata->subscip) )
    {
