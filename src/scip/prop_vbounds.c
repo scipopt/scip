@@ -716,7 +716,7 @@ SCIP_RETCODE topologicalSort(
 
 #ifndef NDEBUG
    for( i = 0; i < nbounds; ++i )
-      assert(propdata->inqueue[i] == 0);
+      assert(!propdata->inqueue[i]);
 #endif
 
    /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
@@ -1436,6 +1436,7 @@ SCIP_RETCODE propagateVbounds(
    while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
+      assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
       propdata->inqueue[topopos] = FALSE;
@@ -1827,6 +1828,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
       SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) );
       propdata->inqueue[idx] = TRUE;
    }
+   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }
