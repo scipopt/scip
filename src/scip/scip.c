@@ -2425,7 +2425,11 @@ SCIP_RETCODE SCIPgetStringParam(
    return SCIP_OKAY;
 }
 
-/** fixes the value of an existing parameter */
+/** fixes the value of an existing parameter
+ *
+ *  @note: Be careful with this method! Some general settings, e.g., the time or node limit, should not be fixed because
+ *         they have to be changed for sub-SCIPs.
+ */
 SCIP_RETCODE SCIPfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
