@@ -412,23 +412,32 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
+   if( !SCIPisParamFixed(subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
+   }
 
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "dfs") != NULL )
+   /* use best dfs node selection */
+   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
    }
 
    /* disable feaspump and fracdiving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
+   if( !SCIPisParamFixed(subscip, "heuristics/feaspump/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/fracdiving/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
+   }
 
    /* restrict LP iterations */
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", 2*heurdata->maxlpiters / MAX(1,nnodes)) );

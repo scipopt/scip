@@ -424,7 +424,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       
       /* copy complete SCIP instance */
       valid = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
       SCIP_CALL( SCIPtransformProb(subscip) );
 
       /* get variable image */
@@ -448,15 +448,41 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* deactivate basically everything except oneopt in the sub-SCIP */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
+      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+      /* if necessary, some of the parameters have to be unfixed first */
+      if( SCIPisParamFixed(subscip, "lp/solvefreq") )
+      {
+         SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of oneopt heuristic\n");
+         SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
+      }
+      SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
+
+      if( SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+      {
+         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/freq in subscip of oneopt heuristic\n");
+         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/freq") );
+      }
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
+
+      if( SCIPisParamFixed(subscip, "heuristics/oneopt/forcelpconstruction") )
+      {
+         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/forcelpconstruction in subscip of oneopt heuristic\n");
+         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/forcelpconstruction") );
+      }
+      SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/forcelpconstruction", TRUE) );
+
+      if( SCIPisParamFixed(subscip, "heuristics/oneopt/beforepresol") )
+      {
+         SCIPwarningMessage(scip, "unfixing parameter heuristics/oneopt/beforepresol in subscip of oneopt heuristic\n");
+         SCIP_CALL( SCIPunfixParam(subscip, "heuristics/oneopt/beforepresol") );
+      }
 
       if( valid )
       {

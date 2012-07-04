@@ -664,7 +664,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       if( success )
       {
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
+         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+         {
+            SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+         }
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/"HEUR_NAME"/freq", -1) );
 
          /* do not abort subproblem on CTRL-C */
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -676,6 +681,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* do presolve and initialize solving */
          SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+         if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
+         {
+            SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
+         }
          SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
 
          /* disable expensive presolving */
@@ -1134,12 +1144,26 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* forbid recursive call of heuristics and separators solving sub-SCIPs */
          SCIP_CALL( SCIPsetSubscipsOff(probingscip, TRUE) );
+         if( SCIPisParamFixed(probingscip, "heuristics/"HEUR_NAME"/freq") )
+         {
+            SCIPwarningMessage(scip,"unfixing parameter heuristics/"HEUR_NAME"/freq in probingscip of "HEUR_NAME" heuristic to avoid recursive calls\n");
+            SCIP_CALL( SCIPunfixParam(probingscip, "heuristics/"HEUR_NAME"/freq") );
+         }
+         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
 
          /* disable heuristics which aim to feasibility instead of optimality */
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/feaspump/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
-         SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
+         if( !SCIPisParamFixed(probingscip, "heuristics/octane/freq") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/octane/freq", -1) );
+         }
+         if( !SCIPisParamFixed(probingscip, "heuristics/objpscostdiving/freq") )
+         {
+               SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/objpscostdiving/freq", -1) );
+         }
+         if( !SCIPisParamFixed(probingscip, "heuristics/rootsoldiving/freq") )
+         {
+            SCIP_CALL( SCIPsetIntParam(probingscip, "heuristics/rootsoldiving/freq", -1) );
+         }
 
          /* disable cutting plane separation */
          SCIP_CALL( SCIPsetSeparating(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
