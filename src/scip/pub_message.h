@@ -55,7 +55,7 @@ extern "C" {
 #define SCIPdebug(x)                        x
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
-#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
+#define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintf                 printf
