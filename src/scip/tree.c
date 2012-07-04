@@ -6083,6 +6083,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
    {
       SCIPdebugMessage("clearing lp state at end of probing mode because LP was initially unsolved\n");
       SCIP_CALL( SCIPlpiClearState(lp->lpi) );
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    /* reset flags */
