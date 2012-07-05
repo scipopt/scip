@@ -1558,7 +1558,7 @@ void GUBsetPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   SCIP_Real*            solvals             /**< solution values of variables in knapsack constraint */
+   SCIP_Real*            solvals             /**< solution values of variables in knapsack constraint; or NULL */
    )
 {
    int nnontrivialgubconss;
@@ -1589,12 +1589,27 @@ void GUBsetPrint(
             int currentvar;
 
             currentvar = gubset->gubconss[c]->gubvars[v];
-            gubsolval += solvals[currentvar];
-            SCIPdebugMessage("      +<%s>(%4.2f)\n", SCIPvarGetName(vars[currentvar]), solvals[currentvar]);
+            if( solvals != NULL )
+            {
+               gubsolval += solvals[currentvar];
+               SCIPdebugMessage("      +<%s>(%4.2f)\n", SCIPvarGetName(vars[currentvar]), solvals[currentvar]);
+            }
+            else
+            {
+               SCIPdebugMessage("      +<%s>\n", SCIPvarGetName(vars[currentvar]));
+            }
          }
 
 	 /* check whether LP solution satisfies the GUB constraint */
-         SCIPdebugMessage("      =%4.2f <= 1 %s\n", gubsolval, SCIPisFeasGT(scip, gubsolval, 1.0) ? "--> violated" : "");
+         if( solvals != NULL )
+         {
+            SCIPdebugMessage("      =%4.2f <= 1 %s\n", gubsolval,
+               SCIPisFeasGT(scip, gubsolval, 1.0) ? "--> violated" : "");
+         }
+         else
+         {
+            SCIPdebugMessage("      <= 1 %s\n", SCIPisFeasGT(scip, gubsolval, 1.0) ? "--> violated" : "");
+         }
          nnontrivialgubconss++;
       }
    }
@@ -1722,7 +1737,6 @@ SCIP_RETCODE GUBsetMoveVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   SCIP_Real*            solvals,            /**< solution values of variables in knapsack constraint */
    int                   var,                /**< index of given variable in knapsack constraint */
    int                   oldgubcons,         /**< index of old GUB constraint of given variable */
    int                   newgubcons          /**< index of new GUB constraint of given variable */
@@ -1769,7 +1783,7 @@ SCIP_RETCODE GUBsetMoveVar(
    {
       SCIPdebugMessage("deleting empty GUB cons<%d> from current GUB set\n", oldgubcons);
 #ifdef SCIP_DEBUG
-      GUBsetPrint(scip, gubset, vars, solvals);
+      GUBsetPrint(scip, gubset, vars, NULL);
 #endif
 
       /* free old GUB constraint */
@@ -1937,8 +1951,7 @@ static
 SCIP_RETCODE GUBsetCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure */
-   SCIP_VAR**            vars,               /**< variables in the knapsack constraint */
-   SCIP_Real*            solvals             /**< solution values of all knapsack variables */
+   SCIP_VAR**            vars                /**< variables in the knapsack constraint */
    )
 {
    int i;
@@ -2248,7 +2261,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
           */
          newgubconsidx = gubset->gubconssidx[gubfirstvar[cliqueidx]];
          assert(newgubconsidx != currentgubconsidx); /* because initially every variable is in a different GUB */
-         SCIP_CALL( GUBsetMoveVar(scip, gubset, vars, solvals, i, currentgubconsidx, newgubconsidx) );
+         SCIP_CALL( GUBsetMoveVar(scip, gubset, vars, i, currentgubconsidx, newgubconsidx) );
 
          assert(gubset->gubconss[gubset->gubconssidx[i]]->gubvars[gubset->gubvarsidx[i]] == i);
       }
@@ -2261,7 +2274,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
 
 #ifndef NDEBUG
    /* checks consistency of GUB set data structure */
-   SCIP_CALL( GUBsetCheck(scip, gubset, vars, solvals) );
+   SCIP_CALL( GUBsetCheck(scip, gubset, vars) );
 #endif
 
    /* free temporary memory */
@@ -2852,7 +2865,6 @@ static
 SCIP_RETCODE getLiftingSequenceGUB(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET*          gubset,             /**< GUB set data structure */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    SCIP_Real*            solvals,            /**< solution values of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    int*                  varsC1,             /**< variables in C1 */
@@ -3183,7 +3195,7 @@ SCIP_RETCODE getLiftingSequenceGUB(
 		if( movevarstatus != GUBVARSTATUS_BELONGSTOSET_C1 )
 		{
 		   assert(movevarstatus == GUBVARSTATUS_BELONGSTOSET_R || movevarstatus == GUBVARSTATUS_CAPACITYEXCEEDED);
-		   SCIP_CALL( GUBsetMoveVar(scip, gubset, vars, solvals, gubset->gubconss[gubconsidx]->gubvars[j],
+		   SCIP_CALL( GUBsetMoveVar(scip, gubset, vars, gubset->gubconss[gubconsidx]->gubvars[j],
                          gubconsidx, ngubconss-1) );
 		   gubset->gubconss[ngubconss-1]->gubvarsstatus[gubset->gubconss[ngubconss-1]->ngubvars-1] =
                       movevarstatus;
@@ -3987,9 +3999,9 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
       {
          varidx = gubset->gubconss[gubconsGC1[j]]->gubvars[k];
          assert(varidx >= 0 && varidx < nvars);
-         assert(liftcoefs[varidx] == 0.0);
+         assert(liftcoefs[varidx] == 0);
 
-         liftcoefs[varidx] = 1.0;
+         liftcoefs[varidx] = 1;
          (*cutact) += solvals[varidx];
       }
       assert(k >= 1);
@@ -4287,8 +4299,13 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
              */
             for( w = minweightslen-1; w >= 1; w-- )
             {
-               finished[w] = MIN(finished[w], safeAddMinweightsGUB(finished[w-1], weight));
-               minweights[w] = MIN(minweights[w], safeAddMinweightsGUB(minweights[w-1], weight));
+               SCIP_Longint tmpval;
+
+               tmpval = safeAddMinweightsGUB(finished[w-1], weight);
+               finished[w] = MIN(finished[w], tmpval);
+
+               tmpval = safeAddMinweightsGUB(minweights[w-1], weight);
+               minweights[w] = MIN(minweights[w], tmpval);
             }
          }
          else
@@ -4341,9 +4358,15 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
             }
             else
             {
+               SCIP_Longint tmpval;
+
                assert(w >= liftcoef);
-               minfinished = MIN(finished[w], safeAddMinweightsGUB(finished[w-liftcoef], weight));
-               minminweight = MIN(minweights[w], safeAddMinweightsGUB(minweights[w-liftcoef], weight));
+
+               tmpval = safeAddMinweightsGUB(finished[w-liftcoef], weight);
+               minfinished = MIN(finished[w], tmpval);
+
+               tmpval = safeAddMinweightsGUB(minweights[w-liftcoef], weight);
+               minminweight = MIN(minweights[w], tmpval);
 
                finished[w] = minfinished;
                minweights[w] = minminweight;
@@ -4438,8 +4461,12 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
          }
          else
          {
+            SCIP_Longint tmpval;
+
             assert(w >= liftcoef);
-            min = MIN(minweights[w], safeAddMinweightsGUB(minweights[w-liftcoef], weight));
+
+            tmpval = safeAddMinweightsGUB(minweights[w-liftcoef], weight);
+            min = MIN(minweights[w], tmpval);
             minweights[w] = min;
          }
       }
@@ -4542,8 +4569,12 @@ SCIP_RETCODE sequentialUpAndDownLiftingGUB(
             }
             else
             {
+               SCIP_Longint tmpval;
+
                assert(w >= liftcoef);
-               min = MIN(minweights[w], safeAddMinweightsGUB(minweights[w-liftcoef], weight));
+
+               tmpval = safeAddMinweightsGUB(minweights[w-liftcoef], weight);
+               min = MIN(minweights[w], tmpval);
                minweights[w] = min;
             }
          }
@@ -4832,7 +4863,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       /* categorizies GUBs of knapsack GUB partion into GOC1, GNC1, GF, GC2, and GR and computes a lifting sequence of
        * the GUBs for the sequential GUB wise lifting procedure
        */
-      SCIP_CALL( getLiftingSequenceGUB(scip, gubset, vars, solvals, weights, varsC1, varsC2, varsF, varsR, nvarsC1,
+      SCIP_CALL( getLiftingSequenceGUB(scip, gubset, solvals, weights, varsC1, varsC2, varsF, varsR, nvarsC1,
             nvarsC2, nvarsF, nvarsR, gubconsGC1, gubconsGC2, gubconsGFC1, gubconsGR, &ngubconsGC1, &ngubconsGC2,
             &ngubconsGFC1, &ngubconsGR, &nconstightened, &maxgubvarssize) );
 
