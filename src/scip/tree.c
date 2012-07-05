@@ -5733,20 +5733,17 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_CALL( SCIPlpStartProbing(lp) );
 
    /* remember, whether the LP was flushed and solved */
-   if( set->stage == SCIP_STAGE_SOLVING )
-   {
-      tree->probinglpwasflushed = lp->flushed;
-      tree->probinglpwassolved = lp->solved;
-      tree->probingloadlpistate = FALSE;
-      tree->probinglpwasrelax = lp->isrelax;
-      tree->probingsolvedlp = FALSE;
+   tree->probinglpwasflushed = lp->flushed;
+   tree->probinglpwassolved = lp->solved;
+   tree->probingloadlpistate = FALSE;
+   tree->probinglpwasrelax = lp->isrelax;
+   tree->probingsolvedlp = FALSE;
 
-      /* remember the LP state in order to restore the LP solution quickly after probing */
-      /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
-      if( lp->flushed && lp->solved )
-      {
-         SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
-      }
+   /* remember the LP state in order to restore the LP solution quickly after probing */
+   /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
+   if( lp->flushed && lp->solved )
+   {
+      SCIP_CALL( SCIPlpGetState(lp, blkmem, &tree->probinglpistate) );
    }
 
    /* create temporary probing root node */
@@ -6028,8 +6025,6 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was flushed before probing starts, flush it again */
    if( tree->probinglpwasflushed )
    {
-      assert(set->stage == SCIP_STAGE_SOLVING);
-
       SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
 
       /* if the LP was solved before probing starts, solve it again to restore the LP solution */
@@ -6076,15 +6071,33 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
       }
    }
+   else
+      lp->flushed = FALSE;
+
    assert(tree->probinglpistate == NULL);
+
+   /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
+   assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);
+
+   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
+    * during resolving right above
+    */
+   assert(!tree->probinglpwassolved || lp->solved || lp->resolvelperror);
+
+   /* if the LP was not solved before probing it should be marked unsolved now; this can occur if a probing LP was
+    * solved in between
+    */
+   if( !tree->probinglpwassolved )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
 
    /* if the LP was solved during probing, but had been unsolved before probing started, we discard the LP state */
    if( set->lp_clearinitialprobinglp && tree->probingsolvedlp && !tree->probinglpwassolved )
    {
       SCIPdebugMessage("clearing lp state at end of probing mode because LP was initially unsolved\n");
       SCIP_CALL( SCIPlpiClearState(lp->lpi) );
-      lp->solved = FALSE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    /* reset flags */
@@ -6099,7 +6112,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
    SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
-   
+
    return SCIP_OKAY;
 }
 
