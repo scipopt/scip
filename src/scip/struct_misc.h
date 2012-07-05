@@ -41,6 +41,16 @@ struct SCIP_SparseSol
    int                   nvars;              /**< number of variables */
 };
 
+/** (circular) Queue data structure */
+struct SCIP_Queue
+{
+   SCIP_Real             sizefac;            /**< memory growing factor */
+   void**                slots;              /**< array of element slots */
+   int                   firstfree;          /**< first free slot */
+   int                   firstused;          /**< first used slot */
+   int                   size;               /**< total number of available element slots */
+};
+
 /** priority queue data structure
  *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
  *  The ordering is done through a pointer comparison function.
