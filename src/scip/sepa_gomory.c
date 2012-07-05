@@ -365,7 +365,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[v], cutcoefs[v]) );
                }
             }
-            assert(SCIProwGetNNonz(cut) > 0);
+
+            if( SCIProwGetNNonz(cut) == 0 )
+            {
+               assert(SCIPisFeasNegative(scip, cutrhs));
+               SCIPdebugMessage(" -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               *result = SCIP_CUTOFF;
+               break;
+            }
 
             /* Only take efficacious cuts, except for cuts with one non-zero coefficients (= bound
                changes); the latter cuts will be handeled internally in sepastore. */
@@ -390,8 +397,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, eff=%f\n",
                         cutname, cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
-		     /* release the row */
-		     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+		                /* release the row */
+		                SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
                      continue;
                   }
