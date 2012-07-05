@@ -72,6 +72,7 @@
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
+#define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
 
 
 /*
@@ -367,6 +368,12 @@ void getClosestLb(
          *closestlbtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestlb <= -MAXBOUND )
+      *closestlb = -SCIPinfinity(scip);
 }
 
 /** return global or local upper bound of given variable whichever is closer to the variables current LP solution value */
@@ -394,6 +401,12 @@ void getClosestUb(
          *closestubtype = -2;
       }
    }
+
+   /* due to numerical reasons, huge bounds are relaxed to infinite bounds; this way the bounds are not used for
+    * the construction of the 0-1 single node flow relaxation
+    */
+   if( *closestub >= MAXBOUND )
+      *closestub = SCIPinfinity(scip);
 }
 
 /** construct a 0-1 single node flow relaxation (with some additional simple constraints) of a mixed integer set 
