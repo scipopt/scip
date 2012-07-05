@@ -54,7 +54,6 @@ typedef enum {
    LINEAR,
    QUADRATIC,
    NONLINEAR
-
 } CONSTYPE;
 
 
@@ -553,8 +552,8 @@ SCIP_RETCODE readConstraints(
 
 /** reads mult and incr attributes of an OSiL node
  *
- * if mult attribute is not present, then returns mult=1
- * if incr attribute is not present, then returns incrint=0 and incrreal=0
+ *  if mult attribute is not present, then returns mult=1
+ *  if incr attribute is not present, then returns incrint=0 and incrreal=0
  */
 static
 void readMultIncr(
@@ -974,7 +973,7 @@ SCIP_RETCODE readQuadraticCoefs(
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occured */
-)
+   )
 {
    const XML_NODE* quadcoef;
    const XML_NODE* qterm;
@@ -1775,7 +1774,7 @@ SCIP_RETCODE readNonlinearExprs(
    SCIP_CONS**           objcons,            /**< buffer to store constraint for nonlinear part of objective function, or to add to if already existing */
    CONSTYPE*             objconstype,        /**< buffer to store type of objective constraint, if created (should be QUADRATIC) */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
-)
+   )
 {
    const XML_NODE* nlexprs;
    const XML_NODE* nlexpr;
@@ -2238,8 +2237,7 @@ SCIP_RETCODE SCIPincludeReaderOsil(
    SCIP_READER* reader;
 
    /* include osil reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
-         NULL) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOsil) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadOsil) );
