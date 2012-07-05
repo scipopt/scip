@@ -1150,23 +1150,38 @@ SCIP_RETCODE solveSubMIP(
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "estimate") != NULL )
+   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+   }
 
    if( SCIPgetNSols(scip) > 0 )
    {

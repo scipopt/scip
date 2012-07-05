@@ -367,22 +367,30 @@ SCIP_RETCODE SCIPapplyZeroobj(
    for( i = 0; i < nvars; i++ )
    {
       SCIP_Real adjustedbound;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real inf;
+      
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+
+      lb = SCIPvarGetLbGlobal(subvars[i]);
+      ub = SCIPvarGetUbGlobal(subvars[i]);
+      inf = SCIPinfinity(subscip);
 
       /* adjust infinite bounds in order to avoid that variables with non-zero objective 
        * get fixed to infinite value in zeroobj subproblem
        */
-      if( SCIPisInfinity(subscip, SCIPvarGetUbGlobal(subvars[i]) ) )
+      if( SCIPisInfinity(subscip, ub ) )
       {
-         adjustedbound = MAX(large, SCIPvarGetLbGlobal(subvars[i])+large);
-         adjustedbound = MIN(adjustedbound, SCIPinfinity(subscip));
+         adjustedbound = MAX(large, lb+large);
+         adjustedbound = MIN(adjustedbound, inf);
          SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], adjustedbound) );
       }
-      if( SCIPisInfinity(subscip, -SCIPvarGetLbGlobal(subvars[i]) ) )
+      if( SCIPisInfinity(subscip, -lb ) )
       {
-         adjustedbound = MIN(-large, SCIPvarGetUbGlobal(subvars[i])-large);
-         adjustedbound = MAX(adjustedbound, -SCIPinfinity(subscip));
+         adjustedbound = MIN(-large, ub-large);
+         adjustedbound = MAX(adjustedbound, -inf);
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], adjustedbound) );
       }
    }
@@ -412,23 +420,32 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
+   if( !SCIPisParamFixed(subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
+   }
 
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(scip, "dfs") != NULL )
+   /* use best dfs node selection */
+   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(scip, "inference") != NULL )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
    }
 
    /* disable feaspump and fracdiving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
+   if( !SCIPisParamFixed(subscip, "heuristics/feaspump/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
+   }
+   if( !SCIPisParamFixed(subscip, "heuristics/fracdiving/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
+   }
 
    /* restrict LP iterations */
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", 2*heurdata->maxlpiters / MAX(1,nnodes)) );

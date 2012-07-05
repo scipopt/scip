@@ -293,18 +293,44 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIPdebugMessage("Copying SCIP was%s successful.\n", success ? "" : " not");
    
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
+   if( SCIPisParamFixed(subscip, "lp/solvefreq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
+   }
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   if( !SCIPisParamFixed(subscip, "conflict/fuiplevels") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   }
+   if( SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter nodeselection/dfs/stdpriority in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "nodeselection/dfs/stdpriority") );
+   }
    SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
+
+   if( !SCIPisParamFixed(subscip, "propagating/pseudoobj/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
+   }
+   if( !SCIPisParamFixed(subscip, "constraints/disableenfops") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
+   }
 
    /* use inference branching */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
+   if( !SCIPisParamFixed(subscip, "branching/inference/useweightedsum") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
+   }
 
    /* only create short conflicts */
-   SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
-  
+   if( !SCIPisParamFixed(subscip, "conflict/maxvarsfac") )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
+   }
+
    /* set limits for the subproblem */
    nodelimit = SCIPgetNLPIterations(scip);
    nodelimit = MAX(sepadata->minnodes, nodelimit);

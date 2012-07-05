@@ -2656,7 +2656,7 @@ SCIP_Real SCIPconflictGetVarLb(
    if( var->conflictlbcount == conflict->count )
    {
       assert(var->conflictlb >= var->conflictrelaxedlb);
-      return var->conflictlb;
+      return var->conflictrelaxedlb;
    }
 
    return SCIPvarGetLbGlobal(var);

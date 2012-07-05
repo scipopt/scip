@@ -57,6 +57,10 @@
 
 #define CPX_INT_MAX      2100000000          /* CPLEX doesn't accept larger values in integer parameters */
 
+/* At several places we need to guarantee to have a factorization of an optimal basis and call the simplex to produce
+ * it. In a numerical perfect world, this should need no iterations. However, due to numerical inaccuracies after
+ * refactorization, it might be necessary to do a few extra pivot steps, in particular if FASTMIP is used. */
+#define CPX_REFACTORMAXITERS     50          /* maximal number of iterations allowed for producing a refactorization of the basis */
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -919,6 +923,30 @@ void reconvertSides(
 }
 
 
+/** after restoring the old lp data in CPLEX we need to resolve the lp to be able to retrieve correct information */
+static
+SCIP_RETCODE restoreLPData(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to return the
+    * basis -> we have to resolve the LP;
+    *
+    * this may happen after manual strong branching on an integral variable, or after conflict analysis on a strong
+    * branching conflict created a constraint that is not able to modify the LP but trigger the additional call of the
+    * separators, in particular, the Gomory separator
+    *
+    * In a numerical perfect world, CPX_REFACTORMAXITERS below should be zero. However, due to numerical inaccuracies
+    * after refactorization, it might be necessary to do a few extra pivot steps.
+    */
+   CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
+   assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+   assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= CPX_REFACTORMAXITERS);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -3283,15 +3311,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXgetbhead(lpi->cpxenv, lpi->cpxlp, bind, NULL);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3321,15 +3341,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvrow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3363,15 +3375,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) == 0);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) == 0);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvcol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3402,18 +3406,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-
-      /* In a numerical perfect world, the 10 below should be zero. However, due to numerical inaccuracies after refactorization, 
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */ 
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 10);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 10);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvarow(lpi->cpxenv, lpi->cpxlp, r, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );
@@ -3443,18 +3436,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN || retval == CPXERR_NO_BASIS )
    {
-      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
-       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
-       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
-       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
-       * call of the separators, in particular, the Gomory separator
-       */
-      CHECK_ZERO( lpi->messagehdlr, CPXdualopt(lpi->cpxenv, lpi->cpxlp) );
-
-      /* In a numerical perfect world, the 50 below should be zero. However, due to numerical inaccuracies after refactorization,
-       * it might be necessary to do one (or even a few) extra pivot steps, in particular if FASTMIP is used. */
-      assert(CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) <= 50);
-      assert(CPXgetitcnt(lpi->cpxenv, lpi->cpxlp) <= 50);
+      SCIP_CALL_QUIET( restoreLPData(lpi) );
       retval = CPXbinvacol(lpi->cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( lpi->messagehdlr, retval );

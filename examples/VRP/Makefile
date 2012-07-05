@@ -103,6 +103,14 @@ ifneq ($(OBJDIR),)
 endif
 		-rm -f $(MAINFILE)
 
+.PHONY: test
+test:           $(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+
 .PHONY: depend
 depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \

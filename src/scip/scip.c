@@ -2330,6 +2330,17 @@ SCIP_RETCODE SCIPaddStringParam(
    return SCIP_OKAY;
 }
 
+/** gets the fixing status of an existing parameter */
+SCIP_Bool SCIPisParamFixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of the parameter */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPisParamFixed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetIsParamFixed(scip->set, name);
+}
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPgetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2414,7 +2425,11 @@ SCIP_RETCODE SCIPgetStringParam(
    return SCIP_OKAY;
 }
 
-/** fixes the value of an existing parameter */
+/** fixes the value of an existing parameter
+ *
+ *  @note: Be careful with this method! Some general settings, e.g., the time or node limit, should not be fixed because
+ *         they have to be changed for sub-SCIPs.
+ */
 SCIP_RETCODE SCIPfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */

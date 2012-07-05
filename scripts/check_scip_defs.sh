@@ -15,8 +15,10 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 SCIPDIR=..
+OUTFILE=`pwd`/check_scip_defs.out
 
 cd $SCIPDIR
+rm -f $OUTFILE
 
 DEFS=`grep -h 'ifdef' src/scip/* | awk ' // { printf("%s\n", $2); }' | sort -u | awk '// { printf("%s ", $1); }'`
 # echo "DEFS = \"$DEFS\""
@@ -62,13 +64,8 @@ do
 
 	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\"" -j
 	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" -j
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" -j || exit 1
 	echo
-
-	if test "$?" != 0
-	then
-	    exit
-	fi
 
 	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\" ZIMPL=false clean"
 	echo
@@ -77,13 +74,8 @@ do
 
 	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" CC=g++ CFLAGS=\"\"" ZIMPL=false -j
 	echo
-	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false -j
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" CC=g++ CFLAGS="" ZIMPL=false -j || exit 1
 	echo
-
-	if test "$?" != 0
-	then
-	    exit
-	fi
 
 #	if test "$?" = 0
 #	then
@@ -95,4 +87,4 @@ do
 #	    echo
 #	fi
     done
-done
+done |& tee -a $OUTFILE

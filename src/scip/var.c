@@ -1529,7 +1529,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsActive(var) || !SCIPvarIsBinary(var));
+   assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -5591,11 +5591,11 @@ SCIP_RETCODE SCIPvarChgType(
       SCIPerrorMessage("cannot change type of variable already in the problem\n");
       return SCIP_INVALIDDATA;
    }
-   
+
    var->vartype = vartype; /*lint !e641*/
    if( var->negatedvar != NULL )
       var->negatedvar->vartype = vartype; /*lint !e641*/
-   
+
    return SCIP_OKAY;
 }
 
