@@ -1783,7 +1783,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       SCIP_Bool stored;
 
-      for( v = 0; v <= lastindexofsusp && nviolatedrows == 0; ++v )
+      for( v = 0; v <= lastindexofsusp; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real origsolval;
@@ -1811,6 +1811,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIPdebugMessage("  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
             nviolatedrows);
       }
+      /* Fixing of remaining variables led to infeasibility */
+      if( nviolatedrows > 0 )
+         goto TERMINATE2;
 
       stored = TRUE;
       /* if the constructed solution might still be extendable to a feasible solution, try this by
