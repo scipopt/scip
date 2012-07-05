@@ -2734,7 +2734,9 @@ SCIP_RETCODE SCIPapplyUndercover(
       goto TERMINATE;
    }
    else
+   {
       SCIPdebugMessage("covering problem created successfully\n");
+   }
 
    /* count number of unfixed covering variables */
    nunfixeds = 0;

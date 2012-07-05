@@ -169,6 +169,9 @@ SCIP_RETCODE solveLP(
       case SCIP_LPSOLSTAT_ERROR:
          SCIPdebugMessage("   an error occured during solving lp\n");
          break;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_OPTIMAL: /* should not appear because it is handled earlier */
       default:
          SCIPdebugMessage("   received an unexpected solstat during solving lp: %d\n", lpsolstat);
       }

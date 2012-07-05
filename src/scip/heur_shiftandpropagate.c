@@ -1753,7 +1753,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             for( i = 0; i < matrix->nrows; ++i )
             {
                if( nvarsleftinrow[i] == 0 && violatedrowpos[i] >= 0 )
+	       {
                   SCIPdebugMessage(" <%d> \n", i);
+	       }
             }
 #endif
             break;
