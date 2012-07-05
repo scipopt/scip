@@ -2026,8 +2026,8 @@ SCIP_RETCODE resolvePropagationCoretimes(
    SCIP_CALL( SCIPallocBufferArray(scip, &reported, nvars) );
    BMSclearMemoryArray(reported, nvars);
 
-   /* first we loop over all variable adjust the capacity with those which provide a global core at the inference peak
-    * and those where the current conflict bounds provide a core at the inference peak
+   /* first we loop over all variables and adjust the capacity with those jobs which provide a global core at the
+    * inference peak and those where the current conflict bounds provide a core at the inference peak
     */
    for( j = 0; j < nvars && capacity >= 0; ++j )
    {
@@ -2051,6 +2051,19 @@ SCIP_RETCODE resolvePropagationCoretimes(
          SCIPvarGetName(var),  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
          SCIPgetConflictVarLb(scip, var), SCIPgetConflictVarUb(scip, var), duration, demands[j]);
 
+      ect = convertBoundToInt(scip, SCIPvarGetLbGlobal(var)) + duration;
+      lst = convertBoundToInt(scip, SCIPvarGetUbGlobal(var));
+
+      /* check if the inference peak is part of the global bound core; if so we decreasing the capacity by the demand of
+       * that job without adding it the explanation
+       */
+      if( inferpeak < ect && lst <= inferpeak )
+      {
+         capacity -= demands[j];
+         reported[j] = TRUE;
+         continue;
+      }
+
       /* collect the conflict bound core (the conflict bounds are those bounds which are already part of the conflict)
        * hence these bound are already reported by other resolve propation steps. In case a bound (lower or upper) is
        * not part of the conflict yet we get the global bounds back.
@@ -2058,8 +2071,10 @@ SCIP_RETCODE resolvePropagationCoretimes(
       ect = convertBoundToInt(scip, SCIPgetConflictVarLb(scip, var)) + duration;
       lst = convertBoundToInt(scip, SCIPgetConflictVarUb(scip, var));
 
-      /* check if the inference peak is part of the global/conflict bound core; if so we decreasing the capacity by the
-       * demand of that job without adding anything to the explanation
+      /* check if the inference peak is part of the conflict bound core; if so we decreasing the capacity by the demand
+       * of that job without and collect the job as part of the explanation
+       *
+       * @note we do not need to reported that job to SCIP since the required bounds are already reported
        */
       if( inferpeak < ect && lst <= inferpeak )
       {
