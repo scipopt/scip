@@ -2891,6 +2891,7 @@ SCIP_RETCODE getLiftingSequenceGUB(
    SORTKEYPAIR** sortkeypairsF;
 #endif
    SORTKEYPAIR** sortkeypairsGFC1;
+   SORTKEYPAIR* sortkeypairsGFC1store;
    SCIP_Real* sortkeysC1;
    SCIP_Real* sortkeysC2;
    SCIP_Real* sortkeysR;
@@ -3069,12 +3070,13 @@ SCIP_RETCODE getLiftingSequenceGUB(
    SCIPfreeBufferArray(scip, &sortkeysC1);
 
    /* allocate and initialize temporary memory for sorting GUB constraints */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsGFC1, ngubconss) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsGFC1, ngubconss) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsGFC1store, ngubconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nC1varsingubcons, ngubconss) );
    BMSclearMemoryArray(nC1varsingubcons, ngubconss);
    for( i = 0; i < ngubconss; i++)
    {
-      SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairsGFC1[i]) );
+      sortkeypairsGFC1[i] = &(sortkeypairsGFC1store[i]);
       sortkeypairsGFC1[i]->key1 = 0.0;
       sortkeypairsGFC1[i]->key2 = 0.0;
    }
@@ -3371,10 +3373,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
 #if GUBSPLITGNC1GUBS
    ngubconss = origngubconss;
 #endif
-   for( i = ngubconss-1; i >= 0; i-- )
-      SCIPfreeBuffer(scip, &sortkeypairsGFC1[i]);
-   SCIPfreeBufferArray(scip, &sortkeypairsGFC1);
    SCIPfreeBufferArray(scip, &nC1varsingubcons);
+   SCIPfreeMemoryArray(scip, &sortkeypairsGFC1store);
+   SCIPfreeMemoryArray(scip, &sortkeypairsGFC1);
 
    return SCIP_OKAY;
 }
