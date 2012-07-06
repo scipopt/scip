@@ -1625,6 +1625,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0);
       assert(SCIPvarIsIntegral(var));
 
+      /* for numerical reasons, we might have to tighten our local bounds further in order to ensure, that our bounds
+       * are indeed valid */
+      if( SCIPisGT(scip, SCIPfeasCeil(scip, ub), ub) )
+         ub = MAX(lb,SCIPfloor(scip, ub - 1));
+      if( SCIPisLT(scip, SCIPfeasFloor(scip, lb), lb) )
+         lb = MIN(ub, SCIPfloor(scip, lb + 1));
+
       /* check whether we hit some limit, e.g. the time limit, in between
        * since the check itself consumes some time, we only do it every tenth iteration
        */
