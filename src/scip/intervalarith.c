@@ -2811,7 +2811,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
       SCIP_INTERVAL res2;
       SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
-      SCIPdebugMessage("intersect [%.20f, %.20f] and [%.20f, %.20f]\n", resultant->inf, resultant->sup, res2.inf, res2.sup);
+      SCIPdebugMessage("intersection of [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
       SCIPintervalIntersect(resultant, *resultant, res2);
       SCIPdebugPrintf(" gives [%.20f, %.20f]\n", resultant->inf, resultant->sup);

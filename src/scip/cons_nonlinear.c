@@ -5459,13 +5459,13 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
             }
             if ( tightened )
             {
-               SCIPdebugMessage("Lower boundx changed.\n");
+               SCIPdebugMessage("Lower bound changed.\n");
                *reduceddom = TRUE;
                return SCIP_OKAY;
             }
          }
 
-         if ( SCIPisInfinity(scip, rhs) )
+         if ( ! SCIPisInfinity(scip, rhs) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, *consdata->linvars, rhs, TRUE, infeasible, &tightened) );
             if ( *infeasible )

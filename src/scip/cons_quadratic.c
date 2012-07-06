@@ -7536,7 +7536,7 @@ SCIP_RETCODE replaceByLinearConstraints(
             }
          }
 
-         if ( SCIPisInfinity(scip, rhs) )
+         if ( ! SCIPisInfinity(scip, rhs) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, *consdata->linvars, rhs, TRUE, infeasible, &tightened) );
             if ( *infeasible )
