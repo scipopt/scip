@@ -1430,7 +1430,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    nlprows = SCIPgetNLPRows(scip);
 
    SCIP_CALL( SCIPgetLPColsData(scip, &lpcols, &nlpcols) );
-   assert(lpcols == NULL || nlpcols > 0);
+   assert(nlpcols == 0 || lpcols != NULL);
 
    /* we need an LP */
    if( nlprows == 0 || nlpcols == 0 )
