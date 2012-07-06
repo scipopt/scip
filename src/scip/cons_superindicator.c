@@ -387,7 +387,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
       SCIPdebug( nnewconss++ );
    }
 
-   SCIPdebug( SCIPdebugMessage("constraint <%s> upgraded to %d indicator constraint%s\n ",
+   SCIPdebug( SCIPdebugMessage("constraint <%s> upgraded to %d indicator constraint%s\n",
          SCIPconsGetName(cons), nnewconss, nnewconss == 1 ? "" : "s") );
 
    /* delete the superindicator constraint */
@@ -590,7 +590,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    SCIPfreeBufferArray(scip, &newvals);
    SCIPfreeBufferArray(scip, &newvars);
 
-   SCIPdebug( SCIPdebugMessage("constraint <%s> upgraded to %d indicator constraint%s\n ",
+   SCIPdebug( SCIPdebugMessage("constraint <%s> upgraded to %d indicator constraint%s\n",
          SCIPconsGetName(cons), nnewconss, nnewconss == 1 ? "" : "s") );
 
    /* delete the superindicator constraint */
@@ -831,7 +831,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 1 --> SCIPsepalpCons() on constraint <%s>",
+         SCIPdebugMessage("binvar <%s> == 1 --> SCIPsepalpCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPsepalpCons(scip, consdata->slackcons, &locresult) );
@@ -941,7 +941,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 0 --> SCIPsepasolCons() on constraint <%s>",
+         SCIPdebugMessage("binvar <%s> == 0 --> SCIPsepasolCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPsepasolCons(scip, consdata->slackcons, sol, &locresult) );
@@ -1058,7 +1058,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenfolpCons() on constraint <%s>",
+         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenfolpCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPenfolpCons(scip, consdata->slackcons, solinfeasible, &locresult) );
@@ -1169,7 +1169,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenfopsCons() on constraint <%s>",
+         SCIPdebugMessage("binvar <%s> == 1 locally --> SCIPenfopsCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPenfopsCons(scip, consdata->slackcons, solinfeasible, objinfeasible, &locresult) );
@@ -1330,7 +1330,7 @@ SCIP_DECL_CONSPROP(consPropSuperindicator)
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
 
-         SCIPdebugMessage("binvar <%s> == 1 locally --> propagating slack constraint <%s>",
+         SCIPdebugMessage("binvar <%s> == 1 locally --> propagating slack constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
          SCIP_CALL( SCIPpropCons(scip, consdata->slackcons, proptiming, &locresult) );
@@ -1505,7 +1505,7 @@ SCIP_DECL_CONSRESPROP(consRespropSuperindicator)
    assert(bdchgidx != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("executing resprop callback for constraint <%s>", SCIPconsGetName(cons));
+   SCIPdebugMessage("executing resprop callback for constraint <%s>\n", SCIPconsGetName(cons));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

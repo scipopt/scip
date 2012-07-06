@@ -2194,7 +2194,7 @@ SCIP_RETCODE readIndicators(
                SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlinvars+1, vars, vals, -lhs,
                      initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
                SCIP_CALL( SCIPaddCons(scip, cons) );
-               SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
+               SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
                SCIPdebugPrintCons(scip, cons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 

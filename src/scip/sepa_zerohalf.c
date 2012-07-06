@@ -4966,8 +4966,8 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, &success) );
 #endif
-   SCIPdebugMessage("Copying the plugins was %s successful.", success ? "" : "not");
-  
+   SCIPdebugMessage("Copying the plugins was %s successful.\n", success ? "" : "not");
+
    SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
          NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
 

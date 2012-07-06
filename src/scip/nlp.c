@@ -1509,7 +1509,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
    if( nlrow->nquadvars == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("removing fixed quadratic variables from nlrow\n\t");
+   SCIPdebugMessage("removing fixed quadratic variables from nlrow\n");
 
    nvarsold = nlrow->nquadvars;
    havechange = FALSE;
@@ -1907,7 +1907,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
 
    SCIPsetFreeBufferArray(set, &used);
 
-   SCIPdebugMessage("finished removing fixed quadratic variables\n\t");
+   SCIPdebugMessage("finished removing fixed quadratic variables\n");
 
    return SCIP_OKAY;
 }

@@ -855,7 +855,7 @@ void createSelectedSortedEventpointsSol(
          (*nvars) = *nvars + 1;
 
          SCIPdebugMessage("lower bounds are considered:\n");
-         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n ", *nvars-1,
+         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n", *nvars-1,
             startindices[*nvars-1], starttimes[*nvars-1], starttimes[*nvars-1] + consdata->durations[startindices[*nvars-1]],
             consdata->demands[startindices[*nvars-1]]);
       }
@@ -874,7 +874,7 @@ void createSelectedSortedEventpointsSol(
          (*nvars) = *nvars + 1;
 
          SCIPdebugMessage("upper bounds are considered:\n");
-         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n ", *nvars-1,
+         SCIPdebugMessage("%d: job[%d] starttime %d, endtime = %d, demand = %d\n", *nvars-1,
             startindices[*nvars-1], starttimes[*nvars-1], starttimes[*nvars-1] + consdata->durations[startindices[*nvars-1]],
             consdata->demands[startindices[*nvars-1]]);
       }
@@ -1915,7 +1915,7 @@ SCIP_RETCODE checkCumulativeCondition(
       /* check freecapacity to be smaller than zero */
       if( freecapacity < 0 && curtime >= hmin )
       {
-         SCIPdebugMessage("freecapacity = %3d \n", freecapacity);
+         SCIPdebugMessage("freecapacity = %3d\n", freecapacity);
          (*violated) = TRUE;
 
          if( printreason )
@@ -6670,7 +6670,7 @@ SCIP_RETCODE tightenCapacity(
 
       oldnchgcoefs = *nchgcoefs;
 
-      SCIPdebugMessage("+-+-+-+-+-+ --> CHANGE capacity of cons<%s> from %d to %d",
+      SCIPdebugMessage("+-+-+-+-+-+ --> CHANGE capacity of cons<%s> from %d to %d\n",
          SCIPconsGetName(cons), consdata->capacity, bestcapacity);
 
       for( j = 0; j < nvars; ++j )

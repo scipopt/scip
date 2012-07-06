@@ -1680,7 +1680,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          permutation[c] = permutation[lastindexofsusp];
          permutation[lastindexofsusp] = permutedvarindex;
 
-         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status", SCIPvarGetName(var), c, lastindexofsusp);
+         SCIPdebugMessage("  Variable %s postponed from pos <%d> to <%d> due to FREE transform status\n", SCIPvarGetName(var), c, lastindexofsusp);
 
          continue;
       }
