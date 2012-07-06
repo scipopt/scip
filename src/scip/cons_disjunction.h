@@ -18,6 +18,12 @@
  * @brief  constraint handler for disjunction constraints
  * @author Stefan Heinz
  * @author Michael Winkler
+ * 
+ * a disjunction constraint \f$ C \f$ is a constraint of the form 
+ * \f[
+ *   C = C_1 \vee \dots \vee C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

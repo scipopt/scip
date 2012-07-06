@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a or constraint
+/** creates and captures an or constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -86,8 +86,11 @@ SCIP_RETCODE SCIPcreateConsOr(
    );
 
 /** creates and captures an or constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *
+ *  @see SCIPcreateConsOr() for information about the basic constraint flag configuration
+ * 
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern

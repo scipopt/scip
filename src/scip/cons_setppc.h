@@ -98,8 +98,11 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a set partitioning constraint with all constraint flags set
- *  to their default values
+/** creates and captures a set partitioning constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
+ *  @see SCIPcreateConsSetpart() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -148,8 +151,11 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a set packing constraint with all constraint flags set
- *  to their default values
+/** creates and captures a set packing constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
+ *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -198,8 +204,11 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a set covering constraint with all constraint flags set
- *  to their default values
+/** creates and captures a set packing constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
+ *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

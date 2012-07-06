@@ -104,8 +104,11 @@ SCIP_RETCODE SCIPcreateConsSOC(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
-/** creates and captures a second order cone constraint with all its constraint flags
- *  set to their default values
+/** creates and captures a second order cone constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
+ *  @see SCIPcreateConsSOC() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

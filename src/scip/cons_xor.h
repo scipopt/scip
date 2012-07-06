@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xor constraint
+/** creates and captures an xor constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
 */
@@ -86,9 +86,12 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs
- *  with all constraint flags set to their default values
+/** creates and captures an xor constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsXor(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *
+ *  @see SCIPcreateConsXor() for information about the basic constraint flag configuration
+ * 
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern

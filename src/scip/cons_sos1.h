@@ -80,7 +80,11 @@ SCIP_RETCODE SCIPcreateConsSOS1(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a SOS1 constraint with all constraint flags set to their default values.
+/** creates and captures an SOS1 constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
+ *  @see SCIPcreateConsSOS1() for the default constraint flag configuration
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
  *  to wrong results as the variable array will not be resorted

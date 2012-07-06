@@ -88,9 +88,12 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
- *  with all constraint flags set to their default values
+/** creates and captures a varbound constraint
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsVarbound(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *
+ *  @see SCIPcreateConsVarbound() for information about the basic constraint flag configuration
+ * 
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern

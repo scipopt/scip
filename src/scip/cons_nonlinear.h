@@ -31,6 +31,12 @@
  * For \f$f_j(x)\f$ that are not known to be convex or concave, a simple variant of linear estimation based on interval gradients is implemented.
  *
  * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
+ * 
+ * This header offers the upgrade functionality to upgrade a general nonlinear constraint into a more specific constraint 
+ * via SCIP_DECL_NONLINCONSUPGD().
+ *
+ * Furthermore, the definition of callbacks used to reformulate an expression graph is offered by 
+ * SCIP_DECL_EXPRGRAPHNODEREFORM().
  *
  * Further, the function representation is stored in an expression graph, which allows to propagate variable domains
  * and constraint sides and offers a simple convexity check.
@@ -234,13 +240,13 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
 
 /** creates and captures a nonlinear constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsNonlinear(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *  method SCIPcreateConsNonlinear2(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *
  *  this variant takes a node of the expression graph as input and can only be used during presolving
  *  it is assumed that the nonlinear constraint will be added to the transformed problem short after creation
  *  the given exprgraphnode is captured in this method
  *
- *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration
+ *  @see SCIPcreateConsNonlinear2() for information about the basic constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

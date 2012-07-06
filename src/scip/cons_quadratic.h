@@ -188,15 +188,19 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
-/** creates and captures a quadratic constraint with all its
- *  flags set to their default values.
- *
+/** creates and captures a quadratic constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ * 
  *  The constraint should be given in the form
  *  \f[
  *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
  *
+ *  @see SCIPcreateConsQuadratic() for the default constraint flag configuration
+ *
+
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 extern
@@ -215,7 +219,7 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
    SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
    );
 
-/** Creates and captures a quadratic constraint.
+/** creates and captures a quadratic constraint.
  * 
  * The constraint should be given in the form
  * \f[
@@ -249,13 +253,16 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures a quadratic constraint in its most basic version, i.e.,
- *  all constraint flags are set to their default values.
+/** creates and captures a quadratic constraint
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
  *
  * The constraint should be given in the form
  * \f[
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
  * \f]
+ *
+ *  @see SCIPcreateConsQuadratic2() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
