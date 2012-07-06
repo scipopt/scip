@@ -550,6 +550,38 @@ public:
    }
 #endif
 
+#ifndef NDEBUG
+   bool checkConsistentBounds()
+   {
+      for( int i = 0; i < nCols(); ++i )
+      {
+         if( lower(i) > upper(i) )
+         {
+            SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
+               i, lower(i), upper(i));
+            return false;
+         }
+      }
+
+      return true;
+   }
+
+   bool checkConsistentSides()
+   {
+      for( int i = 0; i < nRows(); ++i )
+      {
+         if( lhs(i) > rhs(i) )
+         {
+            SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
+               i, lhs(i), rhs(i));
+            return false;
+         }
+      }
+
+      return true;
+   }
+#endif
+
    void trySolve(bool printwarning = true)
    {
       Real timespent;
@@ -601,6 +633,9 @@ public:
       /* store and set verbosity */
       verbosity = Param::verbose();
       Param::setVerbose(getLpInfo() ? 5 : 0);
+
+      assert(checkConsistentBounds());
+      assert(checkConsistentSides());
 
 #ifdef WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
@@ -808,7 +843,7 @@ public:
 
          /* store and set verbosity */
          verbosity = Param::verbose();
-         Param::setVerbose(getLpInfo() ? 3 : 0);
+         Param::setVerbose(getLpInfo() ? 5 : 0);
          SCIPdebugMessage("simplifying LP\n");
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
          result = simplifier->simplify(*this, epsilon(), feastol(), opttol());
@@ -1879,6 +1914,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
       {
 	 assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
 	 lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
+         assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]));
       }
    }
    catch(SPxException x)
@@ -1920,6 +1956,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       {
 	 assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
 	 lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
+         assert(lpi->spx->lhs(ind[i]) <= lpi->spx->rhs(ind[i]));
       }
    }
    catch(SPxException x)
@@ -2063,9 +2100,10 @@ SCIP_RETCODE SCIPlpiScaleRow(
 
       /* create the new row */
       LPRow lprow(lhs, rowvec, rhs);
-   
+
       /* change the row in the LP */
       lpi->spx->changeRow(row, lprow);
+      assert(lpi->spx->lhs(row) <= lpi->spx->rhs(row));
    }
    catch(SPxException x)
    {
@@ -2132,9 +2170,10 @@ SCIP_RETCODE SCIPlpiScaleCol(
 
       /* create the new col (in LPCol's constructor, the upper bound is given first!) */
       LPCol lpcol(obj, colvec, ub, lb);
-   
+
       /* change the col in the LP */
       lpi->spx->changeCol(col, lpcol);
+      assert(lpi->spx->lower(col) <= lpi->spx->upper(col));
    }
    catch(SPxException x)
    {
@@ -2766,6 +2805,7 @@ SCIP_RETCODE lpiStrongbranch(
       SCIPdebugMessage("strong branching down on x%d (%g) with %d iterations\n", col, psol, itlim);
 
       spx->changeUpper(col, newub);
+      assert(spx->lower(col) <= spx->upper(col));
 
       spx->setIterationLimit(itlim);
       do
@@ -2824,6 +2864,7 @@ SCIP_RETCODE lpiStrongbranch(
       while( fromparentbasis );
 
       spx->changeUpper(col, oldub);
+      assert(spx->lower(col) <= spx->upper(col));
    }
    else
    {
@@ -2838,8 +2879,9 @@ SCIP_RETCODE lpiStrongbranch(
       if( newlb <= oldub + 0.5 )
       {
          SCIPdebugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
-      
+
          spx->changeLower(col, newlb);
+         assert(spx->lower(col) <= spx->upper(col));
 
          spx->setIterationLimit(itlim);
          do
@@ -2898,6 +2940,7 @@ SCIP_RETCODE lpiStrongbranch(
          while( fromparentbasis );
 
          spx->changeLower(col, oldlb);
+         assert(spx->lower(col) <= spx->upper(col));
       }
       else
       {
@@ -3744,6 +3787,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
+
    SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
 
    delete[] spxcstat;

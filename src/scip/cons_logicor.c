@@ -1892,6 +1892,8 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+#define MAXCOMPARISONS 1000000
+
 /* try to find a negated clique in a constraint which makes this constraint redundant but we need to keep the negated
  * clique information alive, so we create a corresponding set-packing constraint
  */
@@ -1914,6 +1916,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    SCIP_VAR* var1;
    int c;
    int size;
+   int maxcomppercons;
+   int comppercons;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1960,6 +1964,9 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       if( SCIPconsIsModifiable(cons) && consdata->nvars == 2 )
          continue;
 
+      maxcomppercons = MAXCOMPARISONS / nconss;
+      comppercons = 0;
+
       /* get binary representations of constraint variables */
       SCIP_CALL( SCIPgetBinvarRepresentatives(scip, consdata->nvars, consdata->vars, repvars, negated) );
       for( v = consdata->nvars - 1; v > 0; --v )
@@ -1987,6 +1994,12 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
          if( !SCIPvarIsActive(var1) )
             continue;
 
+	 /* no cliques available */
+	 if( SCIPvarGetNCliques(var1, neg1) == 0 && SCIPvarGetNImpls(var1, neg1) == 0 )
+	    continue;
+
+	 comppercons += (v - 1);
+
          breakloop = FALSE;
 
          for( w = v - 1; w >= 0; --w )
@@ -2011,6 +2024,10 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
 
             if( !SCIPvarIsActive(var2) )
                continue;
+
+	    /* no cliques available */
+	    if( SCIPvarGetNCliques(var2, neg2) == 0 && SCIPvarGetNImpls(var2, neg2) == 0 )
+	       continue;
 
 	    /* check if both active variable are the same */
 	    if( var1 == var2 )
@@ -2089,6 +2106,10 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
          }
          if( breakloop )
             break;
+
+	 /* do not do to many comparisons */
+	 if( comppercons > maxcomppercons )
+	    break;
       }
    }
 

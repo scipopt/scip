@@ -1430,7 +1430,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    nlprows = SCIPgetNLPRows(scip);
 
    SCIP_CALL( SCIPgetLPColsData(scip, &lpcols, &nlpcols) );
-   assert(lpcols == NULL || nlpcols > 0);
+   assert(nlpcols == 0 || lpcols != NULL);
 
    /* we need an LP */
    if( nlprows == 0 || nlpcols == 0 )
@@ -1625,6 +1625,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0);
       assert(SCIPvarIsIntegral(var));
 
+      /* for numerical reasons, we might have to tighten our local bounds further in order to ensure, that our bounds
+       * are indeed valid */
+      if( SCIPisGT(scip, SCIPfeasCeil(scip, ub), ub) )
+         ub = MAX(lb,SCIPfloor(scip, ub - 1));
+      if( SCIPisLT(scip, SCIPfeasFloor(scip, lb), lb) )
+         lb = MIN(ub, SCIPfloor(scip, lb + 1));
+
       /* check whether we hit some limit, e.g. the time limit, in between
        * since the check itself consumes some time, we only do it every tenth iteration
        */
@@ -1753,7 +1760,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             for( i = 0; i < matrix->nrows; ++i )
             {
                if( nvarsleftinrow[i] == 0 && violatedrowpos[i] >= 0 )
+	       {
                   SCIPdebugMessage(" <%d> \n", i);
+	       }
             }
 #endif
             break;
@@ -1783,7 +1792,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    {
       SCIP_Bool stored;
 
-      for( v = 0; v <= lastindexofsusp && nviolatedrows == 0; ++v )
+      for( v = 0; v <= lastindexofsusp; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real origsolval;
@@ -1811,6 +1820,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIPdebugMessage("  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
             nviolatedrows);
       }
+      /* Fixing of remaining variables led to infeasibility */
+      if( nviolatedrows > 0 )
+         goto TERMINATE2;
 
       stored = TRUE;
       /* if the constructed solution might still be extendable to a feasible solution, try this by

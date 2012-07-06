@@ -7373,7 +7373,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'R' fast {'Z','L','I'}\n"
       "   #                      \n"
       "   #                      '-' no preprocessing\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7392,7 +7392,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)\n"
       "   #                      \n"
       "   #                      '-' no processing\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
@@ -7409,7 +7409,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
       "   #                      'p' maximize cut violation and penalize a high number\n"
       "   #                          of aggregated rows in the cut weighted by the number\n"
       "   #                          of rows in the aggregation and the penalty factor p\n"
-      "   #                     ", '\0', SCIP_MAXSTRLEN - ncharsprinted - 1);
+      "   #                     ", '\0', (unsigned int) (SCIP_MAXSTRLEN - ncharsprinted - 1));
 
    assert(ncharsprinted > 0 && ncharsprinted < SCIP_MAXSTRLEN);
 
