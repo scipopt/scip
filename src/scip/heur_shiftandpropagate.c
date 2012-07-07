@@ -1415,7 +1415,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
-   if( !SCIPisLPConstructed(scip) && SCIPhasCurrentNodeLP(scip) )
+   /* stop if there is no LP available */
+   if ( ! SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
    {
       SCIP_Bool nodecutoff;
 
