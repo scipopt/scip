@@ -176,6 +176,8 @@ performance improvements:
 - revised reduced cost propagator
 - increased performance in SCIPcliqueAddVar(), adding a variable to a clique
 - tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
+- when all nonlinearities have been fixed and the number of nonfixed variables is 1 in cons_nonlinear/cons_quadratic
+  handle it by a bound change instead of adding a linear constraint.
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
@@ -232,6 +234,9 @@ fixed bugs:
 - fixed several bugs writing an mps file in the reader_mps.c, e.g. writing fixed variables which are not (yet) removed
   and writing integer variables even with an objective value of 0, if they only exist in non-linear constraints
 - fixed bug in sepa_clique.c, could not handle only empty cliques, that were not removed
+- all plugins that solve sub-SCIPs now do not stop the whole solution process if there has been an error
+- fixed assert with LPI=none (need to count rows/cols in lpi_none)
+- do not run heur_shiftandpropagate if there is no LP
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines
