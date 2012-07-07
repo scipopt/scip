@@ -581,7 +581,12 @@ SCIP_RETCODE SCIPapplyRens(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+
+      /* free */
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL( SCIPfree(&subscip) );
+      return SCIP_OKAY;
    }
 
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -611,7 +616,7 @@ SCIP_RETCODE SCIPapplyRens(
 #ifndef NDEBUG
          SCIP_CALL( retcode );
 #endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+         SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       }
 
       /* check, whether a solution was found;

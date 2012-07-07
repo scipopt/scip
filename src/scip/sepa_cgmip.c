@@ -1748,6 +1748,7 @@ SCIP_RETCODE solveSubscip(
    )
 {
    SCIP* subscip;
+   SCIP_RETCODE retcode;
    SCIP_STATUS status;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
@@ -1817,7 +1818,20 @@ SCIP_RETCODE solveSubscip(
    /* check whether we want a complete solve */
    if ( ! sepadata->earlyterm )
    {
-      SCIP_CALL( SCIPsolve(subscip) );
+      retcode = SCIPsolve(subscip);
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+      if ( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         SCIP_CALL( retcode );
+#endif
+         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       status = SCIPgetStatus(subscip);
 
 #ifdef SCIP_OUTPUT
@@ -1844,13 +1858,25 @@ SCIP_RETCODE solveSubscip(
 
       /* -> solve until first solution is found */
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
-      SCIP_CALL( SCIPsolve(subscip) );
+      retcode = SCIPsolve(subscip);
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+      if ( retcode != SCIP_OKAY )
+      {
+#ifndef NDEBUG
+         SCIP_CALL( retcode );
+#endif
+         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
 
       status = SCIPgetStatus(subscip);
 
       /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
-      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT || 
+      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_NODELIMIT ||
          status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD)
       {
          *success = FALSE;
@@ -1870,8 +1896,20 @@ SCIP_RETCODE solveSubscip(
          SCIPdebugMessage("Continue solving separation problem ...\n");
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
-         SCIP_CALL( SCIPsolve(subscip) );
+         retcode = SCIPsolve(subscip);
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
+
+         /* errors in solving the subproblem should not kill the overall solving process;
+          * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+         if ( retcode != SCIP_OKAY )
+         {
+#ifndef NDEBUG
+            SCIP_CALL( retcode );
+#endif
+            SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
 
          status = SCIPgetStatus(subscip);
          assert( status != SCIP_STATUS_BESTSOLLIMIT );

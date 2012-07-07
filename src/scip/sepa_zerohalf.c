@@ -5207,12 +5207,13 @@ SCIP_RETCODE solveSubscip(
    SCIP_SOL***           sols,               /**< pointer to store array of solutions */
    int*                  nsols               /**< pointer to store number of solutions */
    )
-{ 
+{
+   SCIP_RETCODE          retcode;
    SCIP_STAGE            subscipstage;
    SCIP_Real             maxslack;
    int                   i;
    int                   j;
-  
+
    assert(sepadata != NULL);
    assert(mod2data != NULL);
    assert(auxipdata != NULL);
@@ -5221,9 +5222,20 @@ SCIP_RETCODE solveSubscip(
    assert(*sols == NULL);
    assert(*nsols == 0);
 
-
    /* solve AuxIP */
-   SCIP_CALL(SCIPsolve(auxipdata->subscip));
+   retcode = SCIPsolve(auxipdata->subscip);
+
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
+   if ( retcode != SCIP_OKAY )
+   {
+#ifndef NDEBUG
+      SCIP_CALL( retcode );
+#endif
+      SCIPwarningMessage(scip, "Error while solving subproblem in zerohalf separator; sub-SCIP terminated with code <%d>\n", retcode);
+      *nsols = 0;
+      return SCIP_OKAY;
+   }
 
    /* print statistic */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(auxipdata->subscip, NULL) ) );
