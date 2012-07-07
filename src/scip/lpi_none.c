@@ -29,6 +29,17 @@
 #define LPINAME          "NONE"              /**< name of the LPI interface */
 #define LPIINFINITY       1e20               /**< infinity value */
 
+/** LP interface
+ *
+ *  Store several statistic values about the LP. These values are only needed in order to provide a rudimentary
+ *  communication, e.g., there are asserts that check the number of rows and columns.
+ */
+struct SCIP_LPi
+{
+   int                   nrows;              /**< number of rows */
+   int                   ncols;              /**< number of columns */
+};
+
 
 /*
  * Local Methods
@@ -114,6 +125,11 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIPdebugMessage("SCIPlpiCreate()\n");
    SCIPdebugMessage("Note that there is no LP solver linked to the binary\n");
 
+   /* create empty LPI */
+   SCIP_ALLOC( BMSallocMemory(lpi) );
+   (*lpi)->nrows = 0;
+   (*lpi)->ncols = 0;
+
    return SCIP_OKAY;
 }
 
@@ -124,6 +140,9 @@ SCIP_RETCODE SCIPlpiFree(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    SCIPdebugMessage("SCIPlpiFree()\n");
+
+   BMSfreeMemory(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -158,6 +177,13 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+
+   lpi->nrows = nrows;
+   lpi->ncols = ncols;
+   assert( lpi->nrows >= 0 );
+   assert( lpi->ncols >= 0 );
+
    return SCIP_OKAY;
 }
 
@@ -175,6 +201,11 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( lpi->ncols >= 0 );
+
+   lpi->ncols += ncols;
+
    return SCIP_OKAY;
 }
 
@@ -185,6 +216,12 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( lpi->ncols >= 0 );
+
+   lpi->ncols -= lastcol - firstcol + 1;
+   assert( lpi->ncols >= 0 );
+
    return SCIP_OKAY;
 }
 
@@ -196,6 +233,26 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {  /*lint --e{715}*/
+   int cnt = 0;
+   int j;
+
+   assert( lpi != NULL );
+   assert( dstat != NULL );
+   assert( lpi->ncols >= 0 );
+
+   for (j = 0; j < lpi->ncols; ++j)
+   {
+      if ( dstat[j] )
+      {
+         ++cnt;
+         dstat[j] = -1;
+      }
+      else
+         dstat[j] = cnt;
+   }
+   lpi->ncols -= cnt;
+   assert( lpi->ncols >= 0 );
+
    return SCIP_OKAY;
 }
 
@@ -212,6 +269,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( lpi->nrows >= 0 );
+
+   lpi->nrows += nrows;
+
    return SCIP_OKAY;
 }
 
@@ -222,6 +284,12 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( lpi->nrows >= 0 );
+
+   lpi->nrows -= lastrow - firstrow + 1;
+   assert( lpi->nrows >= 0 );
+
    return SCIP_OKAY;
 }
 
@@ -233,6 +301,26 @@ SCIP_RETCODE SCIPlpiDelRowset(
                                               *   output: new position of row, -1 if row was deleted */
    )
 {  /*lint --e{715}*/
+   int cnt = 0;
+   int i;
+
+   assert( lpi != NULL );
+   assert( dstat != NULL );
+   assert( lpi->nrows >= 0 );
+
+   for (i = 0; i < lpi->nrows; ++i)
+   {
+      if ( dstat[i] )
+      {
+         ++cnt;
+         dstat[i] = -1;
+      }
+      else
+         dstat[i] = cnt;
+   }
+   lpi->nrows -= cnt;
+   assert( lpi->nrows >= 0 );
+
    return SCIP_OKAY;
 }
 
@@ -241,6 +329,13 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( lpi->nrows >= 0 );
+   assert( lpi->ncols >= 0 );
+
+   lpi->nrows = 0;
+   lpi->ncols = 0;
+
    return SCIP_OKAY;
 }
 
@@ -339,8 +434,12 @@ SCIP_RETCODE SCIPlpiGetNRows(
    int*                  nrows               /**< pointer to store the number of rows */
    )
 {  /*lint --e{715}*/
-   assert(nrows != NULL);
-   *nrows = 0;
+   assert( lpi != NULL );
+   assert( nrows != NULL );
+   assert( lpi->nrows >= 0 );
+
+   *nrows = lpi->nrows;
+
    return SCIP_OKAY;
 }
 
@@ -350,8 +449,12 @@ SCIP_RETCODE SCIPlpiGetNCols(
    int*                  ncols               /**< pointer to store the number of cols */
    )
 {  /*lint --e{715}*/
-   assert(ncols != NULL);
-   *ncols = 0;
+   assert( lpi != NULL );
+   assert( ncols != NULL );
+   assert( lpi->ncols >= 0 );
+
+   *ncols = lpi->ncols;
+
    return SCIP_OKAY;
 }
 
@@ -1066,8 +1169,7 @@ SCIP_RETCODE SCIPlpiClearState(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
-   errorMessage();
-   return SCIP_PLUGINNOTFOUND;
+   return SCIP_OKAY;
 }
 
 /** frees LPi state information */
