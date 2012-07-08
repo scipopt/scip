@@ -747,12 +747,6 @@ void SCIPbtnodeFree(
 
 #ifndef NDEBUG
 
-/** returns whether the node is a leaf */
-extern
-SCIP_Bool SCIPbtnodeIsLeaf(
-   SCIP_BTNODE*          node                /**< node */
-   );
-
 /** returns the user data pointer stored in that node */
 extern
 void* SCIPbtnodeGetData(
@@ -777,13 +771,48 @@ SCIP_BTNODE* SCIPbtnodeGetRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
+/** returns the sibling of the node or NULL if does not exist */
+extern
+SCIP_BTNODE* SCIPbtnodeGetSibling(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns whether the node is a root node */
+extern
+SCIP_Bool SCIPbtnodeIsRoot(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns whether the node is a leaf */
+extern
+SCIP_Bool SCIPbtnodeIsLeaf(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns TRUE if the given node is left child */
+extern
+SCIP_Bool SCIPbtnodeIsLeftchild(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
+/** returns TRUE if the given node is right child */
+extern
+SCIP_Bool SCIPbtnodeIsRightchild(
+   SCIP_BTNODE*          node                /**< node */
+   );
+
 #else
 
-#define SCIPbtnodeIsLeaf(node)                (node->left == NULL && node->right == NULL)
-#define SCIPbtnodeGetData(node)               (node->dataptr)
-#define SCIPbtnodeGetParent(node)             (node->parent)
-#define SCIPbtnodeGetLeftchild(node)          (node->left)
-#define SCIPbtnodeGetRightchild(node)         (node->right)
+#define SCIPbtnodeGetData(node)               ((node)->dataptr)
+#define SCIPbtnodeGetParent(node)             ((node)->parent)
+#define SCIPbtnodeGetLeftchild(node)          ((node)->left)
+#define SCIPbtnodeGetRightchild(node)         ((node)->right)
+#define SCIPbtnodeGetSibling(node)            (SCIPbtnodeGetParent(node) == NULL ? NULL : \
+                                               SCIPbtnodeIsLeftchild(node) ? node->parent->right : (node)->parent->right)
+#define SCIPbtnodeIsRoot(node)                (SCIPbtnodeGetParent(node) == NULL)
+#define SCIPbtnodeIsLeaf(node)                ((node)->left == NULL && (node)->right == NULL)
+#define SCIPbtnodeIsLeftchild(node)           (SCIPbtnodeGetParent(node) == NULL ? FALSE : SCIPbtnodeGetLeftchild(node) == (node) ? TRUE : FALSE)
+#define SCIPbtnodeIsRightchild(node)          (SCIPbtnodeGetParent(node) == NULL ? FALSE : SCIPbtnodeGetRightchild(node) == (node) ? TRUE : FALSE)
 
 #endif
 

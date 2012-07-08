@@ -34,8 +34,9 @@
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
 
+#ifndef NDEBUG
 #include "scip/struct_misc.h"
-
+#endif
 
 /*
  * GML graphical printing methods
@@ -5232,22 +5233,16 @@ void SCIPbtnodeFree(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
-#undef SCIPbtnodeIsLeaf
 #undef SCIPbtnodeGetData
 #undef SCIPbtnodeGetKey
 #undef SCIPbtnodeGetParent
 #undef SCIPbtnodeGetLeftchild
 #undef SCIPbtnodeGetRightchild
-
-/** returns whether the node is a leaf */
-SCIP_Bool SCIPbtnodeIsLeaf(
-   SCIP_BTNODE*          node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return (node->left == NULL && node->right == NULL);
-}
+#undef SCIPbtnodeGetSibling
+#undef SCIPbtnodeIsRoot
+#undef SCIPbtnodeIsLeaf
+#undef SCIPbtnodeIsLeftchild
+#undef SCIPbtnodeIsRightchild
 
 /** returns the user data pointer stored in that node */
 void* SCIPbtnodeGetData(
@@ -5287,6 +5282,82 @@ SCIP_BTNODE* SCIPbtnodeGetRightchild(
    assert(node != NULL);
 
    return node->right;
+}
+
+/** returns the sibling of the node or NULL if does not exist */
+SCIP_BTNODE* SCIPbtnodeGetSibling(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( parent == NULL )
+      return NULL;
+
+   if( SCIPbtnodeGetLeftchild(parent) == node )
+      return SCIPbtnodeGetRightchild(parent);
+
+   assert(SCIPbtnodeGetRightchild(parent) == node);
+
+   return SCIPbtnodeGetLeftchild(parent);
+}
+
+/** returns whether the node is a root node */
+SCIP_Bool SCIPbtnodeIsRoot(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->parent == NULL);
+}
+
+/** returns whether the node is a leaf */
+SCIP_Bool SCIPbtnodeIsLeaf(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return (node->left == NULL && node->right == NULL);
+}
+
+/** returns TRUE if the given node is left child */
+SCIP_Bool SCIPbtnodeIsLeftchild(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   if( SCIPbtnodeIsRoot(node) )
+      return FALSE;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( SCIPbtnodeGetLeftchild(parent) == node )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** returns TRUE if the given node is right child */
+SCIP_Bool SCIPbtnodeIsRightchild(
+   SCIP_BTNODE*          node                /**< node */
+   )
+{
+   SCIP_BTNODE* parent;
+
+   if( SCIPbtnodeIsRoot(node) )
+      return FALSE;
+
+   parent = SCIPbtnodeGetParent(node);
+
+   if( SCIPbtnodeGetRightchild(parent) == node )
+      return TRUE;
+
+   return FALSE;
 }
 
 /** sets the give node data
