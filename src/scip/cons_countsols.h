@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-/** data structure for sparse solutions */ 
+/** data structure for sparse solutions */
 struct SparseSolution
 {
    SCIP_Longint*         lbvalues;           /**< array of lower bounds */
@@ -50,7 +50,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
 /** dialog execution method for the count command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
-   
+
 /** execution method of dialog for writing all solutions */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);

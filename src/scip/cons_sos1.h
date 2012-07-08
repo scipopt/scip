@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
 /** creates and captures an SOS1 constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsSOS1() for the default constraint flag configuration
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead

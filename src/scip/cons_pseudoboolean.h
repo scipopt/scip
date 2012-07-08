@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
 /** creates and captures a pseudoboolean constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsPseudoboolean() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -190,7 +190,7 @@ int SCIPgetNLinearVarsPseudoboolean(
 
 /** gets array with non-linear term variables and corresponding number of variable in each non-linear term iff
  *  'termvarssize' (size of array for all non-linear term variables) is big enough, or will return the needed size for
- *  the array for all non-linear variables in termvarssize otherwise, of a given pseudoboolean constraint 
+ *  the array for all non-linear variables in termvarssize otherwise, of a given pseudoboolean constraint
  */
 extern
 SCIP_RETCODE SCIPgetTermVarsDataPseudoboolean(

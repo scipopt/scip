@@ -31,11 +31,11 @@
  * For \f$f_j(x)\f$ that are not known to be convex or concave, a simple variant of linear estimation based on interval gradients is implemented.
  *
  * Branching is performed for variables in nonconvex terms, if the relaxation solution cannot be separated.
- * 
- * This header offers the upgrade functionality to upgrade a general nonlinear constraint into a more specific constraint 
+ *
+ * This header offers the upgrade functionality to upgrade a general nonlinear constraint into a more specific constraint
  * via SCIP_DECL_NONLINCONSUPGD().
  *
- * Furthermore, the definition of callbacks used to reformulate an expression graph is offered by 
+ * Furthermore, the definition of callbacks used to reformulate an expression graph is offered by
  * SCIP_DECL_EXPRGRAPHNODEREFORM().
  *
  * Further, the function representation is stored in an expression graph, which allows to propagate variable domains
@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear2(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

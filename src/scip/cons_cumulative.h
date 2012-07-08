@@ -18,7 +18,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
- * 
+ *
  * Given:
  * - a set of jobs, represented by their integer start time variables \f$S_j\f$, their array of processing times \f$p_j\f$ and of
  *   their demands \f$d_j\f$.

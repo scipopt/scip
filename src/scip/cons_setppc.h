@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
 /** creates and captures a set partitioning constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsSetpart() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
 /** creates and captures a set packing constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -195,7 +195,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -207,7 +207,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
 /** creates and captures a set packing constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsSetpack() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()

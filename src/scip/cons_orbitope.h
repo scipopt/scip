@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 /** creates and captures an orbitope constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- * 
+ *
  *  @see SCIPcreateConsOrbitope() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
