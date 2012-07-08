@@ -807,12 +807,12 @@ SCIP_Bool SCIPbtnodeIsRightchild(
 #define SCIPbtnodeGetParent(node)             ((node)->parent)
 #define SCIPbtnodeGetLeftchild(node)          ((node)->left)
 #define SCIPbtnodeGetRightchild(node)         ((node)->right)
-#define SCIPbtnodeGetSibling(node)            (SCIPbtnodeGetParent(node) == NULL ? NULL : \
-                                               SCIPbtnodeIsLeftchild(node) ? node->parent->right : (node)->parent->right)
-#define SCIPbtnodeIsRoot(node)                (SCIPbtnodeGetParent(node) == NULL)
+#define SCIPbtnodeGetSibling(node)            ((node)->parent == NULL ? NULL : \
+                                               (node)->parent->left == (node) ? (node)->parent->right : (node)->parent->left)
+#define SCIPbtnodeIsRoot(node)                ((node)->parent == NULL)
 #define SCIPbtnodeIsLeaf(node)                ((node)->left == NULL && (node)->right == NULL)
-#define SCIPbtnodeIsLeftchild(node)           (SCIPbtnodeGetParent(node) == NULL ? FALSE : SCIPbtnodeGetLeftchild(node) == (node) ? TRUE : FALSE)
-#define SCIPbtnodeIsRightchild(node)          (SCIPbtnodeGetParent(node) == NULL ? FALSE : SCIPbtnodeGetRightchild(node) == (node) ? TRUE : FALSE)
+#define SCIPbtnodeIsLeftchild(node)           ((node)->parent == NULL ? FALSE : (node)->parent->left == (node) ? TRUE : FALSE)
+#define SCIPbtnodeIsRightchild(node)          ((node)->parent == NULL ? FALSE : (node)->parent->right == (node) ? TRUE : FALSE)
 
 #endif
 
