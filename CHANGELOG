@@ -237,6 +237,7 @@ fixed bugs:
 - all plugins that solve sub-SCIPs now do not stop the whole solution process if there has been an error
 - fixed assert with LPI=none (need to count rows/cols in lpi_none)
 - do not run heur_shiftandpropagate if there is no LP
+- fixed count of propagations in cons_indicator and only try to propagate if variables are not yet fixed
 
 parameters:
 - new parameter <presolving/convertinttobin/maxdomainsize> by default is set to SCIP_LONGINT_MAX, which deternmines

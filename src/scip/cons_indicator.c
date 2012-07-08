@@ -3249,6 +3249,10 @@ SCIP_RETCODE propIndicator(
    if ( ! consdata->linconsactive )
       return SCIP_OKAY;
 
+   assert( consdata->slackvar != NULL );
+   assert( consdata->binvar != NULL );
+   assert( SCIPisFeasGE(scip, SCIPvarGetLbLocal(consdata->slackvar), 0.0) );
+
    /* if both slackvar and binvar are fixed to be nonzero */
    if ( consdata->nfixednonzero > 1 )
    {
@@ -3287,27 +3291,35 @@ SCIP_RETCODE propIndicator(
       {
          assert( SCIPvarGetStatus(consdata->slackvar) != SCIP_VARSTATUS_MULTAGGR );
 
-         SCIPdebugMessage("binary variable <%s> is fixed to be nonzero, fixing slack variable <%s> to 0.\n",
-            SCIPvarGetName(consdata->binvar), SCIPvarGetName(consdata->slackvar));
+         /* if slack variable is not already fixed to 0 */
+         if ( ! SCIPisZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
+         {
+            SCIPdebugMessage("binary variable <%s> is fixed to be nonzero, fixing slack variable <%s> to 0.\n",
+               SCIPvarGetName(consdata->binvar), SCIPvarGetName(consdata->slackvar));
 
-         /* fix slack variable to 0 */
-         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 0, FALSE, &infeasible, &tightened) );
-         assert( ! infeasible );
-         if ( tightened )
-            ++(*nGen);
+            /* fix slack variable to 0 */
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, 0.0, cons, 0, FALSE, &infeasible, &tightened) );
+            assert( ! infeasible );
+            if ( tightened )
+               ++(*nGen);
+         }
       }
 
       /* if slackvar is fixed to be nonzero */
       if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
       {
-         SCIPdebugMessage("slack variable <%s> is fixed to be nonzero, fixing binary variable <%s> to 0.\n",
-            SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
+         /* if binary variable is not yet fixed to 0 */
+         if ( SCIPvarGetUbLocal(consdata->binvar) > 0.5 )
+         {
+            SCIPdebugMessage("slack variable <%s> is fixed to be nonzero, fixing binary variable <%s> to 0.\n",
+               SCIPvarGetName(consdata->slackvar), SCIPvarGetName(consdata->binvar));
 
-         /* fix binary variable to 0 */
-         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->binvar, 0.0, cons, 1, FALSE, &infeasible, &tightened) );
-         assert( ! infeasible );
-         if ( tightened )
-            ++(*nGen);
+            /* fix binary variable to 0 */
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->binvar, 0.0, cons, 1, FALSE, &infeasible, &tightened) );
+            assert( ! infeasible );
+            if ( tightened )
+               ++(*nGen);
+         }
       }
 
       /* reset constraint age counter */
@@ -5164,7 +5176,7 @@ static
 SCIP_DECL_CONSPROP(consPropIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int nGen;
+   int ngen;
    int c;
 
    assert( scip != NULL );
@@ -5177,7 +5189,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    assert( SCIPisTransformed(scip) );
 
    SCIPdebugMessage("Start propagation of constraint handler <%s>.\n", SCIPconshdlrGetName(conshdlr));
-   nGen = 0;
+   ngen = 0;
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5189,6 +5201,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       SCIP_Bool cutoff;
+      int cnt;
 
       *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
@@ -5199,15 +5212,16 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &nGen) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
+      ngen += cnt;
    }
-   SCIPdebugMessage("Propagated %d domains in constraint handler <%s>.\n", nGen, SCIPconshdlrGetName(conshdlr));
-   if ( nGen > 0 )
+   SCIPdebugMessage("Propagated %d domains in constraint handler <%s>.\n", ngen, SCIPconshdlrGetName(conshdlr));
+   if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
