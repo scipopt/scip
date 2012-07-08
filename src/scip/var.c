@@ -12126,7 +12126,7 @@ SCIP_Real SCIPvarGetBestRootRedcost(
  *  reduced cost which is accessible via SCIPvarGetRootRedcost() or the variable was no column of the root LP,
  *  SCIP_INVALID is returned
  */
-SCIP_Real SCIPvarGetBestRootLPobjval(
+SCIP_Real SCIPvarGetBestRootLPObjval(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -12137,7 +12137,7 @@ SCIP_Real SCIPvarGetBestRootLPobjval(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetBestRootLPobjval(var->data.original.transvar);
+      return SCIPvarGetBestRootLPObjval(var->data.original.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
