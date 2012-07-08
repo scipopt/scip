@@ -4419,8 +4419,16 @@ int SCIPsnprintf(
    ...                                       /**< further parameters */
    );
 
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+extern
+SCIP_Bool SCIPstrToIntValue(
+   const char*           str,                /**< string to search */
+   int*                  value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   );
+
 /** extract the next token as a double value if it is one; in case a value is parsed the endptr is set to NULL */
-extern 
+extern
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */

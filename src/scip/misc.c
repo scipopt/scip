@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -6482,6 +6481,31 @@ int SCIPsnprintf(
       n = len-1;
    }
    return n;
+}
+
+/** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to str */
+SCIP_Bool SCIPstrToIntValue(
+   const char*           str,                /**< string to search */
+   int*                  value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   )
+{
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
+
+   *value = strtol(str, endptr, 10);
+
+   if( *endptr != str && *endptr != NULL )
+   {
+      SCIPdebugMessage("parsed integer value <%d>\n", *value);
+      return TRUE;
+   }
+   *endptr = (char*)str;
+
+   SCIPdebugMessage("failed parsing integer value <%s>\n", str);
+
+   return FALSE;
 }
 
 /** extract the next token as a double value if it is one; in case no value is parsed the endptr is set to str */
