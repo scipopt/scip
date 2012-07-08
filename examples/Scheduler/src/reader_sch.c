@@ -49,16 +49,13 @@ SCIP_RETCODE getJobId(
    char**                endptr              /**< pointer to store the final string position if successfully parsed */
    )
 {
-   SCIP_Real value;
    int mode;
 
    /* get job id */
-   SCIP_CALL( SCIPstrToRealValue(str, &value, endptr) );
-   (*job) = (int)(value + 0.5);
+   SCIPstrToIntValue(str, job, endptr);
 
    /* get job mode */
-   SCIP_CALL( SCIPstrToRealValue(*endptr, &value, endptr) );
-   mode = (int)(value + 0.5);
+   SCIPstrToIntValue(*endptr, &mode, endptr);
 
    if( mode != 1 )
    {
@@ -84,7 +81,6 @@ SCIP_RETCODE parseDetails(
    int                   nresources          /**< number of capacities to be parsed */
    )
 {
-   SCIP_Real value;
    char buf[SCH_MAX_LINELEN];
    char* endptr;
    int j;
@@ -106,8 +102,7 @@ SCIP_RETCODE parseDetails(
          SCIPdebugMessage("job %d -> ", j);
 
          /* get number of direct successors */
-         SCIP_CALL( SCIPstrToRealValue(endptr, &value, &endptr) );
-         nsuccessors = (int)(value + 0.5);
+         SCIPstrToIntValue(endptr, &nsuccessors, &endptr);
 
          /* allocate buffer to temporarily collect the successors */
          SCIP_CALL( SCIPallocBufferArray(scip, &successors, nsuccessors) );
@@ -115,9 +110,7 @@ SCIP_RETCODE parseDetails(
          /* parse successor job ids */
          for( s = 0; s < nsuccessors; ++s )
          {
-            if( SCIPstrToRealValue(endptr, &value, &endptr) )
-               successors[s] = (int)(value + 0.5);
-            else
+            if( !SCIPstrToIntValue(endptr, &successors[s], &endptr) )
                return SCIP_READERROR;
          }
 
@@ -129,10 +122,8 @@ SCIP_RETCODE parseDetails(
 
             SCIPstrCopySection(endptr, '[', ']', token, SCIP_MAXSTRLEN, &endptr);
 
-            if( SCIPstrToRealValue(token, &value, &tmpptr) )
+            if( SCIPstrToIntValue(token, &distance, &tmpptr) )
             {
-               distance = (int)(value + 0.5);
-
                SCIP_CALL( SCIPdigraphAddArc(precedencegraph, job, successors[s], (void*)(size_t)distance) );
 
                SCIPdebugPrintf(" %d[%d] ", successors[s], distance);
@@ -164,15 +155,13 @@ SCIP_RETCODE parseDetails(
          SCIP_CALL( getJobId(scip, buf, &job, &endptr) );
 
          /* get processing time */
-         SCIP_CALL( SCIPstrToRealValue(endptr, &value, &endptr) );
-         durations[job] = (int)(value + 0.5);
+         SCIPstrToIntValue(endptr, &durations[job], &endptr);
 
          SCIPdebugMessage("job %d has a processing times: %d\n", job, durations[job]);
 
          for( r = 0; r < nresources; ++r )
          {
-            SCIP_CALL( SCIPstrToRealValue(endptr, &value, &endptr) );
-            demands[job][r] = (int)(value + 0.5);
+            SCIPstrToIntValue(endptr, &demands[job][r], &endptr);
          }
       }
       else
@@ -188,15 +177,13 @@ SCIP_RETCODE parseDetails(
 
       SCIPdebugMessage("line %d %s", *lineno, buf);
 
-      SCIP_CALL( SCIPstrToRealValue(buf, &value, &endptr) );
-      capacities[0] = (int)(value + 0.5);
+      SCIPstrToIntValue(buf, &capacities[0], &endptr);
 
       SCIPdebugMessage("paresed capacities: <%d>", capacities[0]);
 
       for( r = 1; r < nresources; ++r )
       {
-         SCIP_CALL( SCIPstrToRealValue(endptr, &value, &endptr) );
-         capacities[r] = (int)(value + 0.5);
+         SCIPstrToIntValue(endptr, &capacities[r], &endptr);
 
          SCIPdebugPrintf(", <%d>", capacities[r]);
       }
@@ -239,18 +226,17 @@ SCIP_RETCODE readFile(
    /* get number of jobs and resources */
    if( NULL != SCIPfgets(buf, sizeof(buf), file) )
    {
-      SCIP_Real value;
       char* endptr;
+      int value;
 
       lineno++;
 
-      SCIP_CALL( SCIPstrToRealValue(buf, &value, &endptr) );
+      SCIPstrToIntValue(buf, &value, &endptr);
 
       /* not that format includes to dummy jobs */
-      njobs = (int)(value + 0.5) + 2;
+      njobs = value + 2;
 
-      SCIP_CALL( SCIPstrToRealValue(endptr, &value, &endptr) );
-      nresources = (int)(value + 0.5);
+      SCIPstrToIntValue(endptr, &nresources, &endptr);
    }
    else
       return SCIP_READERROR;
