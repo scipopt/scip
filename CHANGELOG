@@ -1,6 +1,11 @@
 SCIP version 3.0.0
 ==================
 
+datastructure:
+- new data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
+- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
+- renamed data structure SPARSESOLUTION to SCIP_SPARSESOL and moved it from cons_countsols.h to struct_misc.h
+
 interface
 - new method SCIPisConflictAnalysisApplicable() which return FALSE is the conflict will not runs; can be used
   to avoid unnecessary initialization of the conflict analysis
@@ -96,10 +101,8 @@ interface
   explaining/resolving this relaxed bound is sufficient
 - new method SCIPbranchVarHole() which branches a variable w.r.t. a given domain hole
 - default integer comparer SCIPsortCompInt() (see pub_misc.h)
-- data structure for binary trees (SCIP_BT and SCIP_BTNODE in pub_misc.h)
 - renamed SCIPstairmap*Core() to SCIPstairmap*Stair()
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
-- renamed data structure SCIP_STAIRMAP to SCIP_PROFILE
 - new methods SCIPfixParam() and SCIPunfixParam() to fix and unfix a parameter, respectively;
   the fixing status of a parameter can be requested by SCIPparamIsFixed();
   in the interactive shell, this can be done with 'fix' (instead of 'set'), e.g., "fix heuristics rens freq TRUE";
@@ -144,6 +147,9 @@ interface
 - new parameter in SCIPcopy() to indicate whether the message handler from the source SCIP should be passed to the
   target SCIP (only the pointer is copied and the usage counter of the message handler is increased), in multi theaded
   enviroment this parameter needs to be set to FALSE
+- new method for SCIP_SPARSESOL usage, SCIPsparseSolCreate(), SCIPsparseSolFree(), SCIPsparseSolGetVars(),
+  SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}
+- renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}
 
 performance improvements:
 - improved scaling of linear constraints, linear constraints with integral variables will now be scale with

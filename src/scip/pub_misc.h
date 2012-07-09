@@ -35,6 +35,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
 #include "scip/type_message.h"
+#include "scip/type_var.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -108,6 +109,61 @@ void SCIPgmlWriteCosing(
  *
  * @{
  */
+
+/*
+ * Sparse solution
+ */
+
+/**@defgroup SparseSol Sparse solution
+ *
+ * @{
+ */
+
+/** creates a sparse solution */
+extern
+SCIP_RETCODE SCIPsparseSolCreate(
+   SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
+					      *   variables
+					      */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
+					      *   arrays
+					      */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
+					      *	  0)
+					      */
+   );
+
+/** frees priority queue, but not the data elements themselves */
+extern
+void SCIPsparseSolFree(
+   SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
+   );
+
+/** returns the variables in the given sparse solution */
+extern
+SCIP_VAR** SCIPsparseSolGetVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the number of variables in the given sparse solution */
+extern
+int SCIPsparseSolGetNVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the the lower bound array for all variables for a given sparse solution */
+extern
+SCIP_Longint* SCIPsparseSolGetLbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
+/** returns the the upper bound array for all variables for a given sparse solution */
+extern
+SCIP_Longint* SCIPsparseSolGetUbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   );
+
 
 /*
  * Priority Queue

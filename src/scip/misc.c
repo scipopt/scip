@@ -35,6 +35,7 @@
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
+#include "scip/var.h"
 #endif
 
 /*
@@ -211,6 +212,117 @@ void SCIPgmlWriteCosing(
    assert(file != NULL);
 
    fprintf(file, "]\n");
+}
+
+
+/*
+ * Sparse solution
+ */
+
+/** creates a sparse solution */
+SCIP_RETCODE SCIPsparseSolCreate(
+   SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
+					      *   variables
+					      */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
+					      *   arrays
+					      */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
+					      *	  0)
+					      */
+   )
+{
+   assert(sparsesol != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+
+   SCIP_ALLOC( BMSallocMemory(sparsesol) );
+
+#ifndef NDEBUG
+   {
+      int v;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+	 assert(vars[v] != NULL);
+	 assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS);
+      }
+   }
+#endif
+
+   /* copy variables */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&((*sparsesol)->vars), vars, nvars) );
+
+   /* create bound arrays */
+   if( cleared )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&((*sparsesol)->lbvalues), nvars) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&((*sparsesol)->ubvalues), nvars) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&((*sparsesol)->lbvalues), nvars) );
+      SCIP_ALLOC( BMSallocMemoryArray(&((*sparsesol)->ubvalues), nvars) );
+   }
+
+   (*sparsesol)->nvars = nvars;
+
+   return SCIP_OKAY;
+}
+
+/** frees priority queue, but not the data elements themselves */
+void SCIPsparseSolFree(
+   SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+   assert(*sparsesol != NULL);
+
+   BMSfreeMemoryArray(&((*sparsesol)->vars));
+   BMSfreeMemoryArray(&((*sparsesol)->ubvalues));
+   BMSfreeMemoryArray(&((*sparsesol)->lbvalues));
+   BMSfreeMemory(sparsesol);
+}
+
+/** returns the variables stored in the given sparse solution */
+SCIP_VAR** SCIPsparseSolGetVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->vars;
+}
+
+/** returns the number of variables stored in the given sparse solution */
+int SCIPsparseSolGetNVars(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->nvars;
+}
+
+/** returns the lower bound array for all variables for a given sparse solution */
+SCIP_Longint* SCIPsparseSolGetLbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->lbvalues;
+}
+
+/** returns the upper bound array for all variables for a given sparse solution */
+SCIP_Longint* SCIPsparseSolGetUbs(
+   SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
+   )
+{
+   assert(sparsesol != NULL);
+
+   return sparsesol->ubvalues;
 }
 
 
