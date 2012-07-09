@@ -2772,12 +2772,11 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
       SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, paramname) );
    }
 
+   /* explicitly reset parameters of setppc constraint handler, if the constraint handler is included */
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/setppc/cliquelifting") );
+
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/disaggregation") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/simplifyinequalities") );
-
-   /* explicitly reset parameters of linear constraint handler, if the constraint handler is included */
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities") );
 
    /* explicitly reset restart parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrestarts") );
@@ -2811,20 +2810,12 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartfac", 0.03, quiet) );
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartminred", 0.06, quiet) );
 
-   /* explicitly change parameters of linear constraint handler, if included */
+   /* explicitly change parameters of setppc constraint handler, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindConshdlr(set, "linear") != NULL )
+   if( SCIPsetFindConshdlr(set, "setppc") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", TRUE, quiet) );
-   }
-
-   /* explicitly change parameters of knapsack constraint handler, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindConshdlr(set, "knapsack") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/knapsack/simplifyinequalities", TRUE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/setppc/cliquelifting", TRUE, quiet) );
    }
 
    /* explicitly change parameters of presolver boundshift, if included */
