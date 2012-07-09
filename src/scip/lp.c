@@ -12297,18 +12297,10 @@ SCIP_RETCODE lpAlgorithm(
    if( lptimelimit > 0.0 )
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
 
-   if ( ! success )
-   {
-      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = TRUE;
-      *timelimit = FALSE;
-      return SCIP_OKAY;
-   }
-
    if( lptimelimit <= 0.0 || !success )
    {
       SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-      *lperror = FALSE;
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
       *timelimit = TRUE;
       return SCIP_OKAY;
    }
