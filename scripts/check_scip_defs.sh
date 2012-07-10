@@ -50,8 +50,20 @@ do
 done
 echo
 
-LPSS=(cpx spx none) # spx132 xprs msk clp grb qso none)
+LPSS=(cpx spx none) # spx132 xprs msk clp grb qso)
 OPTS=(dbg opt prf opt-gccold)
+
+# first ensure that links are available so we don't fail because of that when making with -j later
+for i in ${LPSS[@]}
+do
+    for k in ${OPTS[@]}
+    do
+	echo "make LPS=$i OPT=$k USRCFLAGS=\"$USRDEFS\" links"
+	echo
+	make LPS=$i OPT=$k USRCFLAGS="$USRDEFS" links
+	echo
+    done
+done
 
 for i in ${LPSS[@]}
 do
