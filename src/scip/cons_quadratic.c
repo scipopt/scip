@@ -7445,6 +7445,8 @@ SCIP_RETCODE replaceByLinearConstraints(
    assert(addedcons != NULL);
 
    *addedcons = FALSE;
+   *reduceddom = FALSE;
+   *infeasible = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
