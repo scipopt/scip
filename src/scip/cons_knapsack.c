@@ -908,7 +908,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
    SCIP_Bool*            success             /**< pointer to store if an error occured during solving(normally a memory
                                               *   problem) */
-   ) 
+   )
 {
    SCIP_RETCODE retcode;
    SCIP_Real* tempsort;
@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(success != NULL);
 
    *success = TRUE;
-   
+
 #ifndef NDEBUG
    for( j = nitems - 1; j >= 0; --j )
       assert(weights[j] >= 0);
@@ -1038,7 +1038,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    else if( weightsum > 0 && weightsum <= capacity )
    {
       SCIPdebugMessage("After preprocessing all items fit into knapsack.\n");
-      
+
       for( j = nmyitems - 1; j >= 0; --j )
       {
          if( solitems != NULL )
@@ -1049,7 +1049,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          if( solval != NULL )
             *solval += myprofits[j];
       }
-      
+
       goto TERMINATE;
    }
 
@@ -1117,7 +1117,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update solution value */
       if( solval != NULL )
          *solval += myprofits[p];
-      
+
       goto TERMINATE;
    }
 
@@ -1202,8 +1202,11 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   /* allocate temporary memory and check for memory exceeding */ 
-   retcode = SCIPallocBufferArray(scip, &optvalues, nmyitems * intcap);
+   /* allocate temporary memory and check for memory exceeding */
+   /* @note we do allocate normal memory instead of buffer memory, because the buffer, will not be deleted directly and
+    *       might be a really huge block of memory which we will not use later on
+    */
+   retcode = SCIPallocMemoryArray(scip, &optvalues, nmyitems * intcap);
    if( retcode == SCIP_NOMEMORY )
    {
       SCIPdebugMessage("Did not get enough memory.\n");
@@ -1216,7 +1219,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       SCIP_CALL( retcode );
    }
 
-   /* sort myitems (plus corresponding arrays myweights and myprofits) such that 
+   /* sort myitems (plus corresponding arrays myweights and myprofits) such that
     * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only use for greedy solution
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
@@ -1290,7 +1293,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       }
 
       SCIPfreeBufferArray(scip, &tempsort);
-      SCIPfreeBufferArray(scip, &optvalues);
+      SCIPfreeMemoryArray(scip, &optvalues);
 
       goto TERMINATE;
    }
@@ -1318,7 +1321,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* compute important part of weight, which will be represented in the table */
       intweight = (int)(myweights[j] - minweight);
       assert(0 <= intweight && intweight < intcap);
-      
+
       /* copy all nonzeros from row above */
       for( d = currminweight; d < intweight && d < intcap; ++d )
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
@@ -1380,10 +1383,10 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             /* check that we do not have an underflow */
             assert(myweights[j] <= (INT_MAX + (SCIP_Longint) d));
             d = (int)(d - myweights[j]);
-         } 
+         }
          /* collect non-solution items */
          else
-         { 
+         {
             nonsolitems[*nnonsolitems] = myitems[j];
             ++(*nnonsolitems);
          }
@@ -1407,7 +1410,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             ++(*nnonsolitems);
          }
       }
-         
+
       assert(*nsolitems + *nnonsolitems == nitems);
    }
 
@@ -1419,7 +1422,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* free all temporary memory */
    SCIPfreeBufferArray(scip, &tempsort);
-   SCIPfreeBufferArray(scip, &optvalues);
+   SCIPfreeMemoryArray(scip, &optvalues);
 
  TERMINATE:
    SCIPfreeBufferArray(scip, &myitems);
