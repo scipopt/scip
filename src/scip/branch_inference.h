@@ -19,6 +19,22 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Stefan Heinz
+ *
+ * The inference history branching rule is based on the average number of deductions obtained after
+ * branching this variable upwards and downwards.
+ * Variables which cause many problem reductions are preferred since they are more likely to drive
+ * the created sub-tree towards infeasibility.
+ * Inference history of the variables is updated during the branch-and-bound search.
+ *
+ * For a more detailed description and a comparison between the inference rule and other branching rules
+ * in SCIP, we refer to
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
+ *
+
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -17,6 +17,21 @@
  * @ingroup BRANCHINGRULES
  * @brief  most infeasible LP branching rule
  * @author Tobias Achterberg
+ *
+ * The most infeasible branching rule selects a candidate variable $j$ with fractional solution value \f$ \hat{x}_j\f$
+ * which maximizes
+ * \f[
+ *      \min \left\{ \lceil \hat{x}_j \rceil - \hat{x}_j, \hat{x}_j - \lfloor \hat{x}_j \rfloor  \right\}.
+ * \f]
+ * i. e., a variable which still is farthest from taking an integer value among all branching candidates.
+ *
+ * The most infeasible branching rule and many other branching rules of SCIP are explained and compared in
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

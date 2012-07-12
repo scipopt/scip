@@ -17,6 +17,15 @@
  * @ingroup BRANCHINGRULES
  * @brief  random variable branching rule
  * @author Tobias Achterberg
+ *
+ * The random branching rule randomly selects a candidate variable $j$ from the set of candidate variables.
+ *
+ * The random branching rule and many other branching rules of SCIP are explained and compared in
+ *
+ * @par
+ * Tobias Achterberg@n
+ * Constraint Integer Programming@n
+ * PhD Thesis, Technische Universität Berlin, 2007@n
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
