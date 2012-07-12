@@ -49,6 +49,7 @@
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round,
                                          *   1.0 for dynamic, depending on solutions already found */
+#define DEFAULT_ALPHA             1.0   /**< initial weight of the objective function in the convex combination */
 #define DEFAULT_ALPHADIFF         1.0   /**< threshold difference for the convex parameter to perform perturbation */
 #define DEFAULT_BEFORECUTS       TRUE   /**< should the feasibility pump be called at root node before cut separation? */
 #define DEFAULT_USEFP20         FALSE   /**< should an iterative round-and-propagate scheme be used to find the integral points? */
@@ -71,6 +72,7 @@ struct SCIP_HeurData
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
    SCIP_Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round,
                                               *   1.0 for dynamic, depending on solutions already found */
+   SCIP_Real             alpha;              /**< initial weight of the objective function in the convex combination */
    SCIP_Real             alphadiff;          /**< threshold difference for the convex parameter to perform perturbation */
 
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
@@ -497,7 +499,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolFeaspump)
    return SCIP_OKAY;
 }
 
-
 /** calculates an adjusted maximal number of LP iterations */
 static
 SCIP_Longint adjustedMaxNLPIterations(
@@ -679,7 +680,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
 
-         /* do presolve and initialize solving */
+         /* disable expensive and useless stuff */
          SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
          if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
          {
@@ -687,9 +688,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             SCIP_CALL( SCIPunfixParam(probingscip, "lp/solvefreq") );
          }
          SCIP_CALL( SCIPsetIntParam(probingscip, "lp/solvefreq", -1) );
-
-         /* disable expensive presolving */
+         SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/disableenfops", TRUE) );
          SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
          retcode = SCIPsolve(probingscip);
 
          /* errors in solving the subproblem should not kill the overall solving process;
@@ -772,7 +774,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    scalingfactor = SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
 
    /* data initialization */
-   alpha = 1.0;
+   alpha = heurdata->alpha;
    nloops = 0;
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
@@ -872,11 +874,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             {
                assert(SCIPisFeasLE(probingscip, lb, ub));
                SCIP_CALL( SCIPnewProbingNode(probingscip) );
-
-               SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
                   solval);
-               SCIP_CALL( SCIPpropagateProbing(probingscip, 3, &infeasible, &ndomreds) );
+               SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
+               SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
                SCIPdebugMessage("  -> reduced %"SCIP_LONGINT_FORMAT" domains\n", ndomreds);
 
                if( infeasible )
@@ -1106,6 +1107,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPendProbing(probingscip) );
    }
 
+   /*if( heurdata->usefp20 )
+   {
+         SCIP_CALL( SCIPprintStatistics(probingscip, NULL) );
+   }*/
+
    /* only do stage 3 if we have not found a solution yet */
    /* only do stage 3 if the distance of the closest infeasible solution to the polyhedron is below a certain threshold */
    if( heurdata->stage3 && (*result != SCIP_FOUNDSOL) && SCIPisLE(scip, mindistance, (SCIP_Real) heurdata->neighborhoodsize) )
@@ -1146,6 +1152,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( timelimit > 0.0 && memorylimit > 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       {
          /* do not abort subproblem on CTRL-C */
+         SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
          SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
 
 #ifndef SCIP_DEBUG
@@ -1324,6 +1331,10 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "heuristics/"HEUR_NAME"/objfactor",
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
          &heurdata->objfactor, FALSE, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/"HEUR_NAME"/alpha",
+         "initial weight of the objective function in the convex combination",
+         &heurdata->alpha, FALSE, DEFAULT_ALPHA, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/"HEUR_NAME"/alphadiff",
          "threshold difference for the convex parameter to perform perturbation",
