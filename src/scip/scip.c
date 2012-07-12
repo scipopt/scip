@@ -15088,8 +15088,13 @@ SCIP_RETCODE tightenBounds(
 
       /* we adjust variable bounds to integers first, since otherwise a later bound tightening with a fractional old
        * bound may give an assert because SCIP expects non-continuous variables to have non-fractional bounds
+       *
+       * we adjust bounds with a fractionality within [eps,feastol] only if the resulting bound change is a bound
+       * tightening, because relaxing bounds may not be allowed
        */
-      if( !SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) )
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) ||
+         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
+        )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
@@ -15097,7 +15102,9 @@ SCIP_RETCODE tightenBounds(
 
          assert(tightened);
       }
-      if( !SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) )
+      if( !SCIPisFeasIntegral(scip, SCIPvarGetUbGlobal(var)) ||
+         (!SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)) && SCIPvarGetUbGlobal(var) > SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)))
+        )
       {
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, SCIPfeasFloor(scip, SCIPvarGetUbGlobal(var)), TRUE, infeasible, &tightened) );
          if( *infeasible )
