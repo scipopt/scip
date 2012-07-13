@@ -1314,6 +1314,9 @@ SCIP_RETCODE solveSubNLP(
       }
    }
 
+   if( iterused != NULL && *iterused == 0 )
+      *iterused = 1;
+
    return SCIP_OKAY;
 }
 
