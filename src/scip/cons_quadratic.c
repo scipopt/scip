@@ -6504,7 +6504,13 @@ SCIP_RETCODE generateCut(
       if( !SCIPisInfinity(scip, -minefficacy) || efficacy != NULL )
 #endif
          for( j = 0; j < consdata->nlinvars; ++j )
-            refactivitylinpart += (SCIPisIntegral(scip, lincoefs[j]) ? SCIPround(scip, lincoefs[j]) : lincoefs[j]) * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
+            /* Loose variable have the best bound as LP solution value.
+             * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
+             * When this happens, their LP solution value changes to 0.0!
+             * So when calculating the row activity, we treat loose variable as if they were already column variables.
+             */
+            if( SCIPvarGetStatus(consdata->linvars[j]) != SCIP_VARSTATUS_LOOSE )
+               refactivitylinpart += (SCIPisIntegral(scip, lincoefs[j]) ? SCIPround(scip, lincoefs[j]) : lincoefs[j]) * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -6559,7 +6565,9 @@ SCIP_RETCODE generateCut(
             if( coef[j] == 0.0 )
                continue;
 
-            refactivity += coef[j] * SCIPgetSolVal(scip, sol, consdata->quadvarterms[j].var);
+            /* As above: When calculating the row activity, we treat loose variable as if they were already column variables. */
+            if( SCIPvarGetStatus(consdata->quadvarterms[j].var) != SCIP_VARSTATUS_LOOSE )
+               refactivity += coef[j] * SCIPgetSolVal(scip, sol, consdata->quadvarterms[j].var);
 
             abscoef = REALABS(coef[j]);
             if( abscoef < mincoef )
