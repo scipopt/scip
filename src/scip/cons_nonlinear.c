@@ -3926,7 +3926,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
 
    if( SCIPisEQ(scip, xlb, xub) )
    {
-      assert(SCIPisEQ(scip, vallb, valub));
+      assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
       constant = 0.5 * (vallb+valub);
    }
