@@ -5384,6 +5384,8 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
    assert(addedcons != NULL);
+   assert(reduceddom != NULL);
+   assert(infeasible != NULL);
 
    *addedcons = FALSE;
    *reduceddom = FALSE;

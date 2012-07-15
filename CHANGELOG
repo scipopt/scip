@@ -182,8 +182,8 @@ performance improvements:
 - revised reduced cost propagator
 - increased performance in SCIPcliqueAddVar(), adding a variable to a clique
 - tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
-- when all nonlinearities have been fixed and the number of nonfixed variables is 1 in cons_nonlinear/cons_quadratic
-  handle it by a bound change instead of adding a linear constraint.
+- when all nonlinearities have been fixed and the number of nonfixed variables is 1 in cons_nonlinear/cons_quadratic/
+  cons_bivariate, handle it by a bound change instead of adding a linear constraint
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.
