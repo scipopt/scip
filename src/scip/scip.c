@@ -11495,7 +11495,7 @@ void SCIPfreeParseVarsPolynomialData(
    if( nmonomials == 0 )
       return;
 
-   for( i = 0; i < nmonomials; ++i )
+   for( i = nmonomials - 1; i >= 0; --i )
    {
       SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
