@@ -105,7 +105,8 @@ struct SCIP_ConsData
    unsigned int          iscurvchecked:1;    /**< is nonlinear function checked on convexity or concavity ? */
    unsigned int          isremovedfixingslin:1; /**< did we removed fixed/aggr/multiaggr variables in linear part? */
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds of linear variables in this constraint? */
-   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
+   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables? */
+   unsigned int          forcebackprop:1;    /**< should we force to run the backward propagation on our subgraph in the exprgraph? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -163,8 +164,8 @@ struct SCIP_ConshdlrData
    unsigned int          isremovedfixings:1; /**< have fixed variables been removed in the expression graph? */
    unsigned int          ispropagated:1;     /**< have current bounds of linear variables in constraints and variables in expression graph been propagated? */
    unsigned int          isreformulated:1;   /**< has expression graph been reformulated? */
+   unsigned int          sepanlp:1;          /**< has a linearization in the NLP relaxation been added? */
    int                   naddedreformconss;  /**< number of constraints added via reformulation */
-   SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
 };
@@ -3312,6 +3313,12 @@ SCIP_RETCODE reformulate(
       if( consdata->exprgraphnode == NULL )
          continue;
 
+      /* after reformulation, force a round of backpropagation in expression graph for all constraints,
+       * since new variables (nlreform*) may now be used in existing constraints and we want domain restrictions
+       * of operators propagated for these variables
+       */
+      consdata->forcebackprop = TRUE;
+
       curv = SCIPexprgraphGetNodeCurvature(consdata->exprgraphnode);
 
       /* if nothing concave, then continue */
@@ -3532,12 +3539,12 @@ SCIP_RETCODE computeViolation(
          var = SCIPexprtreeGetVars(consdata->exprtrees[i])[0];
          varval = SCIPgetSolVal(scip, sol, var);
 
-         /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+         /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
          if( sol == NULL )
          {
-            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-            varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+            assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+            assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+            varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
          SCIP_CALL( SCIPexprintEval(exprint, consdata->exprtrees[i], &varval, &val) );
@@ -3554,12 +3561,12 @@ SCIP_RETCODE computeViolation(
             var = SCIPexprtreeGetVars(consdata->exprtrees[i])[j];
             varval = SCIPgetSolVal(scip, sol, var);
 
-            /* project onto global box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
+            /* project onto local box, in case the LP solution is slightly outside the bounds (and then cannot be evaluated) */
             if( sol == NULL )
             {
-               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbGlobal(var)));
-               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbGlobal(var)));
-               varval = MAX(SCIPvarGetLbGlobal(var), MIN(SCIPvarGetUbGlobal(var), varval));
+               assert(SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)));
+               assert(SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)));
+               varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
             }
 
             x[j] = varval;
@@ -5973,7 +5980,10 @@ SCIP_RETCODE propagateConstraintSides(
 
       SCIPintervalSetRoundingMode(roundmode);
 
-      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      /* if we want the expression graph to propagate the bounds in any case, we set minstrength to a negative value */
+      SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds,
+         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+      consdata->forcebackprop = FALSE; /* do this only once */
 
       if( cutoff )
       {
@@ -7755,11 +7765,21 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
 
       /* remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
    else if( consdata->exprgraphnode != NULL )
    {
       /* if constraint already comes with node in expression graph, then also remember that we should run reformulation again */
       conshdlrdata->isreformulated = FALSE;
+
+      /* remember that we should force backward propagation on our subgraph propagating the next time,
+       * so possible domain restrictions are propagated into variable bounds
+       */
+      consdata->forcebackprop = TRUE;
    }
 
    return SCIP_OKAY;
