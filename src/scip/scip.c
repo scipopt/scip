@@ -451,6 +451,9 @@ SCIP_Real getDualbound(
 {
    SCIP_Real lowerbound;
 
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip) * scip->transprob->objsense;
+
    lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
@@ -475,6 +478,9 @@ SCIP_Real getLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      return -SCIPinfinity(scip);
+
    return SCIPtreeGetLowerbound(scip->tree, scip->set);
 }
 
@@ -24126,7 +24132,7 @@ SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return getDualbound(scip);
 }
@@ -24136,7 +24142,7 @@ SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return getLowerbound(scip);
 }
@@ -24146,7 +24152,7 @@ SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
       return getPrimalbound(scip);
@@ -24159,7 +24165,12 @@ SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+   {
+      return getLowerbound(scip);
+   }
 
    return SCIPnodeGetLowerbound(scip->tree->root);
 }
@@ -25533,6 +25544,19 @@ SCIP_RETCODE SCIPprintStatistics(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
+   {
+      printTimingStatistics(scip, file);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
+      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
+      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      printPresolverStatistics(scip, file);
+      printConstraintStatistics(scip, file);
+      printConstraintTimingStatistics(scip, file);
+      printPropagatorStatistics(scip, file);
+      printConflictStatistics(scip, file);
+      return SCIP_OKAY;
+   }
    case SCIP_STAGE_PRESOLVED:
    {
       printTimingStatistics(scip, file);
@@ -25545,6 +25569,8 @@ SCIP_RETCODE SCIPprintStatistics(
       printConstraintTimingStatistics(scip, file);
       printPropagatorStatistics(scip, file);
       printConflictStatistics(scip, file);
+      printHeuristicStatistics(scip, file);
+      printSolutionStatistics(scip, file);
       return SCIP_OKAY;
    }
    case SCIP_STAGE_SOLVING:
