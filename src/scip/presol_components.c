@@ -257,13 +257,23 @@ SCIP_RETCODE copyAndSolveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
+#ifndef SCIP_DEBUG
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
+      compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
+#else
    SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
       compnr, nvars, nbinvars, nintvars, nvars - nintvars - nbinvars, nconss);
+#endif
 
    /* stop if the problem has too many integer variables; only if the problems should be written we have to build it anyway */
-   if( (nbinvars + presoldata->intfactor * nintvars > presoldata->maxintvars) && !presoldata->writeproblems )
+   if( presoldata->maxintvars != -1 && (nbinvars + presoldata->intfactor * nintvars > presoldata->maxintvars)
+      && !presoldata->writeproblems )
    {
+#ifndef SCIP_DEBUG
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "--> not created (too many integer variables)\n");
+#else
       SCIPdebugMessage("--> not created (too many integer variables)\n");
+#endif
 
       return SCIP_OKAY;
    }
@@ -407,7 +417,7 @@ SCIP_RETCODE copyAndSolveComponent(
    }
 #endif
 
-   if( SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars )
+   if( presoldata->maxintvars == -1 || (SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars) )
    {
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
@@ -1243,7 +1253,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
          &presoldata->writeproblems, FALSE, DEFAULT_WRITEPROBLEMS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/components/maxintvars",
-         "maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving)",
+         "maximum number of integer (or binary) variables to solve a subproblem directly (-1: unlimited)",
          &presoldata->maxintvars, FALSE, DEFAULT_MAXINTVARS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/components/nodelimit",
