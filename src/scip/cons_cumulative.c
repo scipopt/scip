@@ -3059,6 +3059,9 @@ SCIP_RETCODE coretimesUpdateUb(
    int lst;
    int lct;
 
+   assert(vars != NULL);
+   assert(pos >= 0 && pos < nvars);
+
    var = vars[pos];
    assert(var != NULL);
 
@@ -3409,9 +3412,7 @@ typedef struct SCIP_Envelop SCIP_ENVELOP;
 static
 SCIP_RETCODE updateEnvelop(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BTNODE*          node,               /**< search node which inserted */
-   SCIP_ENVELOP**        nodedatas,          /**< array with search node data */
-   int*                  nnodedatas          /**< pointer to store the number of search node data structure */
+   SCIP_BTNODE*          node                /**< search node which inserted */
    )
 {
    SCIP_BTNODE* left;
@@ -3664,7 +3665,7 @@ SCIP_RETCODE checkOverload(
       totalenergy += energy;
 
       /* create search node data */
-      SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[j]) );
+      SCIP_CALL( SCIPallocBuffer(scip, &nodedatas[j]) ); /*lint !e866*/
 
       /* initialize search node data */
       /* adjust earliest start time to make it unique in case several jobs have the same earliest start time */
@@ -3717,7 +3718,7 @@ SCIP_RETCODE checkOverload(
       SCIP_CALL( thetatreeInsert(scip, tree, node, nodedatas, &nnodedatas) );
 
       /* update envelop */
-      SCIP_CALL( updateEnvelop(scip, node, nodedatas, &nnodedatas) );
+      SCIP_CALL( updateEnvelop(scip, node) );
       assert(nnodedatas <= 2*nvars);
 
       root = SCIPbtGetRoot(tree);
