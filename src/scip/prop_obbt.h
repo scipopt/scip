@@ -13,21 +13,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   prop_obbt.h
- * @brief  optimality-based bound tightening propagator
- * @author Stefan Weltge
+/**@file    prop_obbt.h
+ * @ingroup PROPAGATORS
+ * @brief   optimality-based bound tightening propagator
+ * @author  Stefan Weltge
  *
  * In Optimality-Based Bound Tightening (OBBT), we solve auxiliary LPs of the form
+ * \f[
+ *      \min / \max \, \{ x_i \mid x \in P' \},
+ * \f]
+ * where \f$P'\f$ is the current LP relaxation restricted by the primal cutoff constraint \f$c^T x <= z\f$, \f$z\f$ the
+ * current cutoff bound. Trivially, the optimal objective value of this LP provides a valid lower/upper bound on
+ * variable \f$x_i\f$.
  *
- *    min/max { x_i : x in P' },
- *
- * where P' is the current LP relaxation restricted by the primal cutoff constraint c*x <= z, z the current cutoff
- * bound. Trivially, the optimal objective value of this LP provides a valid lower/upper bound on variable x_i.
- *
- * Since solving LPs may be expensive, the propagator inspects solutions x in P' and does not run for variable bounds
- * which are tight at x: First, we check SCIP's last LP relaxation solution. Second, we solve a sequence of filtering
- * LP's min/max{ sum( w_i * x_i ) : x in P' } in order to push several variables towards one of their bounds in one LP
- * solve. Third, we inspect all solutions of the auxiliary LPs solved along the way.
+ * Since solving LPs may be expensive, the propagator inspects solutions \f$x \in P'\f$ and does not run for variable
+ * bounds which are tight at \f$x\f$: First, we check SCIP's last LP relaxation solution. Second, we solve a sequence of
+ * filtering LP's \f$\min / \max \, \{ \sum w_i \, x_i \mid x \in P' \}\f$ in order to push several variables towards
+ * one of their bounds in one LP solve. Third, we inspect all solutions of the auxiliary LPs solved along the way.
  *
  * By default, OBBT is only applied for nonbinary variables that occur in nonlinear constraints.
  *

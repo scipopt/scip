@@ -868,7 +868,9 @@ SCIP_RETCODE applyGenVBound(
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, genvbound->var, boundval, FALSE, &infeas, &tightened) );
       }
    }
-   /* tighten bound locally and start conflict analysis in case of infeasibility */
+   /* tighten bound locally and start conflict analysis in case of infeasibility; as inferinfo we pass the index of the
+    * genvbound that was used for propagation
+    */
    else
    {
       if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -1841,6 +1843,10 @@ SCIP_DECL_PROPRESPROP(propRespropGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->genvboundstore != NULL);
+
+   /* as inferinfo we passed the index of the genvbound that was used for propagation; the genvbound might have been
+    * replaced, but also the new genvbound at this position has the same variable on the left-hand side
+    */
    assert(inferinfo >= 0);
    assert(inferinfo < propdata->ngenvbounds);
 
