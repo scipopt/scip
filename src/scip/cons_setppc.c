@@ -5245,7 +5245,7 @@ SCIP_RETCODE removeRedundantConstraints(
    assert(consdata0 != NULL);
    assert(consdata0->nvars >= 1);
 
-   /* sort the constraint */
+   /* sort the constraint cons0 */
    consdataSort(consdata0);
 
    /* get the bit signature of the constraint */
@@ -5273,6 +5273,9 @@ SCIP_RETCODE removeRedundantConstraints(
 
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
+
+      /* sort the constraint cons1 */
+      consdataSort(consdata1);
 
       /* get the bit signature of cons1 */
       signature1 = consdataGetSignature(consdata1);
