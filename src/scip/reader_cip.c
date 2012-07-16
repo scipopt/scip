@@ -81,19 +81,20 @@ SCIP_RETCODE getInputString(
 
    assert(cipinput != NULL);
 
-   /* clear the line */
-   BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
-   
    /* read next line */
    cipinput->endfile = (SCIPfgets(cipinput->strbuf, cipinput->len, cipinput->file) == NULL);
-   
+
    if( cipinput->endfile )
+   {
+      /* clear the line for safety reason */
+      BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
       return SCIP_OKAY;
+   }
 
    cipinput->linenumber++;
    endline = strchr(cipinput->strbuf, '\n');
 
-   endcharacter = strchr(cipinput->strbuf, ';'); 
+   endcharacter = strchr(cipinput->strbuf, ';');
    while( endline == NULL || (endcharacter == NULL && cipinput->section == CIP_CONSTRAINTS && strncmp(cipinput->strbuf, "END", 3) != 0 ) )
    {
       int pos;
@@ -103,8 +104,8 @@ SCIP_RETCODE getInputString(
          pos = cipinput->len - 1;
       else
          pos = endline - cipinput->strbuf;
- 
-      /* don't erase the '\n' from all buffers for constraints */ 
+
+      /* don't erase the '\n' from all buffers for constraints */
       if( endline != NULL && cipinput->section == CIP_CONSTRAINTS )
          pos++;
 
@@ -114,21 +115,25 @@ SCIP_RETCODE getInputString(
          cipinput->len = SCIPcalcMemGrowSize(scip, pos + cipinput->readingsize);
          SCIP_CALL( SCIPreallocBufferArray(scip, &(cipinput->strbuf), cipinput->len) );
       }
-      
+
       /* read next line */
       cipinput->endfile = (SCIPfgets(&(cipinput->strbuf[pos]), cipinput->len - pos, cipinput->file) == NULL);
 
       if( cipinput->endfile )
+      {
+	 /* clear the line for safety reason */
+	 BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
          return SCIP_OKAY;
+      }
 
       cipinput->linenumber++;
       endline = strrchr(cipinput->strbuf, '\n');
-      endcharacter = strchr(cipinput->strbuf, ';'); 
+      endcharacter = strchr(cipinput->strbuf, ';');
    }
    assert(endline != NULL);
 
    /*SCIPdebugMessage("read line: %s\n", cipinput->strbuf);*/
-   
+
    if( cipinput->section == CIP_CONSTRAINTS && endcharacter != NULL && endline - endcharacter != 1 )
    {
       SCIPerrorMessage("Constraint line has to end with ';\\n'.\n");
@@ -137,7 +142,7 @@ SCIP_RETCODE getInputString(
    }
 
    *endline = '\0';
-   
+
    return SCIP_OKAY;
 }
 
