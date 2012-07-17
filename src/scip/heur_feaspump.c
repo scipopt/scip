@@ -873,7 +873,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             if( !SCIPisFeasEQ(probingscip, lb, ub) )
             {
                assert(SCIPisFeasLE(probingscip, lb, ub));
-               SCIP_CALL( SCIPnewProbingNode(probingscip) );
+               /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
                SCIPdebugMessage("try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
@@ -883,7 +883,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( infeasible )
                {
                   SCIPdebugMessage("  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, SCIPgetProbingDepth(probingscip)-1) );
+                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
                }
             }
             else
@@ -930,7 +930,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       
       if( heurdata->usefp20 )
       {
-         SCIP_CALL( SCIPbacktrackProbing(probingscip, 1) );
+         SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
       }
 
       /* change objective coefficients for continuous variables */
