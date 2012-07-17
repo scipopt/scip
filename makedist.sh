@@ -105,6 +105,7 @@ $NAME/check/instances/MIP/*.fzn \
 $NAME/check/instances/MIP/*.lp \
 $NAME/check/instances/MIP/*.mps \
 $NAME/check/instances/MIP/*.osil \
+$NAME/check/instances/Orbitope/*.cip \
 $NAME/check/instances/MINLP/*.cip \
 $NAME/check/instances/MINLP/*.mps \
 $NAME/check/instances/MINLP/*.osil \
