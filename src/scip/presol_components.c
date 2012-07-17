@@ -424,6 +424,10 @@ SCIP_RETCODE copyAndSolveComponent(
       /* solve the subproblem */
       SCIP_CALL( SCIPsolve(subscip) );
 
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
       SCIPstatistic( updateStatisticsSubsolvetime(presoldata, SCIPgetSolvingTime(subscip)) );
 
       if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
