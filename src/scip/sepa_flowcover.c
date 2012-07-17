@@ -1422,7 +1422,7 @@ SCIP_RETCODE getFlowCover(
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing 
     * is less than or equal to zero 
     */ 
-   if( SCIPisFeasLE(scip, transcapacityreal, 0.0) )
+   if( SCIPisFeasLE(scip, transcapacityreal/10, 0.0) )
    {
       assert(!(*found));
       goto TERMINATE;
