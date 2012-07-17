@@ -246,6 +246,9 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+      m_lpifeastol = SPxSolver::feastol();
+      m_lpiopttol = SPxSolver::opttol();
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       m_cpxenv = CPXopenCPLEX(&cpxstat);
