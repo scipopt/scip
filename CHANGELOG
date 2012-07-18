@@ -184,6 +184,9 @@ performance improvements:
 - tighten primal and dual feasibility tolerances independently if they are not reached in LP solving
 - when all nonlinearities have been fixed and the number of nonfixed variables is 1 in cons_nonlinear/cons_quadratic/
   cons_bivariate, handle it by a bound change instead of adding a linear constraint
+- removed 'targetscip' parameter from SCIPconvertCutsToConss(), now this function can only convert cuts on one instance,
+  otherwise use SCIPcopyCuts()
+- added 'ncutsadded' parameter to SCIPcopyCuts() to be able to store the number of copied/converted cuts
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

@@ -9800,7 +9800,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       ncutsadded = 0;
 
       /* create out of all active cuts in cutpool linear constraints */
-      SCIP_CALL( SCIPconvertCutsToConss(scip, scip, NULL, NULL, TRUE, &ncutsadded) );
+      SCIP_CALL( SCIPconvertCutsToConss(scip, NULL, NULL, TRUE, &ncutsadded) );
 
       if( ncutsadded > 0 )
       {

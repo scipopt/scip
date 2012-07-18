@@ -1892,13 +1892,42 @@ SCIP_RETCODE SCIPcopyConss(
 }
 
 
-/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
- *  could be the same
+/** convert all active cuts from cutpool to linear constraints
+ *
+ *  @note Do not change the source SCIP environment during the copying process
+ */
+SCIP_RETCODE SCIPconvertCutsToConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of added cuts, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   /* check stages for the SCIP data structure */
+   SCIP_CALL( checkStage(scip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* if we do not have any cuts, nothing can be converted */
+   if( scip->set->stage < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* create out of all active cuts in cutpool linear constraints in targetscip */
+   SCIP_CALL( SCIPcopyCuts(scip, scip, varmap, consmap, global, ncutsadded) );
+
+   return SCIP_OKAY;
+}
+
+/** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
-SCIP_RETCODE SCIPconvertCutsToConss(
+SCIP_RETCODE SCIPcopyCuts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
@@ -1906,21 +1935,23 @@ SCIP_RETCODE SCIPconvertCutsToConss(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   int*                  ncutsadded          /**< pointer to store number of added cuts */
+   int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    )
 {
    SCIP_CUT** cuts;
    int ncuts;
+   int nlocalcutsadded;
    int c;
 
+
    assert(sourcescip != NULL);
-   assert(sourcescip->set != NULL);
    assert(targetscip != NULL);
-   assert(ncutsadded != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPconvertCutsToConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   nlocalcutsadded = 0;
 
    /* if we do not have any cuts, nothing can be converted */
    if( sourcescip->set->stage < SCIP_STAGE_SOLVING )
@@ -1994,43 +2025,14 @@ SCIP_RETCODE SCIPconvertCutsToConss(
          /* free temporary memory */
          SCIPfreeBufferArray(targetscip, &vars);
 
-         ++(*ncutsadded);
+         ++nlocalcutsadded;
       }
    }
 
-   return SCIP_OKAY;
-}
+   SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
 
-/** copies all active cuts from cutpool of sourcescip to constraints in targetscip 
- *
- *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
- *  @note Do not change the source SCIP environment during the copying process
- */
-SCIP_RETCODE SCIPcopyCuts(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL */
-   SCIP_Bool             global              /**< create a global or a local copy? */
-   )
-{
-   int ncutsadded;
-
-   assert(sourcescip != NULL);
-   assert(targetscip != NULL);
-
-   /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyCuts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyCuts", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   ncutsadded = 0;
-
-   /* create out of all active cuts in cutpool linear constraints in targetscip */
-   SCIP_CALL( SCIPconvertCutsToConss(sourcescip, targetscip, varmap, consmap, global, &ncutsadded) );
-
-   SCIPdebugMessage("Converted %d active cuts to constraints.\n", ncutsadded);
+   if( ncutsadded != NULL )
+      *ncutsadded = nlocalcutsadded;
 
    return SCIP_OKAY;
 }

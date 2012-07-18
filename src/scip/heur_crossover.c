@@ -834,7 +834,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       if( heurdata->copycuts )
       {
          /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE) );
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }
 

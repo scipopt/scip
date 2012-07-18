@@ -521,25 +521,22 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
    );
 
-/** convert all active cuts from cutpool of sourcescip to linear constraints in targetscip, sourcescip and targetscip
- *  could be the same
+/** convert all active cuts from cutpool to linear constraints
  *
- *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
  */
 extern
 SCIP_RETCODE SCIPconvertCutsToConss(
-   SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   int*                  ncutsadded          /**< pointer to store number of added cuts */
+   int*                  ncutsadded          /**< pointer to store number of added cuts, or NULL */
    );
 
-/** copies all active cuts from cutpool of sourcescip to constraints in targetscip
+/** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -552,7 +549,8 @@ SCIP_RETCODE SCIPcopyCuts(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   SCIP_Bool             global              /**< create a global or a local copy? */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    );
 
 /** copies parameter settings from sourcescip to targetscip

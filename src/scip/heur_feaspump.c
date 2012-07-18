@@ -117,7 +117,7 @@ SCIP_RETCODE setupProbingSCIP(
    if( copycuts )
    {
       /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE) );
+      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, FALSE, NULL) );
    }
 
    return SCIP_OKAY;
