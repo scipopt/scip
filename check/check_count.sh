@@ -150,7 +150,6 @@ do
             echo set limits nodes $NODELIMIT       >> $TMPFILE
             echo set limits memory $MEMLIMIT       >> $TMPFILE
             echo set timing clocktype 1            >> $TMPFILE
-            echo set display verblevel 4           >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
             echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
             if test "$LPS" == "none"
