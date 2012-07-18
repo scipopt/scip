@@ -1576,11 +1576,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else if( heurdata->sortvars && heurdata->sortkey == 'r')
    {
       if( nbinvars > 0)
-         SCIPpermuteArray((void**)permutation, 0, nbinvars - 1, &heurdata->randseed);
+         SCIPpermuteIntArray(permutation, 0, nbinvars - 1, &heurdata->randseed);
       if( nintvars > 0)
-         SCIPpermuteArray((void**)&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
+         SCIPpermuteIntArray(&permutation[nbinvars], 0, nintvars, &heurdata->randseed);
       if( nimplvars > 0)
-         SCIPpermuteArray((void**)&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
+         SCIPpermuteIntArray(&permutation[nbinvars + nintvars], 0, nimplvars, &heurdata->randseed);
       SCIPdebugMessage("Variables permuted randomly!\n");
    }
    else

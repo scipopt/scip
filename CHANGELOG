@@ -187,6 +187,7 @@ performance improvements:
 - removed 'targetscip' parameter from SCIPconvertCutsToConss(), now this function can only convert cuts on one instance,
   otherwise use SCIPcopyCuts()
 - added 'ncutsadded' parameter to SCIPcopyCuts() to be able to store the number of copied/converted cuts
+- new method SCIPpermuteIntArray() in pub_misc.h and misc.c for permuting an integer array
 
 plugins:
 - added new presolver convertinttobin, which converts bounded integer variables to their binary representation, e.g.

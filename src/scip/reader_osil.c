@@ -611,7 +611,7 @@ void readMultIncr(
    if( incrreal != NULL )
    {
       *incrreal = strtod(attrval, (char**)&attrval);
-      if( *attrval != '\0' || (incrreal != incrreal) )
+      if( *attrval != '\0' || (incrreal != incrreal) ) /* x != x evaluates to true if x is 'nan' or '(-)infinity' */
       {
          SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", xmlGetAttrval(node, "incr"));
          *doingfine = FALSE;

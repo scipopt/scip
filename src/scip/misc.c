@@ -6389,22 +6389,53 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+void SCIPpermuteIntArray(
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
+   unsigned int*         randseed            /**< seed value for the random generator */
+   )
+{
+   int tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      --end;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPgetRandomInt(begin, end, randseed);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   end,                /**< last index that should be subject to shuffling (array size for whole
+					      *   array)
+					      */
    unsigned int*         randseed            /**< seed value for the random generator */
-   ) 
+   )
 {
+   void* tmp;
+   int i;
+
    /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 ) 
+   while( end > begin+1 )
    {
-      int i;
-      void* tmp;
-      
       end--;
-      
+
       /* get a random position into which the last entry should be shuffled */
       i = SCIPgetRandomInt(begin, end, randseed);
 

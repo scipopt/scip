@@ -3174,7 +3174,7 @@ SCIP_RETCODE presolveTryAddAND(
 
    /* remove bilinear terms that have been replaced */
    SCIP_CALL( removeBilinearTermsPos(scip, cons, ntodelete, todelete) );
-   SCIPfreeBufferArray(scip, todelete);
+   SCIPfreeBufferArray(scip, &todelete);
 
    return SCIP_OKAY;
 }
