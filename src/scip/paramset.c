@@ -1387,7 +1387,7 @@ void SCIPparamsetFree(
    assert((*paramset)->paramssize == 0 || (*paramset)->params != NULL);
    assert((*paramset)->paramssize >= (*paramset)->nparams);
 
-   for( i = 0; i < (*paramset)->nparams; ++i )
+   for( i = (*paramset)->nparams - 1; i >= 0; --i )
    {
       paramFree(&(*paramset)->params[i], blkmem);
    }
