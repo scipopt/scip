@@ -895,10 +895,10 @@ public:
          }
       }
 
-      /* unsimplification not designed for infeasible basis */
-      if( (SPxSolver::getBasisStatus() == SPxBasis::INFEASIBLE || m_stat == SPxSolver::INFEASIBLE) && simplifier != NULL )
+      /* unsimplification only stable for optimal basis */
+      if( m_stat != SPxSolver::OPTIMAL && simplifier != NULL )
       {
-         SCIPdebugMessage("presolved LP infeasible - reloading and solving original LP\n");
+         SCIPdebugMessage("presolved LP not optimal - reloading and solving original LP\n");
 
          delete simplifier;
          simplifier = NULL;
